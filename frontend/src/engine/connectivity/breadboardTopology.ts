@@ -14,28 +14,40 @@ export const PITCH_MM = 2.54;
 export const BREADBOARD_WIDTH_MM = 82.0;
 export const BREADBOARD_HEIGHT_MM = 55.5;
 
+export const BREADBOARD_GEOMETRY = {
+  widthMM: BREADBOARD_WIDTH_MM,
+  heightMM: BREADBOARD_HEIGHT_MM,
+  pitchMM: PITCH_MM,
+  leftMarginMM: 4.17,
+  // Power rails hole Y
+  topRailPosY: 4.8,
+  topRailNegY: 4.8 + PITCH_MM, // 7.34mm
+  bottomRailPosY: 49.6,
+  bottomRailNegY: 49.6 + PITCH_MM, // 52.14mm
+  // Terminal rows Y
+  rowA_Y: 14.5,
+  rowE_Y: 14.5 + 4 * PITCH_MM, // 24.66mm
+  rowF_Y: 32.28,
+  rowJ_Y: 32.28 + 4 * PITCH_MM, // 42.44mm
+  // DIP Central channel
+  channelCenterY: (24.66 + 32.28) / 2, // 28.47mm
+  channelHeightMM: 7.62,
+} as const;
+
 // Generate the 400 holes deterministically
 export function generateBreadboardHoles(): BreadboardHole[] {
   const holes: BreadboardHole[] = [];
 
-  const leftMargin = 4.17; // Centers 30 columns (29 * 2.54 = 73.66mm) inside 82mm
+  const leftMargin = BREADBOARD_GEOMETRY.leftMarginMM;
+  const topRailPosY = BREADBOARD_GEOMETRY.topRailPosY;
+  const topRailNegY = BREADBOARD_GEOMETRY.topRailNegY;
+  const rowA_Y = BREADBOARD_GEOMETRY.rowA_Y;
+  const rowF_Y = BREADBOARD_GEOMETRY.rowF_Y;
+  const bottomRailPosY = BREADBOARD_GEOMETRY.bottomRailPosY;
+  const bottomRailNegY = BREADBOARD_GEOMETRY.bottomRailNegY;
 
-  // Top power rail positions
-  const topRailPosY = 4.8;
-  const topRailNegY = topRailPosY + PITCH_MM; // 7.34mm
-
-  // Terminal rows Y positions
-  const rowA_Y = 14.5;
   const topRows: BreadboardRow[] = ['a', 'b', 'c', 'd', 'e'];
   const bottomRows: BreadboardRow[] = ['f', 'g', 'h', 'i', 'j'];
-
-  // Central DIP channel = 7.62mm (0.3 in)
-  const rowE_Y = rowA_Y + 4 * PITCH_MM; // 24.66mm
-  const rowF_Y = rowE_Y + 7.62; // 32.28mm
-
-  // Bottom power rail positions
-  const bottomRailPosY = rowF_Y + 4 * PITCH_MM + 7.16; // 49.6mm
-  const bottomRailNegY = bottomRailPosY + PITCH_MM; // 52.14mm
 
   // 1. TOP POWER RAILS (25 holes positive, 25 holes negative = 50 holes)
   // In a 400-tie breadboard, 25 holes are arranged in 5 clusters of 5 holes aligned with columns:

@@ -8,26 +8,49 @@ import type { ConnectionEndpoint } from '../../types/connections';
 import type { GenericEquipmentDefinition, GenericEquipmentInstance } from '../../types/workbench';
 import { BREADBOARD_400_HOLES, BREADBOARD_HOLE_MAP, getBreadboardHoleWorldPosition } from './breadboardTopology';
 
-export function getEndpointKey(endpoint: ConnectionEndpoint): string {
+export type { BreadboardHoleRef } from '../../types/connections';
+
+/**
+ * Generates canonical, unambiguous endpoint key for graph indexing and comparisons.
+ * Uses structured JSON encoding to prevent delimiter collisions.
+ */
+export function endpointKey(endpoint: ConnectionEndpoint): string {
   switch (endpoint.kind) {
-    case 'component-terminal':
-      return `term:${endpoint.instanceId}:${endpoint.terminalId}`;
     case 'breadboard-hole':
-      return `hole:${endpoint.breadboardInstanceId}:${endpoint.holeId}`;
+      return JSON.stringify(['hole', endpoint.breadboardInstanceId, endpoint.holeId]);
+    case 'component-terminal':
+      return JSON.stringify(['terminal', endpoint.instanceId, endpoint.terminalId]);
     case 'junction':
-      return `junc:${endpoint.junctionId}`;
+      return JSON.stringify(['junction', endpoint.junctionId]);
   }
 }
 
+export const getEndpointKey = endpointKey;
+
 export function parseEndpointKey(key: string): ConnectionEndpoint {
-  const parts = key.split(':');
-  if (parts[0] === 'term') {
-    return { kind: 'component-terminal', instanceId: parts[1], terminalId: parts[2] };
-  } else if (parts[0] === 'hole') {
-    return { kind: 'breadboard-hole', breadboardInstanceId: parts[1], holeId: parts[2] };
-  } else {
-    return { kind: 'junction', junctionId: parts[1] };
+  try {
+    const parsed = JSON.parse(key);
+    if (Array.isArray(parsed)) {
+      if (parsed[0] === 'hole') {
+        return { kind: 'breadboard-hole', breadboardInstanceId: parsed[1], holeId: parsed[2] };
+      } else if (parsed[0] === 'terminal' || parsed[0] === 'term') {
+        return { kind: 'component-terminal', instanceId: parsed[1], terminalId: parsed[2] };
+      } else if (parsed[0] === 'junction') {
+        return { kind: 'junction', junctionId: parsed[1] };
+      }
+    }
+  } catch {
+    // backwards-compatible fallback for colon-delimited format
+    const parts = key.split(':');
+    if (parts[0] === 'term') {
+      return { kind: 'component-terminal', instanceId: parts[1], terminalId: parts[2] };
+    } else if (parts[0] === 'hole') {
+      return { kind: 'breadboard-hole', breadboardInstanceId: parts[1], holeId: parts[2] };
+    } else if (parts[0] === 'junc' || parts[0] === 'junction') {
+      return { kind: 'junction', junctionId: parts[1] };
+    }
   }
+  throw new Error(`Invalid endpoint key: ${key}`);
 }
 
 /**
@@ -128,8 +151,11 @@ export function findNearestEndpoint(
   let bestCandidate: NearestEndpointResult | null = null;
   let bestScore = Infinity;
 
-  const activeKey = options.activeTargetKey || null;
-  const ignoreKey = options.ignoreEndpointKey || null;
+  const activeParsed = options.activeTargetKey ? parseEndpointKey(options.activeTargetKey) : null;
+  const activeKey = activeParsed ? endpointKey(activeParsed) : (options.activeTargetKey || null);
+
+  const ignoreParsed = options.ignoreEndpointKey ? parseEndpointKey(options.ignoreEndpointKey) : null;
+  const ignoreKey = ignoreParsed ? endpointKey(ignoreParsed) : (options.ignoreEndpointKey || null);
 
   // 1. Check all component terminals
   for (const inst of instances) {

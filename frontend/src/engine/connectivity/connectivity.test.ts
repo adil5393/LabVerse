@@ -2,12 +2,15 @@ import { describe, it, expect } from 'vitest';
 import {
   generateBreadboardHoles,
   BREADBOARD_400_HOLES,
+  BREADBOARD_HOLE_MAP,
   getBreadboardHoleWorldPosition,
   BREADBOARD_WIDTH_MM,
   BREADBOARD_HEIGHT_MM,
 } from './breadboardTopology';
 import {
+  endpointKey,
   getEndpointKey,
+  parseEndpointKey,
   resolveEndpointWorldPosition,
   findNearestEndpoint,
 } from './endpointGeometry';
@@ -18,6 +21,7 @@ import type {
   GenericEquipmentInstance,
 } from '../../types/workbench';
 import type {
+  ConnectionEndpoint,
   JumperWire,
   TerminalAttachment,
 } from '../../types/connections';
@@ -885,7 +889,8 @@ describe('5. Wire Selection, Reconnection, Recoloring & Store Undo/Redo', () => 
         { zoom: 1.0 }
       );
       expect(snap100).not.toBeNull();
-      expect(snap100?.key).toBe('term:res_snap_test:pin_1');
+      const expectedPin1Key = getEndpointKey({ kind: 'component-terminal', instanceId: 'res_snap_test', terminalId: 'pin_1' });
+      expect(snap100?.key).toBe(expectedPin1Key);
 
       // At zoom = 2.0 (high magnification), 18px ~ 2.38mm
       const snap200Inside = findNearestEndpoint(
@@ -895,7 +900,7 @@ describe('5. Wire Selection, Reconnection, Recoloring & Store Undo/Redo', () => 
         { zoom: 2.0 }
       );
       expect(snap200Inside).not.toBeNull();
-      expect(snap200Inside?.key).toBe('term:res_snap_test:pin_1');
+      expect(snap200Inside?.key).toBe(expectedPin1Key);
 
       // Far point outside 18px radius at 2.0x zoom
       const snap200Outside = findNearestEndpoint(
@@ -908,7 +913,7 @@ describe('5. Wire Selection, Reconnection, Recoloring & Store Undo/Redo', () => 
     });
 
     it('implements hysteresis: active snap target remains sticky within release threshold', () => {
-      const activeKey = 'term:res_snap_test:pin_1';
+      const activeKey = getEndpointKey({ kind: 'component-terminal', instanceId: 'res_snap_test', terminalId: 'pin_1' });
 
       // Pointer moves slightly past the acquire threshold, but remains inside release threshold
       const snapSticky = findNearestEndpoint(
@@ -942,5 +947,887 @@ describe('5. Wire Selection, Reconnection, Recoloring & Store Undo/Redo', () => 
       expect(snapSelf).toBeNull();
     });
   });
+
+  describe('7. Milestone C Final Verification: Complete Series Circuit & Topology Resilience', () => {
+    const resDef = PHYSICS_ELECTRICITY_CATALOG.find((d) => d.id === 'resistor_330')!;
+    const ledDef = PHYSICS_ELECTRICITY_CATALOG.find((d) => d.id === 'led_5mm_red')!;
+
+    const bbInst: GenericEquipmentInstance = {
+      instanceId: 'bb_final',
+      definitionId: 'breadboard_half_400',
+      positionMM: { x: 50, y: 50 },
+      rotationDeg: 0,
+      properties: {},
+      connections: {},
+    };
+
+    const dcInst: GenericEquipmentInstance = {
+      instanceId: 'dc_final',
+      definitionId: 'dc_source_5v',
+      positionMM: { x: 0, y: 10 },
+      rotationDeg: 0,
+      properties: { voltageV: 5.0 },
+      connections: {},
+    };
+
+    it('confirms both Resistor and LED can be snapped into valid addressable holes with exact visual lead alignment', () => {
+      // 1. Resistor: Lead A (pin_1) at (0, 2), Lead B (pin_2) at (10.16, 2)
+      // Hole col_10_a is at (4.17 + 9 * 2.54, 14.5) = (27.03, 14.5)
+      // Breadboard is at (50, 50), so col_10_a world = (77.03, 64.5)
+      // When Resistor is positioned at (77.03, 62.5):
+      // Lead A world = (77.03, 62.5 + 2) = (77.03, 64.5) -> matches col_10_a!
+      // Lead B world = (77.03 + 10.16, 62.5 + 2) = (87.19, 64.5) -> matches col_14_a!
+      const resInst: GenericEquipmentInstance = {
+        instanceId: 'res_final',
+        definitionId: 'resistor_330',
+        positionMM: { x: 77.0, y: 62.5 },
+        rotationDeg: 0,
+        properties: { resistanceOhms: 330 },
+        connections: {},
+      };
+
+      const resSnap = detectBreadboardSnap(
+        resInst,
+        resDef,
+        resInst.positionMM,
+        [bbInst, dcInst, resInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        []
+      );
+
+      expect(resSnap).not.toBeNull();
+      expect(resSnap!.isValid).toBe(true);
+      expect(resSnap!.attachments).toEqual([
+        { terminalId: 'pin_1', holeId: 'col_10_a' },
+        { terminalId: 'pin_2', holeId: 'col_14_a' },
+      ]);
+
+      // Confirm lead endpoints align precisely with attached hole coordinates
+      const resSnappedInst: GenericEquipmentInstance = {
+        ...resInst,
+        positionMM: resSnap!.snappedPositionMM,
+      };
+      const leadAPos = resolveEndpointWorldPosition(
+        { kind: 'component-terminal', instanceId: 'res_final', terminalId: 'pin_1' },
+        [resSnappedInst],
+        PHYSICS_ELECTRICITY_CATALOG
+      );
+      const leadBPos = resolveEndpointWorldPosition(
+        { kind: 'component-terminal', instanceId: 'res_final', terminalId: 'pin_2' },
+        [resSnappedInst],
+        PHYSICS_ELECTRICITY_CATALOG
+      );
+      const holeCol10 = BREADBOARD_400_HOLES.find((h) => h.id === 'col_10_a')!;
+      const holeCol14 = BREADBOARD_400_HOLES.find((h) => h.id === 'col_14_a')!;
+      const hole10World = getBreadboardHoleWorldPosition(holeCol10, bbInst.positionMM, 0);
+      const hole14World = getBreadboardHoleWorldPosition(holeCol14, bbInst.positionMM, 0);
+
+      expect(Math.abs(leadAPos!.xMM - hole10World.xMM)).toBeLessThan(0.05);
+      expect(Math.abs(leadAPos!.yMM - hole10World.yMM)).toBeLessThan(0.05);
+      expect(Math.abs(leadBPos!.xMM - hole14World.xMM)).toBeLessThan(0.05);
+      expect(Math.abs(leadBPos!.yMM - hole14World.yMM)).toBeLessThan(0.05);
+
+      // 2. LED: Anode at (1.73, 10), Cathode at (4.27, 10) (1 pitch = 2.54mm apart)
+      // Hole col_14_b world is at (87.19, 67.04), col_15_b world is at (89.73, 67.04)
+      const ledInst: GenericEquipmentInstance = {
+        instanceId: 'led_final',
+        definitionId: 'led_5mm_red',
+        positionMM: { x: 87.19 - 1.73, y: 67.04 - 10.0 }, // (85.46, 57.04)
+        rotationDeg: 0,
+        properties: {},
+        connections: {},
+      };
+
+      const ledSnap = detectBreadboardSnap(
+        ledInst,
+        ledDef,
+        ledInst.positionMM,
+        [bbInst, dcInst, resSnappedInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        resSnap!.attachments.map((a) => ({ ...a, instanceId: 'res_final', breadboardInstanceId: bbInst.instanceId }))
+      );
+
+      expect(ledSnap).not.toBeNull();
+      expect(ledSnap!.isValid).toBe(true);
+      expect(ledSnap!.attachments).toEqual([
+        { terminalId: 'anode', holeId: 'col_14_b' },
+        { terminalId: 'cathode', holeId: 'col_15_b' },
+      ]);
+    });
+
+    it('rejects invalid or occupied hole insertion for 2-pin components', () => {
+      // Trying to place LED where anode lands on occupied col_10_a
+      const occupiedAtts: TerminalAttachment[] = [
+        {
+          instanceId: 'res_final',
+          terminalId: 'pin_1',
+          breadboardInstanceId: 'bb_final',
+          holeId: 'col_10_a',
+        },
+      ];
+
+      const ledInst: GenericEquipmentInstance = {
+        instanceId: 'led_final',
+        definitionId: 'led_5mm_red',
+        positionMM: { x: 77.03 - 1.73, y: 64.5 - 10.0 },
+        rotationDeg: 0,
+        properties: {},
+        connections: {},
+      };
+
+      const snap = detectBreadboardSnap(
+        ledInst,
+        ledDef,
+        ledInst.positionMM,
+        [bbInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        occupiedAtts
+      );
+
+      expect(snap).not.toBeNull();
+      expect(snap!.isValid).toBe(false);
+      expect(snap!.rejectReason).toContain('already occupied');
+    });
+
+    it('verifies a complete series circuit produces exactly 3 electrical nodes via breadboard strips and jumper wires', () => {
+      // Circuit Topology:
+      // DC Source (+) -> w1 -> Top Pos Rail (rail_top_pos_1)
+      // Top Pos Rail (rail_top_pos_5) -> w2 -> Column 10 (col_10_e)
+      // Resistor Lead A snapped into col_10_a (connected to w2 via col 10 strip)
+      // Resistor Lead B snapped into col_14_a
+      // LED Anode snapped into col_14_c (connected to Resistor Lead B via col 14 strip!)
+      // LED Cathode snapped into col_15_c
+      // Column 15 (col_15_e) -> w3 -> Top Neg Rail (rail_top_neg_5)
+      // Top Neg Rail (rail_top_neg_1) -> w4 -> DC Source (-)
+
+      const resInst: GenericEquipmentInstance = {
+        instanceId: 'res_final',
+        definitionId: 'resistor_330',
+        positionMM: { x: 77.03, y: 62.5 },
+        rotationDeg: 0,
+        properties: { resistanceOhms: 330 },
+        connections: {},
+      };
+
+      const ledInst: GenericEquipmentInstance = {
+        instanceId: 'led_final',
+        definitionId: 'led_5mm_red',
+        positionMM: { x: 87.19 - 1.73, y: 69.58 - 10.0 },
+        rotationDeg: 0,
+        properties: {},
+        connections: {},
+      };
+
+      const attachments: TerminalAttachment[] = [
+        { instanceId: 'res_final', terminalId: 'pin_1', breadboardInstanceId: 'bb_final', holeId: 'col_10_a' },
+        { instanceId: 'res_final', terminalId: 'pin_2', breadboardInstanceId: 'bb_final', holeId: 'col_14_a' },
+        { instanceId: 'led_final', terminalId: 'anode', breadboardInstanceId: 'bb_final', holeId: 'col_14_c' },
+        { instanceId: 'led_final', terminalId: 'cathode', breadboardInstanceId: 'bb_final', holeId: 'col_15_c' },
+      ];
+
+      const wires: JumperWire[] = [
+        {
+          id: 'w1_vcc_to_rail',
+          color: '#ef4444',
+          from: { kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'pos' },
+          to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_pos_1' },
+        },
+        {
+          id: 'w2_rail_to_resistor',
+          color: '#ef4444',
+          from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_pos_5' },
+          to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'col_10_e' },
+        },
+        {
+          id: 'w3_led_to_neg_rail',
+          color: '#3b82f6',
+          from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'col_15_e' },
+          to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_neg_5' },
+        },
+        {
+          id: 'w4_neg_rail_to_gnd',
+          color: '#1f2937',
+          from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_neg_1' },
+          to: { kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'neg' },
+        },
+      ];
+
+      const graph = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        attachments,
+        wires
+      );
+
+      // Verify exactly 3 distinct electrical nodes
+      expect(graph.nodes).toHaveLength(3);
+
+      const vccNode = graph.nodes.find((n) => n.name.includes('VCC'));
+      const gndNode = graph.nodes.find((n) => n.name.includes('GND'));
+      const intermediateNode = graph.nodes.find((n) => !n.name.includes('VCC') && !n.name.includes('GND'));
+
+      expect(vccNode).toBeDefined();
+      expect(gndNode).toBeDefined();
+      expect(intermediateNode).toBeDefined();
+
+      const keyDcPos = getEndpointKey({ kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'pos' });
+      const keyDcNeg = getEndpointKey({ kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'neg' });
+      const keyResPin1 = getEndpointKey({ kind: 'component-terminal', instanceId: 'res_final', terminalId: 'pin_1' });
+      const keyResPin2 = getEndpointKey({ kind: 'component-terminal', instanceId: 'res_final', terminalId: 'pin_2' });
+      const keyLedAnode = getEndpointKey({ kind: 'component-terminal', instanceId: 'led_final', terminalId: 'anode' });
+      const keyLedCathode = getEndpointKey({ kind: 'component-terminal', instanceId: 'led_final', terminalId: 'cathode' });
+
+      // Node 1 (VCC): DC Source pos & Resistor pin_1
+      expect(graph.endpointToNodeMap.get(keyDcPos)).toEqual(vccNode!.id);
+      expect(graph.endpointToNodeMap.get(keyResPin1)).toEqual(vccNode!.id);
+
+      // Node 2 (Intermediate): Resistor pin_2 & LED anode (conductive via breadboard column 14 strip!)
+      expect(graph.endpointToNodeMap.get(keyResPin2)).toEqual(intermediateNode!.id);
+      expect(graph.endpointToNodeMap.get(keyLedAnode)).toEqual(intermediateNode!.id);
+
+      // Node 3 (GND): LED cathode & DC Source neg
+      expect(graph.endpointToNodeMap.get(keyLedCathode)).toEqual(gndNode!.id);
+      expect(graph.endpointToNodeMap.get(keyDcNeg)).toEqual(gndNode!.id);
+
+      // CRITICAL: Resistor terminals must NOT be merged
+      expect(graph.endpointToNodeMap.get(keyResPin1)).not.toEqual(graph.endpointToNodeMap.get(keyResPin2));
+
+      // CRITICAL: LED terminals must NOT be merged
+      expect(graph.endpointToNodeMap.get(keyLedAnode)).not.toEqual(graph.endpointToNodeMap.get(keyLedCathode));
+    });
+
+    it('verifies all 7 incomplete and incorrect wiring topology scenarios', () => {
+      const resInst: GenericEquipmentInstance = {
+        instanceId: 'res_final',
+        definitionId: 'resistor_330',
+        positionMM: { x: 77.03, y: 62.5 },
+        rotationDeg: 0,
+        properties: { resistanceOhms: 330 },
+        connections: {},
+      };
+
+      const ledInst: GenericEquipmentInstance = {
+        instanceId: 'led_final',
+        definitionId: 'led_5mm_red',
+        positionMM: { x: 87.19 - 1.73, y: 69.58 - 10.0 },
+        rotationDeg: 0,
+        properties: {},
+        connections: {},
+      };
+
+      const baseAttachments: TerminalAttachment[] = [
+        { instanceId: 'res_final', terminalId: 'pin_1', breadboardInstanceId: 'bb_final', holeId: 'col_10_a' },
+        { instanceId: 'res_final', terminalId: 'pin_2', breadboardInstanceId: 'bb_final', holeId: 'col_14_a' },
+        { instanceId: 'led_final', terminalId: 'anode', breadboardInstanceId: 'bb_final', holeId: 'col_14_c' },
+        { instanceId: 'led_final', terminalId: 'cathode', breadboardInstanceId: 'bb_final', holeId: 'col_15_c' },
+      ];
+
+      const baseWires: JumperWire[] = [
+        {
+          id: 'w1',
+          color: '#ef4444',
+          from: { kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'pos' },
+          to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_pos_1' },
+        },
+        {
+          id: 'w2',
+          color: '#ef4444',
+          from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_pos_5' },
+          to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'col_10_e' },
+        },
+        {
+          id: 'w3',
+          color: '#3b82f6',
+          from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'col_15_e' },
+          to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_neg_5' },
+        },
+        {
+          id: 'w4',
+          color: '#1f2937',
+          from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'rail_top_neg_1' },
+          to: { kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'neg' },
+        },
+      ];
+
+      const keyDcPos = getEndpointKey({ kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'pos' });
+      const keyDcNeg = getEndpointKey({ kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'neg' });
+      const keyResPin1 = getEndpointKey({ kind: 'component-terminal', instanceId: 'res_final', terminalId: 'pin_1' });
+      const keyResPin2 = getEndpointKey({ kind: 'component-terminal', instanceId: 'res_final', terminalId: 'pin_2' });
+      const keyLedAnode = getEndpointKey({ kind: 'component-terminal', instanceId: 'led_final', terminalId: 'anode' });
+      const keyLedCathode = getEndpointKey({ kind: 'component-terminal', instanceId: 'led_final', terminalId: 'cathode' });
+
+      // 1. One wire removed (w4 ground return removed)
+      const graphWithoutW4 = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        baseAttachments,
+        baseWires.filter((w) => w.id !== 'w4')
+      );
+      // DC neg is now in its own isolated node; LED cathode is not connected to DC neg
+      expect(graphWithoutW4.endpointToNodeMap.get(keyLedCathode)).not.toEqual(
+        graphWithoutW4.endpointToNodeMap.get(keyDcNeg)
+      );
+
+      // 2. LED polarity reversed (Anode in col_15_c, Cathode in col_14_c)
+      const reversedAttachments: TerminalAttachment[] = [
+        ...baseAttachments.filter((att) => att.instanceId !== 'led_final'),
+        { instanceId: 'led_final', terminalId: 'anode', breadboardInstanceId: 'bb_final', holeId: 'col_15_c' },
+        { instanceId: 'led_final', terminalId: 'cathode', breadboardInstanceId: 'bb_final', holeId: 'col_14_c' },
+      ];
+      const graphReversed = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        reversedAttachments,
+        baseWires
+      );
+      // Now Resistor pin_2 connects to LED cathode instead of anode!
+      expect(graphReversed.endpointToNodeMap.get(keyResPin2)).toEqual(
+        graphReversed.endpointToNodeMap.get(keyLedCathode)
+      );
+      // And LED anode connects to DC neg (ground)!
+      expect(graphReversed.endpointToNodeMap.get(keyLedAnode)).toEqual(
+        graphReversed.endpointToNodeMap.get(keyDcNeg)
+      );
+
+      // 3. Resistor bypassed (jumper wire directly connecting col_10_d to col_14_d)
+      const bypassWire: JumperWire = {
+        id: 'w_bypass',
+        color: '#eab308',
+        from: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'col_10_d' },
+        to: { kind: 'breadboard-hole', breadboardInstanceId: 'bb_final', holeId: 'col_14_d' },
+      };
+      const graphBypassed = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        baseAttachments,
+        [...baseWires, bypassWire]
+      );
+      // Resistor Lead A and Lead B are now merged into the same node (resistor bypassed / shorted!)
+      expect(graphBypassed.endpointToNodeMap.get(keyResPin1)).toEqual(
+        graphBypassed.endpointToNodeMap.get(keyResPin2)
+      );
+
+      // 4. LED terminals connected to the same conductive strip (both in column 14: col_14_b & col_14_c)
+      const ledShortedAttachments: TerminalAttachment[] = [
+        ...baseAttachments.filter((att) => att.instanceId !== 'led_final'),
+        { instanceId: 'led_final', terminalId: 'anode', breadboardInstanceId: 'bb_final', holeId: 'col_14_b' },
+        { instanceId: 'led_final', terminalId: 'cathode', breadboardInstanceId: 'bb_final', holeId: 'col_14_c' },
+      ];
+      const graphLedShorted = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        ledShortedAttachments,
+        baseWires
+      );
+      // LED Anode and Cathode are now merged into the same node (LED shorted out!)
+      expect(graphLedShorted.endpointToNodeMap.get(keyLedAnode)).toEqual(
+        graphLedShorted.endpointToNodeMap.get(keyLedCathode)
+      );
+
+      // 5. Both supply terminals directly connected (short circuit wire directly between pos and neg)
+      const shortWire: JumperWire = {
+        id: 'w_short',
+        color: '#ef4444',
+        from: { kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'pos' },
+        to: { kind: 'component-terminal', instanceId: 'dc_final', terminalId: 'neg' },
+      };
+      const graphShort = computeConnectivityGraph(
+        [bbInst, dcInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        [],
+        [shortWire]
+      );
+      // Expect node name to report DIRECT SUPPLY SHORT
+      const shortNode = graphShort.nodes.find((n) => n.name.includes('DIRECT SUPPLY SHORT'));
+      expect(shortNode).toBeDefined();
+      expect(graphShort.endpointToNodeMap.get(keyDcPos)).toEqual(shortNode!.id);
+      expect(graphShort.endpointToNodeMap.get(keyDcNeg)).toEqual(shortNode!.id);
+
+      // 6. A component moved away from the breadboard (attachments cleared)
+      const graphDetached = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        baseAttachments.filter((att) => att.instanceId !== 'res_final'), // Resistor detached
+        baseWires
+      );
+      // Resistor Lead A is floating and no longer connected to VCC
+      expect(graphDetached.endpointToNodeMap.get(keyResPin1)).not.toEqual(
+        graphDetached.endpointToNodeMap.get(keyDcPos)
+      );
+
+      // 7. A wire endpoint reconnected to another hole (w3 moved from col_15_e to col_20_e)
+      const reconnectedWires = baseWires.map((w) =>
+        w.id === 'w3'
+          ? {
+              ...w,
+              from: {
+                kind: 'breadboard-hole' as const,
+                breadboardInstanceId: 'bb_final',
+                holeId: 'col_20_e',
+              },
+            }
+          : w
+      );
+      const graphReconnected = computeConnectivityGraph(
+        [bbInst, dcInst, resInst, ledInst],
+        PHYSICS_ELECTRICITY_CATALOG,
+        baseAttachments,
+        reconnectedWires
+      );
+      // Column 15 is now open: LED cathode is no longer connected to GND!
+      expect(graphReconnected.endpointToNodeMap.get(keyLedCathode)).not.toEqual(
+        graphReconnected.endpointToNodeMap.get(keyDcNeg)
+      );
+    });
+  });
 });
+
+describe('8. Section 7 Regression Tests — Multi-Instance Isolation', () => {
+  const bbA: GenericEquipmentInstance = {
+    instanceId: 'breadboard_A',
+    definitionId: 'breadboard_400',
+    positionMM: { x: 20, y: 30 },
+    rotationDeg: 0,
+    properties: {},
+    connections: {},
+  };
+
+  const bbB: GenericEquipmentInstance = {
+    instanceId: 'breadboard_B',
+    definitionId: 'breadboard_400',
+    positionMM: { x: 140, y: 30 },
+    rotationDeg: 0,
+    properties: {},
+    connections: {},
+  };
+
+  const resDef = PHYSICS_ELECTRICITY_CATALOG.find((d) => d.id === 'resistor_330')!;
+
+  // 1. Two breadboards with identical local hole IDs remain electrically separate
+  it('1. Two breadboards with identical local hole IDs remain electrically separate', () => {
+    const wireOnA: JumperWire = {
+      id: 'w_A_test',
+      color: '#ef4444',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_2_f' },
+    };
+    const graph = computeConnectivityGraph([bbA, bbB], PHYSICS_ELECTRICITY_CATALOG, [], [wireOnA]);
+
+    const keyA = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' });
+    const keyB = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' });
+
+    const nodeAId = graph.endpointToNodeMap.get(keyA);
+    const nodeBId = graph.endpointToNodeMap.get(keyB);
+
+    expect(nodeAId).toBeDefined();
+    // Board B's hole is not part of node A!
+    expect(nodeAId).not.toEqual(nodeBId);
+
+    const nodeA = graph.nodes.find((n) => n.id === nodeAId);
+    expect(nodeA).toBeDefined();
+    // Node A must NOT contain any breadboard-hole from breadboard_B
+    const hasBoardBEndpoint = nodeA!.endpoints.some(
+      (ep) => ep.kind === 'breadboard-hole' && ep.breadboardInstanceId === 'breadboard_B'
+    );
+    expect(hasBoardBEndpoint).toBe(false);
+  });
+
+  // 2. Selecting a hole on Board A does not highlight Board B
+  it('2. Selecting a hole on Board A does not highlight Board B', () => {
+    const selectedHole = { breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' };
+
+    // Emulate WorkbenchPage highlighting resolution:
+    const selHoleDef = BREADBOARD_HOLE_MAP.get(selectedHole.holeId)!;
+    const highlightedEndpointKeys = new Set<string>();
+    BREADBOARD_400_HOLES
+      .filter((h) => h.internalStripId === selHoleDef.internalStripId)
+      .forEach((h) => {
+        highlightedEndpointKeys.add(
+          endpointKey({
+            kind: 'breadboard-hole',
+            breadboardInstanceId: selectedHole.breadboardInstanceId,
+            holeId: h.id,
+          })
+        );
+      });
+
+    // Check highlighted holes for Board A
+    const boardAHighlights = new Set<string>();
+    BREADBOARD_400_HOLES.forEach((h) => {
+      const k = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: h.id });
+      if (highlightedEndpointKeys.has(k)) boardAHighlights.add(h.id);
+    });
+
+    // Check highlighted holes for Board B
+    const boardBHighlights = new Set<string>();
+    BREADBOARD_400_HOLES.forEach((h) => {
+      const k = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: h.id });
+      if (highlightedEndpointKeys.has(k)) boardBHighlights.add(h.id);
+    });
+
+    // Board A should highlight all holes in col_1_f through col_1_j
+    expect(boardAHighlights.size).toBe(5);
+    expect(boardAHighlights.has('col_1_f')).toBe(true);
+    expect(boardAHighlights.has('col_1_j')).toBe(true);
+
+    // Board B must have ZERO highlighted holes!
+    expect(boardBHighlights.size).toBe(0);
+    expect(boardBHighlights.has('col_1_f')).toBe(false);
+  });
+
+  // 3. Hovering a hole on Board B does not change Board A's hover state
+  it("3. Hovering a hole on Board B does not change Board A's hover state", () => {
+    // When hovering over Board B's col_5_a hole:
+    const hoveredEndpoint: ConnectionEndpoint = {
+      kind: 'breadboard-hole',
+      breadboardInstanceId: 'breadboard_B',
+      holeId: 'col_5_a',
+    };
+    const hoveredKey = endpointKey(hoveredEndpoint);
+
+    // Evaluating whether Board A's col_5_a hole is hovered:
+    const boardAHoleKey = endpointKey({
+      kind: 'breadboard-hole',
+      breadboardInstanceId: 'breadboard_A',
+      holeId: 'col_5_a',
+    });
+
+    expect(hoveredKey).not.toEqual(boardAHoleKey);
+    // Board A's hole is not matching the hovered target
+    expect(boardAHoleKey === hoveredKey).toBe(false);
+  });
+
+  // 4. The same hole ID on two boards generates different canonical endpoint keys
+  it('4. The same hole ID on two boards generates different canonical endpoint keys', () => {
+    const keyA = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_10_c' });
+    const keyB = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_10_c' });
+
+    expect(keyA).not.toEqual(keyB);
+    expect(keyA).toBe(JSON.stringify(['hole', 'breadboard_A', 'col_10_c']));
+    expect(keyB).toBe(JSON.stringify(['hole', 'breadboard_B', 'col_10_c']));
+
+    // Verify round-trip parsing produces correct instance ID
+    const parsedA = parseEndpointKey(keyA);
+    const parsedB = parseEndpointKey(keyB);
+    expect(parsedA).toEqual({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_10_c' });
+    expect(parsedB).toEqual({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_10_c' });
+  });
+
+  // 5. Corresponding conductive strips on different boards remain separate DSU sets
+  it('5. Corresponding conductive strips on different boards remain separate DSU sets', () => {
+    const wireA: JumperWire = {
+      id: 'w_A',
+      color: '#ef4444',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_g' },
+    };
+    const wireB: JumperWire = {
+      id: 'w_B',
+      color: '#3b82f6',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_h' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_j' },
+    };
+
+    const graph = computeConnectivityGraph([bbA, bbB], PHYSICS_ELECTRICITY_CATALOG, [], [wireA, wireB]);
+
+    const nodeAId = graph.endpointToNodeMap.get(
+      endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' })
+    );
+    const nodeBId = graph.endpointToNodeMap.get(
+      endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' })
+    );
+
+    expect(nodeAId).toBeDefined();
+    expect(nodeBId).toBeDefined();
+    expect(nodeAId).not.toEqual(nodeBId);
+
+    const nodeA = graph.nodes.find((n) => n.id === nodeAId)!;
+    const nodeB = graph.nodes.find((n) => n.id === nodeBId)!;
+
+    // Node A only has breadboard_A endpoints
+    expect(nodeA.endpoints.every((ep) => ep.kind === 'breadboard-hole' && ep.breadboardInstanceId === 'breadboard_A')).toBe(true);
+    // Node B only has breadboard_B endpoints
+    expect(nodeB.endpoints.every((ep) => ep.kind === 'breadboard-hole' && ep.breadboardInstanceId === 'breadboard_B')).toBe(true);
+  });
+
+  // 6. A jumper wire between Board A and Board B correctly merges the connected nodes
+  it('6. A jumper wire between Board A and Board B correctly merges the connected nodes', () => {
+    const bridgeWire: JumperWire = {
+      id: 'w_bridge',
+      color: '#22c55e',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' },
+    };
+
+    const graph = computeConnectivityGraph([bbA, bbB], PHYSICS_ELECTRICITY_CATALOG, [], [bridgeWire]);
+
+    const keyA = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' });
+    const keyB = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' });
+
+    const nodeAId = graph.endpointToNodeMap.get(keyA);
+    const nodeBId = graph.endpointToNodeMap.get(keyB);
+
+    // They are now merged into the exact same electrical node
+    expect(nodeAId).toBeDefined();
+    expect(nodeAId).toEqual(nodeBId);
+
+    const mergedNode = graph.nodes.find((n) => n.id === nodeAId)!;
+    // Merged node includes holes from both Board A and Board B
+    expect(mergedNode.endpoints.some((ep) => ep.kind === 'breadboard-hole' && ep.breadboardInstanceId === 'breadboard_A')).toBe(true);
+    expect(mergedNode.endpoints.some((ep) => ep.kind === 'breadboard-hole' && ep.breadboardInstanceId === 'breadboard_B')).toBe(true);
+  });
+
+  // 7. Removing that wire separates the nodes again
+  it('7. Removing that wire separates the nodes again', () => {
+    const wireA: JumperWire = {
+      id: 'w_A_active',
+      color: '#ef4444',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_g' },
+    };
+    const wireB: JumperWire = {
+      id: 'w_B_active',
+      color: '#3b82f6',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_g' },
+    };
+    const bridgeWire: JumperWire = {
+      id: 'w_bridge',
+      color: '#22c55e',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' },
+    };
+
+    // 1. With wire: merged
+    const graphConnected = computeConnectivityGraph([bbA, bbB], PHYSICS_ELECTRICITY_CATALOG, [], [wireA, wireB, bridgeWire]);
+    const keyA = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_f' });
+    const keyB = endpointKey({ kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_1_f' });
+    expect(graphConnected.endpointToNodeMap.get(keyA)).toEqual(graphConnected.endpointToNodeMap.get(keyB));
+
+    // 2. Wire removed: separated into two distinct nodes
+    const graphDisconnected = computeConnectivityGraph([bbA, bbB], PHYSICS_ELECTRICITY_CATALOG, [], [wireA, wireB]);
+    const nodeAId = graphDisconnected.endpointToNodeMap.get(keyA);
+    const nodeBId = graphDisconnected.endpointToNodeMap.get(keyB);
+    expect(nodeAId).toBeDefined();
+    expect(nodeBId).toBeDefined();
+    expect(nodeAId).not.toEqual(nodeBId);
+  });
+
+  // 8. A component snapped to Board B does not occupy Board A's corresponding holes
+  it("8. A component snapped to Board B does not occupy Board A's corresponding holes", () => {
+    // Resistor snapped to Board B at col_5_b and col_9_b
+    const attachmentsOnB: TerminalAttachment[] = [
+      { instanceId: 'res_B', terminalId: 'pin_1', breadboardInstanceId: 'breadboard_B', holeId: 'col_5_b' },
+      { instanceId: 'res_B', terminalId: 'pin_2', breadboardInstanceId: 'breadboard_B', holeId: 'col_9_b' },
+    ];
+
+    const resA: GenericEquipmentInstance = {
+      instanceId: 'res_A',
+      definitionId: 'resistor_330',
+      positionMM: { x: 30, y: 35 },
+      rotationDeg: 0,
+      properties: {},
+      connections: {},
+    };
+
+    // Resistor lead A is at local (0, 2.0). To place it on col_5_b:
+    const hole5BWorld = getBreadboardHoleWorldPosition(
+      BREADBOARD_HOLE_MAP.get('col_5_b')!,
+      bbA.positionMM,
+      bbA.rotationDeg
+    );
+
+    const snapResult = detectBreadboardSnap(
+      resA,
+      resDef,
+      { x: hole5BWorld.xMM, y: hole5BWorld.yMM - 2.0 },
+      [bbA, bbB],
+      PHYSICS_ELECTRICITY_CATALOG,
+      attachmentsOnB
+    );
+
+    // Board A's holes are completely free: snap must succeed!
+    expect(snapResult).not.toBeNull();
+    expect(snapResult?.isValid).toBe(true);
+    expect(snapResult?.breadboardInstanceId).toBe('breadboard_A');
+    expect(snapResult?.attachments.map((a) => a.holeId)).toEqual(['col_5_b', 'col_9_b']);
+  });
+
+  // 9. Moving Board B does not move components attached to Board A
+  it('9. Moving Board B does not move components attached to Board A', () => {
+    useWorkbenchStore.getState().clearWorkbench();
+
+    const boardAInstance: GenericEquipmentInstance = {
+      instanceId: 'bb_A_move_test',
+      definitionId: 'breadboard_400',
+      positionMM: { x: 10, y: 10 },
+      rotationDeg: 0,
+      properties: {},
+      connections: {},
+    };
+
+    const boardBInstance: GenericEquipmentInstance = {
+      instanceId: 'bb_B_move_test',
+      definitionId: 'breadboard_400',
+      positionMM: { x: 150, y: 10 },
+      rotationDeg: 0,
+      properties: {},
+      connections: {},
+    };
+
+    const resAInstance: GenericEquipmentInstance = {
+      instanceId: 'res_A_move_test',
+      definitionId: 'resistor_330',
+      positionMM: { x: 20, y: 20 },
+      rotationDeg: 0,
+      properties: {},
+      connections: {},
+    };
+
+    useWorkbenchStore.setState({
+      instances: [boardAInstance, boardBInstance, resAInstance],
+      attachments: [
+        { instanceId: 'res_A_move_test', terminalId: 'pin_1', breadboardInstanceId: 'bb_A_move_test', holeId: 'col_5_a' },
+        { instanceId: 'res_A_move_test', terminalId: 'pin_2', breadboardInstanceId: 'bb_A_move_test', holeId: 'col_9_a' },
+      ],
+      wires: [],
+    });
+
+    // Move Board B by dx = +50, dy = +30
+    useWorkbenchStore.getState().updateInstancePosition('bb_B_move_test', { x: 200, y: 40 });
+
+    const stateAfter = useWorkbenchStore.getState();
+    const resAfter = stateAfter.instances.find((i) => i.instanceId === 'res_A_move_test')!;
+    const boardAAfter = stateAfter.instances.find((i) => i.instanceId === 'bb_A_move_test')!;
+    const boardBAfter = stateAfter.instances.find((i) => i.instanceId === 'bb_B_move_test')!;
+
+    // Board B moved:
+    expect(boardBAfter.positionMM).toEqual({ x: 200, y: 40 });
+    // Board A remained at (10, 10):
+    expect(boardAAfter.positionMM).toEqual({ x: 10, y: 10 });
+    // Resistor on Board A must NOT have moved!
+    expect(resAfter.positionMM).toEqual({ x: 20, y: 20 });
+  });
+
+  // 10. Multiple resistors and LEDs maintain distinct terminal identities
+  it('10. Multiple resistors and LEDs maintain distinct terminal identities', () => {
+    const res1: GenericEquipmentInstance = { instanceId: 'res_1', definitionId: 'resistor_330', positionMM: { x: 10, y: 10 }, rotationDeg: 0, properties: {}, connections: {} };
+    const res2: GenericEquipmentInstance = { instanceId: 'res_2', definitionId: 'resistor_330', positionMM: { x: 50, y: 10 }, rotationDeg: 0, properties: {}, connections: {} };
+    const led1: GenericEquipmentInstance = { instanceId: 'led_1', definitionId: 'led_5mm_red', positionMM: { x: 10, y: 50 }, rotationDeg: 0, properties: {}, connections: {} };
+    const led2: GenericEquipmentInstance = { instanceId: 'led_2', definitionId: 'led_5mm_red', positionMM: { x: 50, y: 50 }, rotationDeg: 0, properties: {}, connections: {} };
+
+    const kRes1P1 = endpointKey({ kind: 'component-terminal', instanceId: 'res_1', terminalId: 'pin_1' });
+    const kRes2P1 = endpointKey({ kind: 'component-terminal', instanceId: 'res_2', terminalId: 'pin_1' });
+    const kLed1Anode = endpointKey({ kind: 'component-terminal', instanceId: 'led_1', terminalId: 'anode' });
+    const kLed2Anode = endpointKey({ kind: 'component-terminal', instanceId: 'led_2', terminalId: 'anode' });
+
+    expect(kRes1P1).not.toEqual(kRes2P1);
+    expect(kLed1Anode).not.toEqual(kLed2Anode);
+
+    // Compute connectivity graph with no wires
+    const graph = computeConnectivityGraph([res1, res2, led1, led2], PHYSICS_ELECTRICITY_CATALOG, [], []);
+
+    // All 8 terminals must be in separate, independent nodes
+    const nodeIds = [
+      graph.endpointToNodeMap.get(kRes1P1),
+      graph.endpointToNodeMap.get(endpointKey({ kind: 'component-terminal', instanceId: 'res_1', terminalId: 'pin_2' })),
+      graph.endpointToNodeMap.get(kRes2P1),
+      graph.endpointToNodeMap.get(endpointKey({ kind: 'component-terminal', instanceId: 'res_2', terminalId: 'pin_2' })),
+      graph.endpointToNodeMap.get(kLed1Anode),
+      graph.endpointToNodeMap.get(endpointKey({ kind: 'component-terminal', instanceId: 'led_1', terminalId: 'cathode' })),
+      graph.endpointToNodeMap.get(kLed2Anode),
+      graph.endpointToNodeMap.get(endpointKey({ kind: 'component-terminal', instanceId: 'led_2', terminalId: 'cathode' })),
+    ];
+
+    const uniqueNodes = new Set(nodeIds);
+    expect(uniqueNodes.size).toBe(8);
+  });
+
+  // 11. Undo/redo preserves instance-scoped connections
+  it('11. Undo/redo preserves instance-scoped connections', () => {
+    useWorkbenchStore.getState().clearWorkbench();
+
+    const crossBoardWire: JumperWire = {
+      id: 'w_cross',
+      color: '#06b6d4',
+      from: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_A', holeId: 'col_5_b' },
+      to: { kind: 'breadboard-hole', breadboardInstanceId: 'breadboard_B', holeId: 'col_5_b' },
+    };
+
+    useWorkbenchStore.getState().addWire(crossBoardWire);
+    expect(useWorkbenchStore.getState().wires).toHaveLength(1);
+    expect(useWorkbenchStore.getState().wires[0].from).toEqual({
+      kind: 'breadboard-hole',
+      breadboardInstanceId: 'breadboard_A',
+      holeId: 'col_5_b',
+    });
+
+    // Delete wire
+    useWorkbenchStore.getState().removeWire('w_cross');
+    expect(useWorkbenchStore.getState().wires).toHaveLength(0);
+
+    // Undo deletion
+    useWorkbenchStore.getState().undo();
+    expect(useWorkbenchStore.getState().wires).toHaveLength(1);
+    const restoredWire = useWorkbenchStore.getState().wires[0];
+    expect(restoredWire.from).toEqual({
+      kind: 'breadboard-hole',
+      breadboardInstanceId: 'breadboard_A',
+      holeId: 'col_5_b',
+    });
+    expect(restoredWire.to).toEqual({
+      kind: 'breadboard-hole',
+      breadboardInstanceId: 'breadboard_B',
+      holeId: 'col_5_b',
+    });
+
+    // Redo deletion
+    useWorkbenchStore.getState().redo();
+    expect(useWorkbenchStore.getState().wires).toHaveLength(0);
+  });
+
+  // 12. Save/load preserves all instance IDs and references
+  it('12. Save/load preserves all instance IDs and references', () => {
+    const originalExperiment = {
+      instances: [bbA, bbB],
+      attachments: [
+        { instanceId: 'res_test', terminalId: 'pin_1', breadboardInstanceId: 'breadboard_A', holeId: 'col_1_a' },
+      ],
+      wires: [
+        {
+          id: 'wire_saved',
+          color: '#ef4444',
+          from: { kind: 'breadboard-hole' as const, breadboardInstanceId: 'breadboard_A', holeId: 'col_1_a' },
+          to: { kind: 'breadboard-hole' as const, breadboardInstanceId: 'breadboard_B', holeId: 'col_1_a' },
+        },
+      ],
+    };
+
+    // Serialize to JSON (Save)
+    const jsonStr = JSON.stringify(originalExperiment);
+
+    // Deserialize from JSON (Load)
+    const loadedExperiment = JSON.parse(jsonStr);
+
+    expect(loadedExperiment.instances).toHaveLength(2);
+    expect(loadedExperiment.instances[0].instanceId).toBe('breadboard_A');
+    expect(loadedExperiment.instances[1].instanceId).toBe('breadboard_B');
+
+    expect(loadedExperiment.wires[0].from.breadboardInstanceId).toBe('breadboard_A');
+    expect(loadedExperiment.wires[0].to.breadboardInstanceId).toBe('breadboard_B');
+
+    // Recomputed graph on loaded state must function identically
+    const loadedGraph = computeConnectivityGraph(
+      loadedExperiment.instances,
+      PHYSICS_ELECTRICITY_CATALOG,
+      loadedExperiment.attachments,
+      loadedExperiment.wires
+    );
+
+    const kA = endpointKey(loadedExperiment.wires[0].from);
+    const kB = endpointKey(loadedExperiment.wires[0].to);
+    expect(loadedGraph.endpointToNodeMap.get(kA)).toEqual(loadedGraph.endpointToNodeMap.get(kB));
+  });
+});
+
 

@@ -97,7 +97,7 @@ export function computeConnectivityGraph(
   });
 
   // 2. Add Breadboard Internal Strips
-  // For each breadboard, group its holes by internalStripId and union all holes in each strip
+  // For each breadboard, group its holes by instance-scoped internalStripId and union all holes in each strip
   const breadboards = instances.filter((i) => i.definitionId.includes('breadboard'));
   breadboards.forEach((bb) => {
     const stripToHoles = new Map<string, string[]>();
@@ -108,9 +108,11 @@ export function computeConnectivityGraph(
         breadboardInstanceId: bb.instanceId,
         holeId: hole.id,
       });
-      const list = stripToHoles.get(hole.internalStripId) || [];
+      // The strip conceptual identity is strictly scoped to bb.instanceId
+      const scopedStripId = `${bb.instanceId}:${hole.internalStripId}`;
+      const list = stripToHoles.get(scopedStripId) || [];
       list.push(holeKey);
-      stripToHoles.set(hole.internalStripId, list);
+      stripToHoles.set(scopedStripId, list);
     });
 
     // Union all holes in each internal strip
@@ -180,6 +182,25 @@ export function computeConnectivityGraph(
   wires.forEach((w) => {
     activeKeys.add(getEndpointKey(w.from));
     activeKeys.add(getEndpointKey(w.to));
+  });
+
+  // Find active DSU roots to populate all energized breadboard strip holes into the electrical node
+  const activeRoots = new Set<string>();
+  activeKeys.forEach((key) => {
+    activeRoots.add(dsu.find(key));
+  });
+
+  breadboards.forEach((bb) => {
+    BREADBOARD_400_HOLES.forEach((hole) => {
+      const holeKey = getEndpointKey({
+        kind: 'breadboard-hole',
+        breadboardInstanceId: bb.instanceId,
+        holeId: hole.id,
+      });
+      if (activeRoots.has(dsu.find(holeKey))) {
+        activeKeys.add(holeKey);
+      }
+    });
   });
 
   // Group active endpoints by their DSU root

@@ -3,6 +3,10 @@ import { useWorkbenchStore } from '../../store/useWorkbenchStore';
 import type { GenericEquipmentDefinition } from '../../types/workbench';
 import type { ElectricalNode } from '../../types/connections';
 import { getEndpointKey } from '../../engine/connectivity/endpointGeometry';
+import {
+  BREADBOARD_HOLE_MAP,
+  BREADBOARD_400_HOLES,
+} from '../../engine/connectivity/breadboardTopology';
 
 interface InspectorPanelProps {
   catalog: GenericEquipmentDefinition[];
@@ -21,6 +25,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     isInspectorOpen,
     setInspectorOpen,
     selectedInstanceId,
+    selectedHole,
+    selectHole,
     instances,
     attachments,
     wires,
@@ -31,6 +37,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     updateInstanceRotation,
     removeInstance,
     removeWire,
+    simulationResult,
   } = useWorkbenchStore();
 
   if (!isInspectorOpen) return null;
@@ -39,6 +46,13 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const definition = selectedInstance
     ? catalog.find((def) => def.id === selectedInstance.definitionId)
     : null;
+
+  const simCompState = selectedInstance ? simulationResult?.componentStates[selectedInstance.instanceId] : undefined;
+  const compSubcircuit = selectedInstance
+    ? simulationResult?.subcircuits?.find((sub) =>
+        sub.componentInstanceIds.includes(selectedInstance.instanceId)
+      )
+    : undefined;
 
   const selectedWire = wires.find((w) => w.id === selectedWireId);
 
@@ -250,6 +264,66 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               </div>
             )}
 
+            {/* Live Electrical Simulation Telemetry */}
+            {simCompState && (
+              <div className="p-3 rounded-lg bg-surface-lowest border border-[#4d8eff]/35 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-[#79a9ff] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px]">electric_meter</span>
+                    SIMULATED ELECTRICAL VALUES
+                  </span>
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
+                      simCompState.conducting
+                        ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {simCompState.conducting ? 'CONDUCTING' : 'OFF / OPEN'}
+                  </span>
+                </div>
+
+                {/* Subcircuit Identity Badge */}
+                {compSubcircuit && (
+                  <div className="flex items-center justify-between text-[10px] font-mono bg-surface-high/40 px-2 py-1 rounded text-slate-300">
+                    <span className="text-slate-400">Subcircuit Identity:</span>
+                    <span className="text-emerald-400 font-semibold">{compSubcircuit.subcircuitId}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+                  <div className="p-1.5 rounded bg-surface-high/60">
+                    <div className="text-[10px] text-slate-400">
+                      {selectedInstance.definitionId.includes('dc_source') ? 'Output Current' : 'Current (I)'}
+                    </div>
+                    <div className="text-white font-bold">{(simCompState.currentA * 1000).toFixed(2)} mA</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-surface-high/60">
+                    <div className="text-[10px] text-slate-400">
+                      {selectedInstance.definitionId.includes('dc_source') ? 'Terminal Voltage' : 'Voltage Drop (ΔV)'}
+                    </div>
+                    <div className="text-white font-bold">
+                      {selectedInstance.definitionId.includes('dc_source')
+                        ? `${Number(selectedInstance.properties.voltageV ?? 5.0).toFixed(2)} V`
+                        : `${simCompState.voltageDropV.toFixed(2)} V`}
+                    </div>
+                  </div>
+                  <div className="p-1.5 rounded bg-surface-high/60">
+                    <div className="text-[10px] text-slate-400">
+                      {selectedInstance.definitionId.includes('dc_source') ? 'Power Supplied' : 'Power (P)'}
+                    </div>
+                    <div className="text-white font-bold">{(simCompState.powerDissipationW * 1000).toFixed(1)} mW</div>
+                  </div>
+                  {simCompState.brightness > 0 && (
+                    <div className="p-1.5 rounded bg-surface-high/60">
+                      <div className="text-[10px] text-slate-400">Perceived Light</div>
+                      <div className="text-emerald-300 font-bold">{Math.round(simCompState.brightness * 100)}%</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Physical Terminal Attachments & Breadboard Snapping Status */}
             <div className="space-y-2">
               <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">
@@ -280,11 +354,27 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                   : '#4edea3',
                             }}
                           />
-                          <span className="text-white">{term.label}</span>
+                          <span className="text-white font-medium">{term.label}</span>
                         </div>
-                        <span className="text-[11px] text-primary">
-                          {attachment ? `Plugged: ${attachment.holeId}` : 'Free Floating'}
-                        </span>
+                        {attachment ? (
+                          <button
+                            onClick={() =>
+                              selectHole({
+                                breadboardInstanceId: attachment.breadboardInstanceId,
+                                holeId: attachment.holeId,
+                              })
+                            }
+                            className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-[11px] text-emerald-400 font-semibold flex items-center gap-1 transition-colors"
+                            title="Click to highlight this breadboard hole and its conductive strip"
+                          >
+                            <span className="material-symbols-outlined text-[12px]">login</span>
+                            <span>Hole: {attachment.holeId}</span>
+                          </button>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-surface-high text-[11px] text-slate-400 border border-surface-border">
+                            Free Floating
+                          </span>
+                        )}
                       </div>
                     );
                   })
@@ -292,6 +382,141 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               </div>
             </div>
           </div>
+        ) : selectedHole ? (
+          /* BREADBOARD CONDUCTIVE STRIP INSPECTOR */
+          (() => {
+            const selectedHoleDef = BREADBOARD_HOLE_MAP.get(selectedHole.holeId);
+            if (!selectedHoleDef) return null;
+            const stripHoles = BREADBOARD_400_HOLES.filter(
+              (h) => h.internalStripId === selectedHoleDef.internalStripId
+            );
+            const stripHoleIdSet = new Set(stripHoles.map((sh) => sh.id));
+            const stripAttachments = attachments.filter(
+              (att) =>
+                att.breadboardInstanceId === selectedHole.breadboardInstanceId &&
+                stripHoleIdSet.has(att.holeId)
+            );
+            const stripWires = wires.filter((w) => {
+              const fromMatches =
+                w.from.kind === 'breadboard-hole' &&
+                w.from.breadboardInstanceId === selectedHole.breadboardInstanceId &&
+                stripHoleIdSet.has(w.from.holeId);
+              const toMatches =
+                w.to.kind === 'breadboard-hole' &&
+                w.to.breadboardInstanceId === selectedHole.breadboardInstanceId &&
+                stripHoleIdSet.has(w.to.holeId);
+              return fromMatches || toMatches;
+            });
+
+            const isPowerRail = selectedHoleDef.type === 'power_rail';
+            const stripTitle = isPowerRail
+              ? `${(selectedHoleDef.railLocation || '').toUpperCase()} ${
+                  selectedHoleDef.railType === 'pos' ? 'POSITIVE (+)' : 'NEGATIVE (-)'
+                } POWER RAIL`
+              : `COLUMN ${selectedHoleDef.column} (ROWS ${
+                  ['a', 'b', 'c', 'd', 'e'].includes(selectedHoleDef.row || '') ? 'a–e' : 'f–j'
+                })`;
+
+            return (
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-surface-card border border-primary/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/20 text-primary font-semibold uppercase">
+                      Conductive Strip
+                    </span>
+                    <button
+                      onClick={() => selectHole(null)}
+                      className="text-slate-400 hover:text-white text-xs font-mono"
+                    >
+                      Deselect
+                    </button>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-white font-mono">{stripTitle}</h3>
+                  <div className="text-xs font-mono text-slate-300 space-y-1 bg-surface-lowest p-2 rounded border border-surface-border">
+                    <div>
+                      <span className="text-slate-500">Breadboard:</span>{' '}
+                      <span className="text-primary font-semibold font-mono">
+                        {selectedHole.breadboardInstanceId.slice(0, 16)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Selected Hole:</span>{' '}
+                      <span className="text-tertiary font-semibold">{selectedHole.holeId}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Strip ID:</span> {selectedHoleDef.internalStripId}
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Tie-points:</span> {stripHoles.length} addressable sockets
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plugged Components on this strip */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">
+                    Inserted Components ({stripAttachments.length})
+                  </h4>
+                  {stripAttachments.length === 0 ? (
+                    <div className="p-2 rounded bg-surface-lowest border border-surface-border text-xs text-slate-500 font-mono">
+                      No components plugged into this strip.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {stripAttachments.map((att) => {
+                        const inst = instances.find((i) => i.instanceId === att.instanceId);
+                        const def = inst ? catalog.find((d) => d.id === inst.definitionId) : null;
+                        return (
+                          <div
+                            key={`${att.instanceId}_${att.terminalId}`}
+                            className="p-2 rounded bg-surface-lowest border border-surface-border text-xs flex items-center justify-between font-mono"
+                          >
+                            <span className="text-white">
+                              {def?.name || 'Component'} ({att.terminalId})
+                            </span>
+                            <span className="text-primary font-semibold">{att.holeId}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Connected Wires on this strip */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300">
+                    Connected Jumper Wires ({stripWires.length})
+                  </h4>
+                  {stripWires.length === 0 ? (
+                    <div className="p-2 rounded bg-surface-lowest border border-surface-border text-xs text-slate-500 font-mono">
+                      No jumper wires plugged into this strip.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {stripWires.map((w) => (
+                        <div
+                          key={w.id}
+                          className="p-2 rounded bg-surface-lowest border border-surface-border text-xs flex items-center justify-between font-mono"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full border border-white"
+                              style={{ backgroundColor: w.color }}
+                            />
+                            <span className="text-white">{w.id.slice(0, 10)}</span>
+                          </div>
+                          <span className="text-slate-400 text-[10px]">
+                            {getEndpointKey(w.from)} ↔ {getEndpointKey(w.to)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()
         ) : !selectedWire ? (
           /* Empty Component State */
           <div className="py-8 px-4 text-center space-y-3">

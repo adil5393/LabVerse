@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { UserMode, ViewportTransform, GenericEquipmentInstance } from '../types/workbench';
 import type { JumperWire, TerminalAttachment, ConnectionEndpoint } from '../types/connections';
+import type { CircuitSimulationResult, SimulationVisualSettings } from '../types/simulation';
 
 interface HistorySnapshot {
   instances: GenericEquipmentInstance[];
@@ -27,8 +28,22 @@ interface WorkbenchState {
   selectedWireColor: string;
   activeWireStart: ConnectionEndpoint | null;
 
+  // Selected Breadboard Hole / Conductive Strip Selection
+  selectedHole: { breadboardInstanceId: string; holeId: string } | null;
+  selectHole: (holeRef: { breadboardInstanceId: string; holeId: string } | null) => void;
+
   // Electrical Node Debug Selection
   highlightedNodeId: string | null;
+  setHighlightedNodeId: (nodeId: string | null) => void;
+
+  // Simulation & Visual Feedback State (Milestone D)
+  topologyRevision: number;
+  simulationResult: CircuitSimulationResult | null;
+  simulationSettings: SimulationVisualSettings;
+  setSimulationSettings: (settings: Partial<SimulationVisualSettings>) => void;
+  setSimulationResult: (result: CircuitSimulationResult | null) => void;
+  incrementTopologyRevision: () => void;
+  resetSimulation: () => void;
 
   // History Stacks (Undo/Redo)
   undoStack: HistorySnapshot[];
@@ -68,9 +83,6 @@ interface WorkbenchState {
   updateWireColor: (wireId: string, color: string) => void;
   updateWireEndpoint: (wireId: string, which: 'from' | 'to', newEndpoint: ConnectionEndpoint) => void;
 
-  // Debugging & Highlighting
-  setHighlightedNodeId: (nodeId: string | null) => void;
-
   // Undo / Redo
   pushHistorySnapshot: () => void;
   undo: () => void;
@@ -89,6 +101,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   userMode: 'beginner',
   isInspectorOpen: true,
   selectedInstanceId: null,
+  selectedHole: null,
   instances: [],
   attachments: [],
   wires: [],
@@ -97,6 +110,29 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   selectedWireColor: '#ef4444', // Default red jumper wire
   activeWireStart: null,
   highlightedNodeId: null,
+  topologyRevision: 0,
+  incrementTopologyRevision: () => set((state) => ({ topologyRevision: state.topologyRevision + 1 })),
+  simulationResult: null,
+  simulationSettings: {
+    isRunning: true,
+    showCurrentFlow: true,
+    showVoltage: false,
+    animationSpeed: 1.0,
+  },
+  setSimulationSettings: (newSettings) =>
+    set((state) => ({
+      simulationSettings: { ...state.simulationSettings, ...newSettings },
+    })),
+  setSimulationResult: (result) => set({ simulationResult: result }),
+  resetSimulation: () =>
+    set({
+      simulationSettings: {
+        isRunning: true,
+        showCurrentFlow: true,
+        showVoltage: false,
+        animationSpeed: 1.0,
+      },
+    }),
   undoStack: [],
   redoStack: [],
 
@@ -149,8 +185,25 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   selectInstance: (id) =>
     set({
       selectedInstanceId: id,
-      selectedWireId: id ? null : get().selectedWireId, // Clear wire selection if component selected
+      selectedWireId: id ? null : get().selectedWireId,
+      selectedHole: id ? null : get().selectedHole,
       isInspectorOpen: id ? true : get().isInspectorOpen,
+    }),
+
+  selectHole: (holeRef) =>
+    set((state) => {
+      const isSame =
+        holeRef &&
+        state.selectedHole &&
+        state.selectedHole.breadboardInstanceId === holeRef.breadboardInstanceId &&
+        state.selectedHole.holeId === holeRef.holeId;
+      const nextHole = isSame || !holeRef ? null : holeRef;
+      return {
+        selectedHole: nextHole,
+        selectedInstanceId: nextHole ? null : state.selectedInstanceId,
+        selectedWireId: nextHole ? null : state.selectedWireId,
+        isInspectorOpen: nextHole ? true : state.isInspectorOpen,
+      };
     }),
 
   pushHistorySnapshot: () => {
@@ -174,6 +227,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       instances: [...state.instances, instance],
       selectedInstanceId: instance.instanceId,
       selectedWireId: null,
+      topologyRevision: state.topologyRevision + 1,
     }));
   },
 
@@ -182,6 +236,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     set((state) => ({
       instances: state.instances.filter((inst) => inst.instanceId !== instanceId),
       selectedInstanceId: state.selectedInstanceId === instanceId ? null : state.selectedInstanceId,
+      topologyRevision: state.topologyRevision + 1,
       attachments: state.attachments.filter(
         (att) => att.instanceId !== instanceId && att.breadboardInstanceId !== instanceId
       ),
@@ -247,6 +302,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       instances: state.instances.map((inst) =>
         inst.instanceId === instanceId ? { ...inst, rotationDeg } : inst
       ),
+      topologyRevision: state.topologyRevision + 1,
     }));
   },
 
@@ -257,19 +313,23 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           ? { ...inst, properties: { ...inst.properties, ...properties } }
           : inst
       ),
+      topologyRevision: state.topologyRevision + 1,
     })),
 
   clearWorkbench: () => {
     get().pushHistorySnapshot();
-    set({
+    set((state) => ({
       instances: [],
       attachments: [],
       wires: [],
       selectedInstanceId: null,
       selectedWireId: null,
+      selectedHole: null,
       activeWireStart: null,
       highlightedNodeId: null,
-    });
+      simulationResult: null,
+      topologyRevision: state.topologyRevision + 1,
+    }));
   },
 
   setAttachmentsForInstance: (instanceId, newAttachments) =>
@@ -278,11 +338,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         ...state.attachments.filter((att) => att.instanceId !== instanceId),
         ...newAttachments,
       ],
+      topologyRevision: state.topologyRevision + 1,
     })),
 
   removeAttachmentsForInstance: (instanceId) =>
     set((state) => ({
       attachments: state.attachments.filter((att) => att.instanceId !== instanceId),
+      topologyRevision: state.topologyRevision + 1,
     })),
 
   setWiringMode: (enabled) =>
@@ -305,6 +367,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     set({
       selectedWireId: wireId,
       selectedInstanceId: wireId ? null : get().selectedInstanceId, // Clear component selection if wire selected
+      selectedHole: wireId ? null : get().selectedHole,
       isInspectorOpen: wireId ? true : get().isInspectorOpen,
     }),
 
@@ -314,6 +377,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       wires: [...state.wires, wire],
       activeWireStart: null,
       selectedWireId: wire.id,
+      topologyRevision: state.topologyRevision + 1,
     }));
   },
 
@@ -322,6 +386,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     set((state) => ({
       wires: state.wires.filter((w) => w.id !== wireId),
       selectedWireId: state.selectedWireId === wireId ? null : state.selectedWireId,
+      topologyRevision: state.topologyRevision + 1,
     }));
   },
 
@@ -343,6 +408,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
             }
           : w
       ),
+      topologyRevision: state.topologyRevision + 1,
     }));
   },
 
@@ -352,7 +418,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     }),
 
   undo: () => {
-    const { undoStack, redoStack, instances, wires, attachments } = get();
+    const { undoStack, redoStack, instances, wires, attachments, topologyRevision } = get();
     if (undoStack.length === 0) return;
 
     const previous = undoStack[undoStack.length - 1];
@@ -374,11 +440,12 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       selectedInstanceId: null,
       selectedWireId: null,
       activeWireStart: null,
+      topologyRevision: topologyRevision + 1,
     });
   },
 
   redo: () => {
-    const { redoStack, undoStack, instances, wires, attachments } = get();
+    const { redoStack, undoStack, instances, wires, attachments, topologyRevision } = get();
     if (redoStack.length === 0) return;
 
     const next = redoStack[redoStack.length - 1];
@@ -400,6 +467,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       selectedInstanceId: null,
       selectedWireId: null,
       activeWireStart: null,
+      topologyRevision: topologyRevision + 1,
     });
   },
 }));

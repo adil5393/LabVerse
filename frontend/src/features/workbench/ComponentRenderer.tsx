@@ -2,6 +2,7 @@ import React from 'react';
 import type { GenericEquipmentDefinition, GenericEquipmentInstance } from '../../types/workbench';
 import type { ConnectionEndpoint, TerminalAttachment } from '../../types/connections';
 import { PX_PER_MM } from '../../engine/geometry/coordinates';
+import { endpointKey } from '../../engine/connectivity/endpointGeometry';
 import { BreadboardSVG } from './BreadboardSVG';
 
 interface ComponentRendererProps {
@@ -13,12 +14,18 @@ interface ComponentRendererProps {
   highlightedTerminalIds?: Set<string>;
   highlightedHoleIds?: Set<string>;
   highlightedColor?: string;
+  selectedOccupiedHoleIds?: Set<string>;
+  selectedHoleId?: string | null;
   snapPreviewHoleMap?: Map<string, boolean>;
+  snappedHoleId?: string | null;
   snappedEndpointKey?: string | null;
+  simulationState?: import('../../types/simulation').ComponentSimulationState;
+  faultType?: string;
   onSelect: (instanceId: string) => void;
   onStartDrag: (e: React.PointerEvent, instance: GenericEquipmentInstance) => void;
   onTerminalClick?: (endpoint: ConnectionEndpoint) => void;
   onHoleClick?: (endpoint: ConnectionEndpoint) => void;
+  onSelectHole?: (holeRef: { breadboardInstanceId: string; holeId: string }) => void;
 }
 
 export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
@@ -30,12 +37,18 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   highlightedTerminalIds,
   highlightedHoleIds,
   highlightedColor,
+  selectedOccupiedHoleIds,
+  selectedHoleId,
   snapPreviewHoleMap,
+  snappedHoleId,
   snappedEndpointKey,
+  simulationState,
+  faultType,
   onSelect,
   onStartDrag,
   onTerminalClick,
   onHoleClick,
+  onSelectHole,
 }) => {
   const widthPX = definition.dimensionsMM.width * PX_PER_MM;
   const heightPX = definition.dimensionsMM.height * PX_PER_MM;
@@ -106,13 +119,12 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           isWiringMode={isWiringMode}
           highlightedHoleIds={highlightedHoleIds}
           highlightedColor={highlightedColor}
+          selectedOccupiedHoleIds={selectedOccupiedHoleIds}
+          selectedHoleId={selectedHoleId}
           snapPreviewHoleMap={snapPreviewHoleMap}
-          snappedHoleId={
-            snappedEndpointKey && snappedEndpointKey.startsWith(`hole:${instance.instanceId}:`)
-              ? snappedEndpointKey.split(':')[2]
-              : null
-          }
+          snappedHoleId={snappedHoleId}
           onHoleClick={onHoleClick}
+          onSelectHole={onSelectHole}
         />
       ) : isPowerSupply ? (
         /* DC Bench Power Supply */
@@ -122,9 +134,9 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             height={heightPX}
             rx={5}
             fill="#1c2028"
-            stroke={isSelected ? '#4d8eff' : '#424754'}
-            strokeWidth={isSelected ? '2' : '1.5'}
-            filter="drop-shadow(0 3px 8px rgba(0,0,0,0.5))"
+            stroke={faultType === 'DIRECT_SUPPLY_SHORT' ? '#ef4444' : isSelected ? '#4d8eff' : '#424754'}
+            strokeWidth={faultType === 'DIRECT_SUPPLY_SHORT' ? '2.5' : isSelected ? '2' : '1.5'}
+            filter={faultType === 'DIRECT_SUPPLY_SHORT' ? 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.7))' : 'drop-shadow(0 3px 8px rgba(0,0,0,0.5))'}
           />
           {/* LCD Voltmeter Display */}
           <rect
@@ -134,20 +146,20 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             height={20}
             rx={3}
             fill="#090d14"
-            stroke="#293140"
+            stroke={faultType === 'DIRECT_SUPPLY_SHORT' ? '#dc2626' : '#293140'}
             strokeWidth="1"
           />
           <text
             x={centerX}
             y={22}
-            fill="#4edea3"
-            fontSize="11"
+            fill={faultType === 'DIRECT_SUPPLY_SHORT' ? '#ef4444' : '#4edea3'}
+            fontSize="10"
             fontFamily="JetBrains Mono"
             fontWeight="bold"
             textAnchor="middle"
             pointerEvents="none"
           >
-            {Number(instance.properties.voltageV || 5.0).toFixed(1)} V DC
+            {faultType === 'DIRECT_SUPPLY_SHORT' ? '🚨 SHORT FAULT' : `${Number(instance.properties.voltageV || 5.0).toFixed(1)} V DC`}
           </text>
 
           <text
@@ -274,17 +286,86 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                   strokeLinecap="round"
                 />
 
-                {/* LED Dome Body */}
-                <path
-                  d={`M ${domeX} ${collarY}
-                      L ${domeX} ${domeHeight * 0.45}
-                      A ${domeWidth / 2} ${domeHeight * 0.45} 0 0 1 ${domeX + domeWidth} ${domeHeight * 0.45}
-                      L ${domeX + domeWidth} ${collarY} Z`}
-                  fill="#dc2626"
-                  stroke="#fca5a5"
-                  strokeWidth="1"
-                  filter="drop-shadow(0 2px 6px rgba(220, 38, 38, 0.55))"
-                />
+                {/* Simulated Visual Illumination */}
+                {(() => {
+                  const isConducting = simulationState?.conducting ?? false;
+                  const brightness = simulationState?.brightness ?? 0;
+                  const isOvercurrent = simulationState?.overcurrent ?? false;
+                  const isReversed = faultType === 'REVERSED_LED';
+
+                  // Off: dark unlit translucent ruby plastic (#450a0a).
+                  // Conducting: radiant incandescent red/coral scaled to non-linear brightness.
+                  const domeFill = isConducting
+                    ? `rgb(${Math.min(255, Math.round(220 + 35 * brightness))}, ${Math.round(25 + 55 * brightness)}, ${Math.round(25 + 55 * brightness)})`
+                    : '#450a0a';
+
+                  const domeStroke = isConducting ? '#fecaca' : '#7f1d1d';
+                  const domeFilter = isConducting
+                    ? `drop-shadow(0 0 ${Math.round(4 + 16 * brightness)}px rgba(239, 68, 68, ${0.45 + 0.55 * brightness}))`
+                    : undefined;
+
+                  return (
+                    <>
+                      {/* LED Dome Body */}
+                      <path
+                        d={`M ${domeX} ${collarY}
+                            L ${domeX} ${domeHeight * 0.45}
+                            A ${domeWidth / 2} ${domeHeight * 0.45} 0 0 1 ${domeX + domeWidth} ${domeHeight * 0.45}
+                            L ${domeX + domeWidth} ${collarY} Z`}
+                        fill={domeFill}
+                        stroke={domeStroke}
+                        strokeWidth={isConducting ? 1.5 : 1}
+                        style={{
+                          filter: domeFilter,
+                          transition: 'fill 0.25s ease-out, filter 0.25s ease-out',
+                        }}
+                      />
+
+                      {/* Internal Luminous Lens Flare when conducting */}
+                      {isConducting && (
+                        <circle
+                          cx={domeX + domeWidth / 2}
+                          cy={domeHeight * 0.42}
+                          r={Math.max(1, domeWidth * 0.28 * brightness)}
+                          fill="rgba(255, 255, 255, 0.75)"
+                          style={{ filter: 'blur(1.5px)' }}
+                        />
+                      )}
+
+                      {/* Overcurrent Warning Indicator Halo */}
+                      {isOvercurrent && (
+                        <g>
+                          <circle
+                            cx={domeX + domeWidth / 2}
+                            cy={domeHeight * 0.45}
+                            r={domeWidth * 0.75}
+                            fill="none"
+                            stroke="#f59e0b"
+                            strokeWidth="2"
+                            strokeDasharray="4 3"
+                            className="animate-spin origin-center"
+                          />
+                          <g transform={`translate(${centerX}, -14)`}>
+                            <rect x="-35" y="-7" width="70" height="14" rx="4" fill="#78350f" stroke="#f59e0b" strokeWidth="1" />
+                            <text x="0" y="3" fill="#fef3c7" fontSize="7.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                              ⚠️ OVERCURRENT
+                            </text>
+                          </g>
+                        </g>
+                      )}
+
+                      {/* Reversed Bias Warning Badge */}
+                      {isReversed && (
+                        <g transform={`translate(${centerX}, -14)`}>
+                          <rect x="-32" y="-7" width="64" height="14" rx="4" fill="#7f1d1d" stroke="#ef4444" strokeWidth="1" />
+                          <text x="0" y="3" fill="#fee2e2" fontSize="7.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                            🔄 REVERSED
+                          </text>
+                        </g>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* Collar Rim with flat notch on Cathode side */}
                 <rect
@@ -372,9 +453,19 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         definition.terminals.map((term) => {
           const tx = term.relativePositionMM.x * PX_PER_MM;
           const ty = term.relativePositionMM.y * PX_PER_MM;
-          const termKey = `term:${instance.instanceId}:${term.id}`;
+          const termKey = endpointKey({
+            kind: 'component-terminal',
+            instanceId: instance.instanceId,
+            terminalId: term.id,
+          });
           const isTermHighlighted = highlightedTerminalIds?.has(term.id);
           const isTermSnapped = snappedEndpointKey === termKey;
+
+          // Check if this terminal is physically attached/plugged into a breadboard hole
+          const attachment = attachments.find(
+            (att) => att.instanceId === instance.instanceId && att.terminalId === term.id
+          );
+          const isInserted = Boolean(attachment);
 
           return (
             <g
@@ -394,7 +485,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               }}
               className="cursor-crosshair group/term"
             >
-              {/* Active snap preview target halo */}
+              {/* Active snap preview target halo during wire drawing */}
               {isTermSnapped && (
                 <circle
                   cx={0}
@@ -408,7 +499,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 />
               )}
 
-              {/* Outer pulsing ring when highlighted */}
+              {/* Outer pulsing ring when highlighted by inspector electrical node */}
               {isTermHighlighted && !isTermSnapped && (
                 <circle
                   cx={0}
@@ -423,26 +514,46 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 />
               )}
 
+              {/* Inserted pin socket ring for components inserted into breadboard */}
+              {isInserted && !isPowerSupply && (
+                <circle
+                  cx={0}
+                  cy={0}
+                  r={5.5}
+                  fill="rgba(34, 197, 94, 0.25)"
+                  stroke="#22c55e"
+                  strokeWidth="1.2"
+                  pointerEvents="none"
+                />
+              )}
+
               {/* Terminal contact disc - steady transition without geometry scaling to prevent hover flickering */}
               <circle
                 cx={0}
                 cy={0}
-                r={isPowerSupply ? 7 : 4}
+                r={isPowerSupply ? 7 : isInserted ? 3.5 : 4}
                 fill={
                   isTermSnapped
                     ? '#22c55e'
                     : isTermHighlighted
                     ? highlightedColor || '#4edea3'
+                    : isInserted
+                    ? '#22c55e'
                     : term.polarity === 'positive'
                     ? '#ef4444'
                     : term.polarity === 'negative'
                     ? '#1f2937'
                     : '#475569'
                 }
-                stroke={isTermSnapped ? '#86efac' : '#ffffff'}
-                strokeWidth={isTermSnapped ? '2' : '1.2'}
+                stroke={isTermSnapped ? '#86efac' : isInserted ? '#bbf7d0' : '#ffffff'}
+                strokeWidth={isTermSnapped || isInserted ? '1.8' : '1.2'}
                 className="transition-colors group-hover/term:stroke-[#4edea3]"
               />
+
+              {/* Center metallic contact dot for inserted pins */}
+              {isInserted && !isPowerSupply && (
+                <circle cx={0} cy={0} r={1.2} fill="#ffffff" pointerEvents="none" />
+              )}
 
               {/* Binding post label for power supply */}
               {isPowerSupply && (
@@ -460,7 +571,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 </text>
               )}
 
-              <title>{`${definition.name}: ${term.label}`}</title>
+              <title>{`${definition.name}: ${term.label}${isInserted ? ` (Plugged into ${attachment?.holeId})` : ' (Free Floating)'}`}</title>
 
               {/* Generous transparent hit area (28px diameter) so clicking is never frustrating */}
               <circle cx={0} cy={0} r={14} fill="transparent" />

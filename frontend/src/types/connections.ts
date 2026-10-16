@@ -3,17 +3,19 @@
  * Supports Breadboard holes, Component terminals, and Direct Wiring.
  */
 
+export type BreadboardHoleRef = {
+  kind: 'breadboard-hole';
+  breadboardInstanceId: string;
+  holeId: string;
+};
+
 export type ConnectionEndpoint =
   | {
       kind: 'component-terminal';
       instanceId: string;
       terminalId: string;
     }
-  | {
-      kind: 'breadboard-hole';
-      breadboardInstanceId: string;
-      holeId: string;
-    }
+  | BreadboardHoleRef
   | {
       kind: 'junction';
       junctionId: string;

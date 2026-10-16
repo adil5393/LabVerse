@@ -1,7 +1,8 @@
 import React from 'react';
 import type { JumperWire, ConnectionEndpoint } from '../../types/connections';
 import type { GenericEquipmentDefinition, GenericEquipmentInstance } from '../../types/workbench';
-import { resolveEndpointWorldPosition } from '../../engine/connectivity/endpointGeometry';
+import { resolveEndpointWorldPosition, endpointKey } from '../../engine/connectivity/endpointGeometry';
+import { getVoltageColor } from '../../engine/simulation/voltageColor';
 import { PX_PER_MM } from '../../engine/geometry/coordinates';
 
 interface WireRendererProps {
@@ -15,6 +16,9 @@ interface WireRendererProps {
   selectedWireId: string | null;
   reconnectingWire?: { wireId: string; which: 'from' | 'to' } | null;
   showDiagnostics?: boolean;
+  showVoltage?: boolean;
+  nodeVoltages?: Record<string, number>;
+  connectivityMap?: Map<string, string>;
   onSelectWire?: (wireId: string) => void;
   onStartReconnect?: (wireId: string, which: 'from' | 'to', e: React.PointerEvent) => void;
 }
@@ -30,6 +34,9 @@ export const WireRenderer: React.FC<WireRendererProps> = ({
   selectedWireId,
   reconnectingWire,
   showDiagnostics,
+  showVoltage,
+  nodeVoltages,
+  connectivityMap,
   onSelectWire,
   onStartReconnect,
 }) => {
@@ -132,21 +139,32 @@ export const WireRenderer: React.FC<WireRendererProps> = ({
             )}
 
             {/* Main insulated wire core */}
-            <path
-              d={pathData}
-              fill="none"
-              stroke={wire.color}
-              strokeWidth="3"
-              strokeLinecap="round"
-              pointerEvents={isWiringOrReconnecting ? 'none' : 'stroke'}
-              className="transition-colors group-hover/wire:brightness-125 cursor-pointer"
-              onClick={(e) => {
-                if (!isWiringOrReconnecting) {
-                  e.stopPropagation();
-                  onSelectWire?.(wire.id);
-                }
-              }}
-            />
+            {(() => {
+              const fromKey = endpointKey(wire.from);
+              const nodeId = connectivityMap?.get(fromKey);
+              const wireVoltage = nodeId ? nodeVoltages?.[nodeId] : undefined;
+              const effectiveColor = showVoltage && wireVoltage !== undefined
+                ? getVoltageColor(wireVoltage)
+                : wire.color;
+
+              return (
+                <path
+                  d={pathData}
+                  fill="none"
+                  stroke={effectiveColor}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  pointerEvents={isWiringOrReconnecting ? 'none' : 'stroke'}
+                  className="transition-colors group-hover/wire:brightness-125 cursor-pointer"
+                  onClick={(e) => {
+                    if (!isWiringOrReconnecting) {
+                      e.stopPropagation();
+                      onSelectWire?.(wire.id);
+                    }
+                  }}
+                />
+              );
+            })()}
 
             {/* Metal crimp contacts at endpoints: STRICTLY pointerEvents="none" to prevent terminal hover flickering */}
             <circle cx={x1} cy={y1} r="3" fill="#cbd5e1" stroke="#334155" strokeWidth="0.8" pointerEvents="none" />

@@ -6,6 +6,11 @@ import { EquipmentTray } from './EquipmentTray';
 import { CanvasContainer } from './CanvasContainer';
 import { ComponentRenderer } from './ComponentRenderer';
 import { WireRenderer } from './WireRenderer';
+import { CurrentFlowOverlay } from './CurrentFlowOverlay';
+import { VoltageBadgeOverlay } from './VoltageBadgeOverlay';
+import { SimulationToolbar } from './SimulationToolbar';
+import { SimulationFaultBanner } from './SimulationFaultBanner';
+import { simulateCircuit } from '../../engine/simulation/simulationClient';
 import { InspectorPanel } from './InspectorPanel';
 import { PHYSICS_ELECTRICITY_CATALOG } from '../../subjects/physics/equipmentCatalog';
 import { useWorkbenchStore } from '../../store/useWorkbenchStore';
@@ -14,8 +19,13 @@ import {
   calculateInitialPlacement,
 } from '../../engine/geometry/coordinates';
 import { detectBreadboardSnap, type SnapResult } from '../../engine/connectivity/breadboardSnapping';
+import {
+  BREADBOARD_HOLE_MAP,
+  BREADBOARD_400_HOLES,
+} from '../../engine/connectivity/breadboardTopology';
 import { computeConnectivityGraph } from '../../engine/connectivity/connectivityGraph';
 import {
+  endpointKey,
   getEndpointKey,
   findNearestEndpoint,
   type NearestEndpointResult,
@@ -40,6 +50,7 @@ export const WorkbenchPage: React.FC = () => {
     viewport,
     selectedInstanceId,
     selectedWireId,
+    selectedHole,
     snapToGrid,
     isWiringMode,
     selectedWireColor,
@@ -48,6 +59,7 @@ export const WorkbenchPage: React.FC = () => {
     setWiringMode,
     setActiveWireStart,
     selectWire,
+    selectHole,
     addWire,
     removeWire,
     updateWireEndpoint,
@@ -58,6 +70,10 @@ export const WorkbenchPage: React.FC = () => {
     setAttachmentsForInstance,
     removeAttachmentsForInstance,
     clearWorkbench,
+    simulationResult,
+    simulationSettings,
+    setSimulationResult,
+    topologyRevision,
   } = useWorkbenchStore();
 
   const [notification, setNotification] = useState<string | null>(null);
@@ -66,6 +82,20 @@ export const WorkbenchPage: React.FC = () => {
   const [snappedTarget, setSnappedTarget] = useState<NearestEndpointResult | null>(null);
   const [snapPreview, setSnapPreview] = useState<SnapResult | null>(null);
   const [reconnectingWire, setReconnectingWire] = useState<{ wireId: string; which: 'from' | 'to' } | null>(null);
+
+  // Authoritative simulation calculation whenever circuit topology or components change
+  useEffect(() => {
+    let isCancelled = false;
+    const store = useWorkbenchStore.getState();
+    simulateCircuit(store.instances, PHYSICS_ELECTRICITY_CATALOG, store.attachments, store.wires).then((res) => {
+      if (!isCancelled) {
+        setSimulationResult(res);
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [topologyRevision, setSimulationResult]);
 
   // Authoritative DOM references for SVG matrix inversion
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -91,10 +121,9 @@ export const WorkbenchPage: React.FC = () => {
     return computeConnectivityGraph(instances, PHYSICS_ELECTRICITY_CATALOG, attachments, wires);
   }, [instances, attachments, wires]);
 
-  // Sets of highlighted endpoints when an electrical node is clicked in Inspector
-  const { highlightedTerminalIds, highlightedHoleIds, highlightedColor } = useMemo(() => {
-    const termIds = new Set<string>();
-    const holeIds = new Set<string>();
+  // Canonical endpoint keys highlighted when an electrical node is clicked in Inspector or a hole/strip is selected
+  const { highlightedEndpointKeys, highlightedColor } = useMemo(() => {
+    const epKeys = new Set<string>();
     let color = '#4edea3';
 
     if (highlightedNodeId) {
@@ -102,21 +131,33 @@ export const WorkbenchPage: React.FC = () => {
       if (node) {
         color = node.color;
         node.endpoints.forEach((ep) => {
-          if (ep.kind === 'component-terminal') {
-            termIds.add(ep.terminalId);
-          } else if (ep.kind === 'breadboard-hole') {
-            holeIds.add(ep.holeId);
-          }
+          epKeys.add(endpointKey(ep));
         });
+      }
+    } else if (selectedHole) {
+      const selHoleDef = BREADBOARD_HOLE_MAP.get(selectedHole.holeId);
+      if (selHoleDef) {
+        color = '#38bdf8';
+        // ONLY holes strictly on selectedHole.breadboardInstanceId sharing that strip
+        BREADBOARD_400_HOLES
+          .filter((h) => h.internalStripId === selHoleDef.internalStripId)
+          .forEach((h) => {
+            epKeys.add(
+              endpointKey({
+                kind: 'breadboard-hole',
+                breadboardInstanceId: selectedHole.breadboardInstanceId,
+                holeId: h.id,
+              })
+            );
+          });
       }
     }
 
     return {
-      highlightedTerminalIds: termIds,
-      highlightedHoleIds: holeIds,
+      highlightedEndpointKeys: epKeys,
       highlightedColor: color,
     };
-  }, [highlightedNodeId, connectivityGraph.nodes]);
+  }, [highlightedNodeId, selectedHole, connectivityGraph.nodes]);
 
   // Snap preview hole map for breadboard rendering
   const snapPreviewHoleMap = useMemo(() => {
@@ -420,6 +461,11 @@ export const WorkbenchPage: React.FC = () => {
     (e: React.PointerEvent, targetInstance: GenericEquipmentInstance) => {
       if (isWiringMode || interactionState !== 'idle') return;
 
+      const startClientX = e.clientX;
+      const startClientY = e.clientY;
+      const initialPosMM = { ...targetInstance.positionMM };
+      const initialAtts = attachments.filter((a) => a.instanceId === targetInstance.instanceId);
+
       const initialWorld = pointerToWorld(
         e.clientX,
         e.clientY,
@@ -437,10 +483,38 @@ export const WorkbenchPage: React.FC = () => {
         (d) => d.id === targetInstance.definitionId
       );
 
+      let isDragging = false;
       let latestSnapResult: SnapResult | null = null;
-      setInteractionState('dragging-component');
+
+      const cleanupListeners = () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('pointercancel', handlePointerUp);
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+
+      const handleKeyDown = (keyEvt: KeyboardEvent) => {
+        if (keyEvt.key === 'Escape') {
+          keyEvt.preventDefault();
+          cleanupListeners();
+          if (isDragging) {
+            updateInstancePosition(targetInstance.instanceId, initialPosMM);
+            setAttachmentsForInstance(targetInstance.instanceId, initialAtts);
+            showNotification('Drag cancelled');
+          }
+          setSnapPreview(null);
+          setInteractionState('idle');
+        }
+      };
 
       const handlePointerMove = (moveEvt: PointerEvent) => {
+        const distPx = Math.hypot(moveEvt.clientX - startClientX, moveEvt.clientY - startClientY);
+        if (!isDragging) {
+          if (distPx < 5) return; // Ignore jitter below 5px threshold
+          isDragging = true;
+          setInteractionState('dragging-component');
+        }
+
         const currentWorld = pointerToWorld(
           moveEvt.clientX,
           moveEvt.clientY,
@@ -486,6 +560,15 @@ export const WorkbenchPage: React.FC = () => {
       };
 
       const handlePointerUp = () => {
+        cleanupListeners();
+
+        if (!isDragging) {
+          // Pure click / selection - PRESERVE all existing attachments intact!
+          selectInstance(targetInstance.instanceId);
+          setInteractionState('idle');
+          return;
+        }
+
         // Commit snap attachments or detachment
         if (latestSnapResult && latestSnapResult.isValid) {
           const newAtts = latestSnapResult.attachments.map((a) => ({
@@ -502,14 +585,12 @@ export const WorkbenchPage: React.FC = () => {
 
         setSnapPreview(null);
         setInteractionState('idle');
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-        window.removeEventListener('pointercancel', handlePointerUp);
       };
 
       window.addEventListener('pointermove', handlePointerMove);
       window.addEventListener('pointerup', handlePointerUp);
       window.addEventListener('pointercancel', handlePointerUp);
+      window.addEventListener('keydown', handleKeyDown);
     },
     [
       isWiringMode,
@@ -518,6 +599,7 @@ export const WorkbenchPage: React.FC = () => {
       snapToGrid,
       instances,
       attachments,
+      selectInstance,
       updateInstancePosition,
       setAttachmentsForInstance,
       removeAttachmentsForInstance,
@@ -625,6 +707,72 @@ export const WorkbenchPage: React.FC = () => {
             );
             if (!definition) return null;
 
+            const isBreadboard = definition.id.includes('breadboard');
+
+            // 1. Highlighted holes strictly on THIS breadboard instance
+            const boardHighlightedHoleIds = new Set<string>();
+            if (isBreadboard) {
+              BREADBOARD_400_HOLES.forEach((h) => {
+                const k = endpointKey({
+                  kind: 'breadboard-hole',
+                  breadboardInstanceId: instance.instanceId,
+                  holeId: h.id,
+                });
+                if (highlightedEndpointKeys.has(k)) {
+                  boardHighlightedHoleIds.add(h.id);
+                }
+              });
+            }
+
+            // 2. Highlighted terminals strictly on THIS component instance
+            const compHighlightedTerminalIds = new Set<string>();
+            if (!isBreadboard) {
+              definition.terminals.forEach((term) => {
+                const k = endpointKey({
+                  kind: 'component-terminal',
+                  instanceId: instance.instanceId,
+                  terminalId: term.id,
+                });
+                if (highlightedEndpointKeys.has(k)) {
+                  compHighlightedTerminalIds.add(term.id);
+                }
+              });
+            }
+
+            // 3. Selected hole strictly on THIS breadboard instance
+            const boardSelectedHoleId =
+              selectedHole?.breadboardInstanceId === instance.instanceId ? selectedHole.holeId : null;
+
+            // 4. Snapped hole during wire drawing strictly on THIS breadboard instance
+            const boardSnappedHoleId =
+              snappedTarget?.endpoint.kind === 'breadboard-hole' &&
+              snappedTarget.endpoint.breadboardInstanceId === instance.instanceId
+                ? snappedTarget.endpoint.holeId
+                : null;
+
+            // 5. Snap preview holes strictly on THIS breadboard instance (during component dragging)
+            const boardSnapPreviewMap =
+              snapPreview?.breadboardInstanceId === instance.instanceId ? snapPreviewHoleMap : undefined;
+
+            // 6. Occupied holes by selected component strictly on THIS breadboard instance
+            const boardOccupiedHoles = new Set<string>();
+            if (selectedInstanceId) {
+              attachments
+                .filter(
+                  (att) =>
+                    att.instanceId === selectedInstanceId &&
+                    att.breadboardInstanceId === instance.instanceId
+                )
+                .forEach((att) => boardOccupiedHoles.add(att.holeId));
+            }
+
+            const simState = simulationResult?.componentStates[instance.instanceId];
+            const compFault = simulationResult?.faults.find(
+              (f) =>
+                f.affectedComponentId === instance.instanceId ||
+                (instance.definitionId.includes('dc_source') && f.type === 'DIRECT_SUPPLY_SHORT')
+            );
+
             return (
               <ComponentRenderer
                 key={instance.instanceId}
@@ -633,11 +781,16 @@ export const WorkbenchPage: React.FC = () => {
                 isSelected={selectedInstanceId === instance.instanceId}
                 isWiringMode={isWiringMode}
                 attachments={attachments}
-                highlightedTerminalIds={highlightedTerminalIds}
-                highlightedHoleIds={highlightedHoleIds}
+                highlightedTerminalIds={compHighlightedTerminalIds}
+                highlightedHoleIds={boardHighlightedHoleIds}
                 highlightedColor={highlightedColor}
-                snapPreviewHoleMap={snapPreviewHoleMap}
+                selectedOccupiedHoleIds={boardOccupiedHoles}
+                selectedHoleId={boardSelectedHoleId}
+                snapPreviewHoleMap={boardSnapPreviewMap}
+                snappedHoleId={boardSnappedHoleId}
                 snappedEndpointKey={snappedTarget?.key}
+                simulationState={simState}
+                faultType={compFault?.type}
                 onSelect={(id) => {
                   selectWire(null);
                   selectInstance(id);
@@ -645,6 +798,7 @@ export const WorkbenchPage: React.FC = () => {
                 onStartDrag={handleStartDrag}
                 onTerminalClick={handleEndpointClick}
                 onHoleClick={handleEndpointClick}
+                onSelectHole={selectHole}
               />
             );
           })}
@@ -661,11 +815,33 @@ export const WorkbenchPage: React.FC = () => {
             selectedWireId={selectedWireId}
             reconnectingWire={reconnectingWire}
             showDiagnostics={showDiagnostics}
+            showVoltage={simulationSettings.showVoltage}
+            nodeVoltages={simulationResult?.nodeVoltages}
+            connectivityMap={connectivityGraph.endpointToNodeMap}
             onSelectWire={(id) => {
               selectInstance(null);
               selectWire(id);
             }}
             onStartReconnect={handleStartReconnect}
+          />
+
+          {/* Layer 3: Conventional Current Flow Particle Animation Layer */}
+          <CurrentFlowOverlay
+            wires={wires}
+            instances={instances}
+            catalog={PHYSICS_ELECTRICITY_CATALOG}
+            simulationResult={simulationResult}
+            simulationSettings={simulationSettings}
+            connectivityMap={connectivityGraph.endpointToNodeMap}
+          />
+
+          {/* Layer 4: Voltage Measurements & Delta-V Badges Layer */}
+          <VoltageBadgeOverlay
+            instances={instances}
+            catalog={PHYSICS_ELECTRICITY_CATALOG}
+            simulationResult={simulationResult}
+            simulationSettings={simulationSettings}
+            connectivityMap={connectivityGraph.endpointToNodeMap}
           />
 
           {/* Empty Canvas Initial Prompt */}
@@ -714,6 +890,12 @@ export const WorkbenchPage: React.FC = () => {
             </g>
           )}
         </CanvasContainer>
+
+        {/* Simulation Controls Toolbar (Milestone D) */}
+        <SimulationToolbar />
+
+        {/* Educational Simulation Fault Feedback Banner */}
+        <SimulationFaultBanner faults={simulationResult?.faults || []} />
 
         {/* Right: Contextual Inspector Sidebar */}
         <InspectorPanel

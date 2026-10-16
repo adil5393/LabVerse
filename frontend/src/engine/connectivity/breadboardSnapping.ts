@@ -67,7 +67,12 @@ export function detectBreadboardSnap(
 
   if (!primaryWorldPos || !secondaryWorldPos) return null;
 
-  // Check each breadboard
+  // Check each breadboard and collect candidate snap results
+  const candidates: {
+    result: SnapResult;
+    primaryDistance: number;
+  }[] = [];
+
   for (const bb of breadboards) {
     // Quick bounding box check with generous margin
     const bbMargin = 10;
@@ -126,19 +131,23 @@ export function detectBreadboardSnap(
       }
     }
 
-    // If secondary terminal does not land precisely on a breadboard hole, reject snap
+    // If secondary terminal does not land precisely on a breadboard hole, record invalid candidate
     if (!matchingHole2 || !matchingHole2WorldPos) {
-      return {
-        isValid: false,
-        snappedPositionMM: targetPositionMM,
-        breadboardInstanceId: bb.instanceId,
-        attachments: [],
-        targetHoles: [{ hole: nearestHole1, worldPos: nearestHole1WorldPos }],
-        rejectReason: 'Component pin spacing or orientation does not align with breadboard hole grid.',
-      };
+      candidates.push({
+        result: {
+          isValid: false,
+          snappedPositionMM: targetPositionMM,
+          breadboardInstanceId: bb.instanceId,
+          attachments: [],
+          targetHoles: [{ hole: nearestHole1, worldPos: nearestHole1WorldPos }],
+          rejectReason: 'Component pin spacing or orientation does not align with breadboard hole grid.',
+        },
+        primaryDistance: minDistance1,
+      });
+      continue;
     }
 
-    // Check hole occupancy (excluding self)
+    // Check hole occupancy strictly on THIS breadboard instance (excluding self)
     const occupiedHoles = new Set(
       currentAttachments
         .filter((att) => att.instanceId !== movingInstance.instanceId && att.breadboardInstanceId === bb.instanceId)
@@ -149,37 +158,55 @@ export function detectBreadboardSnap(
     const isHole2Occupied = occupiedHoles.has(matchingHole2.id);
 
     if (isHole1Occupied || isHole2Occupied) {
-      return {
-        isValid: false,
-        snappedPositionMM: targetPositionMM,
+      candidates.push({
+        result: {
+          isValid: false,
+          snappedPositionMM: targetPositionMM,
+          breadboardInstanceId: bb.instanceId,
+          attachments: [],
+          targetHoles: [
+            { hole: nearestHole1, worldPos: nearestHole1WorldPos },
+            { hole: matchingHole2, worldPos: matchingHole2WorldPos },
+          ],
+          rejectReason: 'Target breadboard hole is already occupied by another component pin.',
+        },
+        primaryDistance: minDistance1,
+      });
+      continue;
+    }
+
+    // Rigid snap succeeded on this breadboard!
+    candidates.push({
+      result: {
+        isValid: true,
+        snappedPositionMM: {
+          x: Math.round((targetPositionMM.x + deltaX) * 100) / 100,
+          y: Math.round((targetPositionMM.y + deltaY) * 100) / 100,
+        },
         breadboardInstanceId: bb.instanceId,
-        attachments: [],
+        attachments: [
+          { terminalId: primaryTerm.id, holeId: nearestHole1.id },
+          { terminalId: secondaryTerm.id, holeId: matchingHole2.id },
+        ],
         targetHoles: [
           { hole: nearestHole1, worldPos: nearestHole1WorldPos },
           { hole: matchingHole2, worldPos: matchingHole2WorldPos },
         ],
-        rejectReason: 'Target breadboard hole is already occupied by another component pin.',
-      };
-    }
-
-    // Rigid snap succeeded!
-    return {
-      isValid: true,
-      snappedPositionMM: {
-        x: Math.round((targetPositionMM.x + deltaX) * 100) / 100,
-        y: Math.round((targetPositionMM.y + deltaY) * 100) / 100,
       },
-      breadboardInstanceId: bb.instanceId,
-      attachments: [
-        { terminalId: primaryTerm.id, holeId: nearestHole1.id },
-        { terminalId: secondaryTerm.id, holeId: matchingHole2.id },
-      ],
-      targetHoles: [
-        { hole: nearestHole1, worldPos: nearestHole1WorldPos },
-        { hole: matchingHole2, worldPos: matchingHole2WorldPos },
-      ],
-    };
+      primaryDistance: minDistance1,
+    });
   }
 
-  return null;
+  if (candidates.length === 0) return null;
+
+  // Prioritize valid snaps first, sorted by closest primary distance
+  const validCandidates = candidates.filter((c) => c.result.isValid);
+  if (validCandidates.length > 0) {
+    validCandidates.sort((a, b) => a.primaryDistance - b.primaryDistance);
+    return validCandidates[0].result;
+  }
+
+  // Otherwise return the closest candidate's rejection reason
+  candidates.sort((a, b) => a.primaryDistance - b.primaryDistance);
+  return candidates[0].result;
 }

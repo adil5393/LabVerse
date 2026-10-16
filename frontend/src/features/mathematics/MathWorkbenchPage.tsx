@@ -71,6 +71,9 @@ export const MathWorkbenchPage: React.FC = () => {
         case 'm':
           setTool('distance');
           break;
+        case 'd':
+          setTool('draw');
+          break;
         case 'e':
           setTool('eraser');
           break;

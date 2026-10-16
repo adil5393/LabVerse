@@ -19,6 +19,8 @@ import type {
   DistanceMeasurement,
   MeasurementTriangleMode,
   MathDefaultColors,
+  FreehandStroke,
+  DrawSettings,
 } from '../engine/mathematics/types';
 import { DEFAULT_MATH_COLORS } from '../engine/mathematics/appearance';
 import {
@@ -36,6 +38,8 @@ interface HistorySnapshot {
   measurementOrder: string[];
   selectedMeasurementId: string | null;
   activeMeasurement: ActiveMeasurement | null;
+  drawings: Record<string, FreehandStroke>;
+  drawingOrder: string[];
 }
 
 interface MathState {
@@ -60,6 +64,11 @@ interface MathState {
   measurements: Record<string, DistanceMeasurement>;
   measurementOrder: string[];
   selectedMeasurementId: string | null;
+
+  // Freehand Drawing & Annotation Layer
+  drawings: Record<string, FreehandStroke>;
+  drawingOrder: string[];
+  drawSettings: DrawSettings;
 
   // Appearance & Default Creation Colors
   defaultColors: MathDefaultColors;
@@ -97,6 +106,12 @@ interface MathState {
   setObjectColor: (id: string, color: string) => void;
   setMeasurementColor: (id: string, color: string) => void;
   resetObjectColorToDefault: (id: string) => void;
+
+  // Drawing Actions
+  addStroke: (stroke: FreehandStroke) => void;
+  deleteStrokes: (strokeIds: string[]) => void;
+  clearAllDrawings: () => void;
+  setDrawSettings: (settings: Partial<DrawSettings>) => void;
 
   // Construction State Machine Actions
   startConstruction: (firstPointId: string) => void;
@@ -146,6 +161,8 @@ function createSnapshot(state: {
   measurementOrder?: string[];
   selectedMeasurementId?: string | null;
   activeMeasurement?: ActiveMeasurement | null;
+  drawings?: Record<string, FreehandStroke>;
+  drawingOrder?: string[];
 }): HistorySnapshot {
   return {
     objects: JSON.parse(JSON.stringify(state.objects)),
@@ -155,6 +172,8 @@ function createSnapshot(state: {
     measurementOrder: [...(state.measurementOrder || [])],
     selectedMeasurementId: state.selectedMeasurementId || null,
     activeMeasurement: state.activeMeasurement ? { ...state.activeMeasurement } : null,
+    drawings: JSON.parse(JSON.stringify(state.drawings || {})),
+    drawingOrder: [...(state.drawingOrder || [])],
   };
 }
 
@@ -203,6 +222,13 @@ function initializeExperiment(experiment: MathExperiment) {
     measurements: initialMeasurements,
     measurementOrder: initialMeasurementOrder,
     selectedMeasurementId: null,
+    drawings: {} as Record<string, FreehandStroke>,
+    drawingOrder: [] as string[],
+    drawSettings: {
+      mode: 'pen' as const,
+      color: '#38bdf8',
+      width: 4,
+    },
     defaultColors: { ...DEFAULT_MATH_COLORS },
     activeMeasurement: {
       pointAId: 'pt_A',
@@ -742,9 +768,66 @@ export const useMathStore = create<MathState>((set, get) => ({
     }
   },
 
+  // Drawing Actions
+  addStroke: (stroke) => {
+    const state = get();
+    const snapshot = createSnapshot(state);
+    set({
+      drawings: { ...state.drawings, [stroke.id]: stroke },
+      drawingOrder: [...state.drawingOrder, stroke.id],
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  deleteStrokes: (strokeIds) => {
+    const state = get();
+    const idsToDelete = strokeIds.filter((id) => Boolean(state.drawings[id]));
+    if (idsToDelete.length === 0) return;
+
+    const snapshot = createSnapshot(state);
+    const newDrawings = { ...state.drawings };
+    for (const id of idsToDelete) {
+      delete newDrawings[id];
+    }
+    const deleteSet = new Set(idsToDelete);
+    const newOrder = state.drawingOrder.filter((id) => !deleteSet.has(id));
+
+    set({
+      drawings: newDrawings,
+      drawingOrder: newOrder,
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  clearAllDrawings: () => {
+    const state = get();
+    if (state.drawingOrder.length === 0) return;
+
+    const snapshot = createSnapshot(state);
+    set({
+      drawings: {},
+      drawingOrder: [],
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  setDrawSettings: (patch) =>
+    set((state) => ({
+      drawSettings: { ...state.drawSettings, ...patch },
+    })),
+
   clearCanvas: () => {
     const state = get();
-    if (state.objectOrder.length === 0 && state.measurementOrder.length === 0) return;
+    if (
+      state.objectOrder.length === 0 &&
+      state.measurementOrder.length === 0 &&
+      state.drawingOrder.length === 0
+    ) {
+      return;
+    }
 
     const snapshot = createSnapshot(state);
 
@@ -756,6 +839,8 @@ export const useMathStore = create<MathState>((set, get) => ({
       measurementOrder: [],
       selectedMeasurementId: null,
       activeMeasurement: null,
+      drawings: {},
+      drawingOrder: [],
       constructionState: {
         stage: 'idle',
         firstPointId: null,
@@ -782,6 +867,8 @@ export const useMathStore = create<MathState>((set, get) => ({
       measurementOrder: prevSnapshot.measurementOrder || [],
       selectedMeasurementId: prevSnapshot.selectedMeasurementId || null,
       activeMeasurement: prevSnapshot.activeMeasurement || null,
+      drawings: prevSnapshot.drawings || {},
+      drawingOrder: prevSnapshot.drawingOrder || [],
       history: remainingHistory,
       future: [currentSnapshot, ...state.future.slice(0, MAX_HISTORY)],
     });
@@ -803,6 +890,8 @@ export const useMathStore = create<MathState>((set, get) => ({
       measurementOrder: nextSnapshot.measurementOrder || [],
       selectedMeasurementId: nextSnapshot.selectedMeasurementId || null,
       activeMeasurement: nextSnapshot.activeMeasurement || null,
+      drawings: nextSnapshot.drawings || {},
+      drawingOrder: nextSnapshot.drawingOrder || [],
       history: [...state.history.slice(-MAX_HISTORY + 1), currentSnapshot],
       future: remainingFuture,
     });
@@ -844,6 +933,12 @@ export const useMathStore = create<MathState>((set, get) => ({
       objectOrder: saveFile.objectOrder,
       measurements: sanitizedMeasurements,
       measurementOrder: saveFile.measurementOrder || Object.keys(sanitizedMeasurements),
+      drawings: saveFile.drawings ? JSON.parse(JSON.stringify(saveFile.drawings)) : {},
+      drawingOrder: saveFile.drawingOrder
+        ? [...saveFile.drawingOrder]
+        : saveFile.drawings
+        ? Object.keys(saveFile.drawings)
+        : [],
       defaultColors: saveFile.defaultColors ? { ...saveFile.defaultColors } : state.defaultColors,
       viewport: saveFile.viewport,
       selectedId: null,
@@ -864,6 +959,8 @@ export const useMathStore = create<MathState>((set, get) => ({
       objectOrder: [...state.objectOrder],
       measurements: JSON.parse(JSON.stringify(state.measurements)),
       measurementOrder: [...state.measurementOrder],
+      drawings: JSON.parse(JSON.stringify(state.drawings)),
+      drawingOrder: [...state.drawingOrder],
       defaultColors: { ...state.defaultColors },
       viewport: { ...state.viewport },
     };

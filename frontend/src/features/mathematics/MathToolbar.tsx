@@ -31,12 +31,15 @@ export const MathToolbar: React.FC = () => {
     redo,
     clearCanvas,
     resetExperiment,
+    measurementOrder,
+    drawingOrder,
   } = useMathStore();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const canUndo = history.length > 0;
   const canRedo = future.length > 0;
   const objectCount = objectOrder.length;
+  const hasItems = objectCount > 0 || measurementOrder.length > 0 || drawingOrder.length > 0;
 
   return (
     <header className="h-14 bg-surface-card border-b border-surface-border px-4 lg:px-6 flex items-center justify-between gap-4 select-none shrink-0 z-20">
@@ -205,11 +208,11 @@ export const MathToolbar: React.FC = () => {
           ) : (
             <button
               onClick={() => {
-                if (objectCount > 0) setShowClearConfirm(true);
+                if (hasItems) setShowClearConfirm(true);
               }}
-              disabled={objectCount === 0}
+              disabled={!hasItems}
               className="px-2.5 py-1.5 rounded-xl bg-surface-card hover:bg-surface-elevated disabled:opacity-40 disabled:cursor-not-allowed border border-surface-border text-slate-300 hover:text-white text-xs font-semibold font-mono transition-all flex items-center gap-1.5"
-              title={objectCount === 0 ? 'Canvas is empty' : 'Clear all geometry from canvas (undoable)'}
+              title={!hasItems ? 'Canvas is empty' : 'Clear all geometry and drawings from canvas (undoable)'}
             >
               <span className="material-symbols-outlined text-[16px] text-slate-400">layers_clear</span>
               <span className="hidden sm:inline">Clear</span>

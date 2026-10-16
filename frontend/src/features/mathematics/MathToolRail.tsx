@@ -11,7 +11,7 @@ import { MATH_TOOLS } from '../../engine/mathematics/toolRegistry';
 import { MATH_COLOR_PALETTE } from '../../engine/mathematics/appearance';
 
 export const MathToolRail: React.FC = () => {
-  const { activeTool, setTool, defaultColors, setDefaultColor } = useMathStore();
+  const { activeTool, setTool, defaultColors, setDefaultColor, drawSettings } = useMathStore();
   const [showColorPopover, setShowColorPopover] = useState(false);
 
   // Determine active creation tool category
@@ -44,6 +44,8 @@ export const MathToolRail: React.FC = () => {
               ? defaultColors.line
               : tool.id === 'distance'
               ? defaultColors.measurement
+              : tool.id === 'draw'
+              ? drawSettings.color
               : null;
 
           return (

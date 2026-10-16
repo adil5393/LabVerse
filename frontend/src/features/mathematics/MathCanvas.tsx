@@ -26,9 +26,94 @@ import {
   calculateLineAnalysis,
 } from '../../engine/mathematics/calculations';
 import { hexToRgba } from '../../engine/mathematics/appearance';
-import type { MathPoint, MathSegment, MathLine } from '../../engine/mathematics/types';
+import type {
+  MathPoint,
+  MathSegment,
+  MathLine,
+  FreehandStroke,
+  MathViewportTransform,
+} from '../../engine/mathematics/types';
+import { MathDrawOptionsPanel } from './MathDrawOptionsPanel';
 
 const DRAG_THRESHOLD_PX = 5;
+
+function distanceToSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) {
+    return Math.hypot(px - x1, py - y1);
+  }
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return Math.hypot(px - projX, py - projY);
+}
+
+function hitTestStroke(
+  stroke: FreehandStroke,
+  cursorScreenX: number,
+  cursorScreenY: number,
+  viewport: MathViewportTransform,
+  tolerance = 12
+): boolean {
+  if (!stroke.points || stroke.points.length === 0) return false;
+  const screenPts = stroke.points.map((p) => mathToScreen(p.x, p.y, viewport));
+  const effectiveTolerance = tolerance + stroke.width / 2;
+
+  // Bounding box pre-check
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const pt of screenPts) {
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  }
+
+  if (
+    cursorScreenX < minX - effectiveTolerance ||
+    cursorScreenX > maxX + effectiveTolerance ||
+    cursorScreenY < minY - effectiveTolerance ||
+    cursorScreenY > maxY + effectiveTolerance
+  ) {
+    return false;
+  }
+
+  // Single point / dot hit test
+  if (screenPts.length === 1) {
+    return (
+      Math.hypot(cursorScreenX - screenPts[0].x, cursorScreenY - screenPts[0].y) <=
+      effectiveTolerance
+    );
+  }
+
+  // Multi-segment hit test
+  for (let i = 0; i < screenPts.length - 1; i++) {
+    const dist = distanceToSegment(
+      cursorScreenX,
+      cursorScreenY,
+      screenPts[i].x,
+      screenPts[i].y,
+      screenPts[i + 1].x,
+      screenPts[i + 1].y
+    );
+    if (dist <= effectiveTolerance) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 export const MathCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,11 +152,34 @@ export const MathCanvas: React.FC = () => {
     deleteMeasurement,
     panBy,
     setViewport,
+    drawings,
+    drawingOrder,
+    drawSettings,
+    addStroke,
+    deleteStrokes,
   } = useMathStore();
 
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 900, height: 600 });
   const [cursorMathCoords, setCursorMathCoords] = useState<{ x: number; y: number } | null>(null);
   const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null);
+
+  // Drawing interaction state
+  const [activeStroke, setActiveStroke] = useState<{
+    points: Array<{ x: number; y: number }>;
+    color: string;
+    width: number;
+  } | null>(null);
+  const [erasedStrokeIds, setErasedStrokeIds] = useState<Set<string>>(new Set());
+
+  const isDrawingRef = useRef(false);
+  const isErasingRef = useRef(false);
+  const activeStrokeRef = useRef<{
+    points: Array<{ x: number; y: number }>;
+    color: string;
+    width: number;
+  } | null>(null);
+  const erasedInGestureRef = useRef<Set<string> | null>(null);
+  const lastSampledScreenPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Drag interaction state
   const dragRef = useRef<{
@@ -203,6 +311,7 @@ export const MathCanvas: React.FC = () => {
     e: React.PointerEvent<SVGGElement>,
     point: MathPoint
   ) => {
+    if (activeTool === 'draw') return;
     e.stopPropagation();
     if (e.button !== 0) return;
 
@@ -284,6 +393,7 @@ export const MathCanvas: React.FC = () => {
 
   // Pointer move on a point (for dragging)
   const handlePointPointerMove = (e: React.PointerEvent<SVGGElement>) => {
+    if (activeTool === 'draw') return;
     // If in Pan tool, delegate to canvas pan
     const pan = panRef.current;
     if (pan && pan.isPanning && pan.pointerId === e.pointerId) {
@@ -328,6 +438,7 @@ export const MathCanvas: React.FC = () => {
 
   // Pointer up on a point
   const handlePointPointerUp = (e: React.PointerEvent<SVGGElement>) => {
+    if (activeTool === 'draw') return;
     const pan = panRef.current;
     if (pan && pan.pointerId === e.pointerId) {
       try {
@@ -355,10 +466,35 @@ export const MathCanvas: React.FC = () => {
     dragRef.current = null;
   };
 
+  // Cancel active incomplete stroke on tool switch
+  useEffect(() => {
+    if (activeTool !== 'draw') {
+      isDrawingRef.current = false;
+      activeStrokeRef.current = null;
+      setActiveStroke(null);
+      isErasingRef.current = false;
+      erasedInGestureRef.current = null;
+      setErasedStrokeIds(new Set());
+    }
+  }, [activeTool]);
+
   // Keyboard shortcut for Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // 0. Cancel active drawing stroke or eraser gesture without committing
+        if (isDrawingRef.current || activeStrokeRef.current) {
+          isDrawingRef.current = false;
+          activeStrokeRef.current = null;
+          setActiveStroke(null);
+          return;
+        }
+        if (isErasingRef.current || (erasedInGestureRef.current && erasedInGestureRef.current.size > 0)) {
+          isErasingRef.current = false;
+          erasedInGestureRef.current = null;
+          setErasedStrokeIds(new Set());
+          return;
+        }
         // 1. Cancel active point drag
         if (dragRef.current && dragRef.current.isDragging) {
           const { pointId, initialMathX, initialMathY } = dragRef.current;
@@ -403,12 +539,54 @@ export const MathCanvas: React.FC = () => {
     setTool,
   ]);
 
-  // Canvas background pointer down (click / creation / pan)
+  // Canvas background pointer down (click / creation / pan / draw)
   const handleCanvasPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.button !== 0 && e.button !== 1) return;
 
     // 0. Eraser tool on empty canvas: do nothing (do not create points, pan, or drag)
     if (activeTool === 'eraser') {
+      return;
+    }
+
+    // 0a. Draw tool: handle freehand pen or isolated drawing eraser
+    if (activeTool === 'draw') {
+      if (e.button !== 0) return;
+      if (!svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const mathCoord = screenToMath(screenX, screenY, viewport);
+
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
+
+      if (drawSettings.mode === 'pen') {
+        isDrawingRef.current = true;
+        lastSampledScreenPosRef.current = { x: screenX, y: screenY };
+        const newStroke = {
+          points: [{ x: Number(mathCoord.x.toFixed(4)), y: Number(mathCoord.y.toFixed(4)) }],
+          color: drawSettings.color,
+          width: drawSettings.width,
+        };
+        activeStrokeRef.current = newStroke;
+        setActiveStroke(newStroke);
+      } else if (drawSettings.mode === 'eraser') {
+        isErasingRef.current = true;
+        const erased = new Set<string>();
+        erasedInGestureRef.current = erased;
+        for (const strokeId of drawingOrder) {
+          const s = drawings[strokeId];
+          if (s && hitTestStroke(s, screenX, screenY, viewport)) {
+            erased.add(strokeId);
+          }
+        }
+        if (erased.size > 0) {
+          setErasedStrokeIds(new Set(erased));
+        }
+      }
       return;
     }
 
@@ -495,6 +673,46 @@ export const MathCanvas: React.FC = () => {
       };
       setCursorMathCoords(mathSnap);
 
+      // Handle drawing interactions
+      if (activeTool === 'draw') {
+        if (isDrawingRef.current && activeStrokeRef.current && lastSampledScreenPosRef.current) {
+          const dist = Math.hypot(
+            screenX - lastSampledScreenPosRef.current.x,
+            screenY - lastSampledScreenPosRef.current.y
+          );
+          if (dist >= 3) {
+            lastSampledScreenPosRef.current = { x: screenX, y: screenY };
+            const mathPt = screenToMath(screenX, screenY, viewport);
+            const updatedPoints = [
+              ...activeStrokeRef.current.points,
+              { x: Number(mathPt.x.toFixed(4)), y: Number(mathPt.y.toFixed(4)) },
+            ];
+            const updatedStroke = { ...activeStrokeRef.current, points: updatedPoints };
+            activeStrokeRef.current = updatedStroke;
+            setActiveStroke(updatedStroke);
+          }
+          return;
+        }
+
+        if (isErasingRef.current && erasedInGestureRef.current) {
+          let changed = false;
+          for (const strokeId of drawingOrder) {
+            if (!erasedInGestureRef.current.has(strokeId)) {
+              const s = drawings[strokeId];
+              if (s && hitTestStroke(s, screenX, screenY, viewport)) {
+                erasedInGestureRef.current.add(strokeId);
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            setErasedStrokeIds(new Set(erasedInGestureRef.current));
+          }
+          return;
+        }
+        return;
+      }
+
       // Update construction rubberband preview
       if (constructionState.stage === 'selecting_second') {
         updateConstructionPreview(mathSnap);
@@ -513,6 +731,42 @@ export const MathCanvas: React.FC = () => {
   };
 
   const handleCanvasPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    // Handle drawing commits
+    if (activeTool === 'draw') {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
+
+      if (isDrawingRef.current) {
+        isDrawingRef.current = false;
+        const strokeToCommit = activeStrokeRef.current;
+        if (strokeToCommit && strokeToCommit.points.length > 0) {
+          const id = `stroke_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          addStroke({
+            id,
+            points: strokeToCommit.points,
+            color: strokeToCommit.color,
+            width: strokeToCommit.width,
+          });
+        }
+        activeStrokeRef.current = null;
+        setActiveStroke(null);
+      }
+
+      if (isErasingRef.current) {
+        isErasingRef.current = false;
+        if (erasedInGestureRef.current && erasedInGestureRef.current.size > 0) {
+          const toDelete = Array.from(erasedInGestureRef.current);
+          deleteStrokes(toDelete);
+        }
+        erasedInGestureRef.current = null;
+        setErasedStrokeIds(new Set());
+      }
+      return;
+    }
+
     const pan = panRef.current;
     if (pan && pan.pointerId === e.pointerId) {
       try {
@@ -522,6 +776,24 @@ export const MathCanvas: React.FC = () => {
       }
       panRef.current = null;
     }
+  };
+
+  const handleCanvasPointerCancel = (e: React.PointerEvent<SVGSVGElement>) => {
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore
+    }
+    if (activeTool === 'draw') {
+      isDrawingRef.current = false;
+      activeStrokeRef.current = null;
+      setActiveStroke(null);
+      isErasingRef.current = false;
+      erasedInGestureRef.current = null;
+      setErasedStrokeIds(new Set());
+    }
+    panRef.current = null;
+    dragRef.current = null;
   };
 
   // Wheel zoom towards pointer position
@@ -556,6 +828,9 @@ export const MathCanvas: React.FC = () => {
     if (activeTool === 'pan') {
       return panRef.current?.isPanning ? 'cursor-grabbing' : 'cursor-grab';
     }
+    if (activeTool === 'draw') {
+      return drawSettings.mode === 'eraser' ? 'cursor-pointer' : 'cursor-crosshair';
+    }
     if (activeTool === 'point' || activeTool === 'segment' || activeTool === 'line') {
       return 'cursor-crosshair';
     }
@@ -563,7 +838,45 @@ export const MathCanvas: React.FC = () => {
       return 'cursor-pointer';
     }
     return 'cursor-default';
-  }, [activeTool]);
+  }, [activeTool, drawSettings.mode]);
+
+  // Helper to render a freehand stroke in SVG
+  const renderStroke = (
+    stroke: { id?: string; points: Array<{ x: number; y: number }>; color: string; width: number },
+    key: string
+  ) => {
+    if (!stroke.points || stroke.points.length === 0) return null;
+    const screenPts = stroke.points.map((p) => mathToScreen(p.x, p.y, viewport));
+
+    if (screenPts.length <= 1) {
+      const pt = screenPts[0];
+      return (
+        <circle
+          key={key}
+          cx={pt.x}
+          cy={pt.y}
+          r={Math.max(1.5, stroke.width / 2)}
+          fill={stroke.color}
+        />
+      );
+    }
+
+    const d =
+      `M ${screenPts[0].x.toFixed(1)} ${screenPts[0].y.toFixed(1)} ` +
+      screenPts.slice(1).map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+    return (
+      <path
+        key={key}
+        d={d}
+        stroke={stroke.color}
+        strokeWidth={stroke.width}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    );
+  };
 
   return (
     <div
@@ -579,6 +892,7 @@ export const MathCanvas: React.FC = () => {
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
+        onPointerCancel={handleCanvasPointerCancel}
       >
         <defs>
           <marker
@@ -768,7 +1082,7 @@ export const MathCanvas: React.FC = () => {
         )}
 
         {/* 3. Infinite Lines Layer */}
-        <g id="math-infinite-lines">
+        <g id="math-infinite-lines" pointerEvents={activeTool === 'draw' ? 'none' : 'auto'}>
           {lines.map((line) => {
             const pA = pointsMap.get(line.pointAId);
             const pB = pointsMap.get(line.pointBId);
@@ -791,6 +1105,7 @@ export const MathCanvas: React.FC = () => {
               <g
                 key={line.id}
                 onClick={(e) => {
+                  if (activeTool === 'draw') return;
                   e.stopPropagation();
                   if (activeTool === 'eraser') {
                     deleteObject(line.id);
@@ -886,7 +1201,7 @@ export const MathCanvas: React.FC = () => {
         </g>
 
         {/* 4. Persistent Measurements Layer */}
-        <g id="math-measurements">
+        <g id="math-measurements" pointerEvents={activeTool === 'draw' ? 'none' : 'auto'}>
           {measurementOrder.map((measId) => {
             const meas = measurements[measId];
             if (!meas) return null;
@@ -1130,6 +1445,7 @@ export const MathCanvas: React.FC = () => {
                 {/* 4b. Hypotenuse and Interactive Measurement Badge */}
                 <g
                   onClick={(e) => {
+                    if (activeTool === 'draw') return;
                     e.stopPropagation();
                     if (activeTool === 'eraser') {
                       deleteMeasurement(meas.id);
@@ -1229,7 +1545,7 @@ export const MathCanvas: React.FC = () => {
         </g>
 
         {/* 5. Segments Layer */}
-        <g id="math-segments">
+        <g id="math-segments" pointerEvents={activeTool === 'draw' ? 'none' : 'auto'}>
           {segments.map((seg) => {
             const pA = pointsMap.get(seg.pointAId);
             const pB = pointsMap.get(seg.pointBId);
@@ -1248,6 +1564,7 @@ export const MathCanvas: React.FC = () => {
               <g
                 key={seg.id}
                 onClick={(e) => {
+                  if (activeTool === 'draw') return;
                   e.stopPropagation();
                   if (activeTool === 'eraser') {
                     deleteObject(seg.id);
@@ -1485,8 +1802,20 @@ export const MathCanvas: React.FC = () => {
           </g>
         )}
 
+        {/* 6b. Freehand Drawing Annotations Layer */}
+        <g id="math-annotations" pointerEvents="none">
+          {drawingOrder.map((id) => {
+            if (erasedStrokeIds.has(id)) return null;
+            const stroke = drawings[id];
+            if (!stroke) return null;
+            return renderStroke(stroke, id);
+          })}
+          {/* Active in-progress stroke preview */}
+          {activeStroke && renderStroke(activeStroke, 'active-in-progress-stroke')}
+        </g>
+
         {/* 7. Points Layer */}
-        <g id="math-points">
+        <g id="math-points" pointerEvents={activeTool === 'draw' ? 'none' : 'auto'}>
           {points.map((pt) => {
             const screen = mathToScreen(pt.x, pt.y, viewport);
             const isSelected = selectedId === pt.id;
@@ -1663,6 +1992,18 @@ export const MathCanvas: React.FC = () => {
               </span>
             </>
           )}
+          {activeTool === 'draw' && (
+            <>
+              <span className="material-symbols-outlined text-primary text-[16px]">
+                {drawSettings.mode === 'pen' ? 'draw' : 'ink_eraser'}
+              </span>
+              <span>
+                {drawSettings.mode === 'pen'
+                  ? 'Draw: Click & drag to sketch annotations. Tap to place a dot. Esc to cancel.'
+                  : 'Drawing Eraser: Drag across freehand strokes to erase them. Math objects are protected.'}
+              </span>
+            </>
+          )}
           {activeTool === 'eraser' && (
             <>
               <span className="material-symbols-outlined text-rose-400 text-[16px]">ink_eraser</span>
@@ -1671,6 +2012,9 @@ export const MathCanvas: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Draw Tool Floating Options Panel */}
+      <MathDrawOptionsPanel />
 
       {/* Bottom Coordinate Readout HUD */}
       <div className="absolute bottom-3 left-4 flex items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-lowest/90 backdrop-blur border border-surface-border text-xs font-mono text-slate-300 pointer-events-none shadow-lg">

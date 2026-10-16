@@ -88,6 +88,7 @@ export type MathToolId =
   | 'segment'
   | 'line'
   | 'distance'
+  | 'draw'
   | 'eraser'
   | 'pan'
   | 'axes';
@@ -133,6 +134,21 @@ export interface MathDefaultColors {
   measurement: string;
 }
 
+export interface FreehandStroke {
+  id: string;
+  points: Array<{ x: number; y: number }>;
+  color: string;
+  width: number;
+}
+
+export type DrawToolMode = 'pen' | 'eraser';
+
+export interface DrawSettings {
+  mode: DrawToolMode;
+  color: string;
+  width: number;
+}
+
 export interface MathSaveFile {
   version: '1.0';
   experimentId: string;
@@ -142,6 +158,9 @@ export interface MathSaveFile {
   objectOrder: string[];
   measurements?: Record<string, DistanceMeasurement>;
   measurementOrder?: string[];
+  drawings?: Record<string, FreehandStroke>;
+  drawingOrder?: string[];
   defaultColors?: MathDefaultColors;
   viewport: MathViewportTransform;
 }
+

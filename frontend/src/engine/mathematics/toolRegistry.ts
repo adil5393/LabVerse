@@ -53,6 +53,15 @@ export const MATH_TOOLS: MathToolDefinition[] = [
     cursor: 'pointer',
   },
   {
+    id: 'draw',
+    displayName: 'Draw',
+    icon: 'draw',
+    category: 'manipulation',
+    shortcut: 'D',
+    description: 'Sketch freely over the coordinate plane with pen and drawing eraser.',
+    cursor: 'crosshair',
+  },
+  {
     id: 'eraser',
     displayName: 'Eraser',
     icon: 'ink_eraser',

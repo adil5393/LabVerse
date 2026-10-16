@@ -13,7 +13,104 @@ import {
   calculateLineAnalysis,
   formatMathNumber,
 } from '../../engine/mathematics/calculations';
+import { MATH_COLOR_PALETTE, DEFAULT_MATH_COLORS } from '../../engine/mathematics/appearance';
 import type { MathPoint } from '../../engine/mathematics/types';
+
+interface AppearanceControlProps {
+  label?: string;
+  currentColor: string;
+  defaultColor?: string;
+  onColorChange: (color: string) => void;
+  onReset?: () => void;
+  showReset?: boolean;
+}
+
+const AppearanceControl: React.FC<AppearanceControlProps> = ({
+  label = 'Appearance & Color',
+  currentColor,
+  defaultColor,
+  onColorChange,
+  onReset,
+  showReset = true,
+}) => {
+  return (
+    <div className="space-y-2 pt-2 border-t border-surface-border/60">
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[14px]">palette</span>
+          <span>{label}</span>
+        </label>
+        <div className="flex items-center gap-1.5">
+          <span
+            className="w-3.5 h-3.5 rounded-full border border-surface-border shadow-sm"
+            style={{ backgroundColor: currentColor }}
+          />
+          <span className="text-[10px] font-mono font-bold text-slate-300 uppercase">
+            {currentColor}
+          </span>
+        </div>
+      </div>
+
+      {/* Preset Swatches */}
+      <div className="flex items-center justify-between gap-1 bg-surface-lowest p-1.5 rounded-lg border border-surface-border/60">
+        {MATH_COLOR_PALETTE.map((swatch) => {
+          const isSelected = swatch.value.toUpperCase() === currentColor.toUpperCase();
+          return (
+            <button
+              key={swatch.name}
+              type="button"
+              onClick={() => onColorChange(swatch.value)}
+              className={`w-6 h-6 rounded-md transition-all flex items-center justify-center ${
+                isSelected
+                  ? 'ring-2 ring-white scale-110 shadow-lg z-10'
+                  : 'hover:scale-105 opacity-80 hover:opacity-100'
+              }`}
+              style={{ backgroundColor: swatch.value }}
+              title={`${swatch.name} (${swatch.value})`}
+            >
+              {isSelected && (
+                <span className="material-symbols-outlined text-[13px] text-slate-900 font-bold">
+                  check
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Custom Color Picker & Reset to Default */}
+      <div className="flex items-center justify-between gap-2 pt-0.5">
+        <label
+          className="flex-1 px-2.5 py-1 rounded-lg bg-surface-lowest border border-surface-border/70 hover:border-surface-border flex items-center justify-between text-xs font-mono text-slate-300 cursor-pointer transition-colors"
+          title="Pick custom color"
+        >
+          <span className="flex items-center gap-1.5 text-[11px]">
+            <span className="material-symbols-outlined text-[13px] text-slate-400">colorize</span>
+            Custom
+          </span>
+          <input
+            type="color"
+            value={currentColor}
+            onChange={(e) => onColorChange(e.target.value)}
+            className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0"
+          />
+        </label>
+
+        {showReset && onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="px-2.5 py-1 rounded-lg bg-surface-lowest hover:bg-surface-elevated border border-surface-border/70 text-slate-400 hover:text-slate-200 text-[11px] font-mono transition-colors flex items-center gap-1"
+            title={defaultColor ? `Reset to default (${defaultColor})` : 'Reset to default color'}
+          >
+            <span className="material-symbols-outlined text-[13px]">undo</span>
+            <span>Reset</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const MathInspectorPanel: React.FC = () => {
   const {
@@ -23,6 +120,11 @@ export const MathInspectorPanel: React.FC = () => {
     measurements,
     measurementOrder,
     selectedMeasurementId,
+    defaultColors,
+    setDefaultColor,
+    setObjectColor,
+    setMeasurementColor,
+    resetObjectColorToDefault,
     setPointCoordinates,
     selectObject,
     selectMeasurement,
@@ -197,6 +299,15 @@ export const MathInspectorPanel: React.FC = () => {
                   : 'On Axis'}
               </span>
             </div>
+
+            {/* Appearance Section */}
+            <AppearanceControl
+              label="Point Appearance"
+              currentColor={selectedObject.color || defaultColors.point}
+              defaultColor={defaultColors.point}
+              onColorChange={(color) => setObjectColor(selectedObject.id, color)}
+              onReset={() => resetObjectColorToDefault(selectedObject.id)}
+            />
           </div>
         )}
 
@@ -246,6 +357,15 @@ export const MathInspectorPanel: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Appearance Section */}
+              <AppearanceControl
+                label="Segment Appearance"
+                currentColor={selectedObject.color || defaultColors.segment}
+                defaultColor={defaultColors.segment}
+                onColorChange={(color) => setObjectColor(selectedObject.id, color)}
+                onReset={() => resetObjectColorToDefault(selectedObject.id)}
+              />
 
               <button
                 type="button"
@@ -312,6 +432,15 @@ export const MathInspectorPanel: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Appearance Section */}
+              <AppearanceControl
+                label="Line Appearance"
+                currentColor={selectedObject.color || defaultColors.line}
+                defaultColor={defaultColors.line}
+                onColorChange={(color) => setObjectColor(selectedObject.id, color)}
+                onReset={() => resetObjectColorToDefault(selectedObject.id)}
+              />
 
               <button
                 type="button"
@@ -422,6 +551,15 @@ export const MathInspectorPanel: React.FC = () => {
               </div>
             </div>
 
+            {/* Appearance Section */}
+            <AppearanceControl
+              label="Measurement Appearance"
+              currentColor={selectedMeasurement.color || defaultColors.measurement}
+              defaultColor={defaultColors.measurement}
+              onColorChange={(color) => setMeasurementColor(selectedMeasurement.id, color)}
+              onReset={() => resetObjectColorToDefault(selectedMeasurement.id)}
+            />
+
             {/* Delete Measurement button */}
             <button
               type="button"
@@ -435,7 +573,55 @@ export const MathInspectorPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 1E. Active Measurements Compact List (shown when no measurement is selected) */}
+        {/* 1E. Default Creation Colors (shown when nothing is selected) */}
+        {!selectedObject && !selectedMeasurement && (
+          <div className="space-y-3 p-4 rounded-xl bg-surface-card border border-surface-border shadow-md">
+            <div className="flex items-center justify-between border-b border-surface-border pb-2.5">
+              <span className="text-xs font-mono font-bold text-slate-200 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary text-[16px]">palette</span>
+                DEFAULT CREATION COLORS
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">Pre-Plot</span>
+            </div>
+
+            <div className="space-y-3 text-xs font-mono">
+              <AppearanceControl
+                label="Point Default"
+                currentColor={defaultColors.point}
+                defaultColor={DEFAULT_MATH_COLORS.point}
+                onColorChange={(color) => setDefaultColor('point', color)}
+                onReset={() => setDefaultColor('point', DEFAULT_MATH_COLORS.point)}
+                showReset={defaultColors.point !== DEFAULT_MATH_COLORS.point}
+              />
+              <AppearanceControl
+                label="Segment Default"
+                currentColor={defaultColors.segment}
+                defaultColor={DEFAULT_MATH_COLORS.segment}
+                onColorChange={(color) => setDefaultColor('segment', color)}
+                onReset={() => setDefaultColor('segment', DEFAULT_MATH_COLORS.segment)}
+                showReset={defaultColors.segment !== DEFAULT_MATH_COLORS.segment}
+              />
+              <AppearanceControl
+                label="Infinite Line Default"
+                currentColor={defaultColors.line}
+                defaultColor={DEFAULT_MATH_COLORS.line}
+                onColorChange={(color) => setDefaultColor('line', color)}
+                onReset={() => setDefaultColor('line', DEFAULT_MATH_COLORS.line)}
+                showReset={defaultColors.line !== DEFAULT_MATH_COLORS.line}
+              />
+              <AppearanceControl
+                label="Measurement Default"
+                currentColor={defaultColors.measurement}
+                defaultColor={DEFAULT_MATH_COLORS.measurement}
+                onColorChange={(color) => setDefaultColor('measurement', color)}
+                onReset={() => setDefaultColor('measurement', DEFAULT_MATH_COLORS.measurement)}
+                showReset={defaultColors.measurement !== DEFAULT_MATH_COLORS.measurement}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 1F. Active Measurements Compact List (shown when no measurement is selected) */}
         {measurementOrder.length > 0 && !selectedMeasurement && (
           <div className="space-y-2 p-3 rounded-xl bg-surface-card border border-surface-border">
             <div className="flex items-center justify-between text-xs font-mono text-slate-300">
@@ -452,6 +638,7 @@ export const MathInspectorPanel: React.FC = () => {
                 const p2 = objects[m.pointBId] as MathPoint | undefined;
                 if (!p1 || !p2) return null;
                 const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                const mColor = m.color || defaultColors.measurement;
 
                 return (
                   <div
@@ -464,7 +651,11 @@ export const MathInspectorPanel: React.FC = () => {
                       className="flex-1 text-left flex items-center gap-2 text-slate-300 hover:text-white"
                       title="Select measurement to inspect"
                     >
-                      <span className="text-amber-400 font-bold">{p1.label} ↔ {p2.label}</span>
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 border border-surface-border shadow-xs"
+                        style={{ backgroundColor: mColor }}
+                      />
+                      <span className="font-bold" style={{ color: mColor }}>{p1.label} ↔ {p2.label}</span>
                       <span className="text-slate-400">d ≈ {d.toFixed(2)}</span>
                     </button>
                     <button

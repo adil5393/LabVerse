@@ -18,7 +18,9 @@ import type {
   ActiveMeasurement,
   DistanceMeasurement,
   MeasurementTriangleMode,
+  MathDefaultColors,
 } from '../engine/mathematics/types';
+import { DEFAULT_MATH_COLORS } from '../engine/mathematics/appearance';
 import {
   DISTANCE_EXPERIMENT,
   MATH_EXPERIMENTS,
@@ -59,6 +61,9 @@ interface MathState {
   measurementOrder: string[];
   selectedMeasurementId: string | null;
 
+  // Appearance & Default Creation Colors
+  defaultColors: MathDefaultColors;
+
   // Educational Mode
   predictRevealed: boolean;
   studentPrediction: string;
@@ -86,6 +91,12 @@ interface MathState {
   setPointCoordinates: (id: string, x: number, y: number, recordUndo?: boolean) => void;
   updatePointDrag: (id: string, x: number, y: number) => void;
   commitPointDrag: (id: string) => void;
+
+  // Appearance Actions
+  setDefaultColor: (kind: keyof MathDefaultColors, color: string) => void;
+  setObjectColor: (id: string, color: string) => void;
+  setMeasurementColor: (id: string, color: string) => void;
+  resetObjectColorToDefault: (id: string) => void;
 
   // Construction State Machine Actions
   startConstruction: (firstPointId: string) => void;
@@ -166,6 +177,7 @@ function initializeExperiment(experiment: MathExperiment) {
       pointAId: 'pt_A',
       pointBId: 'pt_B',
       triangleMode: 'horizontal-then-vertical',
+      color: DEFAULT_MATH_COLORS.measurement,
     };
     initialMeasurementOrder.push('meas_AB');
   }
@@ -191,6 +203,7 @@ function initializeExperiment(experiment: MathExperiment) {
     measurements: initialMeasurements,
     measurementOrder: initialMeasurementOrder,
     selectedMeasurementId: null,
+    defaultColors: { ...DEFAULT_MATH_COLORS },
     activeMeasurement: {
       pointAId: 'pt_A',
       pointBId: 'pt_B',
@@ -381,6 +394,7 @@ export const useMathStore = create<MathState>((set, get) => ({
       pointAId,
       pointBId,
       triangleMode,
+      color: state.defaultColors.measurement,
     };
 
     const snapshot = createSnapshot(state);
@@ -466,6 +480,67 @@ export const useMathStore = create<MathState>((set, get) => ({
     });
   },
 
+  setDefaultColor: (kind, color) => {
+    set((state) => ({
+      defaultColors: {
+        ...state.defaultColors,
+        [kind]: color,
+      },
+    }));
+  },
+
+  setObjectColor: (id, color) => {
+    const state = get();
+    const existing = state.objects[id];
+    if (!existing || existing.color === color) return;
+
+    const snapshot = createSnapshot(state);
+    set({
+      objects: {
+        ...state.objects,
+        [id]: {
+          ...existing,
+          color,
+        },
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  setMeasurementColor: (id, color) => {
+    const state = get();
+    const existing = state.measurements[id];
+    if (!existing || existing.color === color) return;
+
+    const snapshot = createSnapshot(state);
+    set({
+      measurements: {
+        ...state.measurements,
+        [id]: {
+          ...existing,
+          color,
+        },
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  resetObjectColorToDefault: (id) => {
+    const state = get();
+    if (state.objects[id]) {
+      const kind = state.objects[id].kind;
+      const defaultColor = state.defaultColors[kind];
+      state.setObjectColor(id, defaultColor);
+      return;
+    }
+    if (state.measurements[id]) {
+      const defaultColor = state.defaultColors.measurement;
+      state.setMeasurementColor(id, defaultColor);
+    }
+  },
+
   createPoint: (x, y) => {
     const state = get();
     const existingPoints = Object.values(state.objects).filter(
@@ -481,7 +556,7 @@ export const useMathStore = create<MathState>((set, get) => ({
       x: Number(x.toFixed(4)),
       y: Number(y.toFixed(4)),
       isDraggable: true,
-      color: '#38bdf8',
+      color: state.defaultColors.point,
       radius: 7,
     };
 
@@ -524,7 +599,7 @@ export const useMathStore = create<MathState>((set, get) => ({
       label: `${pA.label}${pB.label}`,
       pointAId,
       pointBId,
-      color: '#a855f7',
+      color: state.defaultColors.segment,
       strokeWidth: 3,
       style: 'solid',
     };
@@ -573,7 +648,7 @@ export const useMathStore = create<MathState>((set, get) => ({
       label: `Line ${pA.label}${pB.label}`,
       pointAId,
       pointBId,
-      color: '#06b6d4',
+      color: state.defaultColors.line,
       strokeWidth: 2.5,
       style: 'solid',
     };
@@ -743,11 +818,36 @@ export const useMathStore = create<MathState>((set, get) => ({
   loadScene: (saveFile) => {
     const state = get();
     const snapshot = createSnapshot(state);
+
+    const defaults = saveFile.defaultColors || state.defaultColors;
+    const sanitizedObjects: Record<string, MathObject> = {};
+    for (const [id, obj] of Object.entries(saveFile.objects)) {
+      const copy = { ...obj };
+      if (!copy.color) {
+        copy.color = defaults[copy.kind] || DEFAULT_MATH_COLORS[copy.kind];
+      }
+      sanitizedObjects[id] = copy;
+    }
+
+    const sanitizedMeasurements: Record<string, DistanceMeasurement> = {};
+    if (saveFile.measurements) {
+      for (const [id, m] of Object.entries(saveFile.measurements)) {
+        sanitizedMeasurements[id] = {
+          ...m,
+          color: m.color || defaults.measurement || DEFAULT_MATH_COLORS.measurement,
+        };
+      }
+    }
+
     set({
-      objects: saveFile.objects,
+      objects: sanitizedObjects,
       objectOrder: saveFile.objectOrder,
+      measurements: sanitizedMeasurements,
+      measurementOrder: saveFile.measurementOrder || Object.keys(sanitizedMeasurements),
+      defaultColors: saveFile.defaultColors ? { ...saveFile.defaultColors } : state.defaultColors,
       viewport: saveFile.viewport,
       selectedId: null,
+      selectedMeasurementId: null,
       history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
       future: [],
     });
@@ -762,6 +862,9 @@ export const useMathStore = create<MathState>((set, get) => ({
       timestamp: new Date().toISOString(),
       objects: JSON.parse(JSON.stringify(state.objects)),
       objectOrder: [...state.objectOrder],
+      measurements: JSON.parse(JSON.stringify(state.measurements)),
+      measurementOrder: [...state.measurementOrder],
+      defaultColors: { ...state.defaultColors },
       viewport: { ...state.viewport },
     };
   },

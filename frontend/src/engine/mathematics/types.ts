@@ -126,6 +126,13 @@ export interface ActiveMeasurement {
   pointBId: string;
 }
 
+export interface MathDefaultColors {
+  point: string;
+  segment: string;
+  line: string;
+  measurement: string;
+}
+
 export interface MathSaveFile {
   version: '1.0';
   experimentId: string;
@@ -133,5 +140,8 @@ export interface MathSaveFile {
   timestamp: string;
   objects: Record<string, MathObject>;
   objectOrder: string[];
+  measurements?: Record<string, DistanceMeasurement>;
+  measurementOrder?: string[];
+  defaultColors?: MathDefaultColors;
   viewport: MathViewportTransform;
 }

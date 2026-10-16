@@ -25,6 +25,7 @@ import {
   calculateInfiniteLineEndpoints,
   calculateLineAnalysis,
 } from '../../engine/mathematics/calculations';
+import { hexToRgba } from '../../engine/mathematics/appearance';
 import type { MathPoint, MathSegment, MathLine } from '../../engine/mathematics/types';
 
 const DRAG_THRESHOLD_PX = 5;
@@ -45,6 +46,7 @@ export const MathCanvas: React.FC = () => {
     showCoordinates,
     showConstructions,
     constructionState,
+    defaultColors,
     selectObject,
     setPointCoordinates,
     updatePointDrag,
@@ -779,6 +781,7 @@ export const MathCanvas: React.FC = () => {
             const s2 = mathToScreen(clip[1].x, clip[1].y, viewport);
             const isSelected = selectedId === line.id;
             const analysis = calculateLineAnalysis(pA, pB);
+            const lineColor = line.color || defaultColors.line;
 
             // Midpoint on screen for line badge
             const midScreenX = (s1.x + s2.x) / 2;
@@ -834,7 +837,7 @@ export const MathCanvas: React.FC = () => {
                     y1={s1.y}
                     x2={s2.x}
                     y2={s2.y}
-                    stroke="#22d3ee"
+                    stroke={lineColor}
                     strokeWidth="7"
                     strokeOpacity="0.4"
                   />
@@ -846,10 +849,10 @@ export const MathCanvas: React.FC = () => {
                   y1={s1.y}
                   x2={s2.x}
                   y2={s2.y}
-                  stroke={isSelected ? '#67e8f9' : line.color || '#06b6d4'}
+                  stroke={lineColor}
                   strokeWidth={line.strokeWidth || 2.5}
                   strokeDasharray={line.style === 'dashed' ? '6,4' : undefined}
-                  className="transition-colors group-hover:stroke-[#22d3ee]"
+                  className="transition-colors group-hover:opacity-90"
                 />
 
                 {/* Equation badge pill */}
@@ -860,15 +863,15 @@ export const MathCanvas: React.FC = () => {
                     width="90"
                     height="22"
                     rx="6"
-                    fill="#083344"
-                    stroke="#06b6d4"
+                    fill="#0f172a"
+                    stroke={lineColor}
                     strokeWidth="1.5"
                     filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))"
                   />
                   <text
                     x="0"
                     y="4"
-                    fill="#cffafe"
+                    fill={lineColor}
                     fontSize="10"
                     fontFamily="JetBrains Mono"
                     fontWeight="bold"
@@ -910,6 +913,7 @@ export const MathCanvas: React.FC = () => {
             const midScreenY = (sA.y + sB.y) / 2;
 
             const triangleMode = meas.triangleMode || 'horizontal-then-vertical';
+            const measColor = meas.color || defaultColors.measurement;
             const renderHV = triangleMode === 'horizontal-then-vertical' || triangleMode === 'both';
             const renderVH = triangleMode === 'vertical-then-horizontal' || triangleMode === 'both';
 
@@ -939,7 +943,7 @@ export const MathCanvas: React.FC = () => {
                             ? `${sA.x},${sA.y} ${sD.x},${sD.y} ${sB.x},${sB.y}`
                             : `${sA.x},${sA.y} ${sC.x},${sC.y} ${sB.x},${sB.y}`
                         }
-                        fill="rgba(245, 158, 11, 0.06)"
+                        fill={hexToRgba(measColor, 0.08)}
                         stroke="none"
                       />
                     )}
@@ -1173,7 +1177,7 @@ export const MathCanvas: React.FC = () => {
                       y1={sA.y}
                       x2={sB.x}
                       y2={sB.y}
-                      stroke="#f59e0b"
+                      stroke={measColor}
                       strokeWidth="7"
                       strokeOpacity="0.4"
                       strokeLinecap="round"
@@ -1186,10 +1190,10 @@ export const MathCanvas: React.FC = () => {
                     y1={sA.y}
                     x2={sB.x}
                     y2={sB.y}
-                    stroke={isSelected ? '#fbbf24' : '#f59e0b'}
+                    stroke={measColor}
                     strokeWidth={isSelected ? 3.5 : 2.5}
                     strokeDasharray="6,4"
-                    className="transition-colors group-hover:stroke-[#fbbf24]"
+                    className="transition-colors group-hover:opacity-90"
                   />
 
                   {/* Interactive Distance Pill Badge */}
@@ -1200,16 +1204,16 @@ export const MathCanvas: React.FC = () => {
                       width="76"
                       height="24"
                       rx="7"
-                      fill={isSelected ? '#451a03' : '#1e1b4b'}
-                      stroke={isHoveredEraser ? '#ef4444' : isSelected ? '#fbbf24' : '#f59e0b'}
+                      fill="#0f172a"
+                      stroke={isHoveredEraser ? '#ef4444' : isSelected ? '#ffffff' : measColor}
                       strokeWidth={isSelected ? '2' : '1.3'}
                       filter="drop-shadow(0 2px 6px rgba(0,0,0,0.75))"
-                      className="transition-all group-hover:stroke-[#fbbf24]"
+                      className="transition-all"
                     />
                     <text
                       x="0"
                       y="4"
-                      fill={isSelected ? '#fef08a' : '#fef3c7'}
+                      fill={measColor}
                       fontSize="11"
                       fontFamily="JetBrains Mono"
                       fontWeight="bold"
@@ -1235,6 +1239,7 @@ export const MathCanvas: React.FC = () => {
             const sB = mathToScreen(pB.x, pB.y, viewport);
             const isSelected = selectedId === seg.id;
             const dist = Math.hypot(pB.x - pA.x, pB.y - pA.y);
+            const segColor = seg.color || defaultColors.segment;
 
             const midScreenX = (sA.x + sB.x) / 2;
             const midScreenY = (sA.y + sB.y) / 2;
@@ -1288,7 +1293,7 @@ export const MathCanvas: React.FC = () => {
                     y1={sA.y}
                     x2={sB.x}
                     y2={sB.y}
-                    stroke="#c084fc"
+                    stroke={segColor}
                     strokeWidth="7"
                     strokeOpacity="0.4"
                     strokeLinecap="round"
@@ -1300,10 +1305,10 @@ export const MathCanvas: React.FC = () => {
                   y1={sA.y}
                   x2={sB.x}
                   y2={sB.y}
-                  stroke={isSelected ? '#d8b4fe' : seg.color || '#a855f7'}
+                  stroke={segColor}
                   strokeWidth={seg.strokeWidth || 3}
                   strokeLinecap="round"
-                  className="transition-colors group-hover:stroke-[#c084fc]"
+                  className="transition-colors group-hover:opacity-90"
                 />
 
                 <g transform={`translate(${midScreenX}, ${midScreenY - 14})`}>
@@ -1313,15 +1318,15 @@ export const MathCanvas: React.FC = () => {
                     width="68"
                     height="22"
                     rx="6"
-                    fill="#1e1b4b"
-                    stroke="#a855f7"
+                    fill="#0f172a"
+                    stroke={segColor}
                     strokeWidth="1.5"
                     filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))"
                   />
                   <text
                     x="0"
                     y="4"
-                    fill="#f3e8ff"
+                    fill={segColor}
                     fontSize="11"
                     fontFamily="JetBrains Mono"
                     fontWeight="bold"
@@ -1353,14 +1358,14 @@ export const MathCanvas: React.FC = () => {
                       y1={s1.y}
                       x2={s2.x}
                       y2={s2.y}
-                      stroke="#c084fc"
+                      stroke={defaultColors.segment}
                       strokeWidth="2.5"
                       strokeDasharray="6,4"
                     />
-                    <circle cx={s2.x} cy={s2.y} r="5" fill="#c084fc" stroke="#ffffff" strokeWidth="1.5" />
+                    <circle cx={s2.x} cy={s2.y} r="5" fill={defaultColors.segment} stroke="#ffffff" strokeWidth="1.5" />
                     <g transform={`translate(${(s1.x + s2.x) / 2}, ${(s1.y + s2.y) / 2 - 12})`}>
-                      <rect x="-30" y="-10" width="60" height="20" rx="5" fill="#1e1b4b" stroke="#c084fc" strokeWidth="1" />
-                      <text x="0" y="4" fill="#f3e8ff" fontSize="10" fontFamily="JetBrains Mono" textAnchor="middle">
+                      <rect x="-30" y="-10" width="60" height="20" rx="5" fill="#0f172a" stroke={defaultColors.segment} strokeWidth="1" />
+                      <text x="0" y="4" fill={defaultColors.segment} fontSize="10" fontFamily="JetBrains Mono" textAnchor="middle">
                         {previewDist.toFixed(2)}
                       </text>
                     </g>
@@ -1381,11 +1386,11 @@ export const MathCanvas: React.FC = () => {
                       y1={cs1.y}
                       x2={cs2.x}
                       y2={cs2.y}
-                      stroke="#22d3ee"
+                      stroke={defaultColors.line}
                       strokeWidth="2.5"
                       strokeDasharray="6,4"
                     />
-                    <circle cx={s2.x} cy={s2.y} r="5" fill="#22d3ee" stroke="#ffffff" strokeWidth="1.5" />
+                    <circle cx={s2.x} cy={s2.y} r="5" fill={defaultColors.line} stroke="#ffffff" strokeWidth="1.5" />
                   </>
                 );
               }
@@ -1405,7 +1410,7 @@ export const MathCanvas: React.FC = () => {
                     {!isDegenerate && (
                       <polygon
                         points={`${s1.x},${s1.y} ${sC.x},${sC.y} ${s2.x},${s2.y}`}
-                        fill="rgba(245, 158, 11, 0.08)"
+                        fill={hexToRgba(defaultColors.measurement, 0.08)}
                         stroke="none"
                       />
                     )}
@@ -1458,16 +1463,16 @@ export const MathCanvas: React.FC = () => {
                       y1={s1.y}
                       x2={s2.x}
                       y2={s2.y}
-                      stroke="#f59e0b"
+                      stroke={defaultColors.measurement}
                       strokeWidth="2.5"
                       strokeDasharray="4,4"
                     />
                     {/* Pointer circle at preview endpoint */}
-                    <circle cx={s2.x} cy={s2.y} r="5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
+                    <circle cx={s2.x} cy={s2.y} r="5" fill={defaultColors.measurement} stroke="#ffffff" strokeWidth="1.5" />
                     {/* Hypotenuse distance pill */}
                     <g transform={`translate(${(s1.x + s2.x) / 2}, ${(s1.y + s2.y) / 2 - 12})`}>
-                      <rect x="-34" y="-11" width="68" height="22" rx="6" fill="#451a03" stroke="#f59e0b" strokeWidth="1.2" />
-                      <text x="0" y="4" fill="#fef3c7" fontSize="10.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                      <rect x="-34" y="-11" width="68" height="22" rx="6" fill="#0f172a" stroke={defaultColors.measurement} strokeWidth="1.2" />
+                      <text x="0" y="4" fill={defaultColors.measurement} fontSize="10.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
                         d ≈ {previewDist.toFixed(2)}
                       </text>
                     </g>
@@ -1487,7 +1492,7 @@ export const MathCanvas: React.FC = () => {
             const isSelected = selectedId === pt.id;
             const isFirstConstructPoint =
               constructionState.stage === 'selecting_second' && constructionState.firstPointId === pt.id;
-            const ptColor = isFirstConstructPoint ? '#22c55e' : pt.color || '#4d8eff';
+            const ptColor = isFirstConstructPoint ? '#22c55e' : pt.color || defaultColors.point;
 
             return (
               <g
@@ -1592,7 +1597,7 @@ export const MathCanvas: React.FC = () => {
                     <text
                       x="4"
                       y="1"
-                      fill="#f8fafc"
+                      fill={ptColor}
                       fontSize="10.5"
                       fontFamily="JetBrains Mono"
                       fontWeight="bold"

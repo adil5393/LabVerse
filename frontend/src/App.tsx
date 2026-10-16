@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SubjectExplorer } from './features/explorer/SubjectExplorer';
 import { ElectricityLab } from './features/electricity/ElectricityLab';
 import { WorkbenchPage } from './features/workbench/WorkbenchPage';
+import { MathematicsLab } from './features/mathematics/MathematicsLab';
+import { MathWorkbenchPage } from './features/mathematics/MathWorkbenchPage';
 
 export const App: React.FC = () => {
   return (
@@ -11,11 +13,17 @@ export const App: React.FC = () => {
         {/* Route 1: Subject Explorer */}
         <Route path="/" element={<SubjectExplorer />} />
 
-        {/* Route 2: Electricity Laboratory */}
+        {/* Route 2: Electricity Laboratory (Physics) */}
         <Route path="/physics/electricity" element={<ElectricityLab />} />
 
-        {/* Route 3: Interactive Workbench */}
+        {/* Route 3: Interactive Physics Workbench */}
         <Route path="/physics/electricity/workbench" element={<WorkbenchPage />} />
+
+        {/* Route 4: Mathematics Laboratory Landing Page */}
+        <Route path="/mathematics" element={<MathematicsLab />} />
+
+        {/* Route 5: Interactive Mathematics Workbench */}
+        <Route path="/mathematics/workbench" element={<MathWorkbenchPage />} />
 
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

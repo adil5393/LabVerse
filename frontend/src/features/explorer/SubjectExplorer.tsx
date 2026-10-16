@@ -59,14 +59,15 @@ const SUBJECTS_DATA: SubjectInfo[] = [
   {
     id: 'mathematics',
     name: 'Mathematics',
-    category: 'Geometry, Calculus & Coordinate Graphing',
-    description: 'Dynamic geometric proofs, parametric surfaces, vector fields, and calculus rate-of-change visualizers.',
+    category: 'Geometry, Cartesian Planes & Trigonometry',
+    description: 'Dynamic Cartesian coordinate planes, Euclidean distance with Pythagorean theorem, linear functions, and geometric proofs.',
     icon: 'calculate',
-    topicsCount: 5,
-    experimentsCount: 10,
-    status: 'in_development',
+    topicsCount: 4,
+    experimentsCount: 1,
+    status: 'ready',
+    route: '/mathematics',
     accentColor: '#a855f7',
-    badgeText: 'Coming Soon',
+    badgeText: 'Active Laboratory',
   },
   {
     id: 'robotics',
@@ -133,7 +134,7 @@ export const SubjectExplorer: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Available Now (1)
+              Available Now ({SUBJECTS_DATA.filter((s) => s.status === 'ready').length})
             </button>
             <button
               onClick={() => setActiveFilter('dev')}
@@ -143,7 +144,7 @@ export const SubjectExplorer: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              In Development (4)
+              In Development ({SUBJECTS_DATA.filter((s) => s.status === 'in_development').length})
             </button>
           </div>
         </section>
@@ -154,19 +155,23 @@ export const SubjectExplorer: React.FC = () => {
             const isReady = subject.status === 'ready';
 
             if (isReady) {
+              const isMath = subject.id === 'mathematics';
+
               return (
                 <article
                   key={subject.id}
-                  className="md:col-span-2 lg:col-span-2 rounded-2xl bg-gradient-to-b from-surface-card to-[#121620] border-2 border-primary/50 hover:border-primary transition-all duration-300 shadow-xl shadow-primary/5 flex flex-col justify-between overflow-hidden relative group"
+                  className={`md:col-span-2 lg:col-span-2 rounded-2xl bg-gradient-to-b from-surface-card to-[#121620] border-2 ${
+                    isMath ? 'border-purple-500/50 hover:border-purple-400' : 'border-primary/50 hover:border-primary'
+                  } transition-all duration-300 shadow-xl shadow-primary/5 flex flex-col justify-between overflow-hidden relative group`}
                 >
                   {/* Top Bar Banner */}
                   <div className="px-6 py-4 bg-surface-elevated/70 border-b border-surface-border flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+                      <div className={`w-9 h-9 rounded-lg ${isMath ? 'bg-purple-500/20 text-purple-300' : 'bg-primary/20 text-primary'} flex items-center justify-center`}>
                         <span className="material-symbols-outlined text-[22px]">{subject.icon}</span>
                       </div>
                       <div>
-                        <span className="text-xs font-mono font-medium tracking-wider text-primary uppercase">
+                        <span className={`text-xs font-mono font-medium tracking-wider ${isMath ? 'text-purple-400' : 'text-primary'} uppercase`}>
                           {subject.name} Laboratory
                         </span>
                         <h2 className="text-xl font-bold text-white tracking-tight">{subject.category}</h2>
@@ -186,25 +191,51 @@ export const SubjectExplorer: React.FC = () => {
 
                     {/* Active Lab Topics Preview */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
-                        <span className="material-symbols-outlined text-primary text-xl mt-0.5">schema</span>
-                        <div>
-                          <h4 className="text-sm font-semibold text-white">Solderless Breadboarding</h4>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Standard 400-tie-point terminal pitch (2.54mm), dual power rails & central trough.
-                          </p>
-                        </div>
-                      </div>
+                      {isMath ? (
+                        <>
+                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
+                            <span className="material-symbols-outlined text-purple-400 text-xl mt-0.5">grid_4x4</span>
+                            <div>
+                              <h4 className="text-sm font-semibold text-white">Cartesian Coordinate Plane</h4>
+                              <p className="text-xs text-slate-400 mt-1">
+                                Mathematically consistent 2D coordinate system, upward positive Y, and snap-to-grid.
+                              </p>
+                            </div>
+                          </div>
 
-                      <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
-                        <span className="material-symbols-outlined text-tertiary text-xl mt-0.5">bolt</span>
-                        <div>
-                          <h4 className="text-sm font-semibold text-white">DC Loop Simulation</h4>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Real scientific DC solver. Reference 5V + 330Ω + LED circuit verifies 9.09 mA current.
-                          </p>
-                        </div>
-                      </div>
+                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
+                            <span className="material-symbols-outlined text-tertiary text-xl mt-0.5">square_foot</span>
+                            <div>
+                              <h4 className="text-sm font-semibold text-white">Distance & Pythagorean Proofs</h4>
+                              <p className="text-xs text-slate-400 mt-1">
+                                Euclidean distance d = √[(x₂-x₁)² + (y₂-y₁)²], live Δx/Δy triangle, and Predict & Reveal.
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
+                            <span className="material-symbols-outlined text-primary text-xl mt-0.5">schema</span>
+                            <div>
+                              <h4 className="text-sm font-semibold text-white">Solderless Breadboarding</h4>
+                              <p className="text-xs text-slate-400 mt-1">
+                                Standard 400-tie-point terminal pitch (2.54mm), dual power rails & central trough.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
+                            <span className="material-symbols-outlined text-tertiary text-xl mt-0.5">bolt</span>
+                            <div>
+                              <h4 className="text-sm font-semibold text-white">DC Loop Simulation</h4>
+                              <p className="text-xs text-slate-400 mt-1">
+                                Real scientific DC solver. Reference 5V + 330Ω + LED circuit verifies 9.09 mA current.
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -213,19 +244,21 @@ export const SubjectExplorer: React.FC = () => {
                     <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
                       <span className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm text-slate-500">grid_view</span>
-                        1 Active Topic
+                        {isMath ? '4 Core Modules' : '1 Active Topic'}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm text-slate-500">science</span>
-                        2 Workbench Modes
+                        {isMath ? 'Interactive Workbench' : '2 Workbench Modes'}
                       </span>
                     </div>
 
                     <Link
                       to={subject.route || '#'}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dim text-white font-semibold text-sm shadow-lg shadow-primary/25 transition-all group-hover:gap-3"
+                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${
+                        isMath ? 'bg-purple-600 hover:bg-purple-500' : 'bg-primary hover:bg-primary-dim'
+                      } text-white font-semibold text-sm shadow-lg shadow-primary/25 transition-all group-hover:gap-3`}
                     >
-                      <span>Enter Electricity Lab</span>
+                      <span>{isMath ? 'Enter Mathematics Lab' : 'Enter Electricity Lab'}</span>
                       <span className="material-symbols-outlined text-base">arrow_forward</span>
                     </Link>
                   </div>

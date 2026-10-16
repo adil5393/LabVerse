@@ -1,23 +1,28 @@
 /**
  * Reusable Zustand State Store for LabVerse Mathematics Laboratory
  *
- * Implements authoritative mathematical scene state, undo/redo history,
- * viewport transformations, and educational predict/reveal state.
+ * Implements authoritative mathematical scene state, construction state machine,
+ * active measurements, undo/redo history, viewport transformations, and educational state.
  */
 
 import { create } from 'zustand';
 import type {
   MathObject,
   MathPoint,
+  MathSegment,
+  MathLine,
   MathToolId,
   MathViewportTransform,
   MathSaveFile,
+  ConstructionState,
+  ActiveMeasurement,
 } from '../engine/mathematics/types';
 import {
   DISTANCE_EXPERIMENT,
   MATH_EXPERIMENTS,
   type MathExperiment,
 } from '../engine/mathematics/experimentRegistry';
+import { generateNextPointLabel } from '../engine/mathematics/calculations';
 
 interface HistorySnapshot {
   objects: Record<string, MathObject>;
@@ -38,6 +43,10 @@ interface MathState {
   showAxes: boolean;
   showCoordinates: boolean;
   showConstructions: boolean;
+
+  // Interaction Lifecycle & Construction State
+  constructionState: ConstructionState;
+  activeMeasurement: ActiveMeasurement | null;
 
   // Educational Mode
   predictRevealed: boolean;
@@ -66,8 +75,21 @@ interface MathState {
   updatePointDrag: (id: string, x: number, y: number) => void;
   commitPointDrag: (id: string) => void;
 
+  // Construction State Machine Actions
+  startConstruction: (firstPointId: string) => void;
+  updateConstructionPreview: (coord: { x: number; y: number } | null) => void;
+  cancelConstruction: () => void;
+
+  // Measurement Actions
+  setActiveMeasurement: (measurement: ActiveMeasurement | null) => void;
+
+  // Object Creation & Management
+  createPoint: (x: number, y: number) => MathPoint;
+  createSegment: (pointAId: string, pointBId: string) => MathSegment | null;
+  createLine: (pointAId: string, pointBId: string) => MathLine | null;
   addObject: (object: MathObject) => void;
   deleteObject: (id: string) => void;
+  deleteSelectedObject: () => void;
 
   undo: () => void;
   redo: () => void;
@@ -118,6 +140,15 @@ function initializeExperiment(experiment: MathExperiment) {
     showAxes: true,
     showCoordinates: true,
     showConstructions: true,
+    constructionState: {
+      stage: 'idle' as const,
+      firstPointId: null,
+      previewCoord: null,
+    },
+    activeMeasurement: {
+      pointAId: 'pt_A',
+      pointBId: 'pt_B',
+    },
     predictRevealed: false,
     studentPrediction: '',
     predictionSubmitted: false,
@@ -129,7 +160,17 @@ function initializeExperiment(experiment: MathExperiment) {
 export const useMathStore = create<MathState>((set, get) => ({
   ...initializeExperiment(DISTANCE_EXPERIMENT),
 
-  setTool: (tool) => set({ activeTool: tool }),
+  setTool: (tool) => {
+    // When switching tools, cancel any incomplete construction
+    set({
+      activeTool: tool,
+      constructionState: {
+        stage: 'idle',
+        firstPointId: null,
+        previewCoord: null,
+      },
+    });
+  },
 
   setViewport: (patch) =>
     set((state) => ({
@@ -210,12 +251,169 @@ export const useMathStore = create<MathState>((set, get) => ({
 
   commitPointDrag: (_id) => {
     const state = get();
-    // Drag commits are placed onto undo stack
     const snapshot = createSnapshot(state);
     set({
       history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
       future: [],
     });
+  },
+
+  // Construction State Machine
+  startConstruction: (firstPointId) =>
+    set({
+      constructionState: {
+        stage: 'selecting_second',
+        firstPointId,
+        previewCoord: null,
+      },
+    }),
+
+  updateConstructionPreview: (coord) =>
+    set((state) => ({
+      constructionState: {
+        ...state.constructionState,
+        previewCoord: coord,
+      },
+    })),
+
+  cancelConstruction: () =>
+    set({
+      constructionState: {
+        stage: 'idle',
+        firstPointId: null,
+        previewCoord: null,
+      },
+    }),
+
+  setActiveMeasurement: (measurement) => set({ activeMeasurement: measurement }),
+
+  createPoint: (x, y) => {
+    const state = get();
+    const existingPoints = Object.values(state.objects).filter(
+      (o): o is MathPoint => o.kind === 'point'
+    );
+    const label = generateNextPointLabel(existingPoints);
+    const id = `pt_${label}_${Date.now()}`;
+
+    const newPoint: MathPoint = {
+      id,
+      kind: 'point',
+      label,
+      x: Number(x.toFixed(4)),
+      y: Number(y.toFixed(4)),
+      isDraggable: true,
+      color: '#38bdf8',
+      radius: 7,
+    };
+
+    const snapshot = createSnapshot(state);
+    set({
+      objects: { ...state.objects, [id]: newPoint },
+      objectOrder: [...state.objectOrder, id],
+      selectedId: id,
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+
+    return newPoint;
+  },
+
+  createSegment: (pointAId, pointBId) => {
+    const state = get();
+    if (pointAId === pointBId) return null; // Reject zero-length self-segment
+
+    const pA = state.objects[pointAId] as MathPoint | undefined;
+    const pB = state.objects[pointBId] as MathPoint | undefined;
+    if (!pA || !pB) return null;
+
+    // Check if duplicate segment already connects these two points
+    const existing = Object.values(state.objects).find(
+      (o): o is MathSegment =>
+        o.kind === 'segment' &&
+        ((o.pointAId === pointAId && o.pointBId === pointBId) ||
+          (o.pointAId === pointBId && o.pointBId === pointAId))
+    );
+    if (existing) {
+      set({ selectedId: existing.id });
+      return existing;
+    }
+
+    const id = `seg_${pA.label}${pB.label}_${Date.now()}`;
+    const newSegment: MathSegment = {
+      id,
+      kind: 'segment',
+      label: `${pA.label}${pB.label}`,
+      pointAId,
+      pointBId,
+      color: '#a855f7',
+      strokeWidth: 3,
+      style: 'solid',
+    };
+
+    const snapshot = createSnapshot(state);
+    set({
+      objects: { ...state.objects, [id]: newSegment },
+      objectOrder: [...state.objectOrder, id],
+      selectedId: id,
+      constructionState: {
+        stage: 'idle',
+        firstPointId: null,
+        previewCoord: null,
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+
+    return newSegment;
+  },
+
+  createLine: (pointAId, pointBId) => {
+    const state = get();
+    if (pointAId === pointBId) return null; // Reject coincident points
+
+    const pA = state.objects[pointAId] as MathPoint | undefined;
+    const pB = state.objects[pointBId] as MathPoint | undefined;
+    if (!pA || !pB) return null;
+
+    // Check if duplicate line already exists
+    const existing = Object.values(state.objects).find(
+      (o): o is MathLine =>
+        o.kind === 'line' &&
+        ((o.pointAId === pointAId && o.pointBId === pointBId) ||
+          (o.pointAId === pointBId && o.pointBId === pointAId))
+    );
+    if (existing) {
+      set({ selectedId: existing.id });
+      return existing;
+    }
+
+    const id = `line_${pA.label}${pB.label}_${Date.now()}`;
+    const newLine: MathLine = {
+      id,
+      kind: 'line',
+      label: `Line ${pA.label}${pB.label}`,
+      pointAId,
+      pointBId,
+      color: '#06b6d4',
+      strokeWidth: 2.5,
+      style: 'solid',
+    };
+
+    const snapshot = createSnapshot(state);
+    set({
+      objects: { ...state.objects, [id]: newLine },
+      objectOrder: [...state.objectOrder, id],
+      selectedId: id,
+      constructionState: {
+        stage: 'idle',
+        firstPointId: null,
+        previewCoord: null,
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+
+    return newLine;
   },
 
   addObject: (object) => {
@@ -238,22 +436,39 @@ export const useMathStore = create<MathState>((set, get) => ({
     const newObjects = { ...state.objects };
     delete newObjects[id];
 
-    // If point was deleted, also delete dependent segments
+    // If point was deleted, also delete dependent segments and lines
     for (const [key, obj] of Object.entries(newObjects)) {
-      if ((obj.kind === 'segment' || obj.kind === 'line') && (obj.pointAId === id || obj.pointBId === id)) {
+      if (
+        (obj.kind === 'segment' || obj.kind === 'line') &&
+        (obj.pointAId === id || obj.pointBId === id)
+      ) {
         delete newObjects[key];
       }
     }
 
     const newOrder = state.objectOrder.filter((oId) => Boolean(newObjects[oId]));
 
+    // If measurement references deleted point, reset measurement to default
+    let activeMeasurement = state.activeMeasurement;
+    if (activeMeasurement && (activeMeasurement.pointAId === id || activeMeasurement.pointBId === id)) {
+      activeMeasurement = null;
+    }
+
     set({
       objects: newObjects,
       objectOrder: newOrder,
       selectedId: state.selectedId === id ? null : state.selectedId,
+      activeMeasurement,
       history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
       future: [],
     });
+  },
+
+  deleteSelectedObject: () => {
+    const state = get();
+    if (state.selectedId) {
+      get().deleteObject(state.selectedId);
+    }
   },
 
   undo: () => {

@@ -1,22 +1,28 @@
 /**
  * Mathematical Inspector & Educational Guidance Panel
  *
- * Implements properties inspection for points and segments,
- * step-by-step distance formula calculation breakdown,
+ * Implements properties inspection for points, segments, and infinite lines,
+ * step-by-step distance formula calculation breakdown for measured points,
  * and teacher-led Predict / Reveal mode for smart TVs.
  */
 
 import React, { useState } from 'react';
 import { useMathStore } from '../../store/useMathStore';
-import { calculateDistanceAnalysis } from '../../engine/mathematics/calculations';
+import {
+  calculateDistanceAnalysis,
+  calculateLineAnalysis,
+  formatMathNumber,
+} from '../../engine/mathematics/calculations';
 import type { MathPoint } from '../../engine/mathematics/types';
 
 export const MathInspectorPanel: React.FC = () => {
   const {
     objects,
     selectedId,
+    activeMeasurement,
     setPointCoordinates,
     selectObject,
+    deleteObject,
     predictRevealed,
     studentPrediction,
     predictionSubmitted,
@@ -32,11 +38,26 @@ export const MathInspectorPanel: React.FC = () => {
 
   const selectedObject = selectedId ? objects[selectedId] : null;
 
-  // Find points A and B for distance experiment
-  const ptA = (objects['pt_A'] as MathPoint) || Object.values(objects).find((o): o is MathPoint => o.kind === 'point');
-  const ptB = (objects['pt_B'] as MathPoint) || Object.values(objects).filter((o): o is MathPoint => o.kind === 'point')[1];
+  // Resolve measured points (either active measurement or default A and B)
+  const measuredPoints = React.useMemo(() => {
+    if (activeMeasurement) {
+      const p1 = objects[activeMeasurement.pointAId] as MathPoint | undefined;
+      const p2 = objects[activeMeasurement.pointBId] as MathPoint | undefined;
+      if (p1 && p2 && p1.id !== p2.id) return { p1, p2 };
+    }
+    const ptA =
+      (objects['pt_A'] as MathPoint) ||
+      Object.values(objects).find((o): o is MathPoint => o.kind === 'point');
+    const ptB =
+      (objects['pt_B'] as MathPoint) ||
+      Object.values(objects).filter((o): o is MathPoint => o.kind === 'point')[1];
+    if (ptA && ptB && ptA.id !== ptB.id) return { p1: ptA, p2: ptB };
+    return null;
+  }, [activeMeasurement, objects]);
 
-  const distanceAnalysis = ptA && ptB && ptA.id !== ptB.id ? calculateDistanceAnalysis(ptA, ptB) : null;
+  const distanceAnalysis = measuredPoints
+    ? calculateDistanceAnalysis(measuredPoints.p1, measuredPoints.p2)
+    : null;
 
   // Sync point input inputs when selection changes
   React.useEffect(() => {
@@ -81,6 +102,8 @@ export const MathInspectorPanel: React.FC = () => {
 
       <div className="p-5 space-y-6 flex-1">
         {/* Section 1: Selected Object Inspector */}
+
+        {/* 1A. Point Inspector */}
         {selectedObject && selectedObject.kind === 'point' && (
           <div className="space-y-4 p-4 rounded-xl bg-surface-card border border-surface-border shadow-md">
             <div className="flex items-center justify-between border-b border-surface-border pb-3">
@@ -117,12 +140,22 @@ export const MathInspectorPanel: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-1.5 rounded-lg bg-primary hover:bg-primary-dim text-white text-xs font-semibold font-mono transition-colors shadow"
-              >
-                Apply Coordinates
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-1.5 rounded-lg bg-primary hover:bg-primary-dim text-white text-xs font-semibold font-mono transition-colors shadow"
+                >
+                  Apply Coordinates
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteObject(selectedObject.id)}
+                  className="px-3 py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-700/60 text-red-200 text-xs font-mono transition-colors flex items-center gap-1"
+                  title="Delete Point (Delete)"
+                >
+                  <span className="material-symbols-outlined text-[15px]">delete</span>
+                </button>
+              </div>
             </form>
 
             <div className="text-[11px] font-mono text-slate-400 pt-1 flex justify-between">
@@ -142,6 +175,7 @@ export const MathInspectorPanel: React.FC = () => {
           </div>
         )}
 
+        {/* 1B. Segment Inspector */}
         {selectedObject && selectedObject.kind === 'segment' && (() => {
           const pA = objects[selectedObject.pointAId] as MathPoint | undefined;
           const pB = objects[selectedObject.pointBId] as MathPoint | undefined;
@@ -180,24 +214,99 @@ export const MathInspectorPanel: React.FC = () => {
                     {dist.toFixed(3)} units
                   </span>
                 </div>
-                <div className="flex justify-between py-1">
+                <div className="flex justify-between py-1 border-b border-surface-border/50">
                   <span className="text-slate-400">Midpoint M:</span>
                   <span className="text-slate-200">
                     ({midX.toFixed(2)}, {midY.toFixed(2)})
                   </span>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => deleteObject(selectedObject.id)}
+                className="w-full py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-700/60 text-red-200 text-xs font-mono transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[15px]">delete</span>
+                <span>Delete Segment</span>
+              </button>
             </div>
           );
         })()}
 
-        {/* Section 2: Distance Between Two Points Live Calculation */}
+        {/* 1C. Infinite Line Inspector */}
+        {selectedObject && selectedObject.kind === 'line' && (() => {
+          const pA = objects[selectedObject.pointAId] as MathPoint | undefined;
+          const pB = objects[selectedObject.pointBId] as MathPoint | undefined;
+          const analysis = pA && pB ? calculateLineAnalysis(pA, pB) : null;
+
+          return (
+            <div className="space-y-4 p-4 rounded-xl bg-surface-card border border-surface-border shadow-md">
+              <div className="flex items-center justify-between border-b border-surface-border pb-3">
+                <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">trending_flat</span>
+                  LINE: {selectedObject.label || 'Infinite Line'}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                  Infinite Line
+                </span>
+              </div>
+
+              {analysis && (
+                <div className="space-y-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-lg bg-surface-lowest border border-cyan-500/30 text-center">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+                      Line Equation
+                    </span>
+                    <strong className="text-sm text-cyan-200 font-bold block mt-0.5">
+                      {analysis.equation}
+                    </strong>
+                  </div>
+
+                  <div className="flex justify-between py-1 border-b border-surface-border/50">
+                    <span className="text-slate-400">Slope (m):</span>
+                    <span className="text-white font-semibold">
+                      {analysis.isVertical ? 'Undefined (Vertical)' : formatMathNumber(analysis.slope)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-surface-border/50">
+                    <span className="text-slate-400">Y-Intercept (c):</span>
+                    <span className="text-white font-semibold">
+                      {Number.isNaN(analysis.yIntercept) ? 'None' : formatMathNumber(analysis.yIntercept)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-surface-border/50">
+                    <span className="text-slate-400">Angle of Inclination:</span>
+                    <span className="text-white font-semibold">{analysis.angleDeg}°</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-surface-border/50">
+                    <span className="text-slate-400">Defining Points:</span>
+                    <span className="text-slate-300">
+                      {pA ? `${pA.label}(${pA.x}, ${pA.y})` : ''} & {pB ? `${pB.label}(${pB.x}, ${pB.y})` : ''}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => deleteObject(selectedObject.id)}
+                className="w-full py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-700/60 text-red-200 text-xs font-mono transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-[15px]">delete</span>
+                <span>Delete Line</span>
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Section 2: Distance Formula Live Calculation for Measured Points */}
         {distanceAnalysis && (
           <div className="space-y-4 p-4 rounded-xl bg-gradient-to-b from-surface-card to-surface-lowest border border-surface-border shadow-lg">
             <div className="flex items-center justify-between border-b border-surface-border pb-2.5">
               <span className="text-xs font-mono font-bold text-amber-400 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px]">square_foot</span>
-                DISTANCE FORMULA BREAKDOWN
+                DISTANCE: {distanceAnalysis.p1.label} TO {distanceAnalysis.p2.label}
               </span>
               <span className="text-[10px] font-mono text-slate-400">Class 9–10</span>
             </div>
@@ -205,7 +314,7 @@ export const MathInspectorPanel: React.FC = () => {
             {/* Formula Reference */}
             <div className="p-3 rounded-lg bg-surface-lowest border border-surface-border/70 text-center space-y-1">
               <span className="text-[11px] font-mono text-slate-400 block uppercase tracking-wider">
-                Distance Equation
+                Euclidean Distance Formula
               </span>
               <div className="text-sm font-mono text-amber-200 font-bold">
                 d = √[(x₂ - x₁)² + (y₂ - y₁)²]
@@ -263,7 +372,7 @@ export const MathInspectorPanel: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Estimate or calculate the distance before revealing the authoritative mathematical solution.
+              Estimate the distance between {distanceAnalysis.p1.label} and {distanceAnalysis.p2.label} before revealing the solution.
             </p>
 
             {!predictRevealed ? (
@@ -344,10 +453,11 @@ export const MathInspectorPanel: React.FC = () => {
               Interactive Tips
             </span>
             <ul className="list-disc pl-4 space-y-1 leading-relaxed">
-              <li>Click or touch Point A or B to select and edit exact coordinates.</li>
-              <li>Drag points across the coordinate plane to see live distance and right-triangle updates.</li>
-              <li>Toggle Snap-to-Grid in the top toolbar to snap to whole coordinates.</li>
-              <li>Use mouse wheel or zoom buttons to zoom in and out.</li>
+              <li>Click or touch any point, segment, or line to inspect its exact mathematical properties.</li>
+              <li>Use the left sidebar tools to construct new points, segments, or infinite lines.</li>
+              <li>Use Distance Measure (M) to select any two points on the plane and analyze their Euclidean distance.</li>
+              <li>Press Delete or Backspace to delete the selected object.</li>
+              <li>Press Escape to cancel an in-progress construction or clear selection.</li>
             </ul>
           </div>
         )}

@@ -43,7 +43,7 @@ export interface MathViewportTransform {
   panX: number;
   panY: number;
   zoom: number;
-  unitPixels: number; // Pixels per 1 mathematical coordinate unit (e.g. 40px = 1 unit)
+  unitPixels: number; // Pixels per 1 mathematical coordinate unit (e.g. 44px = 1 unit)
 }
 
 export interface DistanceAnalysis {
@@ -71,12 +71,24 @@ export interface DistanceAnalysis {
   };
 }
 
+export interface LineAnalysis {
+  p1: { x: number; y: number; label: string };
+  p2: { x: number; y: number; label: string };
+  isVertical: boolean;
+  isHorizontal: boolean;
+  slope: number;
+  yIntercept: number;
+  equation: string;
+  angleDeg: number;
+}
+
 export type MathToolId =
   | 'select'
   | 'point'
   | 'segment'
   | 'line'
   | 'distance'
+  | 'pan'
   | 'axes';
 
 export interface MathToolDefinition {
@@ -87,6 +99,17 @@ export interface MathToolDefinition {
   shortcut?: string;
   description: string;
   cursor: string;
+}
+
+export interface ConstructionState {
+  stage: 'idle' | 'selecting_second';
+  firstPointId: string | null;
+  previewCoord: { x: number; y: number } | null;
+}
+
+export interface ActiveMeasurement {
+  pointAId: string;
+  pointBId: string;
 }
 
 export interface MathSaveFile {

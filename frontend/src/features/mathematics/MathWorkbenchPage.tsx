@@ -13,9 +13,9 @@ import { MathInspectorPanel } from './MathInspectorPanel';
 import { useMathStore } from '../../store/useMathStore';
 
 export const MathWorkbenchPage: React.FC = () => {
-  const { setTool, undo, redo, selectObject } = useMathStore();
+  const { setTool, undo, redo, selectObject, deleteSelectedObject, toggleAxes } = useMathStore();
 
-  // Keyboard shortcut listener
+  // Global Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't intercept if user is typing into an input field
@@ -39,6 +39,11 @@ export const MathWorkbenchPage: React.FC = () => {
         return;
       }
 
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        deleteSelectedObject();
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case 'v':
           setTool('select');
@@ -55,8 +60,11 @@ export const MathWorkbenchPage: React.FC = () => {
         case 'm':
           setTool('distance');
           break;
+        case 'h':
+          setTool('pan');
+          break;
         case 'g':
-          setTool('axes');
+          toggleAxes();
           break;
         case 'escape':
           selectObject(null);
@@ -68,7 +76,7 @@ export const MathWorkbenchPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setTool, undo, redo, selectObject]);
+  }, [setTool, undo, redo, selectObject, deleteSelectedObject, toggleAxes]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-on-surface antialiased overflow-hidden select-none">

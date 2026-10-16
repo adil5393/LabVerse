@@ -1,13 +1,14 @@
 /**
  * Interactive Cartesian Mathematical Canvas for LabVerse Mathematics Laboratory
  *
- * Implements SVG Cartesian coordinate plane with:
- * - Mathematical world coordinates (positive Y pointing upward)
- * - Fine/major grid ticks and adaptive axis numbers
- * - 5px pointer drag threshold with pointer capture
- * - Independent point dragging with instant dependent geometry updates
- * - Dashed right-triangle Pythagorean constructions for distance experiment
- * - Smart-TV touch and desktop mouse support
+ * Implements complete tool interactions and lifecycle:
+ * - Select / Move (V)
+ * - Point placement with auto-labels (P)
+ * - Line Segment construction with live rubberband preview (S)
+ * - Infinite Line with viewport clipping (L)
+ * - Distance Measurement between any two points (M)
+ * - Pan & Navigate (H)
+ * - Drag threshold (5px), Escape cancellation, and Smart-TV touch support.
  */
 
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
@@ -19,8 +20,12 @@ import {
   calculateAdaptiveTickInterval,
   getVisibleMathBounds,
 } from '../../engine/mathematics/coordinates';
-import { calculateDistanceAnalysis } from '../../engine/mathematics/calculations';
-import type { MathPoint, MathSegment } from '../../engine/mathematics/types';
+import {
+  calculateDistanceAnalysis,
+  calculateInfiniteLineEndpoints,
+  calculateLineAnalysis,
+} from '../../engine/mathematics/calculations';
+import type { MathPoint, MathSegment, MathLine } from '../../engine/mathematics/types';
 
 const DRAG_THRESHOLD_PX = 5;
 
@@ -39,11 +44,19 @@ export const MathCanvas: React.FC = () => {
     showAxes,
     showCoordinates,
     showConstructions,
+    constructionState,
+    activeMeasurement,
     selectObject,
     setPointCoordinates,
     updatePointDrag,
     commitPointDrag,
-    addObject,
+    startConstruction,
+    updateConstructionPreview,
+    cancelConstruction,
+    createPoint,
+    createSegment,
+    createLine,
+    setActiveMeasurement,
     panBy,
     setViewport,
   } = useMathStore();
@@ -89,13 +102,17 @@ export const MathCanvas: React.FC = () => {
     return () => ro.disconnect();
   }, []);
 
-  // Compute points and segments
+  // Compute points, segments, lines
   const points = useMemo(() => {
     return Object.values(objects).filter((obj): obj is MathPoint => obj.kind === 'point');
   }, [objects]);
 
   const segments = useMemo(() => {
     return Object.values(objects).filter((obj): obj is MathSegment => obj.kind === 'segment');
+  }, [objects]);
+
+  const lines = useMemo(() => {
+    return Object.values(objects).filter((obj): obj is MathLine => obj.kind === 'line');
   }, [objects]);
 
   // Points map for fast lookup
@@ -105,20 +122,12 @@ export const MathCanvas: React.FC = () => {
     return map;
   }, [points]);
 
-  // Distance construction for the first experiment (points A and B)
-  const distanceAnalysis = useMemo(() => {
-    const ptA = pointsMap.get('pt_A') || points[0];
-    const ptB = pointsMap.get('pt_B') || points[1];
-    if (ptA && ptB && ptA.id !== ptB.id) {
-      return calculateDistanceAnalysis(ptA, ptB);
-    }
-    return null;
-  }, [pointsMap, points]);
-
   // Compute visible math bounds and grid lines
-  const { minX, maxX, minY, maxY } = useMemo(() => {
+  const visibleBounds = useMemo(() => {
     return getVisibleMathBounds(canvasDimensions.width, canvasDimensions.height, viewport);
   }, [canvasDimensions, viewport]);
+
+  const { minX, maxX, minY, maxY } = visibleBounds;
 
   const { majorStep, minorStep } = useMemo(() => {
     return calculateAdaptiveTickInterval(viewport.zoom, viewport.unitPixels);
@@ -136,7 +145,6 @@ export const MathCanvas: React.FC = () => {
     const majorY: number[] = [];
     const minorY: number[] = [];
 
-    // X ticks
     for (let x = startX; x <= endX; x += majorStep) {
       majorX.push(Number(x.toFixed(4)));
     }
@@ -150,7 +158,6 @@ export const MathCanvas: React.FC = () => {
       }
     }
 
-    // Y ticks
     for (let y = startY; y <= endY; y += majorStep) {
       majorY.push(Number(y.toFixed(4)));
     }
@@ -172,14 +179,95 @@ export const MathCanvas: React.FC = () => {
     return mathToScreen(0, 0, viewport);
   }, [viewport]);
 
-  // Handle pointer down on point (starts drag candidate with threshold)
+  // Distance analysis between actively measured points (or default A and B)
+  const measuredDistanceAnalysis = useMemo(() => {
+    if (activeMeasurement) {
+      const p1 = pointsMap.get(activeMeasurement.pointAId);
+      const p2 = pointsMap.get(activeMeasurement.pointBId);
+      if (p1 && p2 && p1.id !== p2.id) {
+        return calculateDistanceAnalysis(p1, p2);
+      }
+    }
+    const ptA = pointsMap.get('pt_A') || points[0];
+    const ptB = pointsMap.get('pt_B') || points[1];
+    if (ptA && ptB && ptA.id !== ptB.id) {
+      return calculateDistanceAnalysis(ptA, ptB);
+    }
+    return null;
+  }, [activeMeasurement, pointsMap, points]);
+
+  // First point for active construction
+  const constructionFirstPoint = useMemo(() => {
+    if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
+      return pointsMap.get(constructionState.firstPointId) || null;
+    }
+    return null;
+  }, [constructionState, pointsMap]);
+
+  // Handle pointer down on a point
   const handlePointPointerDown = (
     e: React.PointerEvent<SVGGElement>,
     point: MathPoint
   ) => {
     e.stopPropagation();
-    if (e.button !== 0) return; // Only primary button
+    if (e.button !== 0) return;
 
+    // 1. Line Segment tool construction
+    if (activeTool === 'segment') {
+      if (constructionState.stage === 'idle') {
+        startConstruction(point.id);
+        return;
+      } else if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
+        if (constructionState.firstPointId !== point.id) {
+          createSegment(constructionState.firstPointId, point.id);
+        }
+        return;
+      }
+    }
+
+    // 2. Line tool construction
+    if (activeTool === 'line') {
+      if (constructionState.stage === 'idle') {
+        startConstruction(point.id);
+        return;
+      } else if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
+        if (constructionState.firstPointId !== point.id) {
+          createLine(constructionState.firstPointId, point.id);
+        }
+        return;
+      }
+    }
+
+    // 3. Distance Measure tool
+    if (activeTool === 'distance') {
+      if (constructionState.stage === 'idle') {
+        startConstruction(point.id);
+        return;
+      } else if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
+        if (constructionState.firstPointId !== point.id) {
+          setActiveMeasurement({
+            pointAId: constructionState.firstPointId,
+            pointBId: point.id,
+          });
+          cancelConstruction();
+        }
+        return;
+      }
+    }
+
+    // 4. Pan tool: ignore point selection, start pan
+    if (activeTool === 'pan') {
+      panRef.current = {
+        isPanning: true,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        pointerId: e.pointerId,
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    // 5. Select / Move tool: select and start drag candidate
     selectObject(point.id);
 
     dragRef.current = {
@@ -196,8 +284,19 @@ export const MathCanvas: React.FC = () => {
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  // Pointer move on point
+  // Pointer move on a point (for dragging)
   const handlePointPointerMove = (e: React.PointerEvent<SVGGElement>) => {
+    // If in Pan tool, delegate to canvas pan
+    const pan = panRef.current;
+    if (pan && pan.isPanning && pan.pointerId === e.pointerId) {
+      const deltaX = e.clientX - pan.startClientX;
+      const deltaY = e.clientY - pan.startClientY;
+      pan.startClientX = e.clientX;
+      pan.startClientY = e.clientY;
+      panBy(deltaX, deltaY);
+      return;
+    }
+
     const drag = dragRef.current;
     if (!drag || !drag.isDragging || drag.pointerId !== e.pointerId) return;
 
@@ -207,12 +306,11 @@ export const MathCanvas: React.FC = () => {
 
     if (!drag.dragStarted) {
       if (distanceMoved < DRAG_THRESHOLD_PX) {
-        return; // Threshold not yet exceeded
+        return;
       }
       drag.dragStarted = true;
     }
 
-    // Convert current pointer to screen offset and math coordinates
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
@@ -230,8 +328,19 @@ export const MathCanvas: React.FC = () => {
     updatePointDrag(drag.pointId, targetX, targetY);
   };
 
-  // Pointer up on point
+  // Pointer up on a point
   const handlePointPointerUp = (e: React.PointerEvent<SVGGElement>) => {
+    const pan = panRef.current;
+    if (pan && pan.pointerId === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
+      panRef.current = null;
+      return;
+    }
+
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
 
@@ -242,64 +351,86 @@ export const MathCanvas: React.FC = () => {
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
-      // Ignore if pointer capture already lost
+      // Ignore
     }
 
     dragRef.current = null;
   };
 
-  // Cancel drag on Escape key
+  // Keyboard shortcut for Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && dragRef.current && dragRef.current.isDragging) {
-        const { pointId, initialMathX, initialMathY } = dragRef.current;
-        setPointCoordinates(pointId, initialMathX, initialMathY, false);
-        dragRef.current = null;
+      if (e.key === 'Escape') {
+        // Cancel active point drag
+        if (dragRef.current && dragRef.current.isDragging) {
+          const { pointId, initialMathX, initialMathY } = dragRef.current;
+          setPointCoordinates(pointId, initialMathX, initialMathY, false);
+          dragRef.current = null;
+        }
+        // Cancel active construction
+        cancelConstruction();
+        // Clear selection
+        selectObject(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setPointCoordinates]);
+  }, [setPointCoordinates, cancelConstruction, selectObject]);
 
-  // Canvas background pointer down (pan or placement)
+  // Canvas background pointer down (click / creation / pan)
   const handleCanvasPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (e.target !== svgRef.current && (e.target as HTMLElement).tagName !== 'rect') return;
+    if (e.button !== 0 && e.button !== 1) return;
 
-    // Check if middle click or space key or pan mode
-    if (e.button === 1 || e.button === 0) {
-      // If clicking on empty canvas with select tool, deselect
-      if (activeTool === 'select' && e.button === 0) {
-        selectObject(null);
-      }
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const mathRaw = screenToMath(screenX, screenY, viewport);
+    const mathCoord = {
+      x: snapToGrid ? snapToMathGrid(mathRaw.x, gridSnapStep) : Number(mathRaw.x.toFixed(4)),
+      y: snapToGrid ? snapToMathGrid(mathRaw.y, gridSnapStep) : Number(mathRaw.y.toFixed(4)),
+    };
 
-      if (activeTool === 'point' && e.button === 0) {
-        // Place a new point
-        if (!svgRef.current) return;
-        const rect = svgRef.current.getBoundingClientRect();
-        const screenX = e.clientX - rect.left;
-        const screenY = e.clientY - rect.top;
-        const math = screenToMath(screenX, screenY, viewport);
-        const finalX = snapToGrid ? snapToMathGrid(math.x, gridSnapStep) : Number(math.x.toFixed(2));
-        const finalY = snapToGrid ? snapToMathGrid(math.y, gridSnapStep) : Number(math.y.toFixed(2));
+    // 1. Point tool: create new point
+    if (activeTool === 'point' && e.button === 0) {
+      createPoint(mathCoord.x, mathCoord.y);
+      return;
+    }
 
-        const nextLetter = String.fromCharCode(65 + (points.length % 26));
-        const newPointId = `pt_${Date.now()}`;
-        const newPoint: MathPoint = {
-          id: newPointId,
-          kind: 'point',
-          label: nextLetter,
-          x: finalX,
-          y: finalY,
-          isDraggable: true,
-          color: '#38bdf8',
-          radius: 7,
-        };
-        addObject(newPoint);
+    // 2. Segment tool on empty canvas: create point 1 or point 2
+    if (activeTool === 'segment' && e.button === 0) {
+      if (constructionState.stage === 'idle') {
+        const newP1 = createPoint(mathCoord.x, mathCoord.y);
+        startConstruction(newP1.id);
+        return;
+      } else if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
+        const newP2 = createPoint(mathCoord.x, mathCoord.y);
+        createSegment(constructionState.firstPointId, newP2.id);
         return;
       }
+    }
 
-      // Start canvas panning
+    // 3. Line tool on empty canvas: create point 1 or point 2
+    if (activeTool === 'line' && e.button === 0) {
+      if (constructionState.stage === 'idle') {
+        const newP1 = createPoint(mathCoord.x, mathCoord.y);
+        startConstruction(newP1.id);
+        return;
+      } else if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
+        const newP2 = createPoint(mathCoord.x, mathCoord.y);
+        createLine(constructionState.firstPointId, newP2.id);
+        return;
+      }
+    }
+
+    // 4. Select tool: clicking empty space deselects
+    if (activeTool === 'select' && e.button === 0) {
+      selectObject(null);
+    }
+
+    // 5. Pan tool or middle-drag or background-drag in select tool: start canvas pan
+    if (activeTool === 'pan' || activeTool === 'select' || e.button === 1) {
       panRef.current = {
         isPanning: true,
         startClientX: e.clientX,
@@ -317,10 +448,16 @@ export const MathCanvas: React.FC = () => {
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
       const math = screenToMath(screenX, screenY, viewport);
-      setCursorMathCoords({
-        x: Number(math.x.toFixed(2)),
-        y: Number(math.y.toFixed(2)),
-      });
+      const mathSnap = {
+        x: snapToGrid ? snapToMathGrid(math.x, gridSnapStep) : Number(math.x.toFixed(2)),
+        y: snapToGrid ? snapToMathGrid(math.y, gridSnapStep) : Number(math.y.toFixed(2)),
+      };
+      setCursorMathCoords(mathSnap);
+
+      // Update construction rubberband preview
+      if (constructionState.stage === 'selecting_second') {
+        updateConstructionPreview(mathSnap);
+      }
     }
 
     // Handle canvas panning
@@ -356,13 +493,10 @@ export const MathCanvas: React.FC = () => {
       const pointerScreenX = e.clientX - rect.left;
       const pointerScreenY = e.clientY - rect.top;
 
-      // Mathematical coordinate under the pointer before zoom
       const mathBefore = screenToMath(pointerScreenX, pointerScreenY, viewport);
-
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
       const newZoom = Math.max(0.2, Math.min(4.0, viewport.zoom * zoomFactor));
 
-      // Calculate new pan so the math point stays exactly under pointer
       const effectiveScale = viewport.unitPixels * newZoom;
       const newPanX = pointerScreenX - mathBefore.x * effectiveScale;
       const newPanY = pointerScreenY + mathBefore.y * effectiveScale;
@@ -376,23 +510,36 @@ export const MathCanvas: React.FC = () => {
     [viewport, setViewport]
   );
 
+  // Determine cursor based on tool and pan state
+  const canvasCursorClass = useMemo(() => {
+    if (activeTool === 'pan') {
+      return panRef.current?.isPanning ? 'cursor-grabbing' : 'cursor-grab';
+    }
+    if (activeTool === 'point' || activeTool === 'segment' || activeTool === 'line') {
+      return 'cursor-crosshair';
+    }
+    if (activeTool === 'distance') {
+      return 'cursor-pointer';
+    }
+    return 'cursor-default';
+  }, [activeTool]);
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-[#090d14] overflow-hidden select-none touch-none workbench-mat"
+      className={`relative w-full h-full bg-[#090d14] overflow-hidden select-none touch-none workbench-mat ${canvasCursorClass}`}
       onWheel={handleWheel}
     >
       <svg
         ref={svgRef}
         width={canvasDimensions.width}
         height={canvasDimensions.height}
-        className="w-full h-full cursor-crosshair"
+        className="w-full h-full"
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
       >
         <defs>
-          {/* Arrow markers for axes */}
           <marker
             id="axis-arrow-x"
             viewBox="0 0 10 10"
@@ -420,7 +567,6 @@ export const MathCanvas: React.FC = () => {
         {/* 1. Grid Lines Layer */}
         {showGrid && (
           <g id="math-grid-lines" pointerEvents="none">
-            {/* Minor Grid Lines */}
             {minorXTicks.map((x) => {
               const sx = mathToScreen(x, 0, viewport).x;
               return (
@@ -449,10 +595,8 @@ export const MathCanvas: React.FC = () => {
                 />
               );
             })}
-
-            {/* Major Grid Lines */}
             {majorXTicks.map((x) => {
-              if (Math.abs(x) < 1e-5) return null; // Skip axis itself
+              if (Math.abs(x) < 1e-5) return null;
               const sx = mathToScreen(x, 0, viewport).x;
               return (
                 <line
@@ -467,7 +611,7 @@ export const MathCanvas: React.FC = () => {
               );
             })}
             {majorYTicks.map((y) => {
-              if (Math.abs(y) < 1e-5) return null; // Skip axis itself
+              if (Math.abs(y) < 1e-5) return null;
               const sy = mathToScreen(0, y, viewport).y;
               return (
                 <line
@@ -487,7 +631,6 @@ export const MathCanvas: React.FC = () => {
         {/* 2. Cartesian Axes Layer */}
         {showAxes && (
           <g id="math-axes" pointerEvents="none">
-            {/* X-Axis */}
             <line
               x1={0}
               y1={originScreen.y}
@@ -497,7 +640,6 @@ export const MathCanvas: React.FC = () => {
               strokeWidth="2"
               markerEnd="url(#axis-arrow-x)"
             />
-            {/* X-Axis label */}
             <text
               x={canvasDimensions.width - 24}
               y={originScreen.y - 10}
@@ -509,7 +651,6 @@ export const MathCanvas: React.FC = () => {
               x
             </text>
 
-            {/* Y-Axis */}
             <line
               x1={originScreen.x}
               y1={canvasDimensions.height}
@@ -519,7 +660,6 @@ export const MathCanvas: React.FC = () => {
               strokeWidth="2"
               markerEnd="url(#axis-arrow-y)"
             />
-            {/* Y-Axis label */}
             <text
               x={originScreen.x + 12}
               y={24}
@@ -531,7 +671,6 @@ export const MathCanvas: React.FC = () => {
               y
             </text>
 
-            {/* Origin indicator (0,0) */}
             <circle cx={originScreen.x} cy={originScreen.y} r={3.5} fill="#94a3b8" />
             <text
               x={originScreen.x - 14}
@@ -543,7 +682,6 @@ export const MathCanvas: React.FC = () => {
               O
             </text>
 
-            {/* Ticks and numeric coordinate labels */}
             {majorXTicks.map((x) => {
               if (Math.abs(x) < 1e-5) return null;
               const sx = mathToScreen(x, 0, viewport).x;
@@ -588,22 +726,112 @@ export const MathCanvas: React.FC = () => {
           </g>
         )}
 
-        {/* 3. Distance Experiment Constructions Layer (Dashed Right Triangle) */}
-        {showConstructions && distanceAnalysis && (
+        {/* 3. Infinite Lines Layer */}
+        <g id="math-infinite-lines">
+          {lines.map((line) => {
+            const pA = pointsMap.get(line.pointAId);
+            const pB = pointsMap.get(line.pointBId);
+            if (!pA || !pB) return null;
+
+            const clip = calculateInfiniteLineEndpoints(pA, pB, visibleBounds);
+            if (!clip) return null;
+
+            const s1 = mathToScreen(clip[0].x, clip[0].y, viewport);
+            const s2 = mathToScreen(clip[1].x, clip[1].y, viewport);
+            const isSelected = selectedId === line.id;
+            const analysis = calculateLineAnalysis(pA, pB);
+
+            // Midpoint on screen for line badge
+            const midScreenX = (s1.x + s2.x) / 2;
+            const midScreenY = (s1.y + s2.y) / 2;
+
+            return (
+              <g
+                key={line.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectObject(line.id);
+                }}
+                className="cursor-pointer group"
+              >
+                {/* Hit testing area */}
+                <line
+                  x1={s1.x}
+                  y1={s1.y}
+                  x2={s2.x}
+                  y2={s2.y}
+                  stroke="transparent"
+                  strokeWidth="20"
+                />
+
+                {/* Selection halo */}
+                {isSelected && (
+                  <line
+                    x1={s1.x}
+                    y1={s1.y}
+                    x2={s2.x}
+                    y2={s2.y}
+                    stroke="#22d3ee"
+                    strokeWidth="7"
+                    strokeOpacity="0.4"
+                  />
+                )}
+
+                {/* Main line body */}
+                <line
+                  x1={s1.x}
+                  y1={s1.y}
+                  x2={s2.x}
+                  y2={s2.y}
+                  stroke={isSelected ? '#67e8f9' : line.color || '#06b6d4'}
+                  strokeWidth={line.strokeWidth || 2.5}
+                  strokeDasharray={line.style === 'dashed' ? '6,4' : undefined}
+                  className="transition-colors group-hover:stroke-[#22d3ee]"
+                />
+
+                {/* Equation badge pill */}
+                <g transform={`translate(${midScreenX}, ${midScreenY - 14})`}>
+                  <rect
+                    x="-45"
+                    y="-11"
+                    width="90"
+                    height="22"
+                    rx="6"
+                    fill="#083344"
+                    stroke="#06b6d4"
+                    strokeWidth="1.5"
+                    filter="drop-shadow(0 2px 6px rgba(0,0,0,0.7))"
+                  />
+                  <text
+                    x="0"
+                    y="4"
+                    fill="#cffafe"
+                    fontSize="10"
+                    fontFamily="JetBrains Mono"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                  >
+                    {analysis.equation}
+                  </text>
+                </g>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* 4. Distance Construction Layer (Right Triangle for Reference or Measured Points) */}
+        {showConstructions && measuredDistanceAnalysis && (
           <g id="distance-constructions">
             {(() => {
-              const { p1, p2, dx, dy, absDx, absDy } = distanceAnalysis;
+              const { p1, p2, dx, dy, absDx, absDy } = measuredDistanceAnalysis;
               const sA = mathToScreen(p1.x, p1.y, viewport);
               const sB = mathToScreen(p2.x, p2.y, viewport);
-              // Third vertex C is at (x2, y1)
               const sC = mathToScreen(p2.x, p1.y, viewport);
 
-              // Don't render triangle if points are collinear horizontally or vertically
               const isDegenerate = Math.abs(dx) < 1e-4 || Math.abs(dy) < 1e-4;
 
               return (
                 <>
-                  {/* Shaded Right Triangle Body */}
                   {!isDegenerate && (
                     <polygon
                       points={`${sA.x},${sA.y} ${sC.x},${sC.y} ${sB.x},${sB.y}`}
@@ -613,7 +841,7 @@ export const MathCanvas: React.FC = () => {
                     />
                   )}
 
-                  {/* Horizontal Leg: from A(x1, y1) to C(x2, y1) */}
+                  {/* Horizontal Leg */}
                   <line
                     x1={sA.x}
                     y1={sA.y}
@@ -625,7 +853,7 @@ export const MathCanvas: React.FC = () => {
                     pointerEvents="none"
                   />
 
-                  {/* Vertical Leg: from C(x2, y1) to B(x2, y2) */}
+                  {/* Vertical Leg */}
                   <line
                     x1={sC.x}
                     y1={sC.y}
@@ -637,7 +865,7 @@ export const MathCanvas: React.FC = () => {
                     pointerEvents="none"
                   />
 
-                  {/* Right Angle Symbol at Corner C(x2, y1) */}
+                  {/* Right Angle Corner Marker */}
                   {!isDegenerate && (() => {
                     const size = 12;
                     const dirX = sA.x < sC.x ? -1 : 1;
@@ -653,7 +881,7 @@ export const MathCanvas: React.FC = () => {
                     );
                   })()}
 
-                  {/* Horizontal Difference Badge: Δx = |x2 - x1| */}
+                  {/* Horizontal Diff Badge */}
                   <g transform={`translate(${(sA.x + sC.x) / 2}, ${sA.y + (p2.y > p1.y ? 16 : -16)})`}>
                     <rect
                       x="-28"
@@ -679,7 +907,7 @@ export const MathCanvas: React.FC = () => {
                     </text>
                   </g>
 
-                  {/* Vertical Difference Badge: Δy = |y2 - y1| */}
+                  {/* Vertical Diff Badge */}
                   <g transform={`translate(${sC.x + (p2.x > p1.x ? 18 : -18)}, ${(sC.y + sB.y) / 2})`}>
                     <rect
                       x="-28"
@@ -710,7 +938,7 @@ export const MathCanvas: React.FC = () => {
           </g>
         )}
 
-        {/* 4. Segments Layer */}
+        {/* 5. Segments Layer */}
         <g id="math-segments">
           {segments.map((seg) => {
             const pA = pointsMap.get(seg.pointAId);
@@ -722,7 +950,6 @@ export const MathCanvas: React.FC = () => {
             const isSelected = selectedId === seg.id;
             const dist = Math.hypot(pB.x - pA.x, pB.y - pA.y);
 
-            // Midpoint screen position for length badge
             const midScreenX = (sA.x + sB.x) / 2;
             const midScreenY = (sA.y + sB.y) / 2;
 
@@ -735,7 +962,6 @@ export const MathCanvas: React.FC = () => {
                 }}
                 className="cursor-pointer group"
               >
-                {/* Generous invisible stroke for hit testing */}
                 <line
                   x1={sA.x}
                   y1={sA.y}
@@ -745,7 +971,6 @@ export const MathCanvas: React.FC = () => {
                   strokeWidth="20"
                 />
 
-                {/* Selection halo */}
                 {isSelected && (
                   <line
                     x1={sA.x}
@@ -759,7 +984,6 @@ export const MathCanvas: React.FC = () => {
                   />
                 )}
 
-                {/* Visible segment core */}
                 <line
                   x1={sA.x}
                   y1={sA.y}
@@ -771,7 +995,6 @@ export const MathCanvas: React.FC = () => {
                   className="transition-colors group-hover:stroke-[#c084fc]"
                 />
 
-                {/* Length badge pill */}
                 <g transform={`translate(${midScreenX}, ${midScreenY - 14})`}>
                   <rect
                     x="-34"
@@ -801,12 +1024,97 @@ export const MathCanvas: React.FC = () => {
           })}
         </g>
 
-        {/* 5. Points Layer */}
+        {/* 6. Active Construction Rubberband Preview Layer */}
+        {constructionFirstPoint && constructionState.previewCoord && (
+          <g id="math-construction-preview" pointerEvents="none">
+            {(() => {
+              const s1 = mathToScreen(constructionFirstPoint.x, constructionFirstPoint.y, viewport);
+              const p2 = constructionState.previewCoord;
+              const s2 = mathToScreen(p2.x, p2.y, viewport);
+              const previewDist = Math.hypot(p2.x - constructionFirstPoint.x, p2.y - constructionFirstPoint.y);
+
+              // Segment Rubberband
+              if (activeTool === 'segment') {
+                return (
+                  <>
+                    <line
+                      x1={s1.x}
+                      y1={s1.y}
+                      x2={s2.x}
+                      y2={s2.y}
+                      stroke="#c084fc"
+                      strokeWidth="2.5"
+                      strokeDasharray="6,4"
+                    />
+                    <circle cx={s2.x} cy={s2.y} r="5" fill="#c084fc" stroke="#ffffff" strokeWidth="1.5" />
+                    <g transform={`translate(${(s1.x + s2.x) / 2}, ${(s1.y + s2.y) / 2 - 12})`}>
+                      <rect x="-30" y="-10" width="60" height="20" rx="5" fill="#1e1b4b" stroke="#c084fc" strokeWidth="1" />
+                      <text x="0" y="4" fill="#f3e8ff" fontSize="10" fontFamily="JetBrains Mono" textAnchor="middle">
+                        {previewDist.toFixed(2)}
+                      </text>
+                    </g>
+                  </>
+                );
+              }
+
+              // Infinite Line Rubberband
+              if (activeTool === 'line') {
+                const clip = calculateInfiniteLineEndpoints(constructionFirstPoint, p2, visibleBounds);
+                if (!clip) return null;
+                const cs1 = mathToScreen(clip[0].x, clip[0].y, viewport);
+                const cs2 = mathToScreen(clip[1].x, clip[1].y, viewport);
+                return (
+                  <>
+                    <line
+                      x1={cs1.x}
+                      y1={cs1.y}
+                      x2={cs2.x}
+                      y2={cs2.y}
+                      stroke="#22d3ee"
+                      strokeWidth="2.5"
+                      strokeDasharray="6,4"
+                    />
+                    <circle cx={s2.x} cy={s2.y} r="5" fill="#22d3ee" stroke="#ffffff" strokeWidth="1.5" />
+                  </>
+                );
+              }
+
+              // Distance Tool Preview
+              if (activeTool === 'distance') {
+                return (
+                  <>
+                    <line
+                      x1={s1.x}
+                      y1={s1.y}
+                      x2={s2.x}
+                      y2={s2.y}
+                      stroke="#f59e0b"
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
+                    />
+                    <g transform={`translate(${(s1.x + s2.x) / 2}, ${(s1.y + s2.y) / 2 - 12})`}>
+                      <rect x="-32" y="-10" width="64" height="20" rx="5" fill="#451a03" stroke="#f59e0b" strokeWidth="1.2" />
+                      <text x="0" y="4" fill="#fef3c7" fontSize="10" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                        d = {previewDist.toFixed(2)}
+                      </text>
+                    </g>
+                  </>
+                );
+              }
+
+              return null;
+            })()}
+          </g>
+        )}
+
+        {/* 7. Points Layer */}
         <g id="math-points">
           {points.map((pt) => {
             const screen = mathToScreen(pt.x, pt.y, viewport);
             const isSelected = selectedId === pt.id;
-            const ptColor = pt.color || '#4d8eff';
+            const isFirstConstructPoint =
+              constructionState.stage === 'selecting_second' && constructionState.firstPointId === pt.id;
+            const ptColor = isFirstConstructPoint ? '#22c55e' : pt.color || '#4d8eff';
 
             return (
               <g
@@ -815,13 +1123,26 @@ export const MathCanvas: React.FC = () => {
                 onPointerDown={(e) => handlePointPointerDown(e, pt)}
                 onPointerMove={handlePointPointerMove}
                 onPointerUp={handlePointPointerUp}
-                className="cursor-grab active:cursor-grabbing group/pt"
+                className={activeTool === 'pan' ? 'cursor-grab' : 'cursor-grab active:cursor-grabbing group/pt'}
               >
-                {/* 36px generous hit area for touch displays and mouse */}
                 <circle cx={0} cy={0} r={20} fill="transparent" />
 
-                {/* Glowing Outer Selection Ring */}
-                {isSelected && (
+                {/* Construction target pulsing halo */}
+                {isFirstConstructPoint && (
+                  <circle
+                    cx={0}
+                    cy={0}
+                    r={16}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="2.5"
+                    strokeDasharray="4,3"
+                    className="animate-spin origin-center"
+                  />
+                )}
+
+                {/* Selected object halo */}
+                {isSelected && !isFirstConstructPoint && (
                   <circle
                     cx={0}
                     cy={0}
@@ -834,7 +1155,7 @@ export const MathCanvas: React.FC = () => {
                   />
                 )}
 
-                {/* Point Body */}
+                {/* Point body */}
                 <circle
                   cx={0}
                   cy={0}
@@ -846,10 +1167,8 @@ export const MathCanvas: React.FC = () => {
                   className="transition-transform group-hover/pt:scale-110"
                 />
 
-                {/* Point Center Highlight */}
                 <circle cx={0} cy={0} r={2} fill="#ffffff" pointerEvents="none" />
 
-                {/* Label and Coordinate Tag */}
                 {showCoordinates && (
                   <g transform="translate(12, -12)" pointerEvents="none">
                     <rect
@@ -881,6 +1200,60 @@ export const MathCanvas: React.FC = () => {
         </g>
       </svg>
 
+      {/* Top Contextual Instructions Banner */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <div className="px-3.5 py-1.5 rounded-full bg-surface-lowest/90 backdrop-blur border border-surface-border text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
+          {activeTool === 'select' && (
+            <>
+              <span className="material-symbols-outlined text-primary text-[16px]">touch_app</span>
+              <span>Select objects to inspect or drag points. Drag canvas to pan.</span>
+            </>
+          )}
+          {activeTool === 'pan' && (
+            <>
+              <span className="material-symbols-outlined text-amber-400 text-[16px]">drag_pan</span>
+              <span>Pan mode: Click & drag anywhere to navigate plane. Wheel to zoom.</span>
+            </>
+          )}
+          {activeTool === 'point' && (
+            <>
+              <span className="material-symbols-outlined text-sky-400 text-[16px]">adjust</span>
+              <span>Point: Click anywhere on Cartesian plane to create a point.</span>
+            </>
+          )}
+          {activeTool === 'segment' && (
+            <>
+              <span className="material-symbols-outlined text-purple-400 text-[16px]">linear_scale</span>
+              <span>
+                {constructionState.stage === 'idle'
+                  ? 'Segment: Click the first point (or click empty space to place it).'
+                  : 'Click the second point to connect segment (Esc to cancel).'}
+              </span>
+            </>
+          )}
+          {activeTool === 'line' && (
+            <>
+              <span className="material-symbols-outlined text-cyan-400 text-[16px]">trending_flat</span>
+              <span>
+                {constructionState.stage === 'idle'
+                  ? 'Infinite Line: Click first point (or click empty space to place it).'
+                  : 'Click second point to create infinite line (Esc to cancel).'}
+              </span>
+            </>
+          )}
+          {activeTool === 'distance' && (
+            <>
+              <span className="material-symbols-outlined text-amber-400 text-[16px]">straighten</span>
+              <span>
+                {constructionState.stage === 'idle'
+                  ? 'Measure Distance: Click first point to measure from.'
+                  : 'Click second point to view distance analysis.'}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Bottom Coordinate Readout HUD */}
       <div className="absolute bottom-3 left-4 flex items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-lowest/90 backdrop-blur border border-surface-border text-xs font-mono text-slate-300 pointer-events-none shadow-lg">
         <span className="flex items-center gap-1.5 text-primary">
@@ -907,7 +1280,7 @@ export const MathCanvas: React.FC = () => {
 
       {/* Bottom Right TV/Touch Hint */}
       <div className="absolute bottom-3 right-4 hidden md:flex items-center gap-2 px-2.5 py-1 rounded bg-surface-lowest/80 text-[11px] font-mono text-slate-400 border border-surface-border/60 pointer-events-none">
-        <span>Drag points A & B to explore distance formula</span>
+        <span>Press Esc to cancel any in-progress tool or deselect</span>
       </div>
     </div>
   );

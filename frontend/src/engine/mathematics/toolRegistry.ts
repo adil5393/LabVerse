@@ -1,8 +1,7 @@
 /**
  * Extensible Tool Registry for LabVerse Mathematics Laboratory
  *
- * Defines the initial mathematical tool definitions and registry interface
- * designed for future modular expansion without architecture changes.
+ * Defines the mathematical tool definitions and registry interface.
  */
 
 import type { MathToolDefinition, MathToolId } from './types';
@@ -10,11 +9,11 @@ import type { MathToolDefinition, MathToolId } from './types';
 export const MATH_TOOLS: MathToolDefinition[] = [
   {
     id: 'select',
-    displayName: 'Select & Move',
+    displayName: 'Select / Move',
     icon: 'pan_tool_alt',
     category: 'manipulation',
     shortcut: 'V',
-    description: 'Select geometric objects or drag points across the coordinate plane.',
+    description: 'Select geometric objects or drag points across the plane.',
     cursor: 'default',
   },
   {
@@ -23,7 +22,7 @@ export const MATH_TOOLS: MathToolDefinition[] = [
     icon: 'adjust',
     category: 'construct',
     shortcut: 'P',
-    description: 'Place a new point at coordinate coordinates on the Cartesian plane.',
+    description: 'Place new points at Cartesian coordinates with automatic labels.',
     cursor: 'crosshair',
   },
   {
@@ -32,35 +31,35 @@ export const MATH_TOOLS: MathToolDefinition[] = [
     icon: 'linear_scale',
     category: 'construct',
     shortcut: 'S',
-    description: 'Connect two points with a finite line segment.',
+    description: 'Connect two points with a finite line segment with length pill.',
     cursor: 'crosshair',
   },
   {
     id: 'line',
-    displayName: 'Line',
+    displayName: 'Infinite Line',
     icon: 'trending_flat',
     category: 'construct',
     shortcut: 'L',
-    description: 'Draw an infinite line passing through two points.',
+    description: 'Draw an infinite line passing through two points with slope equation.',
     cursor: 'crosshair',
   },
   {
     id: 'distance',
-    displayName: 'Distance & Measure',
+    displayName: 'Distance Measure',
     icon: 'straighten',
     category: 'measure',
     shortcut: 'M',
-    description: 'Inspect Euclidean distance, coordinate differences, and geometric metrics.',
+    description: 'Select two points to measure distance, Δx, and Δy without clutter.',
     cursor: 'pointer',
   },
   {
-    id: 'axes',
-    displayName: 'Coordinate Axes',
-    icon: 'grid_4x4',
+    id: 'pan',
+    displayName: 'Pan & Navigate',
+    icon: 'drag_pan',
     category: 'view',
-    shortcut: 'G',
-    description: 'Configure Cartesian plane axes, origin visibility, and grid snapping.',
-    cursor: 'default',
+    shortcut: 'H',
+    description: 'Drag anywhere to pan across the infinite Cartesian coordinate plane.',
+    cursor: 'grab',
   },
 ];
 

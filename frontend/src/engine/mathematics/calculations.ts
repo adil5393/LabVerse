@@ -50,6 +50,24 @@ export function calculateDifferences(
 }
 
 /**
+ * Calculates auxiliary right-triangle helper vertices for endpoints A(x1, y1) and B(x2, y2).
+ * Helper C = (x2, y1) for horizontal-then-vertical path.
+ * Helper D = (x1, y2) for vertical-then-horizontal path.
+ */
+export function calculateHelperVertices(
+  p1: { x: number; y: number },
+  p2: { x: number; y: number }
+): {
+  helperC: { x: number; y: number };
+  helperD: { x: number; y: number };
+} {
+  return {
+    helperC: { x: p2.x, y: p1.y },
+    helperD: { x: p1.x, y: p2.y },
+  };
+}
+
+/**
  * Formats a number to clean presentation string (removes trailing zeros, handles decimals).
  */
 export function formatMathNumber(num: number, maxDecimals = 3): string {

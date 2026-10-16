@@ -108,6 +108,19 @@ export interface ConstructionState {
   previewCoord: { x: number; y: number } | null;
 }
 
+export type MeasurementTriangleMode =
+  | 'horizontal-then-vertical'
+  | 'vertical-then-horizontal'
+  | 'both';
+
+export interface DistanceMeasurement {
+  id: string;
+  pointAId: string;
+  pointBId: string;
+  triangleMode: MeasurementTriangleMode;
+  color?: string;
+}
+
 export interface ActiveMeasurement {
   pointAId: string;
   pointBId: string;

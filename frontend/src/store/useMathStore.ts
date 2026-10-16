@@ -16,6 +16,8 @@ import type {
   MathSaveFile,
   ConstructionState,
   ActiveMeasurement,
+  DistanceMeasurement,
+  MeasurementTriangleMode,
 } from '../engine/mathematics/types';
 import {
   DISTANCE_EXPERIMENT,
@@ -28,6 +30,9 @@ interface HistorySnapshot {
   objects: Record<string, MathObject>;
   objectOrder: string[];
   selectedId: string | null;
+  measurements: Record<string, DistanceMeasurement>;
+  measurementOrder: string[];
+  selectedMeasurementId: string | null;
   activeMeasurement: ActiveMeasurement | null;
 }
 
@@ -48,6 +53,11 @@ interface MathState {
   // Interaction Lifecycle & Construction State
   constructionState: ConstructionState;
   activeMeasurement: ActiveMeasurement | null;
+
+  // Persistent Committed Measurements
+  measurements: Record<string, DistanceMeasurement>;
+  measurementOrder: string[];
+  selectedMeasurementId: string | null;
 
   // Educational Mode
   predictRevealed: boolean;
@@ -72,6 +82,7 @@ interface MathState {
   toggleConstructions: () => void;
 
   selectObject: (id: string | null) => void;
+  selectMeasurement: (id: string | null) => void;
   setPointCoordinates: (id: string, x: number, y: number, recordUndo?: boolean) => void;
   updatePointDrag: (id: string, x: number, y: number) => void;
   commitPointDrag: (id: string) => void;
@@ -83,6 +94,14 @@ interface MathState {
 
   // Measurement Actions
   setActiveMeasurement: (measurement: ActiveMeasurement | null) => void;
+  createMeasurement: (
+    pointAId: string,
+    pointBId: string,
+    triangleMode?: MeasurementTriangleMode
+  ) => DistanceMeasurement | null;
+  deleteMeasurement: (id: string) => void;
+  setMeasurementTriangleMode: (id: string, mode: MeasurementTriangleMode) => void;
+  clearAllMeasurements: () => void;
 
   // Object Creation & Management
   createPoint: (x: number, y: number) => MathPoint;
@@ -112,12 +131,18 @@ function createSnapshot(state: {
   objects: Record<string, MathObject>;
   objectOrder: string[];
   selectedId: string | null;
+  measurements?: Record<string, DistanceMeasurement>;
+  measurementOrder?: string[];
+  selectedMeasurementId?: string | null;
   activeMeasurement?: ActiveMeasurement | null;
 }): HistorySnapshot {
   return {
     objects: JSON.parse(JSON.stringify(state.objects)),
     objectOrder: [...state.objectOrder],
     selectedId: state.selectedId,
+    measurements: JSON.parse(JSON.stringify(state.measurements || {})),
+    measurementOrder: [...(state.measurementOrder || [])],
+    selectedMeasurementId: state.selectedMeasurementId || null,
     activeMeasurement: state.activeMeasurement ? { ...state.activeMeasurement } : null,
   };
 }
@@ -129,6 +154,20 @@ function initializeExperiment(experiment: MathExperiment) {
   for (const obj of experiment.initialObjects) {
     objects[obj.id] = JSON.parse(JSON.stringify(obj));
     objectOrder.push(obj.id);
+  }
+
+  const initialMeasurements: Record<string, DistanceMeasurement> = {};
+  const initialMeasurementOrder: string[] = [];
+
+  // Distance experiment initializes with reference measurement between A and B
+  if (experiment.id === 'distance-between-two-points' && objects['pt_A'] && objects['pt_B']) {
+    initialMeasurements['meas_AB'] = {
+      id: 'meas_AB',
+      pointAId: 'pt_A',
+      pointBId: 'pt_B',
+      triangleMode: 'horizontal-then-vertical',
+    };
+    initialMeasurementOrder.push('meas_AB');
   }
 
   return {
@@ -149,6 +188,9 @@ function initializeExperiment(experiment: MathExperiment) {
       firstPointId: null,
       previewCoord: null,
     },
+    measurements: initialMeasurements,
+    measurementOrder: initialMeasurementOrder,
+    selectedMeasurementId: null,
     activeMeasurement: {
       pointAId: 'pt_A',
       pointBId: 'pt_B',
@@ -213,7 +255,21 @@ export const useMathStore = create<MathState>((set, get) => ({
   toggleAxes: () => set((state) => ({ showAxes: !state.showAxes })),
   toggleConstructions: () => set((state) => ({ showConstructions: !state.showConstructions })),
 
-  selectObject: (id) => set({ selectedId: id }),
+  selectObject: (id) =>
+    set({
+      selectedId: id,
+      ...(id ? { selectedMeasurementId: null } : {}),
+    }),
+
+  selectMeasurement: (id) => {
+    const state = get();
+    const meas = id ? state.measurements[id] : null;
+    set({
+      selectedMeasurementId: id,
+      ...(id ? { selectedId: null } : {}),
+      activeMeasurement: meas ? { pointAId: meas.pointAId, pointBId: meas.pointBId } : null,
+    });
+  },
 
   setPointCoordinates: (id, x, y, recordUndo = true) => {
     const state = get();
@@ -290,6 +346,125 @@ export const useMathStore = create<MathState>((set, get) => ({
     }),
 
   setActiveMeasurement: (measurement) => set({ activeMeasurement: measurement }),
+
+  createMeasurement: (pointAId, pointBId, triangleMode = 'horizontal-then-vertical') => {
+    const state = get();
+    if (pointAId === pointBId) return null; // Reject coincident endpoints
+
+    const pA = state.objects[pointAId] as MathPoint | undefined;
+    const pB = state.objects[pointBId] as MathPoint | undefined;
+    if (!pA || !pB) return null;
+
+    // Check if measurement already connects these two points
+    const existing = Object.values(state.measurements).find(
+      (m) =>
+        (m.pointAId === pointAId && m.pointBId === pointBId) ||
+        (m.pointAId === pointBId && m.pointBId === pointAId)
+    );
+    if (existing) {
+      set({
+        selectedMeasurementId: existing.id,
+        selectedId: null,
+        activeMeasurement: { pointAId: existing.pointAId, pointBId: existing.pointBId },
+        constructionState: {
+          stage: 'idle',
+          firstPointId: null,
+          previewCoord: null,
+        },
+      });
+      return existing;
+    }
+
+    const id = `meas_${pA.label || 'P'}${pB.label || 'P'}_${Date.now()}`;
+    const newMeasurement: DistanceMeasurement = {
+      id,
+      pointAId,
+      pointBId,
+      triangleMode,
+    };
+
+    const snapshot = createSnapshot(state);
+    set({
+      measurements: { ...state.measurements, [id]: newMeasurement },
+      measurementOrder: [...state.measurementOrder, id],
+      selectedMeasurementId: id,
+      selectedId: null,
+      activeMeasurement: { pointAId, pointBId },
+      constructionState: {
+        stage: 'idle',
+        firstPointId: null,
+        previewCoord: null,
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+
+    return newMeasurement;
+  },
+
+  deleteMeasurement: (id) => {
+    const state = get();
+    if (!state.measurements[id]) return;
+
+    const snapshot = createSnapshot(state);
+    const newMeasurements = { ...state.measurements };
+    const deleted = newMeasurements[id];
+    delete newMeasurements[id];
+    const newOrder = state.measurementOrder.filter((mId) => mId !== id);
+
+    let activeMeasurement = state.activeMeasurement;
+    if (activeMeasurement && deleted) {
+      if (
+        (activeMeasurement.pointAId === deleted.pointAId && activeMeasurement.pointBId === deleted.pointBId) ||
+        (activeMeasurement.pointAId === deleted.pointBId && activeMeasurement.pointBId === deleted.pointAId)
+      ) {
+        const firstRemaining = newOrder.length > 0 ? newMeasurements[newOrder[0]] : null;
+        activeMeasurement = firstRemaining
+          ? { pointAId: firstRemaining.pointAId, pointBId: firstRemaining.pointBId }
+          : null;
+      }
+    }
+
+    set({
+      measurements: newMeasurements,
+      measurementOrder: newOrder,
+      selectedMeasurementId: state.selectedMeasurementId === id ? null : state.selectedMeasurementId,
+      activeMeasurement,
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  setMeasurementTriangleMode: (id, mode) => {
+    const state = get();
+    const existing = state.measurements[id];
+    if (!existing || existing.triangleMode === mode) return;
+
+    const snapshot = createSnapshot(state);
+    set({
+      measurements: {
+        ...state.measurements,
+        [id]: { ...existing, triangleMode: mode },
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
+
+  clearAllMeasurements: () => {
+    const state = get();
+    if (state.measurementOrder.length === 0) return;
+
+    const snapshot = createSnapshot(state);
+    set({
+      measurements: {},
+      measurementOrder: [],
+      selectedMeasurementId: null,
+      activeMeasurement: null,
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
+  },
 
   createPoint: (x, y) => {
     const state = get();
@@ -452,16 +627,33 @@ export const useMathStore = create<MathState>((set, get) => ({
 
     const newOrder = state.objectOrder.filter((oId) => Boolean(newObjects[oId]));
 
-    // If measurement references deleted point, reset measurement to default
+    // Also remove any measurements referencing this deleted point
+    const newMeasurements = { ...state.measurements };
+    for (const [mId, m] of Object.entries(newMeasurements)) {
+      if (m.pointAId === id || m.pointBId === id) {
+        delete newMeasurements[mId];
+      }
+    }
+    const newMeasurementOrder = state.measurementOrder.filter((mId) => Boolean(newMeasurements[mId]));
+
+    // If measurement references deleted point, update active measurement
     let activeMeasurement = state.activeMeasurement;
     if (activeMeasurement && (activeMeasurement.pointAId === id || activeMeasurement.pointBId === id)) {
-      activeMeasurement = null;
+      const firstRemaining = newMeasurementOrder.length > 0 ? newMeasurements[newMeasurementOrder[0]] : null;
+      activeMeasurement = firstRemaining
+        ? { pointAId: firstRemaining.pointAId, pointBId: firstRemaining.pointBId }
+        : null;
     }
 
     set({
       objects: newObjects,
       objectOrder: newOrder,
       selectedId: (state.selectedId && newObjects[state.selectedId]) ? state.selectedId : null,
+      measurements: newMeasurements,
+      measurementOrder: newMeasurementOrder,
+      selectedMeasurementId: (state.selectedMeasurementId && newMeasurements[state.selectedMeasurementId])
+        ? state.selectedMeasurementId
+        : null,
       activeMeasurement,
       history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
       future: [],
@@ -477,7 +669,7 @@ export const useMathStore = create<MathState>((set, get) => ({
 
   clearCanvas: () => {
     const state = get();
-    if (state.objectOrder.length === 0) return;
+    if (state.objectOrder.length === 0 && state.measurementOrder.length === 0) return;
 
     const snapshot = createSnapshot(state);
 
@@ -485,6 +677,9 @@ export const useMathStore = create<MathState>((set, get) => ({
       objects: {},
       objectOrder: [],
       selectedId: null,
+      measurements: {},
+      measurementOrder: [],
+      selectedMeasurementId: null,
       activeMeasurement: null,
       constructionState: {
         stage: 'idle',
@@ -508,6 +703,9 @@ export const useMathStore = create<MathState>((set, get) => ({
       objects: prevSnapshot.objects,
       objectOrder: prevSnapshot.objectOrder,
       selectedId: prevSnapshot.selectedId,
+      measurements: prevSnapshot.measurements || {},
+      measurementOrder: prevSnapshot.measurementOrder || [],
+      selectedMeasurementId: prevSnapshot.selectedMeasurementId || null,
       activeMeasurement: prevSnapshot.activeMeasurement || null,
       history: remainingHistory,
       future: [currentSnapshot, ...state.future.slice(0, MAX_HISTORY)],
@@ -526,6 +724,9 @@ export const useMathStore = create<MathState>((set, get) => ({
       objects: nextSnapshot.objects,
       objectOrder: nextSnapshot.objectOrder,
       selectedId: nextSnapshot.selectedId,
+      measurements: nextSnapshot.measurements || {},
+      measurementOrder: nextSnapshot.measurementOrder || [],
+      selectedMeasurementId: nextSnapshot.selectedMeasurementId || null,
       activeMeasurement: nextSnapshot.activeMeasurement || null,
       history: [...state.history.slice(-MAX_HISTORY + 1), currentSnapshot],
       future: remainingFuture,

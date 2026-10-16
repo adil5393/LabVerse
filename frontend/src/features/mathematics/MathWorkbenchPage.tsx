@@ -46,6 +46,11 @@ export const MathWorkbenchPage: React.FC = () => {
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        const { selectedMeasurementId: selMeasId, deleteMeasurement: delMeas } = useMathStore.getState();
+        if (selMeasId) {
+          delMeas(selMeasId);
+          return;
+        }
         deleteSelectedObject();
         return;
       }

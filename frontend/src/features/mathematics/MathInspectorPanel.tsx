@@ -20,9 +20,15 @@ export const MathInspectorPanel: React.FC = () => {
     objects,
     selectedId,
     activeMeasurement,
+    measurements,
+    measurementOrder,
+    selectedMeasurementId,
     setPointCoordinates,
     selectObject,
+    selectMeasurement,
     deleteObject,
+    deleteMeasurement,
+    setMeasurementTriangleMode,
     predictRevealed,
     studentPrediction,
     predictionSubmitted,
@@ -37,13 +43,33 @@ export const MathInspectorPanel: React.FC = () => {
   const [editPointId, setEditPointId] = useState<string | null>(null);
 
   const selectedObject = selectedId ? objects[selectedId] : null;
+  const selectedMeasurement = selectedMeasurementId ? measurements[selectedMeasurementId] : null;
 
-  // Resolve measured points (either active measurement or default A and B)
-  const measuredPoints = React.useMemo(() => {
+  // Resolve active measurement for distance breakdown
+  const activeInspectionMeasurement = React.useMemo(() => {
+    if (selectedMeasurement) return selectedMeasurement;
+    if (selectedMeasurementId && measurements[selectedMeasurementId]) return measurements[selectedMeasurementId];
     if (activeMeasurement) {
-      const p1 = objects[activeMeasurement.pointAId] as MathPoint | undefined;
-      const p2 = objects[activeMeasurement.pointBId] as MathPoint | undefined;
-      if (p1 && p2 && p1.id !== p2.id) return { p1, p2 };
+      const existing = Object.values(measurements).find(
+        (m) =>
+          (m.pointAId === activeMeasurement.pointAId && m.pointBId === activeMeasurement.pointBId) ||
+          (m.pointAId === activeMeasurement.pointBId && m.pointBId === activeMeasurement.pointAId)
+      );
+      if (existing) return existing;
+    }
+    if (measurementOrder.length > 0 && measurements[measurementOrder[0]]) {
+      return measurements[measurementOrder[0]];
+    }
+    return null;
+  }, [selectedMeasurement, selectedMeasurementId, activeMeasurement, measurements, measurementOrder]);
+
+  const distanceAnalysis = React.useMemo(() => {
+    if (activeInspectionMeasurement) {
+      const p1 = objects[activeInspectionMeasurement.pointAId] as MathPoint | undefined;
+      const p2 = objects[activeInspectionMeasurement.pointBId] as MathPoint | undefined;
+      if (p1 && p2 && p1.id !== p2.id) {
+        return calculateDistanceAnalysis(p1, p2);
+      }
     }
     const ptA =
       (objects['pt_A'] as MathPoint) ||
@@ -51,13 +77,9 @@ export const MathInspectorPanel: React.FC = () => {
     const ptB =
       (objects['pt_B'] as MathPoint) ||
       Object.values(objects).filter((o): o is MathPoint => o.kind === 'point')[1];
-    if (ptA && ptB && ptA.id !== ptB.id) return { p1: ptA, p2: ptB };
+    if (ptA && ptB && ptA.id !== ptB.id) return calculateDistanceAnalysis(ptA, ptB);
     return null;
-  }, [activeMeasurement, objects]);
-
-  const distanceAnalysis = measuredPoints
-    ? calculateDistanceAnalysis(measuredPoints.p1, measuredPoints.p2)
-    : null;
+  }, [activeInspectionMeasurement, objects]);
 
   // Sync point input inputs when selection changes
   React.useEffect(() => {
@@ -90,9 +112,12 @@ export const MathInspectorPanel: React.FC = () => {
           <span className="material-symbols-outlined text-primary text-[20px]">analytics</span>
           <span>Properties & Analysis</span>
         </div>
-        {selectedId && (
+        {(selectedId || selectedMeasurementId) && (
           <button
-            onClick={() => selectObject(null)}
+            onClick={() => {
+              selectObject(null);
+              selectMeasurement(null);
+            }}
             className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-surface-container border border-surface-border"
           >
             Clear
@@ -299,6 +324,166 @@ export const MathInspectorPanel: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* 1D. Selected Measurement Inspector */}
+        {selectedMeasurement && distanceAnalysis && (
+          <div className="space-y-4 p-4 rounded-xl bg-surface-card border border-amber-500/40 shadow-md">
+            <div className="flex items-center justify-between border-b border-surface-border pb-3">
+              <span className="text-xs font-mono font-bold text-amber-400 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">straighten</span>
+                MEASUREMENT: {distanceAnalysis.p1.label} ↔ {distanceAnalysis.p2.label}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                Distance Analysis
+              </span>
+            </div>
+
+            {/* Endpoints & Metrics */}
+            <div className="space-y-2 text-xs font-mono">
+              <div className="flex justify-between py-1 border-b border-surface-border/50">
+                <span className="text-slate-400">Endpoint 1:</span>
+                <span className="text-white font-semibold">
+                  {distanceAnalysis.p1.label}({distanceAnalysis.p1.x}, {distanceAnalysis.p1.y})
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-surface-border/50">
+                <span className="text-slate-400">Endpoint 2:</span>
+                <span className="text-white font-semibold">
+                  {distanceAnalysis.p2.label}({distanceAnalysis.p2.x}, {distanceAnalysis.p2.y})
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-surface-border/50">
+                <span className="text-slate-400">Horizontal Diff (Δx):</span>
+                <span className="text-sky-400 font-bold">
+                  {distanceAnalysis.absDx} units
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-surface-border/50">
+                <span className="text-slate-400">Vertical Diff (Δy):</span>
+                <span className="text-orange-400 font-bold">
+                  {distanceAnalysis.absDy} units
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-surface-border/50">
+                <span className="text-slate-400">Total Distance:</span>
+                <span className="text-amber-300 font-bold text-sm">
+                  {distanceAnalysis.isExactSquare
+                    ? `${distanceAnalysis.exactSqrt} (Exact)`
+                    : `√${distanceAnalysis.sumOfSquares} ≈ ${distanceAnalysis.formattedDistance}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Triangle Display Mode Selector */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-mono text-slate-400 block">
+                Auxiliary Triangle Guide
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 bg-surface-lowest p-1 rounded-lg border border-surface-border">
+                <button
+                  type="button"
+                  onClick={() => setMeasurementTriangleMode(selectedMeasurement.id, 'horizontal-then-vertical')}
+                  className={`py-1.5 px-1 rounded text-[10px] font-mono font-bold transition-all flex flex-col items-center gap-0.5 ${
+                    (selectedMeasurement.triangleMode || 'horizontal-then-vertical') === 'horizontal-then-vertical'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Helper C = (x₂, y₁) [Standard]"
+                >
+                  <span>H → V</span>
+                  <span className="text-[9px] opacity-70">Helper C</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMeasurementTriangleMode(selectedMeasurement.id, 'vertical-then-horizontal')}
+                  className={`py-1.5 px-1 rounded text-[10px] font-mono font-bold transition-all flex flex-col items-center gap-0.5 ${
+                    selectedMeasurement.triangleMode === 'vertical-then-horizontal'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Helper D = (x₁, y₂)"
+                >
+                  <span>V → H</span>
+                  <span className="text-[9px] opacity-70">Helper D</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMeasurementTriangleMode(selectedMeasurement.id, 'both')}
+                  className={`py-1.5 px-1 rounded text-[10px] font-mono font-bold transition-all flex flex-col items-center gap-0.5 ${
+                    selectedMeasurement.triangleMode === 'both'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Both Helper Triangles (Bounding Rectangle)"
+                >
+                  <span>Both Δ</span>
+                  <span className="text-[9px] opacity-70">C & D</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Delete Measurement button */}
+            <button
+              type="button"
+              onClick={() => deleteMeasurement(selectedMeasurement.id)}
+              className="w-full py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-700/60 text-red-200 text-xs font-mono transition-colors flex items-center justify-center gap-1.5"
+              title="Delete this measurement (Delete / Backspace)"
+            >
+              <span className="material-symbols-outlined text-[15px]">delete</span>
+              <span>Delete Measurement</span>
+            </button>
+          </div>
+        )}
+
+        {/* 1E. Active Measurements Compact List (shown when no measurement is selected) */}
+        {measurementOrder.length > 0 && !selectedMeasurement && (
+          <div className="space-y-2 p-3 rounded-xl bg-surface-card border border-surface-border">
+            <div className="flex items-center justify-between text-xs font-mono text-slate-300">
+              <span className="font-bold flex items-center gap-1 text-amber-400">
+                <span className="material-symbols-outlined text-[15px]">straighten</span>
+                Active Measurements ({measurementOrder.length})
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {measurementOrder.map((mId) => {
+                const m = measurements[mId];
+                if (!m) return null;
+                const p1 = objects[m.pointAId] as MathPoint | undefined;
+                const p2 = objects[m.pointBId] as MathPoint | undefined;
+                if (!p1 || !p2) return null;
+                const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface-lowest border border-surface-border/70 hover:border-amber-500/50 text-xs font-mono transition-colors group"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selectMeasurement(m.id)}
+                      className="flex-1 text-left flex items-center gap-2 text-slate-300 hover:text-white"
+                      title="Select measurement to inspect"
+                    >
+                      <span className="text-amber-400 font-bold">{p1.label} ↔ {p2.label}</span>
+                      <span className="text-slate-400">d ≈ {d.toFixed(2)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMeasurement(m.id);
+                      }}
+                      className="p-1 rounded text-slate-500 hover:text-red-400 transition-colors"
+                      title="Delete Measurement"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Section 2: Distance Formula Live Calculation for Measured Points */}
         {distanceAnalysis && (

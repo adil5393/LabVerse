@@ -45,7 +45,6 @@ export const MathCanvas: React.FC = () => {
     showCoordinates,
     showConstructions,
     constructionState,
-    activeMeasurement,
     selectObject,
     setPointCoordinates,
     updatePointDrag,
@@ -56,9 +55,14 @@ export const MathCanvas: React.FC = () => {
     createPoint,
     createSegment,
     createLine,
-    setActiveMeasurement,
     deleteObject,
     setTool,
+    measurements,
+    measurementOrder,
+    selectedMeasurementId,
+    selectMeasurement,
+    createMeasurement,
+    deleteMeasurement,
     panBy,
     setViewport,
   } = useMathStore();
@@ -182,22 +186,7 @@ export const MathCanvas: React.FC = () => {
     return mathToScreen(0, 0, viewport);
   }, [viewport]);
 
-  // Distance analysis between actively measured points (or default A and B)
-  const measuredDistanceAnalysis = useMemo(() => {
-    if (activeMeasurement) {
-      const p1 = pointsMap.get(activeMeasurement.pointAId);
-      const p2 = pointsMap.get(activeMeasurement.pointBId);
-      if (p1 && p2 && p1.id !== p2.id) {
-        return calculateDistanceAnalysis(p1, p2);
-      }
-    }
-    const ptA = pointsMap.get('pt_A') || points[0];
-    const ptB = pointsMap.get('pt_B') || points[1];
-    if (ptA && ptB && ptA.id !== ptB.id) {
-      return calculateDistanceAnalysis(ptA, ptB);
-    }
-    return null;
-  }, [activeMeasurement, pointsMap, points]);
+
 
   // First point for active construction
   const constructionFirstPoint = useMemo(() => {
@@ -255,12 +244,9 @@ export const MathCanvas: React.FC = () => {
         return;
       } else if (constructionState.stage === 'selecting_second' && constructionState.firstPointId) {
         if (constructionState.firstPointId !== point.id) {
-          setActiveMeasurement({
-            pointAId: constructionState.firstPointId,
-            pointBId: point.id,
-          });
-          cancelConstruction();
+          createMeasurement(constructionState.firstPointId, point.id);
         }
+        cancelConstruction();
         return;
       }
     }
@@ -383,12 +369,17 @@ export const MathCanvas: React.FC = () => {
           cancelConstruction();
           return;
         }
-        // 3. Clear selection if an object is selected
+        // 3. Clear selected measurement if any
+        if (selectedMeasurementId) {
+          selectMeasurement(null);
+          return;
+        }
+        // 4. Clear selection if an object is selected
         if (selectedId) {
           selectObject(null);
           return;
         }
-        // 4. If in eraser tool, return to select tool
+        // 5. If in eraser tool, return to select tool
         if (activeTool === 'eraser') {
           setTool('select');
           return;
@@ -398,7 +389,17 @@ export const MathCanvas: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setPointCoordinates, cancelConstruction, selectObject, constructionState.stage, selectedId, activeTool, setTool]);
+  }, [
+    setPointCoordinates,
+    cancelConstruction,
+    selectObject,
+    selectMeasurement,
+    constructionState.stage,
+    selectedId,
+    selectedMeasurementId,
+    activeTool,
+    setTool,
+  ]);
 
   // Canvas background pointer down (click / creation / pan)
   const handleCanvasPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -406,6 +407,16 @@ export const MathCanvas: React.FC = () => {
 
     // 0. Eraser tool on empty canvas: do nothing (do not create points, pan, or drag)
     if (activeTool === 'eraser') {
+      return;
+    }
+
+    // 0b. Distance tool on empty canvas: cancel construction or deselect measurement
+    if (activeTool === 'distance' && e.button === 0) {
+      if (constructionState.stage !== 'idle') {
+        cancelConstruction();
+      } else {
+        selectMeasurement(null);
+      }
       return;
     }
 
@@ -454,6 +465,7 @@ export const MathCanvas: React.FC = () => {
     // 4. Select tool: clicking empty space deselects
     if (activeTool === 'select' && e.button === 0) {
       selectObject(null);
+      selectMeasurement(null);
     }
 
     // 5. Pan tool or middle-drag or background-drag in select tool: start canvas pan
@@ -870,124 +882,347 @@ export const MathCanvas: React.FC = () => {
           })}
         </g>
 
-        {/* 4. Distance Construction Layer (Right Triangle for Reference or Measured Points) */}
-        {showConstructions && measuredDistanceAnalysis && (
-          <g id="distance-constructions">
-            {(() => {
-              const { p1, p2, dx, dy, absDx, absDy } = measuredDistanceAnalysis;
-              const sA = mathToScreen(p1.x, p1.y, viewport);
-              const sB = mathToScreen(p2.x, p2.y, viewport);
-              const sC = mathToScreen(p2.x, p1.y, viewport);
+        {/* 4. Persistent Measurements Layer */}
+        <g id="math-measurements">
+          {measurementOrder.map((measId) => {
+            const meas = measurements[measId];
+            if (!meas) return null;
+            const p1 = pointsMap.get(meas.pointAId);
+            const p2 = pointsMap.get(meas.pointBId);
+            if (!p1 || !p2) return null;
 
-              const isDegenerate = Math.abs(dx) < 1e-4 || Math.abs(dy) < 1e-4;
+            const analysis = calculateDistanceAnalysis(p1, p2);
+            const { dx, dy, absDx, absDy, formattedDistance } = analysis;
 
-              return (
-                <>
-                  {!isDegenerate && (
-                    <polygon
-                      points={`${sA.x},${sA.y} ${sC.x},${sC.y} ${sB.x},${sB.y}`}
-                      fill="rgba(168, 85, 247, 0.08)"
-                      stroke="none"
-                      pointerEvents="none"
-                    />
-                  )}
+            const sA = mathToScreen(p1.x, p1.y, viewport);
+            const sB = mathToScreen(p2.x, p2.y, viewport);
+            // Helper C = (p2.x, p1.y) -> (x2, y1)
+            const sC = mathToScreen(p2.x, p1.y, viewport);
+            // Helper D = (p1.x, p2.y) -> (x1, y2)
+            const sD = mathToScreen(p1.x, p2.y, viewport);
 
-                  {/* Horizontal Leg */}
+            const isDegenerate = Math.abs(dx) < 1e-4 || Math.abs(dy) < 1e-4;
+            const isSelected = selectedMeasurementId === meas.id;
+            const isHoveredEraser = activeTool === 'eraser' && hoveredDeleteId === meas.id;
+            const anySelected = Boolean(selectedMeasurementId);
+
+            const midScreenX = (sA.x + sB.x) / 2;
+            const midScreenY = (sA.y + sB.y) / 2;
+
+            const triangleMode = meas.triangleMode || 'horizontal-then-vertical';
+            const renderHV = triangleMode === 'horizontal-then-vertical' || triangleMode === 'both';
+            const renderVH = triangleMode === 'vertical-then-horizontal' || triangleMode === 'both';
+
+            const size = 12;
+            const dirX_C = sA.x < sC.x ? -1 : 1;
+            const dirY_C = sB.y < sC.y ? -1 : 1;
+            const dirX_D = sB.x < sD.x ? -1 : 1;
+            const dirY_D = sA.y < sD.y ? -1 : 1;
+
+            return (
+              <g
+                key={meas.id}
+                className={`transition-opacity ${
+                  anySelected && !isSelected ? 'opacity-65' : 'opacity-100'
+                }`}
+              >
+                {/* 4a. Auxiliary Helper Right-Triangles (rendered when showConstructions is true) */}
+                {showConstructions && (
+                  <g pointerEvents="none">
+                    {/* Shaded Area */}
+                    {!isDegenerate && (
+                      <polygon
+                        points={
+                          triangleMode === 'both'
+                            ? `${sA.x},${sA.y} ${sC.x},${sC.y} ${sB.x},${sB.y} ${sD.x},${sD.y}`
+                            : triangleMode === 'vertical-then-horizontal'
+                            ? `${sA.x},${sA.y} ${sD.x},${sD.y} ${sB.x},${sB.y}`
+                            : `${sA.x},${sA.y} ${sC.x},${sC.y} ${sB.x},${sB.y}`
+                        }
+                        fill="rgba(245, 158, 11, 0.06)"
+                        stroke="none"
+                      />
+                    )}
+
+                    {/* Horizontal-then-Vertical (Helper C) Guides */}
+                    {renderHV && (
+                      <>
+                        {/* Horizontal Leg (A -> C) */}
+                        <line
+                          x1={sA.x}
+                          y1={sA.y}
+                          x2={sC.x}
+                          y2={sC.y}
+                          stroke="#38bdf8"
+                          strokeWidth="2"
+                          strokeDasharray="5,4"
+                        />
+                        {/* Vertical Leg (C -> B) */}
+                        <line
+                          x1={sC.x}
+                          y1={sC.y}
+                          x2={sB.x}
+                          y2={sB.y}
+                          stroke="#fb923c"
+                          strokeWidth="2"
+                          strokeDasharray="5,4"
+                        />
+                        {/* Right Angle Corner Marker at C */}
+                        {!isDegenerate && (
+                          <path
+                            d={`M ${sC.x + dirX_C * size} ${sC.y} L ${sC.x + dirX_C * size} ${
+                              sC.y + dirY_C * size
+                            } L ${sC.x} ${sC.y + dirY_C * size}`}
+                            fill="none"
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                          />
+                        )}
+                        {/* Δx Badge */}
+                        <g transform={`translate(${(sA.x + sC.x) / 2}, ${sA.y + (p2.y > p1.y ? 16 : -16)})`}>
+                          <rect
+                            x="-28"
+                            y="-10"
+                            width="56"
+                            height="20"
+                            rx="5"
+                            fill="#0f172a"
+                            stroke="#38bdf8"
+                            strokeWidth="1.2"
+                            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.6))"
+                          />
+                          <text
+                            x="0"
+                            y="4"
+                            fill="#7dd3fc"
+                            fontSize="10"
+                            fontFamily="JetBrains Mono"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                          >
+                            Δx = {absDx}
+                          </text>
+                        </g>
+                        {/* Δy Badge */}
+                        <g transform={`translate(${sC.x + (p2.x > p1.x ? 18 : -18)}, ${(sC.y + sB.y) / 2})`}>
+                          <rect
+                            x="-28"
+                            y="-10"
+                            width="56"
+                            height="20"
+                            rx="5"
+                            fill="#0f172a"
+                            stroke="#fb923c"
+                            strokeWidth="1.2"
+                            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.6))"
+                          />
+                          <text
+                            x="0"
+                            y="4"
+                            fill="#fdba74"
+                            fontSize="10"
+                            fontFamily="JetBrains Mono"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                          >
+                            Δy = {absDy}
+                          </text>
+                        </g>
+                      </>
+                    )}
+
+                    {/* Vertical-then-Horizontal (Helper D) Guides */}
+                    {renderVH && (
+                      <>
+                        {/* Vertical Leg (A -> D) */}
+                        <line
+                          x1={sA.x}
+                          y1={sA.y}
+                          x2={sD.x}
+                          y2={sD.y}
+                          stroke="#fb923c"
+                          strokeWidth="2"
+                          strokeDasharray="5,4"
+                        />
+                        {/* Horizontal Leg (D -> B) */}
+                        <line
+                          x1={sD.x}
+                          y1={sD.y}
+                          x2={sB.x}
+                          y2={sB.y}
+                          stroke="#38bdf8"
+                          strokeWidth="2"
+                          strokeDasharray="5,4"
+                        />
+                        {/* Right Angle Corner Marker at D */}
+                        {!isDegenerate && (
+                          <path
+                            d={`M ${sD.x} ${sD.y + dirY_D * size} L ${sD.x + dirX_D * size} ${
+                              sD.y + dirY_D * size
+                            } L ${sD.x + dirX_D * size} ${sD.y}`}
+                            fill="none"
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                          />
+                        )}
+                        {/* If not in 'both' mode, render Δ badges along D legs */}
+                        {triangleMode === 'vertical-then-horizontal' && (
+                          <>
+                            <g transform={`translate(${sD.x + (p2.x > p1.x ? -20 : 20)}, ${(sA.y + sD.y) / 2})`}>
+                              <rect
+                                x="-28"
+                                y="-10"
+                                width="56"
+                                height="20"
+                                rx="5"
+                                fill="#0f172a"
+                                stroke="#fb923c"
+                                strokeWidth="1.2"
+                                filter="drop-shadow(0 2px 4px rgba(0,0,0,0.6))"
+                              />
+                              <text
+                                x="0"
+                                y="4"
+                                fill="#fdba74"
+                                fontSize="10"
+                                fontFamily="JetBrains Mono"
+                                fontWeight="bold"
+                                textAnchor="middle"
+                              >
+                                Δy = {absDy}
+                              </text>
+                            </g>
+                            <g transform={`translate(${(sD.x + sB.x) / 2}, ${sD.y + (p2.y > p1.y ? -16 : 16)})`}>
+                              <rect
+                                x="-28"
+                                y="-10"
+                                width="56"
+                                height="20"
+                                rx="5"
+                                fill="#0f172a"
+                                stroke="#38bdf8"
+                                strokeWidth="1.2"
+                                filter="drop-shadow(0 2px 4px rgba(0,0,0,0.6))"
+                              />
+                              <text
+                                x="0"
+                                y="4"
+                                fill="#7dd3fc"
+                                fontSize="10"
+                                fontFamily="JetBrains Mono"
+                                fontWeight="bold"
+                                textAnchor="middle"
+                              >
+                                Δx = {absDx}
+                              </text>
+                            </g>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </g>
+                )}
+
+                {/* 4b. Hypotenuse and Interactive Measurement Badge */}
+                <g
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (activeTool === 'eraser') {
+                      deleteMeasurement(meas.id);
+                      if (hoveredDeleteId === meas.id) setHoveredDeleteId(null);
+                      return;
+                    }
+                    selectMeasurement(meas.id);
+                  }}
+                  onPointerEnter={() => {
+                    if (activeTool === 'eraser') setHoveredDeleteId(meas.id);
+                  }}
+                  onPointerLeave={() => {
+                    if (hoveredDeleteId === meas.id) setHoveredDeleteId(null);
+                  }}
+                  className="cursor-pointer group"
+                >
+                  {/* Invisible broad hit testing line */}
                   <line
                     x1={sA.x}
                     y1={sA.y}
-                    x2={sC.x}
-                    y2={sC.y}
-                    stroke="#38bdf8"
-                    strokeWidth="2"
-                    strokeDasharray="5,4"
-                    pointerEvents="none"
-                  />
-
-                  {/* Vertical Leg */}
-                  <line
-                    x1={sC.x}
-                    y1={sC.y}
                     x2={sB.x}
                     y2={sB.y}
-                    stroke="#fb923c"
-                    strokeWidth="2"
-                    strokeDasharray="5,4"
-                    pointerEvents="none"
+                    stroke="transparent"
+                    strokeWidth="24"
                   />
 
-                  {/* Right Angle Corner Marker */}
-                  {!isDegenerate && (() => {
-                    const size = 12;
-                    const dirX = sA.x < sC.x ? -1 : 1;
-                    const dirY = sB.y < sC.y ? -1 : 1;
-                    return (
-                      <path
-                        d={`M ${sC.x + dirX * size} ${sC.y} L ${sC.x + dirX * size} ${sC.y + dirY * size} L ${sC.x} ${sC.y + dirY * size}`}
-                        fill="none"
-                        stroke="#94a3b8"
-                        strokeWidth="1.5"
-                        pointerEvents="none"
-                      />
-                    );
-                  })()}
+                  {/* Eraser hover highlight */}
+                  {isHoveredEraser && (
+                    <line
+                      x1={sA.x}
+                      y1={sA.y}
+                      x2={sB.x}
+                      y2={sB.y}
+                      stroke="#ef4444"
+                      strokeWidth="8"
+                      strokeOpacity="0.85"
+                      strokeLinecap="round"
+                    />
+                  )}
 
-                  {/* Horizontal Diff Badge */}
-                  <g transform={`translate(${(sA.x + sC.x) / 2}, ${sA.y + (p2.y > p1.y ? 16 : -16)})`}>
+                  {/* Selection glow */}
+                  {isSelected && !isHoveredEraser && (
+                    <line
+                      x1={sA.x}
+                      y1={sA.y}
+                      x2={sB.x}
+                      y2={sB.y}
+                      stroke="#f59e0b"
+                      strokeWidth="7"
+                      strokeOpacity="0.4"
+                      strokeLinecap="round"
+                    />
+                  )}
+
+                  {/* Main Hypotenuse Line */}
+                  <line
+                    x1={sA.x}
+                    y1={sA.y}
+                    x2={sB.x}
+                    y2={sB.y}
+                    stroke={isSelected ? '#fbbf24' : '#f59e0b'}
+                    strokeWidth={isSelected ? 3.5 : 2.5}
+                    strokeDasharray="6,4"
+                    className="transition-colors group-hover:stroke-[#fbbf24]"
+                  />
+
+                  {/* Interactive Distance Pill Badge */}
+                  <g transform={`translate(${midScreenX}, ${midScreenY - 14})`}>
                     <rect
-                      x="-28"
-                      y="-10"
-                      width="56"
-                      height="20"
-                      rx="5"
-                      fill="#0f172a"
-                      stroke="#38bdf8"
-                      strokeWidth="1.2"
-                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.6))"
+                      x="-38"
+                      y="-12"
+                      width="76"
+                      height="24"
+                      rx="7"
+                      fill={isSelected ? '#451a03' : '#1e1b4b'}
+                      stroke={isHoveredEraser ? '#ef4444' : isSelected ? '#fbbf24' : '#f59e0b'}
+                      strokeWidth={isSelected ? '2' : '1.3'}
+                      filter="drop-shadow(0 2px 6px rgba(0,0,0,0.75))"
+                      className="transition-all group-hover:stroke-[#fbbf24]"
                     />
                     <text
                       x="0"
                       y="4"
-                      fill="#7dd3fc"
-                      fontSize="10"
+                      fill={isSelected ? '#fef08a' : '#fef3c7'}
+                      fontSize="11"
                       fontFamily="JetBrains Mono"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
-                      Δx = {absDx}
+                      d ≈ {formattedDistance}
                     </text>
                   </g>
-
-                  {/* Vertical Diff Badge */}
-                  <g transform={`translate(${sC.x + (p2.x > p1.x ? 18 : -18)}, ${(sC.y + sB.y) / 2})`}>
-                    <rect
-                      x="-28"
-                      y="-10"
-                      width="56"
-                      height="20"
-                      rx="5"
-                      fill="#0f172a"
-                      stroke="#fb923c"
-                      strokeWidth="1.2"
-                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.6))"
-                    />
-                    <text
-                      x="0"
-                      y="4"
-                      fill="#fdba74"
-                      fontSize="10"
-                      fontFamily="JetBrains Mono"
-                      fontWeight="bold"
-                      textAnchor="middle"
-                    >
-                      Δy = {absDy}
-                    </text>
-                  </g>
-                </>
-              );
-            })()}
-          </g>
-        )}
+                </g>
+              </g>
+            );
+          })}
+        </g>
 
         {/* 5. Segments Layer */}
         <g id="math-segments">
@@ -1157,21 +1392,83 @@ export const MathCanvas: React.FC = () => {
 
               // Distance Tool Preview
               if (activeTool === 'distance') {
+                const sC = mathToScreen(p2.x, constructionFirstPoint.y, viewport);
+                const absDx = Math.abs(p2.x - constructionFirstPoint.x);
+                const absDy = Math.abs(p2.y - constructionFirstPoint.y);
+                const isDegenerate = absDx < 1e-4 || absDy < 1e-4;
+                const dirX = s1.x < sC.x ? -1 : 1;
+                const dirY = s2.y < sC.y ? -1 : 1;
+
                 return (
                   <>
+                    {/* Shaded right triangle preview */}
+                    {!isDegenerate && (
+                      <polygon
+                        points={`${s1.x},${s1.y} ${sC.x},${sC.y} ${s2.x},${s2.y}`}
+                        fill="rgba(245, 158, 11, 0.08)"
+                        stroke="none"
+                      />
+                    )}
+                    {/* Horizontal preview leg */}
+                    <line
+                      x1={s1.x}
+                      y1={s1.y}
+                      x2={sC.x}
+                      y2={sC.y}
+                      stroke="#38bdf8"
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
+                    />
+                    {/* Vertical preview leg */}
+                    <line
+                      x1={sC.x}
+                      y1={sC.y}
+                      x2={s2.x}
+                      y2={s2.y}
+                      stroke="#fb923c"
+                      strokeWidth="2"
+                      strokeDasharray="4,4"
+                    />
+                    {/* Right-angle marker preview */}
+                    {!isDegenerate && (
+                      <path
+                        d={`M ${sC.x + dirX * 10} ${sC.y} L ${sC.x + dirX * 10} ${sC.y + dirY * 10} L ${sC.x} ${sC.y + dirY * 10}`}
+                        fill="none"
+                        stroke="#94a3b8"
+                        strokeWidth="1.5"
+                      />
+                    )}
+                    {/* Δx Badge */}
+                    <g transform={`translate(${(s1.x + sC.x) / 2}, ${s1.y + (p2.y > constructionFirstPoint.y ? 16 : -16)})`}>
+                      <rect x="-26" y="-9" width="52" height="18" rx="4" fill="#0f172a" stroke="#38bdf8" strokeWidth="1" />
+                      <text x="0" y="3.5" fill="#7dd3fc" fontSize="9.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                        Δx = {absDx.toFixed(1)}
+                      </text>
+                    </g>
+                    {/* Δy Badge */}
+                    <g transform={`translate(${sC.x + (p2.x > constructionFirstPoint.x ? 18 : -18)}, ${(sC.y + s2.y) / 2})`}>
+                      <rect x="-26" y="-9" width="52" height="18" rx="4" fill="#0f172a" stroke="#fb923c" strokeWidth="1" />
+                      <text x="0" y="3.5" fill="#fdba74" fontSize="9.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                        Δy = {absDy.toFixed(1)}
+                      </text>
+                    </g>
+                    {/* Hypotenuse line */}
                     <line
                       x1={s1.x}
                       y1={s1.y}
                       x2={s2.x}
                       y2={s2.y}
                       stroke="#f59e0b"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                       strokeDasharray="4,4"
                     />
+                    {/* Pointer circle at preview endpoint */}
+                    <circle cx={s2.x} cy={s2.y} r="5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
+                    {/* Hypotenuse distance pill */}
                     <g transform={`translate(${(s1.x + s2.x) / 2}, ${(s1.y + s2.y) / 2 - 12})`}>
-                      <rect x="-32" y="-10" width="64" height="20" rx="5" fill="#451a03" stroke="#f59e0b" strokeWidth="1.2" />
-                      <text x="0" y="4" fill="#fef3c7" fontSize="10" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
-                        d = {previewDist.toFixed(2)}
+                      <rect x="-34" y="-11" width="68" height="22" rx="6" fill="#451a03" stroke="#f59e0b" strokeWidth="1.2" />
+                      <text x="0" y="4" fill="#fef3c7" fontSize="10.5" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                        d ≈ {previewDist.toFixed(2)}
                       </text>
                     </g>
                   </>

@@ -28,6 +28,7 @@ interface HistorySnapshot {
   objects: Record<string, MathObject>;
   objectOrder: string[];
   selectedId: string | null;
+  activeMeasurement: ActiveMeasurement | null;
 }
 
 interface MathState {
@@ -90,6 +91,7 @@ interface MathState {
   addObject: (object: MathObject) => void;
   deleteObject: (id: string) => void;
   deleteSelectedObject: () => void;
+  clearCanvas: () => void;
 
   undo: () => void;
   redo: () => void;
@@ -110,11 +112,13 @@ function createSnapshot(state: {
   objects: Record<string, MathObject>;
   objectOrder: string[];
   selectedId: string | null;
+  activeMeasurement?: ActiveMeasurement | null;
 }): HistorySnapshot {
   return {
     objects: JSON.parse(JSON.stringify(state.objects)),
     objectOrder: [...state.objectOrder],
     selectedId: state.selectedId,
+    activeMeasurement: state.activeMeasurement ? { ...state.activeMeasurement } : null,
   };
 }
 
@@ -457,7 +461,7 @@ export const useMathStore = create<MathState>((set, get) => ({
     set({
       objects: newObjects,
       objectOrder: newOrder,
-      selectedId: state.selectedId === id ? null : state.selectedId,
+      selectedId: (state.selectedId && newObjects[state.selectedId]) ? state.selectedId : null,
       activeMeasurement,
       history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
       future: [],
@@ -469,6 +473,27 @@ export const useMathStore = create<MathState>((set, get) => ({
     if (state.selectedId) {
       get().deleteObject(state.selectedId);
     }
+  },
+
+  clearCanvas: () => {
+    const state = get();
+    if (state.objectOrder.length === 0) return;
+
+    const snapshot = createSnapshot(state);
+
+    set({
+      objects: {},
+      objectOrder: [],
+      selectedId: null,
+      activeMeasurement: null,
+      constructionState: {
+        stage: 'idle',
+        firstPointId: null,
+        previewCoord: null,
+      },
+      history: [...state.history.slice(-MAX_HISTORY + 1), snapshot],
+      future: [],
+    });
   },
 
   undo: () => {
@@ -483,6 +508,7 @@ export const useMathStore = create<MathState>((set, get) => ({
       objects: prevSnapshot.objects,
       objectOrder: prevSnapshot.objectOrder,
       selectedId: prevSnapshot.selectedId,
+      activeMeasurement: prevSnapshot.activeMeasurement || null,
       history: remainingHistory,
       future: [currentSnapshot, ...state.future.slice(0, MAX_HISTORY)],
     });
@@ -500,6 +526,7 @@ export const useMathStore = create<MathState>((set, get) => ({
       objects: nextSnapshot.objects,
       objectOrder: nextSnapshot.objectOrder,
       selectedId: nextSnapshot.selectedId,
+      activeMeasurement: nextSnapshot.activeMeasurement || null,
       history: [...state.history.slice(-MAX_HISTORY + 1), currentSnapshot],
       future: remainingFuture,
     });

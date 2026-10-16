@@ -5,13 +5,14 @@
  * grid/snap toggles, and zoom management for desktop and 1080p smart TVs.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMathStore } from '../../store/useMathStore';
 
 export const MathToolbar: React.FC = () => {
   const {
     currentExperimentId,
+    objectOrder,
     viewport,
     snapToGrid,
     showGrid,
@@ -28,11 +29,14 @@ export const MathToolbar: React.FC = () => {
     toggleConstructions,
     undo,
     redo,
+    clearCanvas,
     resetExperiment,
   } = useMathStore();
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const canUndo = history.length > 0;
   const canRedo = future.length > 0;
+  const objectCount = objectOrder.length;
 
   return (
     <header className="h-14 bg-surface-card border-b border-surface-border px-4 lg:px-6 flex items-center justify-between gap-4 select-none shrink-0 z-20">
@@ -175,9 +179,50 @@ export const MathToolbar: React.FC = () => {
           </button>
         </div>
 
+        {/* Clear Canvas Action */}
+        <div className="relative">
+          {showClearConfirm ? (
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-lowest border border-amber-500/50 shadow-xl">
+              <span className="text-[11px] font-mono text-amber-300 pl-1.5 pr-0.5">Clear all?</span>
+              <button
+                onClick={() => {
+                  clearCanvas();
+                  setShowClearConfirm(false);
+                }}
+                className="px-2 py-0.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold font-mono transition-colors"
+                title="Confirm clear all geometry"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-2 py-0.5 rounded-lg bg-surface-card hover:bg-surface-elevated text-slate-300 text-[11px] font-mono transition-colors"
+                title="Cancel"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                if (objectCount > 0) setShowClearConfirm(true);
+              }}
+              disabled={objectCount === 0}
+              className="px-2.5 py-1.5 rounded-xl bg-surface-card hover:bg-surface-elevated disabled:opacity-40 disabled:cursor-not-allowed border border-surface-border text-slate-300 hover:text-white text-xs font-semibold font-mono transition-all flex items-center gap-1.5"
+              title={objectCount === 0 ? 'Canvas is empty' : 'Clear all geometry from canvas (undoable)'}
+            >
+              <span className="material-symbols-outlined text-[16px] text-slate-400">layers_clear</span>
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          )}
+        </div>
+
         {/* Reset Experiment */}
         <button
-          onClick={() => resetExperiment(currentExperimentId)}
+          onClick={() => {
+            setShowClearConfirm(false);
+            resetExperiment(currentExperimentId);
+          }}
           className="px-2.5 py-1.5 rounded-xl bg-surface-card hover:bg-surface-elevated border border-surface-border text-slate-300 hover:text-white text-xs font-semibold font-mono transition-all flex items-center gap-1.5"
           title="Reset Experiment to Default Points A(2,3) and B(7,6)"
         >

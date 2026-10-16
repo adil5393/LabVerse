@@ -88,6 +88,7 @@ export type MathToolId =
   | 'segment'
   | 'line'
   | 'distance'
+  | 'eraser'
   | 'pan'
   | 'axes';
 

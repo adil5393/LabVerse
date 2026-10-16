@@ -53,6 +53,15 @@ export const MATH_TOOLS: MathToolDefinition[] = [
     cursor: 'pointer',
   },
   {
+    id: 'eraser',
+    displayName: 'Eraser',
+    icon: 'ink_eraser',
+    category: 'manipulation',
+    shortcut: 'E',
+    description: 'Click any point, segment, or line to delete it.',
+    cursor: 'pointer',
+  },
+  {
     id: 'pan',
     displayName: 'Pan & Navigate',
     icon: 'drag_pan',

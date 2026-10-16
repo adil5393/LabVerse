@@ -57,12 +57,15 @@ export const MathCanvas: React.FC = () => {
     createSegment,
     createLine,
     setActiveMeasurement,
+    deleteObject,
+    setTool,
     panBy,
     setViewport,
   } = useMathStore();
 
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 900, height: 600 });
   const [cursorMathCoords, setCursorMathCoords] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredDeleteId, setHoveredDeleteId] = useState<string | null>(null);
 
   // Drag interaction state
   const dragRef = useRef<{
@@ -211,6 +214,13 @@ export const MathCanvas: React.FC = () => {
   ) => {
     e.stopPropagation();
     if (e.button !== 0) return;
+
+    // 0. Eraser tool: delete point immediately (cascades to dependent segments/lines in store)
+    if (activeTool === 'eraser') {
+      deleteObject(point.id);
+      if (hoveredDeleteId === point.id) setHoveredDeleteId(null);
+      return;
+    }
 
     // 1. Line Segment tool construction
     if (activeTool === 'segment') {
@@ -361,26 +371,43 @@ export const MathCanvas: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // Cancel active point drag
+        // 1. Cancel active point drag
         if (dragRef.current && dragRef.current.isDragging) {
           const { pointId, initialMathX, initialMathY } = dragRef.current;
           setPointCoordinates(pointId, initialMathX, initialMathY, false);
           dragRef.current = null;
+          return;
         }
-        // Cancel active construction
-        cancelConstruction();
-        // Clear selection
-        selectObject(null);
+        // 2. Cancel active construction before clearing selection
+        if (constructionState.stage !== 'idle') {
+          cancelConstruction();
+          return;
+        }
+        // 3. Clear selection if an object is selected
+        if (selectedId) {
+          selectObject(null);
+          return;
+        }
+        // 4. If in eraser tool, return to select tool
+        if (activeTool === 'eraser') {
+          setTool('select');
+          return;
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setPointCoordinates, cancelConstruction, selectObject]);
+  }, [setPointCoordinates, cancelConstruction, selectObject, constructionState.stage, selectedId, activeTool, setTool]);
 
   // Canvas background pointer down (click / creation / pan)
   const handleCanvasPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.button !== 0 && e.button !== 1) return;
+
+    // 0. Eraser tool on empty canvas: do nothing (do not create points, pan, or drag)
+    if (activeTool === 'eraser') {
+      return;
+    }
 
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -518,7 +545,7 @@ export const MathCanvas: React.FC = () => {
     if (activeTool === 'point' || activeTool === 'segment' || activeTool === 'line') {
       return 'cursor-crosshair';
     }
-    if (activeTool === 'distance') {
+    if (activeTool === 'distance' || activeTool === 'eraser') {
       return 'cursor-pointer';
     }
     return 'cursor-default';
@@ -750,7 +777,18 @@ export const MathCanvas: React.FC = () => {
                 key={line.id}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (activeTool === 'eraser') {
+                    deleteObject(line.id);
+                    if (hoveredDeleteId === line.id) setHoveredDeleteId(null);
+                    return;
+                  }
                   selectObject(line.id);
+                }}
+                onPointerEnter={() => {
+                  if (activeTool === 'eraser') setHoveredDeleteId(line.id);
+                }}
+                onPointerLeave={() => {
+                  if (hoveredDeleteId === line.id) setHoveredDeleteId(null);
                 }}
                 className="cursor-pointer group"
               >
@@ -761,11 +799,24 @@ export const MathCanvas: React.FC = () => {
                   x2={s2.x}
                   y2={s2.y}
                   stroke="transparent"
-                  strokeWidth="20"
+                  strokeWidth="24"
                 />
 
+                {/* Eraser hover highlight */}
+                {activeTool === 'eraser' && hoveredDeleteId === line.id && (
+                  <line
+                    x1={s1.x}
+                    y1={s1.y}
+                    x2={s2.x}
+                    y2={s2.y}
+                    stroke="#ef4444"
+                    strokeWidth="8"
+                    strokeOpacity="0.85"
+                  />
+                )}
+
                 {/* Selection halo */}
-                {isSelected && (
+                {isSelected && activeTool !== 'eraser' && (
                   <line
                     x1={s1.x}
                     y1={s1.y}
@@ -958,7 +1009,18 @@ export const MathCanvas: React.FC = () => {
                 key={seg.id}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (activeTool === 'eraser') {
+                    deleteObject(seg.id);
+                    if (hoveredDeleteId === seg.id) setHoveredDeleteId(null);
+                    return;
+                  }
                   selectObject(seg.id);
+                }}
+                onPointerEnter={() => {
+                  if (activeTool === 'eraser') setHoveredDeleteId(seg.id);
+                }}
+                onPointerLeave={() => {
+                  if (hoveredDeleteId === seg.id) setHoveredDeleteId(null);
                 }}
                 className="cursor-pointer group"
               >
@@ -968,10 +1030,24 @@ export const MathCanvas: React.FC = () => {
                   x2={sB.x}
                   y2={sB.y}
                   stroke="transparent"
-                  strokeWidth="20"
+                  strokeWidth="24"
                 />
 
-                {isSelected && (
+                {/* Eraser hover highlight */}
+                {activeTool === 'eraser' && hoveredDeleteId === seg.id && (
+                  <line
+                    x1={sA.x}
+                    y1={sA.y}
+                    x2={sB.x}
+                    y2={sB.y}
+                    stroke="#ef4444"
+                    strokeWidth="8"
+                    strokeOpacity="0.85"
+                    strokeLinecap="round"
+                  />
+                )}
+
+                {isSelected && activeTool !== 'eraser' && (
                   <line
                     x1={sA.x}
                     y1={sA.y}
@@ -1123,9 +1199,43 @@ export const MathCanvas: React.FC = () => {
                 onPointerDown={(e) => handlePointPointerDown(e, pt)}
                 onPointerMove={handlePointPointerMove}
                 onPointerUp={handlePointPointerUp}
-                className={activeTool === 'pan' ? 'cursor-grab' : 'cursor-grab active:cursor-grabbing group/pt'}
+                onPointerEnter={() => {
+                  if (activeTool === 'eraser') setHoveredDeleteId(pt.id);
+                }}
+                onPointerLeave={() => {
+                  if (hoveredDeleteId === pt.id) setHoveredDeleteId(null);
+                }}
+                className={
+                  activeTool === 'pan'
+                    ? 'cursor-grab'
+                    : activeTool === 'eraser'
+                    ? 'cursor-pointer group/pt'
+                    : 'cursor-grab active:cursor-grabbing group/pt'
+                }
               >
-                <circle cx={0} cy={0} r={20} fill="transparent" />
+                <circle cx={0} cy={0} r={22} fill="transparent" />
+
+                {/* Eraser hover target highlight */}
+                {activeTool === 'eraser' && hoveredDeleteId === pt.id && (
+                  <>
+                    <circle
+                      cx={0}
+                      cy={0}
+                      r={18}
+                      fill="rgba(239, 68, 68, 0.25)"
+                      stroke="#ef4444"
+                      strokeWidth="2.5"
+                      strokeDasharray="4,2"
+                      className="animate-pulse"
+                    />
+                    <g transform="translate(0, -22)" pointerEvents="none">
+                      <rect x="-20" y="-8" width="40" height="16" rx="3" fill="#7f1d1d" stroke="#ef4444" strokeWidth="1" />
+                      <text x="0" y="4" fill="#fecaca" fontSize="9" fontFamily="JetBrains Mono" fontWeight="bold" textAnchor="middle">
+                        ERASE
+                      </text>
+                    </g>
+                  </>
+                )}
 
                 {/* Construction target pulsing halo */}
                 {isFirstConstructPoint && (
@@ -1142,7 +1252,7 @@ export const MathCanvas: React.FC = () => {
                 )}
 
                 {/* Selected object halo */}
-                {isSelected && !isFirstConstructPoint && (
+                {isSelected && !isFirstConstructPoint && activeTool !== 'eraser' && (
                   <circle
                     cx={0}
                     cy={0}
@@ -1249,6 +1359,12 @@ export const MathCanvas: React.FC = () => {
                   ? 'Measure Distance: Click first point to measure from.'
                   : 'Click second point to view distance analysis.'}
               </span>
+            </>
+          )}
+          {activeTool === 'eraser' && (
+            <>
+              <span className="material-symbols-outlined text-rose-400 text-[16px]">ink_eraser</span>
+              <span>Eraser: Click any point (removes dependents), segment, or line to delete it. Esc to exit.</span>
             </>
           )}
         </div>

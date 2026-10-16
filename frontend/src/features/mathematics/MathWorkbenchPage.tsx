@@ -18,8 +18,14 @@ export const MathWorkbenchPage: React.FC = () => {
   // Global Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing into an input field
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+      // Don't intercept if user is typing into an input field or contenteditable element
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
         return;
       }
 
@@ -60,14 +66,14 @@ export const MathWorkbenchPage: React.FC = () => {
         case 'm':
           setTool('distance');
           break;
+        case 'e':
+          setTool('eraser');
+          break;
         case 'h':
           setTool('pan');
           break;
         case 'g':
           toggleAxes();
-          break;
-        case 'escape':
-          selectObject(null);
           break;
         default:
           break;

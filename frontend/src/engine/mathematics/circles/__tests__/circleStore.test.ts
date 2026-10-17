@@ -134,4 +134,90 @@ describe('useCircleStore & Architectural Module Isolation', () => {
       expect(useMathStore.getState().history.length).toBe(mathHistoryBefore);
     });
   });
+
+  describe('Milestone M2.1: Diameter Construction & Interactive Invariants', () => {
+    it('creates dedicated diameter with diametrically opposite point', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+      const ptAId = Object.keys(store.circumferencePoints)[0];
+      const initialAngle = store.circumferencePoints[ptAId].angleRad;
+
+      const diameterId = store.addDiameter(circleId, ptAId);
+      const diameter = useCircleStore.getState().radiusDiameters[diameterId];
+
+      expect(diameter).toBeDefined();
+      expect(diameter.type).toBe('diameter');
+      expect(diameter.pointId).toBe(ptAId);
+      expect(diameter.point2Id).toBeDefined();
+
+      const oppPt = useCircleStore.getState().circumferencePoints[diameter.point2Id!];
+      expect(oppPt).toBeDefined();
+      expect(oppPt.circleId).toBe(circleId);
+      // Angle should be initialAngle + π
+      const expectedOppAngle = (initialAngle + Math.PI) % (2 * Math.PI);
+      expect(oppPt.angleRad).toBeCloseTo(expectedOppAngle, 2);
+    });
+
+    it('maintains diametrical constraint: rotating point A automatically rotates opposite point B', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+      const ptAId = store.addCircumferencePoint(circleId, 0.0); // angle 0
+
+      const diameterId = store.addDiameter(circleId, ptAId);
+      const diameter = useCircleStore.getState().radiusDiameters[diameterId];
+      const oppPtId = diameter.point2Id!;
+
+      expect(useCircleStore.getState().circumferencePoints[oppPtId].angleRad).toBeCloseTo(Math.PI, 2);
+
+      // Rotate point A to π/2 (90°)
+      store.updateCircumferencePoint(ptAId, Math.PI / 2);
+
+      // Opposite point B must automatically be at 3π/2 (270°)
+      expect(useCircleStore.getState().circumferencePoints[ptAId].angleRad).toBeCloseTo(Math.PI / 2, 2);
+      expect(useCircleStore.getState().circumferencePoints[oppPtId].angleRad).toBeCloseTo((3 * Math.PI) / 2, 2);
+    });
+
+    it('supports user-facing label size preference setting', () => {
+      const store = useCircleStore.getState();
+      expect(store.labelSize).toBe('normal'); // Default Normal
+
+      store.setLabelSize('large');
+      expect(useCircleStore.getState().labelSize).toBe('large');
+
+      store.setLabelSize('small');
+      expect(useCircleStore.getState().labelSize).toBe('small');
+    });
+
+    it('executes fitToConstruction recalculating viewport comfortably', () => {
+      const store = useCircleStore.getState();
+      store.fitToConstruction(1200, 800);
+
+      const vp = useCircleStore.getState().viewport;
+      expect(vp.zoom).toBeGreaterThanOrEqual(20);
+      expect(vp.zoom).toBeLessThanOrEqual(110);
+    });
+
+    it('preserves student constructions when switching between explore, investigate, and practice modes', () => {
+      const store = useCircleStore.getState();
+      const circleId = store.addCircle({ x: 5, y: -2 }, 3.5);
+
+      expect(useCircleStore.getState().circles[circleId]).toBeDefined();
+
+      // Switch to investigate
+      store.setMode('investigate');
+      expect(useCircleStore.getState().mode).toBe('investigate');
+      expect(useCircleStore.getState().circles[circleId]).toBeDefined();
+
+      // Switch to practice
+      store.setMode('practice');
+      expect(useCircleStore.getState().mode).toBe('practice');
+      expect(useCircleStore.getState().circles[circleId]).toBeDefined();
+
+      // Switch back to explore
+      store.setMode('explore');
+      expect(useCircleStore.getState().mode).toBe('explore');
+      expect(useCircleStore.getState().circles[circleId]).toBeDefined();
+    });
+  });
 });
+

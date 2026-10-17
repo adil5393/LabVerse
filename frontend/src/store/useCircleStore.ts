@@ -20,11 +20,17 @@ import type {
   FreehandDrawingStroke,
   CircleToolId,
   CircleMode,
+  LabelSizePreference,
   CircleViewportTransform,
   CircleConstructionStep,
   WorldPoint,
 } from '../engine/mathematics/circles/types';
 import { CIRCLE_EXPERIMENTS } from '../engine/mathematics/circles/circleExperiments';
+import {
+  calculateOppositeDiameterPoint,
+  computeConstructionBoundingBox,
+  calculateFitViewport,
+} from '../engine/mathematics/circles/geometry';
 
 interface CircleSceneSnapshot {
   circles: Record<string, CircleObject>;
@@ -45,6 +51,7 @@ interface CircleState {
   activeTool: CircleToolId;
   constructionStep: CircleConstructionStep;
   viewport: CircleViewportTransform;
+  labelSize: LabelSizePreference;
 
   // View toggles
   showGrid: boolean;
@@ -81,6 +88,11 @@ interface CircleState {
   setActiveTool: (tool: CircleToolId) => void;
   setConstructionStep: (step: CircleConstructionStep) => void;
   setViewport: (transform: Partial<CircleViewportTransform>) => void;
+  setLabelSize: (size: LabelSizePreference) => void;
+  fitToConstruction: (canvasWidth: number, canvasHeight: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
   toggleGrid: () => void;
   toggleAxes: () => void;
   toggleCoordinates: () => void;
@@ -94,6 +106,7 @@ interface CircleState {
   updateCircumferencePoint: (id: string, angleRad: number) => void;
   addChord: (circleId: string, pointAId: string, pointBId: string) => string;
   addRadiusDiameter: (circleId: string, type: 'radius' | 'diameter', pointId: string, point2Id?: string) => string;
+  addDiameter: (circleId: string, pointId: string) => string;
   addAngle: (circleId: string, point1Id: string, vertexId: string, point2Id: string, isCentral?: boolean) => string;
   addTangent: (circleId: string, contactPointId: string) => string;
   addCyclicQuad: (circleId: string, ptAId: string, ptBId: string, ptCId: string, ptDId: string) => string;
@@ -166,7 +179,8 @@ export const useCircleStore = create<CircleState>((set, get) => {
     mode: 'explore',
     activeTool: 'select',
     constructionStep: { type: 'idle' },
-    viewport: { zoom: 45, panX: 0, panY: 0 },
+    viewport: { zoom: 55, panX: 0, panY: 0 },
+    labelSize: 'normal',
 
     showGrid: true,
     showAxes: true,
@@ -237,6 +251,51 @@ export const useCircleStore = create<CircleState>((set, get) => {
     setConstructionStep: (constructionStep) => set({ constructionStep }),
     setViewport: (transform) =>
       set((state) => ({ viewport: { ...state.viewport, ...transform } })),
+    setLabelSize: (labelSize) => set({ labelSize }),
+
+    fitToConstruction: (canvasWidth: number, canvasHeight: number) => {
+      const state = get();
+      const circleList = Object.values(state.circles);
+      const pointsList = Object.values(state.circumferencePoints).map((pt) => {
+        const c = state.circles[pt.circleId];
+        if (!c) return { x: 0, y: 0 };
+        return {
+          x: c.center.x + c.radius * Math.cos(pt.angleRad),
+          y: c.center.y + c.radius * Math.sin(pt.angleRad),
+        };
+      });
+
+      const bounds = computeConstructionBoundingBox(circleList, pointsList);
+      const fit = calculateFitViewport(bounds, canvasWidth, canvasHeight, 90);
+      set({ viewport: fit });
+    },
+
+    zoomIn: () =>
+      set((state) => ({
+        viewport: {
+          ...state.viewport,
+          zoom: Math.min(130, Math.round(state.viewport.zoom * 1.2)),
+        },
+      })),
+
+    zoomOut: () =>
+      set((state) => ({
+        viewport: {
+          ...state.viewport,
+          zoom: Math.max(18, Math.round(state.viewport.zoom / 1.2)),
+        },
+      })),
+
+    resetZoom: () =>
+      set((state) => ({
+        viewport: {
+          ...state.viewport,
+          zoom: 55,
+          panX: 0,
+          panY: 0,
+        },
+      })),
+
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
     toggleAxes: () => set((state) => ({ showAxes: !state.showAxes })),
     toggleCoordinates: () => set((state) => ({ showCoordinates: !state.showCoordinates })),
@@ -300,11 +359,29 @@ export const useCircleStore = create<CircleState>((set, get) => {
     updateCircumferencePoint: (id, angleRad) => {
       set((state) => {
         if (!state.circumferencePoints[id]) return state;
+        const updatedPoints: Record<string, CircumferencePoint> = {
+          ...state.circumferencePoints,
+          [id]: { ...state.circumferencePoints[id], angleRad },
+        };
+
+        // Maintain diametrical constraint: if point is part of a diameter, update opposite point
+        Object.values(state.radiusDiameters).forEach((item) => {
+          if (item.type === 'diameter') {
+            const oppId =
+              item.pointId === id ? item.point2Id : item.point2Id === id ? item.pointId : null;
+            if (oppId && updatedPoints[oppId]) {
+              let oppAngle = (angleRad + Math.PI) % (2 * Math.PI);
+              if (oppAngle < 0) oppAngle += 2 * Math.PI;
+              updatedPoints[oppId] = {
+                ...updatedPoints[oppId],
+                angleRad: Number(oppAngle.toFixed(4)),
+              };
+            }
+          }
+        });
+
         return {
-          circumferencePoints: {
-            ...state.circumferencePoints,
-            [id]: { ...state.circumferencePoints[id], angleRad },
-          },
+          circumferencePoints: updatedPoints,
         };
       });
     },
@@ -355,6 +432,56 @@ export const useCircleStore = create<CircleState>((set, get) => {
       }));
       get().pushHistory();
       return id;
+    },
+
+    addDiameter: (circleId, pointId) => {
+      const circle = get().circles[circleId];
+      const ptA = get().circumferencePoints[pointId];
+      if (!circle || !ptA) return '';
+
+      // Calculate opposite point A' coordinates & angle
+      const worldA = {
+        x: circle.center.x + circle.radius * Math.cos(ptA.angleRad),
+        y: circle.center.y + circle.radius * Math.sin(ptA.angleRad),
+      };
+      const opp = calculateOppositeDiameterPoint(circle, worldA);
+
+      // Create diametrically opposite point
+      const oppPointId = `pt_${Date.now()}_opp`;
+      const oppPointName = `${ptA.name}'`;
+      const newOppPoint: CircumferencePoint = {
+        id: oppPointId,
+        name: oppPointName,
+        circleId,
+        angleRad: opp.oppositeAngleRad,
+        color: '#38bdf8',
+      };
+
+      const diameterId = `diameter_${Date.now()}`;
+      const newDiameter: CircleRadiusDiameter = {
+        id: diameterId,
+        name: `Diameter ${ptA.name}${oppPointName}`,
+        circleId,
+        type: 'diameter',
+        pointId,
+        point2Id: oppPointId,
+        color: '#38bdf8',
+      };
+
+      set((state) => ({
+        circumferencePoints: {
+          ...state.circumferencePoints,
+          [oppPointId]: newOppPoint,
+        },
+        radiusDiameters: {
+          ...state.radiusDiameters,
+          [diameterId]: newDiameter,
+        },
+        selectedId: diameterId,
+        selectedType: 'radius_diameter',
+      }));
+      get().pushHistory();
+      return diameterId;
     },
 
     addAngle: (circleId, point1Id, vertexId, point2Id, isCentral = false) => {

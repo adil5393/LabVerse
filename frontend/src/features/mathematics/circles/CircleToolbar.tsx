@@ -1,15 +1,8 @@
-/**
- * Header Toolbar Component for Class 9 Circles Laboratory
- *
- * Implements navigation back to Mathematics selector, experiment switcher,
- * mode selector (Explore, Investigate, Practice), undo/redo, and fullscreen.
- */
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCircleStore } from '../../../store/useCircleStore';
 import { CIRCLE_EXPERIMENTS } from '../../../engine/mathematics/circles/circleExperiments';
-import type { CircleMode } from '../../../engine/mathematics/circles/types';
+import type { CircleMode, LabelSizePreference } from '../../../engine/mathematics/circles/types';
 
 export const CircleToolbar: React.FC = () => {
   const {
@@ -22,13 +15,23 @@ export const CircleToolbar: React.FC = () => {
     canUndo,
     canRedo,
     resetExperiment,
+    labelSize,
+    setLabelSize,
   } = useCircleStore();
 
   const handleToggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
+    try {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    } catch {
+      // Graceful unsupported browser handling
     }
   };
 
@@ -99,8 +102,31 @@ export const CircleToolbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: History, Reset & Fullscreen */}
-      <div className="flex items-center gap-1.5">
+      {/* Right: Label Size, History, Reset & Fullscreen */}
+      <div className="flex items-center gap-2">
+        {/* User-facing Label Size Toggle: Small | Normal | Large */}
+        <div className="flex items-center gap-1 bg-surface-card px-2 py-1 rounded-xl border border-surface-border text-xs">
+          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider hidden lg:inline mr-0.5">
+            Labels:
+          </span>
+          {(['small', 'normal', 'large'] as LabelSizePreference[]).map((size) => (
+            <button
+              key={size}
+              onClick={() => setLabelSize(size)}
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold capitalize transition-all ${
+                labelSize === size
+                  ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title={`Set mathematical label typography to ${size}`}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+
+        <div className="h-5 w-px bg-surface-border mx-0.5 hidden sm:block" />
+
         <button
           onClick={undo}
           disabled={!canUndo()}
@@ -130,7 +156,7 @@ export const CircleToolbar: React.FC = () => {
 
         <button
           onClick={handleToggleFullscreen}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors ml-1"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors ml-0.5"
           title="Toggle Fullscreen"
         >
           <span className="material-symbols-outlined text-[18px]">fullscreen</span>

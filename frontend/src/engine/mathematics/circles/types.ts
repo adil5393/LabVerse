@@ -10,12 +10,16 @@ export type CircleToolId =
   | 'circle'
   | 'point_on_circle'
   | 'chord'
-  | 'radius_diameter'
+  | 'radius'
+  | 'diameter'
+  | 'radius_diameter' // for backward compatibility
   | 'angle_measure'
   | 'tangent'
   | 'eraser';
 
 export type CircleMode = 'explore' | 'investigate' | 'practice';
+
+export type LabelSizePreference = 'small' | 'normal' | 'large';
 
 export interface WorldPoint {
   x: number;

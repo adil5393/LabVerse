@@ -8,6 +8,14 @@ import {
   calculateTangentSegment,
   screenToWorld,
   worldToScreen,
+  calculateOppositeDiameterPoint,
+  computeConstructionBoundingBox,
+  calculateFitViewport,
+  pointHitsScreenPoint,
+  pointHitsCircleCircumference,
+  distanceToScreenSegment,
+  validatePracticeAnswer,
+  LABEL_TYPOGRAPHY_CONFIGS,
 } from '../geometry';
 import type { CircleObject, WorldPoint } from '../types';
 
@@ -123,4 +131,134 @@ describe('Circle Geometry Engine - Pure Calculations', () => {
       expect(roundtrip.y).toBeCloseTo(worldPt.y, 3);
     });
   });
+
+  describe('Milestone M2.1: Diameter Construction & Opposing Endpoint Geometry', () => {
+    it('calculates diametrically opposite endpoint B = (2C - A) correctly', () => {
+      const circle: CircleObject = {
+        id: 'c_test',
+        name: 'Circle C',
+        center: { x: 3, y: 4 },
+        radius: 5,
+      };
+
+      // Point A at (6, 8) — distance to center is 5
+      const ptA: WorldPoint = { x: 6, y: 8 };
+      expect(distanceBetween(circle.center, ptA)).toBeCloseTo(5.0, 3);
+
+      const result = calculateOppositeDiameterPoint(circle, ptA);
+      // B = (2*3 - 6, 2*4 - 8) = (0, 0)
+      expect(result.oppositePoint.x).toBeCloseTo(0.0, 3);
+      expect(result.oppositePoint.y).toBeCloseTo(0.0, 3);
+
+      // Verify B lies on circle
+      expect(distanceBetween(circle.center, result.oppositePoint)).toBeCloseTo(5.0, 3);
+
+      // Verify C is exact midpoint of AB
+      const midX = (ptA.x + result.oppositePoint.x) / 2;
+      const midY = (ptA.y + result.oppositePoint.y) / 2;
+      expect(midX).toBeCloseTo(circle.center.x, 3);
+      expect(midY).toBeCloseTo(circle.center.y, 3);
+
+      // Verify length AB = 2r = 10
+      expect(distanceBetween(ptA, result.oppositePoint)).toBeCloseTo(10.0, 3);
+    });
+
+    it('calculates opposite angle as exactly (thetaA + π) mod 2π', () => {
+      const circle: CircleObject = {
+        id: 'c_test2',
+        name: 'Circle C2',
+        center: { x: 0, y: 0 },
+        radius: 4,
+      };
+
+      const angleA = Math.PI / 6; // 30°
+      const ptA = getCircumferenceCoords(circle, angleA);
+      const res = calculateOppositeDiameterPoint(circle, ptA);
+
+      const expectedOppAngle = angleA + Math.PI; // 210°
+      expect(res.oppositeAngleRad).toBeCloseTo(expectedOppAngle, 2);
+    });
+  });
+
+  describe('Milestone M2.1: Bounding Box and Viewport Fit Calculations', () => {
+    it('computes bounding box containing all circles and points', () => {
+      const circles: CircleObject[] = [
+        { id: 'c1', name: 'C1', center: { x: 0, y: 0 }, radius: 4 },
+        { id: 'c2', name: 'C2', center: { x: 6, y: 2 }, radius: 3 },
+      ];
+      const points: WorldPoint[] = [{ x: -5, y: -6 }];
+
+      const bounds = computeConstructionBoundingBox(circles, points);
+      // minX should be min(-4, 3, -5) = -5
+      // maxX should be max(4, 9) = 9
+      // minY should be min(-4, -1, -6) = -6
+      // maxY should be max(4, 5) = 5
+      expect(bounds.minX).toBe(-5);
+      expect(bounds.maxX).toBe(9);
+      expect(bounds.minY).toBe(-6);
+      expect(bounds.maxY).toBe(5);
+    });
+
+    it('calculates optimal viewport zoom and pan centering geometry in canvas', () => {
+      const bounds = { minX: -4, maxX: 4, minY: -4, maxY: 4 };
+      const fit = calculateFitViewport(bounds, 1000, 800, 80);
+
+      expect(fit.zoom).toBeGreaterThanOrEqual(40);
+      expect(fit.zoom).toBeLessThanOrEqual(100);
+      // Center of bounds is (0, 0), so panX and panY should be 0
+      expect(fit.panX).toBe(0);
+      expect(fit.panY).toBe(0);
+    });
+  });
+
+  describe('Milestone M2.1: Screen-Space Hit Testing Tolerance', () => {
+    it('detects point clicks within screen-space tolerance regardless of exact pixel', () => {
+      const ptScreen = { x: 200, y: 150 };
+      expect(pointHitsScreenPoint(205, 155, ptScreen.x, ptScreen.y, 18)).toBe(true);
+      expect(pointHitsScreenPoint(215, 165, ptScreen.x, ptScreen.y, 18)).toBe(false);
+    });
+
+    it('detects circumference clicks with generous tolerance for touch / classroom screens', () => {
+      const centerScreen = { x: 300, y: 300 };
+      const radiusPx = 100;
+
+      // Click at radius 108 px (distance diff = 8px <= 18px tolerance)
+      expect(pointHitsCircleCircumference(408, 300, centerScreen.x, centerScreen.y, radiusPx, 18)).toBe(true);
+      // Click at radius 125 px (distance diff = 25px > 18px tolerance)
+      expect(pointHitsCircleCircumference(425, 300, centerScreen.x, centerScreen.y, radiusPx, 18)).toBe(false);
+    });
+
+    it('calculates screen distance to line segments for chord selection', () => {
+      const d = distanceToScreenSegment(100, 105, 50, 100, 200, 100);
+      expect(d).toBeCloseTo(5.0, 2);
+    });
+  });
+
+  describe('Milestone M2.1: Practice Answer Validation', () => {
+    it('validates exact matches and normalized answers with units', () => {
+      expect(validatePracticeAnswer('8 cm', '8 cm')).toBe(true);
+      expect(validatePracticeAnswer('8cm', '8 cm')).toBe(true);
+      expect(validatePracticeAnswer('8', '8 cm')).toBe(true);
+      expect(validatePracticeAnswer('8.0', '8 cm')).toBe(true);
+      expect(validatePracticeAnswer('9 cm', '8 cm')).toBe(false);
+    });
+
+    it('supports numerical tolerance for calculations', () => {
+      expect(validatePracticeAnswer('7.07', 7.071, 0.05)).toBe(true);
+      expect(validatePracticeAnswer('7.5', 7.071, 0.05)).toBe(false);
+    });
+  });
+
+  describe('Milestone M2.1: Shared Typography System Tokens', () => {
+    it('provides Small, Normal, and Large typography presets conforming to guidelines', () => {
+      expect(LABEL_TYPOGRAPHY_CONFIGS.small.pointLabelSize).toBe(14);
+      expect(LABEL_TYPOGRAPHY_CONFIGS.normal.pointLabelSize).toBe(17);
+      expect(LABEL_TYPOGRAPHY_CONFIGS.large.pointLabelSize).toBe(20);
+
+      expect(LABEL_TYPOGRAPHY_CONFIGS.normal.measurementSize).toBe(15);
+      expect(LABEL_TYPOGRAPHY_CONFIGS.normal.secondaryCoordSize).toBe(13);
+      expect(LABEL_TYPOGRAPHY_CONFIGS.normal.haloWidth).toBe(4);
+    });
+  });
 });
+

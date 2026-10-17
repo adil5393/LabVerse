@@ -10,7 +10,7 @@
  * - Tangent vector and perpendicularity verification
  */
 
-import type { WorldPoint, CircleObject } from './types';
+import type { WorldPoint, CircleObject, LabelSizePreference } from './types';
 
 export const EPSILON = 1e-4;
 
@@ -279,3 +279,349 @@ export function verifyEqualChordsEquidistant(
     distanceDiff: Number(distanceDiff.toFixed(3)),
   };
 }
+
+/**
+ * Calculates the diametrically opposite point B on a circle for given circumference point A.
+ * For circle center C(cx, cy) and point A(ax, ay):
+ * B = (2*cx - ax, 2*cy - ay)
+ * Angle: (thetaA + π) mod 2π
+ */
+export function calculateOppositeDiameterPoint(
+  circle: CircleObject,
+  pointA: WorldPoint
+): {
+  oppositePoint: WorldPoint;
+  oppositeAngleRad: number;
+} {
+  const oppX = Number((2 * circle.center.x - pointA.x).toFixed(4));
+  const oppY = Number((2 * circle.center.y - pointA.y).toFixed(4));
+  const oppositePoint: WorldPoint = { x: oppX, y: oppY };
+
+  let oppositeAngleRad = projectPointToCircleAngle(circle.center, oppositePoint);
+  if (oppositeAngleRad < 0) {
+    oppositeAngleRad += 2 * Math.PI;
+  }
+
+  return {
+    oppositePoint,
+    oppositeAngleRad: Number(oppositeAngleRad.toFixed(4)),
+  };
+}
+
+/**
+ * Computes bounding box enclosing all active circle geometry in world units.
+ */
+export function computeConstructionBoundingBox(
+  circles: CircleObject[],
+  points: WorldPoint[] = []
+): { minX: number; maxX: number; minY: number; maxY: number } {
+  if (circles.length === 0 && points.length === 0) {
+    return { minX: -5, maxX: 5, minY: -5, maxY: 5 };
+  }
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  circles.forEach((c) => {
+    minX = Math.min(minX, c.center.x - c.radius);
+    maxX = Math.max(maxX, c.center.x + c.radius);
+    minY = Math.min(minY, c.center.y - c.radius);
+    maxY = Math.max(maxY, c.center.y + c.radius);
+  });
+
+  points.forEach((p) => {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  });
+
+  // Guard against degenerate zero-size bounds
+  if (maxX <= minX) {
+    minX -= 2;
+    maxX += 2;
+  }
+  if (maxY <= minY) {
+    minY -= 2;
+    maxY += 2;
+  }
+
+  return {
+    minX: Number(minX.toFixed(2)),
+    maxX: Number(maxX.toFixed(2)),
+    minY: Number(minY.toFixed(2)),
+    maxY: Number(maxY.toFixed(2)),
+  };
+}
+
+/**
+ * Calculates optimal viewport zoom and pan to fit active geometry inside the canvas.
+ */
+export function calculateFitViewport(
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  canvasWidth: number,
+  canvasHeight: number,
+  paddingPx: number = 80
+): { zoom: number; panX: number; panY: number } {
+  const spanX = Math.max(1, bounds.maxX - bounds.minX);
+  const spanY = Math.max(1, bounds.maxY - bounds.minY);
+
+  const usableWidth = Math.max(150, canvasWidth - paddingPx * 2);
+  const usableHeight = Math.max(150, canvasHeight - paddingPx * 2);
+
+  // Compute zoom so geometry spans usable area comfortably
+  const targetZoomRaw = Math.min(usableWidth / spanX, usableHeight / spanY);
+  // Clamp zoom to sensible education viewing ranges (20px to 110px per unit)
+  const zoom = Math.max(20, Math.min(110, Math.round(targetZoomRaw)));
+
+  const centerWorldX = (bounds.minX + bounds.maxX) / 2;
+  const centerWorldY = (bounds.minY + bounds.maxY) / 2;
+
+  // Center world coordinates at (canvasWidth / 2, canvasHeight / 2)
+  const panX = -centerWorldX * zoom;
+  const panY = centerWorldY * zoom;
+
+  const roundedPanX = Math.round(panX);
+  const roundedPanY = Math.round(panY);
+
+  return {
+    zoom,
+    panX: roundedPanX === 0 ? 0 : roundedPanX,
+    panY: roundedPanY === 0 ? 0 : roundedPanY,
+  };
+}
+
+/**
+ * Shared Typography System for Class 9 Circles (Milestone M2.1)
+ */
+export interface LabelTypographyConfig {
+  pointLabelSize: number;
+  measurementSize: number;
+  secondaryCoordSize: number;
+  haloWidth: number;
+  badgePaddingX: number;
+  badgePaddingY: number;
+  badgeRadius: number;
+  fontFamily: string;
+}
+
+export const LABEL_TYPOGRAPHY_CONFIGS: Record<LabelSizePreference, LabelTypographyConfig> = {
+  small: {
+    pointLabelSize: 14,
+    measurementSize: 13,
+    secondaryCoordSize: 11,
+    haloWidth: 3,
+    badgePaddingX: 6,
+    badgePaddingY: 3,
+    badgeRadius: 4,
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+  },
+  normal: {
+    pointLabelSize: 17,
+    measurementSize: 15,
+    secondaryCoordSize: 13,
+    haloWidth: 4,
+    badgePaddingX: 8,
+    badgePaddingY: 4,
+    badgeRadius: 6,
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+  },
+  large: {
+    pointLabelSize: 20,
+    measurementSize: 18,
+    secondaryCoordSize: 15,
+    haloWidth: 5,
+    badgePaddingX: 10,
+    badgePaddingY: 5,
+    badgeRadius: 8,
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+  },
+};
+
+/**
+ * Draws high-contrast halo text on canvas ensuring legibility across light, dark, and complex backgrounds.
+ */
+export function drawHaloText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  options: {
+    fillColor?: string;
+    haloColor?: string;
+    haloWidth?: number;
+    font?: string;
+    align?: CanvasTextAlign;
+    baseline?: CanvasTextBaseline;
+  } = {}
+): void {
+  const {
+    fillColor = '#ffffff',
+    haloColor = '#090d16',
+    haloWidth = 4,
+    font = 'bold 16px Inter, sans-serif',
+    align = 'left',
+    baseline = 'alphabetic',
+  } = options;
+
+  ctx.save();
+  ctx.font = font;
+  ctx.textAlign = align;
+  ctx.textBaseline = baseline;
+
+  // Dark halo
+  ctx.strokeStyle = haloColor;
+  ctx.lineWidth = haloWidth;
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  ctx.strokeText(text, x, y);
+
+  // Crisp foreground text
+  ctx.fillStyle = fillColor;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+/**
+ * Draws a high-contrast pill badge with rounded corners for geometric measurements.
+ */
+export function drawPillBadge(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  centerX: number,
+  centerY: number,
+  options: {
+    bgColor?: string;
+    textColor?: string;
+    borderColor?: string;
+    fontSize?: number;
+    fontFamily?: string;
+    paddingX?: number;
+    paddingY?: number;
+    borderRadius?: number;
+  } = {}
+): void {
+  const {
+    bgColor = 'rgba(15, 23, 42, 0.88)',
+    textColor = '#38bdf8',
+    borderColor = 'rgba(56, 189, 248, 0.4)',
+    fontSize = 15,
+    fontFamily = 'Inter, system-ui, sans-serif',
+    paddingX = 8,
+    paddingY = 4,
+    borderRadius = 6,
+  } = options;
+
+  ctx.save();
+  ctx.font = `bold ${fontSize}px ${fontFamily}`;
+  const textWidth = ctx.measureText(text).width;
+  const boxWidth = textWidth + paddingX * 2;
+  const boxHeight = fontSize + paddingY * 2;
+  const left = centerX - boxWidth / 2;
+  const top = centerY - boxHeight / 2;
+
+  // Rounded rect background
+  ctx.fillStyle = bgColor;
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 1.2;
+
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(left, top, boxWidth, boxHeight, borderRadius);
+  } else {
+    ctx.rect(left, top, boxWidth, boxHeight);
+  }
+  ctx.fill();
+  ctx.stroke();
+
+  // Text inside badge
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, centerX, centerY);
+  ctx.restore();
+}
+
+/**
+ * Screen-space tolerance hit testing for points.
+ */
+export function pointHitsScreenPoint(
+  clickScreenX: number,
+  clickScreenY: number,
+  targetScreenX: number,
+  targetScreenY: number,
+  tolerancePx: number = 18
+): boolean {
+  const dx = clickScreenX - targetScreenX;
+  const dy = clickScreenY - targetScreenY;
+  return Math.hypot(dx, dy) <= tolerancePx;
+}
+
+/**
+ * Screen-space tolerance hit testing for circle circumference.
+ */
+export function pointHitsCircleCircumference(
+  clickScreenX: number,
+  clickScreenY: number,
+  circleCenterScreenX: number,
+  circleCenterScreenY: number,
+  circleRadiusScreenPx: number,
+  tolerancePx: number = 18
+): boolean {
+  const distToCenter = Math.hypot(clickScreenX - circleCenterScreenX, clickScreenY - circleCenterScreenY);
+  return Math.abs(distToCenter - circleRadiusScreenPx) <= tolerancePx;
+}
+
+/**
+ * Distance from screen point (px, py) to line segment (x1, y1)-(x2, y2).
+ */
+export function distanceToScreenSegment(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return Math.hypot(px - projX, py - projY);
+}
+
+/**
+ * Validates student practice input against mathematical ground truth.
+ */
+export function validatePracticeAnswer(
+  userAnswer: string,
+  correctAnswer: number | string,
+  tolerance: number = 0.05
+): boolean {
+  const cleanedUser = userAnswer.trim().toLowerCase();
+  const cleanedTarget = String(correctAnswer).trim().toLowerCase();
+
+  // Exact string match
+  if (cleanedUser === cleanedTarget) return true;
+
+  // Normalized unit comparison (e.g., "8 cm" vs "8cm" vs "8")
+  const userNumMatch = cleanedUser.match(/[-+]?[0-9]*\.?[0-9]+/);
+  const targetNumMatch = cleanedTarget.match(/[-+]?[0-9]*\.?[0-9]+/);
+
+  if (userNumMatch && targetNumMatch) {
+    const userVal = parseFloat(userNumMatch[0]);
+    const targetVal = parseFloat(targetNumMatch[0]);
+    if (!isNaN(userVal) && !isNaN(targetVal)) {
+      return Math.abs(userVal - targetVal) <= tolerance;
+    }
+  }
+
+  return false;
+}
+

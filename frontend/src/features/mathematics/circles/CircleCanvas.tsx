@@ -1,5 +1,5 @@
 /**
- * Circle Canvas Component for Class 9 Circles Laboratory (Milestones M2 & M2.1)
+ * Circle Canvas Component for Class 9 Circles Laboratory (Milestones M2, M2.1 & M2.2 Hotfix)
  *
  * Implements interactive 2D canvas rendering of:
  * - High-contrast Cartesian coordinate plane (grid, axes, ticks)
@@ -8,12 +8,20 @@
  * - Circles (center, circumference, radius, diameter)
  * - Constrained circumference points (free dragging along circle)
  * - Reliable diameter construction with opposite endpoint calculation B = (2C - A)
+ * - Fully Functional Angle Measurement Tool:
+ *   - 3-point interactive sequence: Point 1 (1/3) -> Vertex (2/3) -> Point 2 (3/3)
+ *   - Support for Central Angles (vertex at center) & Inscribed Angles (vertex on circumference)
+ *   - Screen-space hit tolerance (18px) for both circumference points and circle centers
+ *   - Visual selection feedback with highlighted rings and point badges
+ *   - Live preview arc and degree badge following cursor
+ *   - Mathematical minor-arc sweep calculation preventing inverted/reflex arcs
+ *   - Point-missed and duplicate-point guidance feedback
+ *   - Selection and deletion via Eraser tool
+ *   - Escape cancellation support
  * - Chords (midpoint, perpendicular distance from center, length badges)
- * - Central and inscribed angles (arcs, degree readouts)
  * - Tangent lines (perpendicular indicator at contact point)
  * - Cyclic quadrilaterals (polygon fill, opposite angle metrics)
- * - Screen-space hit testing tolerance (touch and classroom display friendly)
- * - Persistent tool guidance bar with Escape-to-cancel support
+ * - Persistent tool guidance bar
  * - Fit-to-construction framing
  */
 
@@ -34,6 +42,8 @@ import {
   pointHitsScreenPoint,
   pointHitsCircleCircumference,
   distanceToScreenSegment,
+  resolveCirclePointCoords,
+  calculateMinorArcSweep,
 } from '../../../engine/mathematics/circles/geometry';
 import type { WorldPoint, CircleObject, CircleToolId } from '../../../engine/mathematics/circles/types';
 
@@ -78,7 +88,7 @@ const TOOL_INSTRUCTIONS: Record<CircleToolId, { name: string; instruction: strin
   angle_measure: {
     name: 'Angle Measure',
     shortcut: 'A',
-    instruction: 'Select three points in order. The second point is the vertex.',
+    instruction: 'Select three points in order (first ray point, vertex, second ray point).',
   },
   tangent: {
     name: 'Tangent',
@@ -88,7 +98,7 @@ const TOOL_INSTRUCTIONS: Record<CircleToolId, { name: string; instruction: strin
   eraser: {
     name: 'Eraser',
     shortcut: 'E',
-    instruction: 'Click any point, chord, diameter, or circle to remove it.',
+    instruction: 'Click any point, chord, diameter, angle, or circle to remove it.',
   },
 };
 
@@ -120,6 +130,7 @@ export const CircleCanvas: React.FC = () => {
     addChord,
     addRadiusDiameter,
     addDiameter,
+    addAngle,
     addTangent,
     deleteObject,
     setConstructionStep,
@@ -134,6 +145,15 @@ export const CircleCanvas: React.FC = () => {
   const [draggedPointId, setDraggedPointId] = useState<string | null>(null);
   const [draggedCircleCenterId, setDraggedCircleCenterId] = useState<string | null>(null);
   const [previewPoint, setPreviewPoint] = useState<WorldPoint | null>(null);
+  const [pointMissedNotice, setPointMissedNotice] = useState<string | null>(null);
+
+  // Auto-dismiss missed point notice after 3 seconds
+  useEffect(() => {
+    if (pointMissedNotice) {
+      const timer = setTimeout(() => setPointMissedNotice(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [pointMissedNotice]);
 
   // Resize canvas to parent container
   useEffect(() => {
@@ -154,6 +174,7 @@ export const CircleCanvas: React.FC = () => {
       if (e.key === 'Escape') {
         setConstructionStep({ type: 'idle' });
         setPreviewPoint(null);
+        setPointMissedNotice(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -497,32 +518,28 @@ export const CircleCanvas: React.FC = () => {
       ctx.restore();
     });
 
-    // 7. Draw Angles (Central & Inscribed)
+    // 7. Draw Committed Angles (Central & Inscribed)
     Object.values(angles).forEach((ang) => {
       const circle = circles[ang.circleId];
-      const pt1 = circumferencePoints[ang.point1Id];
-      const pt2 = circumferencePoints[ang.point2Id];
-      if (!circle || !pt1 || !pt2) return;
+      if (!circle) return;
 
-      const world1 = getCircumferenceCoords(circle, pt1.angleRad);
-      const world2 = getCircumferenceCoords(circle, pt2.angleRad);
-      const worldVertex =
-        ang.vertexId === 'center'
-          ? circle.center
-          : circumferencePoints[ang.vertexId]
-          ? getCircumferenceCoords(circle, circumferencePoints[ang.vertexId].angleRad)
-          : circle.center;
+      const p1Resolved = resolveCirclePointCoords(ang.point1Id, circles, circumferencePoints);
+      const vResolved = resolveCirclePointCoords(ang.vertexId, circles, circumferencePoints);
+      const p2Resolved = resolveCirclePointCoords(ang.point2Id, circles, circumferencePoints);
+      if (!p1Resolved || !vResolved || !p2Resolved) return;
 
-      const p1Pos = toScreen(world1);
-      const p2Pos = toScreen(world2);
-      const vPos = toScreen(worldVertex);
+      const p1Pos = toScreen(p1Resolved.coords);
+      const vPos = toScreen(vResolved.coords);
+      const p2Pos = toScreen(p2Resolved.coords);
 
-      const angleDeg = calculateAngleDegrees(world1, worldVertex, world2);
+      const angleDeg = calculateAngleDegrees(p1Resolved.coords, vResolved.coords, p2Resolved.coords);
+      const arc = calculateMinorArcSweep(vPos, p1Pos, p2Pos);
+      const isSelected = selectedId === ang.id;
 
       ctx.save();
       // Draw rays from vertex to points
-      ctx.strokeStyle = ang.color || '#38bdf8';
-      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = isSelected ? '#ffffff' : ang.color || (ang.isCentral ? '#38bdf8' : '#f59e0b');
+      ctx.lineWidth = isSelected ? 3 : 2;
       ctx.beginPath();
       ctx.moveTo(vPos.x, vPos.y);
       ctx.lineTo(p1Pos.x, p1Pos.y);
@@ -530,21 +547,25 @@ export const CircleCanvas: React.FC = () => {
       ctx.lineTo(p2Pos.x, p2Pos.y);
       ctx.stroke();
 
-      // Angle Arc
-      const a1 = Math.atan2(p1Pos.y - vPos.y, p1Pos.x - vPos.x);
-      const a2 = Math.atan2(p2Pos.y - vPos.y, p2Pos.x - vPos.x);
+      // Vertex dot
+      ctx.fillStyle = ctx.strokeStyle;
       ctx.beginPath();
-      ctx.arc(vPos.x, vPos.y, 24, a1, a2);
+      ctx.arc(vPos.x, vPos.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Angle Arc using minor-arc sweep
+      ctx.beginPath();
+      ctx.arc(vPos.x, vPos.y, 24, arc.startAngle, arc.endAngle, arc.anticlockwise);
       ctx.stroke();
 
-      // Degree Badge
-      const labelX = vPos.x + 22 * Math.cos((a1 + a2) / 2) + 12;
-      const labelY = vPos.y + 22 * Math.sin((a1 + a2) / 2) - 8;
+      // Degree Badge positioned along bisector
+      const labelX = vPos.x + 36 * Math.cos(arc.bisectorAngle);
+      const labelY = vPos.y + 36 * Math.sin(arc.bisectorAngle);
       drawPillBadge(ctx, `${angleDeg.toFixed(1)}°`, labelX, labelY, {
         fontSize: typography.measurementSize,
         fontFamily: typography.fontFamily,
-        textColor: ang.color || '#38bdf8',
-        borderColor: 'rgba(56, 189, 248, 0.45)',
+        textColor: isSelected ? '#ffffff' : ang.color || (ang.isCentral ? '#38bdf8' : '#f59e0b'),
+        borderColor: isSelected ? '#ffffff' : 'rgba(56, 189, 248, 0.45)',
         paddingX: typography.badgePaddingX,
         paddingY: typography.badgePaddingY,
         borderRadius: typography.badgeRadius,
@@ -660,7 +681,7 @@ export const CircleCanvas: React.FC = () => {
       ctx.restore();
     });
 
-    // 10. Draw Construction Preview
+    // 10. Draw Circle Creation Preview
     if (previewPoint && constructionStep.type === 'creating_circle' && constructionStep.center) {
       const cPos = toScreen(constructionStep.center);
       const r = distanceBetween(constructionStep.center, previewPoint);
@@ -679,6 +700,114 @@ export const CircleCanvas: React.FC = () => {
         borderColor: 'rgba(56, 189, 248, 0.6)',
       });
       ctx.restore();
+    }
+
+    // 11. Draw Angle Measurement Construction Preview
+    if (constructionStep.type === 'measuring_angle') {
+      const pts = constructionStep.points || [];
+
+      // Step 1: First Ray Point Selected
+      if (pts.length >= 1) {
+        const p1Resolved = resolveCirclePointCoords(pts[0], circles, circumferencePoints);
+        if (p1Resolved) {
+          const p1Screen = toScreen(p1Resolved.coords);
+          ctx.save();
+          // Amber highlight ring
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(p1Screen.x, p1Screen.y, 11, 0, Math.PI * 2);
+          ctx.stroke();
+
+          drawPillBadge(ctx, `1: ${p1Resolved.name}`, p1Screen.x, p1Screen.y - 18, {
+            fontSize: typography.secondaryCoordSize,
+            fontFamily: typography.fontFamily,
+            textColor: '#f59e0b',
+            borderColor: 'rgba(245, 158, 11, 0.7)',
+            paddingX: 5,
+            paddingY: 2,
+          });
+
+          // Guide line to cursor
+          if (pts.length === 1 && previewPoint) {
+            const cursorScreen = toScreen(previewPoint);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p1Screen.x, p1Screen.y);
+            ctx.lineTo(cursorScreen.x, cursorScreen.y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      // Step 2: Vertex Selected -> Solid ray to Point 1 + live preview ray to cursor
+      if (pts.length >= 2) {
+        const p1Resolved = resolveCirclePointCoords(pts[0], circles, circumferencePoints);
+        const vResolved = resolveCirclePointCoords(pts[1], circles, circumferencePoints);
+        if (p1Resolved && vResolved) {
+          const p1Screen = toScreen(p1Resolved.coords);
+          const vScreen = toScreen(vResolved.coords);
+
+          ctx.save();
+          // Vertex Cyan Ring
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(vScreen.x, vScreen.y, 12, 0, Math.PI * 2);
+          ctx.stroke();
+
+          drawPillBadge(ctx, `Vertex: ${vResolved.name}`, vScreen.x, vScreen.y - 18, {
+            fontSize: typography.secondaryCoordSize,
+            fontFamily: typography.fontFamily,
+            textColor: '#38bdf8',
+            borderColor: 'rgba(56, 189, 248, 0.8)',
+            paddingX: 5,
+            paddingY: 2,
+          });
+
+          // Solid ray from Vertex to Point 1
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(vScreen.x, vScreen.y);
+          ctx.lineTo(p1Screen.x, p1Screen.y);
+          ctx.stroke();
+
+          // Preview ray from Vertex to cursor + live arc & readout
+          if (previewPoint) {
+            const cursorScreen = toScreen(previewPoint);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(vScreen.x, vScreen.y);
+            ctx.lineTo(cursorScreen.x, cursorScreen.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Live preview angle
+            const liveDeg = calculateAngleDegrees(p1Resolved.coords, vResolved.coords, previewPoint);
+            if (liveDeg > 0.5) {
+              const liveArc = calculateMinorArcSweep(vScreen, p1Screen, cursorScreen);
+              ctx.beginPath();
+              ctx.arc(vScreen.x, vScreen.y, 24, liveArc.startAngle, liveArc.endAngle, liveArc.anticlockwise);
+              ctx.stroke();
+
+              const badgeX = vScreen.x + 38 * Math.cos(liveArc.bisectorAngle);
+              const badgeY = vScreen.y + 38 * Math.sin(liveArc.bisectorAngle);
+              drawPillBadge(ctx, `${liveDeg.toFixed(1)}°`, badgeX, badgeY, {
+                fontSize: typography.measurementSize,
+                fontFamily: typography.fontFamily,
+                textColor: '#38bdf8',
+                borderColor: 'rgba(56, 189, 248, 0.6)',
+              });
+            }
+          }
+          ctx.restore();
+        }
+      }
     }
   }, [
     circles,
@@ -744,6 +873,28 @@ export const CircleCanvas: React.FC = () => {
           selectObject(circle.id, 'circle');
           setDraggedCircleCenterId(circle.id);
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          return;
+        }
+      }
+
+      // Check angles
+      for (const ang of Object.values(angles)) {
+        const circle = circles[ang.circleId];
+        if (!circle) continue;
+        const p1 = resolveCirclePointCoords(ang.point1Id, circles, circumferencePoints);
+        const v = resolveCirclePointCoords(ang.vertexId, circles, circumferencePoints);
+        const p2 = resolveCirclePointCoords(ang.point2Id, circles, circumferencePoints);
+        if (!p1 || !v || !p2) continue;
+        const p1Pos = toScreen(p1.coords);
+        const vPos = toScreen(v.coords);
+        const p2Pos = toScreen(p2.coords);
+
+        if (
+          pointHitsScreenPoint(screenX, screenY, vPos.x, vPos.y, HIT_TOLERANCE_PX) ||
+          distanceToScreenSegment(screenX, screenY, vPos.x, vPos.y, p1Pos.x, p1Pos.y) <= HIT_TOLERANCE_PX ||
+          distanceToScreenSegment(screenX, screenY, vPos.x, vPos.y, p2Pos.x, p2Pos.y) <= HIT_TOLERANCE_PX
+        ) {
+          selectObject(ang.id, 'angle');
           return;
         }
       }
@@ -927,6 +1078,93 @@ export const CircleCanvas: React.FC = () => {
       return;
     }
 
+    // 7. ANGLE MEASURE TOOL (A) - Fully Functional 3-Point Sequence
+    if (activeTool === 'angle_measure') {
+      let clickedPointId: string | null = null;
+      let targetCircleId: string | null = null;
+
+      // 1. Check circumference points first
+      for (const pt of Object.values(circumferencePoints)) {
+        const circle = circles[pt.circleId];
+        if (!circle) continue;
+        const ptScreen = toScreen(getCircumferenceCoords(circle, pt.angleRad));
+        if (pointHitsScreenPoint(screenX, screenY, ptScreen.x, ptScreen.y, HIT_TOLERANCE_PX)) {
+          clickedPointId = pt.id;
+          targetCircleId = circle.id;
+          break;
+        }
+      }
+
+      // 2. Check circle centers
+      if (!clickedPointId) {
+        for (const circle of Object.values(circles)) {
+          const centerScreen = toScreen(circle.center);
+          if (pointHitsScreenPoint(screenX, screenY, centerScreen.x, centerScreen.y, HIT_TOLERANCE_PX)) {
+            clickedPointId = `center_${circle.id}`;
+            targetCircleId = circle.id;
+            break;
+          }
+        }
+      }
+
+      // If click missed all points, notify user clearly without breaking state
+      if (!clickedPointId || !targetCircleId) {
+        const currentCount =
+          constructionStep.type === 'measuring_angle' ? constructionStep.points.length : 0;
+        setPointMissedNotice(
+          `Missed existing point. Please click an existing point or circle center (${currentCount + 1}/3).`
+        );
+        return;
+      }
+
+      setPointMissedNotice(null);
+
+      // Step 1: First Ray Point (1/3)
+      if (constructionStep.type !== 'measuring_angle' || constructionStep.points.length === 0) {
+        setConstructionStep({
+          type: 'measuring_angle',
+          circleId: targetCircleId,
+          points: [clickedPointId],
+        });
+        return;
+      }
+
+      // Step 2: Vertex (2/3)
+      if (constructionStep.points.length === 1) {
+        const p1Id = constructionStep.points[0];
+        if (p1Id === clickedPointId) {
+          setPointMissedNotice('Vertex must be distinct from the first point.');
+          return;
+        }
+        setConstructionStep({
+          type: 'measuring_angle',
+          circleId: targetCircleId,
+          points: [p1Id, clickedPointId],
+        });
+        return;
+      }
+
+      // Step 3: Second Ray Point (3/3)
+      if (constructionStep.points.length === 2) {
+        const [p1Id, vId] = constructionStep.points;
+        if (clickedPointId === vId) {
+          setPointMissedNotice('Final point must be distinct from the vertex.');
+          return;
+        }
+        if (clickedPointId === p1Id) {
+          setPointMissedNotice('Final point must be distinct from the first point.');
+          return;
+        }
+
+        const isCentral = vId.startsWith('center') || vId === 'center' || vId === targetCircleId;
+        addAngle(targetCircleId, p1Id, vId, clickedPointId, isCentral);
+        setConstructionStep({ type: 'idle' });
+        setPreviewPoint(null);
+        return;
+      }
+      return;
+    }
+
     // Backward-compatibility: radius_diameter
     if (activeTool === 'radius_diameter') {
       for (const pt of Object.values(circumferencePoints)) {
@@ -941,7 +1179,7 @@ export const CircleCanvas: React.FC = () => {
       return;
     }
 
-    // 7. TANGENT TOOL (T)
+    // 8. TANGENT TOOL (T)
     if (activeTool === 'tangent') {
       for (const pt of Object.values(circumferencePoints)) {
         const circle = circles[pt.circleId];
@@ -955,7 +1193,7 @@ export const CircleCanvas: React.FC = () => {
       return;
     }
 
-    // 8. ERASER TOOL (E)
+    // 9. ERASER TOOL (E)
     if (activeTool === 'eraser') {
       // Click point => delete point
       for (const pt of Object.values(circumferencePoints)) {
@@ -964,6 +1202,27 @@ export const CircleCanvas: React.FC = () => {
         const ptScreen = toScreen(getCircumferenceCoords(circle, pt.angleRad));
         if (pointHitsScreenPoint(screenX, screenY, ptScreen.x, ptScreen.y, HIT_TOLERANCE_PX)) {
           deleteObject(pt.id, 'point');
+          return;
+        }
+      }
+      // Click angle => delete angle
+      for (const ang of Object.values(angles)) {
+        const circle = circles[ang.circleId];
+        if (!circle) continue;
+        const p1 = resolveCirclePointCoords(ang.point1Id, circles, circumferencePoints);
+        const v = resolveCirclePointCoords(ang.vertexId, circles, circumferencePoints);
+        const p2 = resolveCirclePointCoords(ang.point2Id, circles, circumferencePoints);
+        if (!p1 || !v || !p2) continue;
+        const p1Pos = toScreen(p1.coords);
+        const vPos = toScreen(v.coords);
+        const p2Pos = toScreen(p2.coords);
+
+        if (
+          pointHitsScreenPoint(screenX, screenY, vPos.x, vPos.y, HIT_TOLERANCE_PX) ||
+          distanceToScreenSegment(screenX, screenY, vPos.x, vPos.y, p1Pos.x, p1Pos.y) <= HIT_TOLERANCE_PX ||
+          distanceToScreenSegment(screenX, screenY, vPos.x, vPos.y, p2Pos.x, p2Pos.y) <= HIT_TOLERANCE_PX
+        ) {
+          deleteObject(ang.id, 'angle');
           return;
         }
       }
@@ -1051,8 +1310,11 @@ export const CircleCanvas: React.FC = () => {
       return;
     }
 
-    // Circle Creation Preview
-    if (constructionStep.type === 'creating_circle') {
+    // Preview for circle creation or angle measurement
+    if (
+      constructionStep.type === 'creating_circle' ||
+      constructionStep.type === 'measuring_angle'
+    ) {
       setPreviewPoint(currentWorld);
     }
   };
@@ -1101,6 +1363,15 @@ export const CircleCanvas: React.FC = () => {
     activeInstruction = 'First point selected. Click a second point on the circle to create the chord. Press Esc to cancel.';
   } else if (constructionStep.type === 'creating_diameter') {
     activeInstruction = 'Circle targeted. Click an existing point or anywhere on its circumference to construct the diameter. Press Esc to cancel.';
+  } else if (constructionStep.type === 'measuring_angle') {
+    const pts = constructionStep.points || [];
+    if (pts.length === 0) {
+      activeInstruction = 'Select first ray point (1/3). Click any circumference point or circle center.';
+    } else if (pts.length === 1) {
+      activeInstruction = 'Select vertex (2/3). Click circle center for central angle, or boundary point for inscribed.';
+    } else if (pts.length === 2) {
+      activeInstruction = 'Select final ray point (3/3). Click a third point to complete angle measurement.';
+    }
   }
 
   return (
@@ -1115,6 +1386,20 @@ export const CircleCanvas: React.FC = () => {
         className="w-full h-full block cursor-crosshair"
         style={{ touchAction: 'none' }}
       />
+
+      {/* Point Missed / Construction Warning Toast */}
+      {pointMissedNotice && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-950/95 backdrop-blur-md border border-amber-500/80 text-amber-200 px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl flex items-center gap-2 z-30 animate-bounce">
+          <span className="material-symbols-outlined text-[18px] text-amber-400">info</span>
+          <span>{pointMissedNotice}</span>
+          <button
+            onClick={() => setPointMissedNotice(null)}
+            className="ml-2 text-slate-400 hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[14px]">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Floating Canvas Viewport Controls */}
       <div className="absolute bottom-16 right-4 flex items-center gap-1.5 bg-surface-elevated/90 backdrop-blur-md p-1.5 rounded-xl border border-surface-border shadow-xl z-20">
@@ -1153,7 +1438,7 @@ export const CircleCanvas: React.FC = () => {
         </button>
       </div>
 
-      {/* Persistent Bottom Guidance Bar (Visible for touch screens and classrooms) */}
+      {/* Persistent Bottom Guidance Bar */}
       <div className="absolute bottom-3 left-3 right-3 sm:right-64 bg-surface-elevated/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-surface-border shadow-2xl flex items-center justify-between gap-3 text-xs z-20 select-none">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 flex items-center justify-center">
@@ -1195,6 +1480,7 @@ export const CircleCanvas: React.FC = () => {
             onClick={() => {
               setConstructionStep({ type: 'idle' });
               setPreviewPoint(null);
+              setPointMissedNotice(null);
             }}
             className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-[11px] font-semibold transition-all shrink-0 flex items-center gap-1"
           >

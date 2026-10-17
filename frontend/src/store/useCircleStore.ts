@@ -30,6 +30,7 @@ import {
   calculateOppositeDiameterPoint,
   computeConstructionBoundingBox,
   calculateFitViewport,
+  resolveCirclePointCoords,
 } from '../engine/mathematics/circles/geometry';
 
 interface CircleSceneSnapshot {
@@ -486,9 +487,15 @@ export const useCircleStore = create<CircleState>((set, get) => {
 
     addAngle: (circleId, point1Id, vertexId, point2Id, isCentral = false) => {
       const id = `angle_${Date.now()}`;
+      const state = get();
+      const p1 = resolveCirclePointCoords(point1Id, state.circles, state.circumferencePoints);
+      const v = resolveCirclePointCoords(vertexId, state.circles, state.circumferencePoints);
+      const p2 = resolveCirclePointCoords(point2Id, state.circles, state.circumferencePoints);
+      const name = p1 && v && p2 ? `∠${p1.name}${v.name}${p2.name}` : isCentral ? 'Central Angle' : 'Inscribed Angle';
+
       const newAngle: CircleAngleMeasurement = {
         id,
-        name: isCentral ? 'Central Angle' : 'Inscribed Angle',
+        name,
         circleId,
         point1Id,
         vertexId,

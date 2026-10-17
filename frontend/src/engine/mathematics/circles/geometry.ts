@@ -10,7 +10,7 @@
  * - Tangent vector and perpendicularity verification
  */
 
-import type { WorldPoint, CircleObject, LabelSizePreference } from './types';
+import type { WorldPoint, CircleObject, CircumferencePoint, LabelSizePreference } from './types';
 
 export const EPSILON = 1e-4;
 
@@ -144,6 +144,74 @@ export function calculateAngleDegrees(
   const cosTheta = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
   const angleRad = Math.acos(cosTheta);
   return Number(((angleRad * 180) / Math.PI).toFixed(2));
+}
+
+/**
+ * Resolves world coordinates, display name, parent circle ID and center status for any point reference.
+ */
+export function resolveCirclePointCoords(
+  pointId: string,
+  circles: Record<string, CircleObject>,
+  circumferencePoints: Record<string, CircumferencePoint>
+): { coords: WorldPoint; name: string; circleId: string; isCenter: boolean } | null {
+  // 1. Check circumference points
+  if (circumferencePoints[pointId]) {
+    const pt = circumferencePoints[pointId];
+    const circle = circles[pt.circleId];
+    if (!circle) return null;
+    return {
+      coords: getCircumferenceCoords(circle, pt.angleRad),
+      name: pt.name,
+      circleId: pt.circleId,
+      isCenter: false,
+    };
+  }
+
+  // 2. Check circle centers (handles center_<circleId>, circle.id, or 'center')
+  for (const circle of Object.values(circles)) {
+    if (pointId === circle.id || pointId === 'center' || pointId === `center_${circle.id}`) {
+      return {
+        coords: circle.center,
+        name: circle.name || 'O',
+        circleId: circle.id,
+        isCenter: true,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Computes exact minor arc sweep parameters (start, end, direction, bisector) between two rays.
+ * Guarantees drawing the smaller angle [0°, 180°] rather than accidentally sweeping a reflex arc.
+ */
+export function calculateMinorArcSweep(
+  vertexScreen: { x: number; y: number },
+  p1Screen: { x: number; y: number },
+  p2Screen: { x: number; y: number }
+): {
+  startAngle: number;
+  endAngle: number;
+  anticlockwise: boolean;
+  bisectorAngle: number;
+} {
+  const a1 = Math.atan2(p1Screen.y - vertexScreen.y, p1Screen.x - vertexScreen.x);
+  const a2 = Math.atan2(p2Screen.y - vertexScreen.y, p2Screen.x - vertexScreen.x);
+
+  let diff = (a2 - a1) % (2 * Math.PI);
+  if (diff < -Math.PI) diff += 2 * Math.PI;
+  if (diff > Math.PI) diff -= 2 * Math.PI;
+
+  const anticlockwise = diff < 0;
+  const bisectorAngle = a1 + diff / 2;
+
+  return {
+    startAngle: a1,
+    endAngle: a2,
+    anticlockwise,
+    bisectorAngle,
+  };
 }
 
 /**

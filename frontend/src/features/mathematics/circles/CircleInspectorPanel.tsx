@@ -25,6 +25,7 @@ import {
   verifyInscribedAngleTheorem,
   verifyCyclicQuadOppositeAngles,
   validatePracticeAnswer,
+  resolveCirclePointCoords,
 } from '../../../engine/mathematics/circles/geometry';
 
 export const CircleInspectorPanel: React.FC = () => {
@@ -326,6 +327,45 @@ export const CircleInspectorPanel: React.FC = () => {
                     <div className="text-sm font-bold text-emerald-400">{quadVerification.sumBD}°</div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Committed Angle Measurements */}
+            {Object.keys(angles).length > 0 && primaryCircle && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
+                <div className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-amber-400 text-[16px]">square_foot</span>
+                  <span>Angle Measurements ({Object.keys(angles).length})</span>
+                </div>
+                {Object.values(angles).map((ang) => {
+                  const p1 = resolveCirclePointCoords(ang.point1Id, circles, circumferencePoints);
+                  const v = resolveCirclePointCoords(ang.vertexId, circles, circumferencePoints);
+                  const p2 = resolveCirclePointCoords(ang.point2Id, circles, circumferencePoints);
+                  if (!p1 || !v || !p2) return null;
+                  const deg = calculateAngleDegrees(p1.coords, v.coords, p2.coords);
+
+                  return (
+                    <div
+                      key={ang.id}
+                      className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1"
+                    >
+                      <div className="flex justify-between font-bold text-slate-200">
+                        <span>{ang.name}</span>
+                        <span className={ang.isCentral ? 'text-sky-400' : 'text-amber-400'}>{deg.toFixed(1)}°</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>Classification:</span>
+                        <span className="text-slate-300">{ang.isCentral ? 'Central Angle' : 'Inscribed Angle'}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>Points:</span>
+                        <span className="text-slate-300">
+                          {p1.name} — {v.name} (Vertex) — {p2.name}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

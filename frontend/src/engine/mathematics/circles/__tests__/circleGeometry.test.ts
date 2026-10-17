@@ -16,8 +16,10 @@ import {
   distanceToScreenSegment,
   validatePracticeAnswer,
   LABEL_TYPOGRAPHY_CONFIGS,
+  resolveCirclePointCoords,
+  calculateMinorArcSweep,
 } from '../geometry';
-import type { CircleObject, WorldPoint } from '../types';
+import type { CircleObject, WorldPoint, CircumferencePoint } from '../types';
 
 describe('Circle Geometry Engine - Pure Calculations', () => {
   const testCircle: CircleObject = {
@@ -260,5 +262,50 @@ describe('Circle Geometry Engine - Pure Calculations', () => {
       expect(LABEL_TYPOGRAPHY_CONFIGS.normal.haloWidth).toBe(4);
     });
   });
+
+  describe('Milestone M2.2 Hotfix: Angle Sweep & Point Resolution', () => {
+    it('resolves both circumference points and circle centers transparently', () => {
+      const circles: Record<string, CircleObject> = {
+        c1: { id: 'c1', name: 'Circle O', center: { x: 2, y: 3 }, radius: 4 },
+      };
+      const circumferencePoints: Record<string, CircumferencePoint> = {
+        pA: { id: 'pA', name: 'A', circleId: 'c1', angleRad: 0 },
+      };
+
+      // Resolve circumference point
+      const resA = resolveCirclePointCoords('pA', circles, circumferencePoints);
+      expect(resA).toBeDefined();
+      expect(resA?.name).toBe('A');
+      expect(resA?.coords.x).toBeCloseTo(6, 3);
+      expect(resA?.coords.y).toBeCloseTo(3, 3);
+      expect(resA?.isCenter).toBe(false);
+
+      // Resolve center point
+      const resCenter = resolveCirclePointCoords('center_c1', circles, circumferencePoints);
+      expect(resCenter).toBeDefined();
+      expect(resCenter?.name).toBe('Circle O');
+      expect(resCenter?.coords.x).toBe(2);
+      expect(resCenter?.coords.y).toBe(3);
+      expect(resCenter?.isCenter).toBe(true);
+    });
+
+    it('calculates minor arc sweep ensuring sweep is always <= 180°', () => {
+      const vertex = { x: 100, y: 100 };
+      const p1 = { x: 200, y: 100 }; // 0 rad
+      const p2 = { x: 100, y: 200 }; // π/2 rad
+
+      const sweep = calculateMinorArcSweep(vertex, p1, p2);
+      expect(sweep.anticlockwise).toBe(false);
+      expect(sweep.startAngle).toBeCloseTo(0, 3);
+      expect(sweep.endAngle).toBeCloseTo(Math.PI / 2, 3);
+      expect(sweep.bisectorAngle).toBeCloseTo(Math.PI / 4, 3);
+
+      // When points are in reverse order
+      const sweepRev = calculateMinorArcSweep(vertex, p2, p1);
+      expect(sweepRev.anticlockwise).toBe(true);
+      expect(sweepRev.bisectorAngle).toBeCloseTo(Math.PI / 4, 3);
+    });
+  });
 });
+
 

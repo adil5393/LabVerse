@@ -219,5 +219,120 @@ describe('useCircleStore & Architectural Module Isolation', () => {
       expect(useCircleStore.getState().circles[circleId]).toBeDefined();
     });
   });
+
+  describe('Milestone M2.2 Hotfix: Angle Measurement Lifecycle & Interactivity', () => {
+    it('constructs central angle A -> O -> B with isCentral=true and correct classification', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+
+      const pAId = store.addCircumferencePoint(circleId, 0, 'A'); // (4, 0)
+      const pBId = store.addCircumferencePoint(circleId, Math.PI / 2, 'B'); // (0, 4)
+      const centerId = `center_${circleId}`;
+
+      const angleId = store.addAngle(circleId, pAId, centerId, pBId, true);
+      const angle = useCircleStore.getState().angles[angleId];
+
+      expect(angle).toBeDefined();
+      expect(angle.name).toContain('A');
+      expect(angle.name).toContain('B');
+      expect(angle.isCentral).toBe(true);
+      expect(angle.point1Id).toBe(pAId);
+      expect(angle.vertexId).toBe(centerId);
+      expect(angle.point2Id).toBe(pBId);
+    });
+
+    it('constructs inscribed angle A -> P -> B with isCentral=false', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+
+      const pAId = store.addCircumferencePoint(circleId, 0, 'A');
+      const pPId = store.addCircumferencePoint(circleId, Math.PI * 0.75, 'P');
+      const pBId = store.addCircumferencePoint(circleId, Math.PI / 2, 'B');
+
+      const angleId = store.addAngle(circleId, pAId, pPId, pBId, false);
+      const angle = useCircleStore.getState().angles[angleId];
+
+      expect(angle).toBeDefined();
+      expect(angle.isCentral).toBe(false);
+      expect(angle.vertexId).toBe(pPId);
+    });
+
+    it('supports live angle updates when points move without storing stale coordinates', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+
+      const pAId = store.addCircumferencePoint(circleId, 0, 'A');
+      const pBId = store.addCircumferencePoint(circleId, Math.PI / 2, 'B');
+      const centerId = `center_${circleId}`;
+
+      const angleId = store.addAngle(circleId, pAId, centerId, pBId, true);
+      expect(useCircleStore.getState().angles[angleId]).toBeDefined();
+
+      // Rotate point B from 90° to 180°
+      store.updateCircumferencePoint(pBId, Math.PI);
+
+      // Angle entity retains references to pAId and pBId, coordinates update dynamically
+      const ptBUpdated = useCircleStore.getState().circumferencePoints[pBId];
+      expect(ptBUpdated.angleRad).toBeCloseTo(Math.PI, 2);
+    });
+
+    it('supports undo and redo for angle measurements', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+      const initialAnglesCount = Object.keys(store.angles).length;
+
+      const pAId = store.addCircumferencePoint(circleId, 0, 'A');
+      const pBId = store.addCircumferencePoint(circleId, 1, 'B');
+      const angleId = store.addAngle(circleId, pAId, `center_${circleId}`, pBId, true);
+
+      expect(Object.keys(useCircleStore.getState().angles).length).toBe(initialAnglesCount + 1);
+
+      // Undo
+      store.undo();
+      expect(useCircleStore.getState().angles[angleId]).toBeUndefined();
+
+      // Redo
+      store.redo();
+      expect(useCircleStore.getState().angles[angleId]).toBeDefined();
+    });
+
+    it('cascades deletion cleanly when one of the ray points is deleted', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+
+      const pAId = store.addCircumferencePoint(circleId, 0, 'A');
+      const pBId = store.addCircumferencePoint(circleId, 1, 'B');
+      const angleId = store.addAngle(circleId, pAId, `center_${circleId}`, pBId, true);
+
+      expect(useCircleStore.getState().angles[angleId]).toBeDefined();
+
+      // Delete point A
+      store.deleteObject(pAId, 'point');
+
+      // Angle should be automatically deleted because point A was removed
+      expect(useCircleStore.getState().angles[angleId]).toBeUndefined();
+    });
+
+    it('allows deleting an angle directly without affecting parent circle or points', () => {
+      const store = useCircleStore.getState();
+      const circleId = Object.keys(store.circles)[0];
+
+      const pAId = store.addCircumferencePoint(circleId, 0, 'A');
+      const pBId = store.addCircumferencePoint(circleId, 1, 'B');
+      const angleId = store.addAngle(circleId, pAId, `center_${circleId}`, pBId, true);
+
+      expect(useCircleStore.getState().angles[angleId]).toBeDefined();
+
+      // Delete angle directly
+      store.deleteObject(angleId, 'angle');
+
+      expect(useCircleStore.getState().angles[angleId]).toBeUndefined();
+      // Circle and points must remain intact
+      expect(useCircleStore.getState().circles[circleId]).toBeDefined();
+      expect(useCircleStore.getState().circumferencePoints[pAId]).toBeDefined();
+      expect(useCircleStore.getState().circumferencePoints[pBId]).toBeDefined();
+    });
+  });
 });
+
 

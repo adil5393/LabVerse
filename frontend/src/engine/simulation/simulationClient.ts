@@ -9,7 +9,7 @@ import type { JumperWire, TerminalAttachment } from '../../types/connections';
 import type { CircuitSimulationResult } from '../../types/simulation';
 import { solveCircuitLocal } from './dcSolverLocal';
 
-const BACKEND_SOLVE_URL = 'http://localhost:8000/api/solve';
+const BACKEND_SOLVE_URL = '/api/solve';
 
 export async function simulateCircuit(
   instances: GenericEquipmentInstance[],

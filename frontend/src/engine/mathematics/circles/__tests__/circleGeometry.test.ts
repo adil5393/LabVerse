@@ -18,6 +18,13 @@ import {
   LABEL_TYPOGRAPHY_CONFIGS,
   resolveCirclePointCoords,
   calculateMinorArcSweep,
+  rotatePoint,
+  reflectPointAcrossLine,
+  calculatePerpendicularBisector,
+  calculateCircumcircleFromThreePoints,
+  calculateChordDistancePythagorean,
+  testConcyclicityFourPoints,
+  testSameSegmentAngles,
 } from '../geometry';
 import type { CircleObject, WorldPoint, CircumferencePoint } from '../types';
 
@@ -304,6 +311,194 @@ describe('Circle Geometry Engine - Pure Calculations', () => {
       const sweepRev = calculateMinorArcSweep(vertex, p2, p1);
       expect(sweepRev.anticlockwise).toBe(true);
       expect(sweepRev.bisectorAngle).toBeCloseTo(Math.PI / 4, 3);
+    });
+  });
+
+  describe('Milestone M2.3: Symmetry Transformations & Invariants', () => {
+    const center: WorldPoint = { x: 0, y: 0 };
+
+    it('rotates a point around center preserving distance from origin', () => {
+      const p: WorldPoint = { x: 4, y: 0 };
+      // 90° rotation counterclockwise
+      const pRot90 = rotatePoint(p, center, Math.PI / 2);
+      expect(pRot90.x).toBeCloseTo(0, 3);
+      expect(pRot90.y).toBeCloseTo(4, 3);
+      expect(distanceBetween(center, pRot90)).toBeCloseTo(4, 3);
+
+      // 180° rotation
+      const pRot180 = rotatePoint(p, center, Math.PI);
+      expect(pRot180.x).toBeCloseTo(-4, 3);
+      expect(pRot180.y).toBeCloseTo(0, 3);
+      expect(distanceBetween(center, pRot180)).toBeCloseTo(4, 3);
+    });
+
+    it('preserves chord lengths under rotation (isometry)', () => {
+      const pA: WorldPoint = { x: 4, y: 0 };
+      const pB: WorldPoint = { x: 0, y: 4 };
+      const origChordLen = distanceBetween(pA, pB);
+
+      const rotA = rotatePoint(pA, center, 0.732);
+      const rotB = rotatePoint(pB, center, 0.732);
+      const rotChordLen = distanceBetween(rotA, rotB);
+
+      expect(rotChordLen).toBeCloseTo(origChordLen, 4);
+    });
+
+    it('reflects a point across a diameter axis preserving distance', () => {
+      const p: WorldPoint = { x: 3, y: 4 }; // Distance = 5
+      // Reflect across horizontal axis (angle 0)
+      const pReflX = reflectPointAcrossLine(p, center, 0);
+      expect(pReflX.x).toBeCloseTo(3, 3);
+      expect(pReflX.y).toBeCloseTo(-4, 3);
+      expect(distanceBetween(center, pReflX)).toBeCloseTo(5, 3);
+
+      // Reflect across diagonal y = x (angle π/4)
+      const pReflDiag = reflectPointAcrossLine(p, center, Math.PI / 4);
+      expect(pReflDiag.x).toBeCloseTo(4, 3);
+      expect(pReflDiag.y).toBeCloseTo(3, 3);
+      expect(distanceBetween(center, pReflDiag)).toBeCloseTo(5, 3);
+    });
+  });
+
+  describe('Milestone M2.3: Perpendicular Bisector & Circumcircle Construction', () => {
+    it('calculates the perpendicular bisector of a segment', () => {
+      const p1: WorldPoint = { x: 0, y: 0 };
+      const p2: WorldPoint = { x: 6, y: 0 };
+      const bisector = calculatePerpendicularBisector(p1, p2);
+
+      expect(bisector.midpoint.x).toBeCloseTo(3, 3);
+      expect(bisector.midpoint.y).toBeCloseTo(0, 3);
+      expect(bisector.normalDirection.x).toBeCloseTo(0, 3);
+      expect(Math.abs(bisector.normalDirection.y)).toBeCloseTo(1, 3);
+    });
+
+    it('constructs circumcircle for right-angled triangle with circumcenter on hypotenuse', () => {
+      // Right triangle at (0,0) with vertices (0,0), (6,0), (0,8)
+      // Hypotenuse is from (6,0) to (0,8), midpoint is (3,4)
+      const pA: WorldPoint = { x: 0, y: 0 };
+      const pB: WorldPoint = { x: 6, y: 0 };
+      const pC: WorldPoint = { x: 0, y: 8 };
+
+      const circum = calculateCircumcircleFromThreePoints(pA, pB, pC);
+      expect(circum.isCollinear).toBe(false);
+      expect(circum.circumcenter?.x).toBeCloseTo(3, 3);
+      expect(circum.circumcenter?.y).toBeCloseTo(4, 3);
+      expect(circum.radius).toBeCloseTo(5, 3);
+      expect(circum.triangleType).toBe('right');
+      expect(circum.oa).toBeCloseTo(5, 3);
+      expect(circum.ob).toBeCloseTo(5, 3);
+      expect(circum.oc).toBeCloseTo(5, 3);
+    });
+
+    it('constructs circumcircle for acute triangle with circumcenter inside', () => {
+      // Equilateral-like acute triangle
+      const pA: WorldPoint = { x: -3, y: 0 };
+      const pB: WorldPoint = { x: 3, y: 0 };
+      const pC: WorldPoint = { x: 0, y: 5 };
+
+      const circum = calculateCircumcircleFromThreePoints(pA, pB, pC);
+      expect(circum.isCollinear).toBe(false);
+      expect(circum.circumcenter?.x).toBeCloseTo(0, 3);
+      expect(circum.oa).toBeCloseTo(circum.ob, 3);
+      expect(circum.ob).toBeCloseTo(circum.oc, 3);
+      expect(circum.triangleType).toBe('acute');
+    });
+
+    it('constructs circumcircle for obtuse triangle with circumcenter outside', () => {
+      // Very flat triangle: (0,0), (6,0), (3, 0.5)
+      const pA: WorldPoint = { x: 0, y: 0 };
+      const pB: WorldPoint = { x: 6, y: 0 };
+      const pC: WorldPoint = { x: 3, y: 0.5 };
+
+      const circum = calculateCircumcircleFromThreePoints(pA, pB, pC);
+      expect(circum.isCollinear).toBe(false);
+      expect(circum.triangleType).toBe('obtuse');
+    });
+
+    it('strictly rejects collinear points and does not fabricate a circumcenter', () => {
+      const p1: WorldPoint = { x: 1, y: 1 };
+      const p2: WorldPoint = { x: 2, y: 2 };
+      const p3: WorldPoint = { x: 5, y: 5 };
+
+      const circum = calculateCircumcircleFromThreePoints(p1, p2, p3);
+      expect(circum.isCollinear).toBe(true);
+      expect(circum.circumcenter).toBeNull();
+      expect(circum.radius).toBeNull();
+      expect(circum.triangleType).toBe('collinear');
+    });
+  });
+
+  describe('Milestone M2.3: Chord Distance & Pythagorean Invariants', () => {
+    it('calculates chord distance verifying longer chord is nearer to center', () => {
+      const radius = 5.0;
+      const chordLong = 8.0;
+      const chordShort = 6.0;
+
+      const resLong = calculateChordDistancePythagorean(radius, chordLong);
+      const resShort = calculateChordDistancePythagorean(radius, chordShort);
+
+      expect(resLong.isValid).toBe(true);
+      expect(resShort.isValid).toBe(true);
+      expect(resLong.distance).toBeCloseTo(3.0, 3); // sqrt(25 - 16) = 3
+      expect(resShort.distance).toBeCloseTo(4.0, 3); // sqrt(25 - 9) = 4
+      expect(resLong.distance).toBeLessThan(resShort.distance);
+    });
+
+    it('evaluates diameter as chord with zero distance from center', () => {
+      const resDiameter = calculateChordDistancePythagorean(5.0, 10.0);
+      expect(resDiameter.isValid).toBe(true);
+      expect(resDiameter.distance).toBeCloseTo(0.0, 3);
+    });
+
+    it('rejects chords longer than diameter (2r)', () => {
+      const resInvalid = calculateChordDistancePythagorean(5.0, 11.0);
+      expect(resInvalid.isValid).toBe(false);
+    });
+  });
+
+  describe('Milestone M2.3: Concyclicity & Same-Segment Converses', () => {
+    it('identifies four cyclic points and verifies supplementary opposite angles', () => {
+      // 4 points on circle of radius 5
+      const pA: WorldPoint = { x: 5, y: 0 };
+      const pB: WorldPoint = { x: 0, y: 5 };
+      const pC: WorldPoint = { x: -5, y: 0 };
+      const pD: WorldPoint = { x: 0, y: -5 };
+
+      const test = testConcyclicityFourPoints(pA, pB, pC, pD);
+      expect(test.isCyclic).toBe(true);
+      expect(test.sumOpposite1).toBeCloseTo(180, 1);
+      expect(test.sumOpposite2).toBeCloseTo(180, 1);
+      expect(test.deviationDeg).toBeCloseTo(0, 1);
+    });
+
+    it('identifies non-cyclic configuration when fourth point is off circle', () => {
+      const pA: WorldPoint = { x: 5, y: 0 };
+      const pB: WorldPoint = { x: 0, y: 5 };
+      const pC: WorldPoint = { x: -5, y: 0 };
+      const pD: WorldPoint = { x: 0, y: -9 }; // Distort point D
+
+      const test = testConcyclicityFourPoints(pA, pB, pC, pD);
+      expect(test.isCyclic).toBe(false);
+    });
+
+    it('validates converse of same-segment theorem: same side + equal angles => concyclic', () => {
+      const a: WorldPoint = { x: -4, y: 0 };
+      const b: WorldPoint = { x: 4, y: 0 };
+      // P and Q on circle x² + y² = 16 (or radius 5 circle passing through A and B)
+      // On same upper side (y > 0)
+      const p: WorldPoint = { x: 0, y: 4 };
+      const q: WorldPoint = { x: 2, y: Math.sqrt(12) };
+
+      const res = testSameSegmentAngles(a, b, p, q);
+      expect(res.areSameSide).toBe(true);
+      expect(res.areEqual).toBe(true);
+      expect(res.isConcyclic).toBe(true);
+
+      // Point R on opposite side (y < 0)
+      const r: WorldPoint = { x: 0, y: -4 };
+      const resOpp = testSameSegmentAngles(a, b, p, r);
+      expect(resOpp.areSameSide).toBe(false);
+      expect(resOpp.isConcyclic).toBe(false);
     });
   });
 });

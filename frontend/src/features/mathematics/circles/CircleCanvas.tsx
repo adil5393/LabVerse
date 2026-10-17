@@ -44,6 +44,9 @@ import {
   distanceToScreenSegment,
   resolveCirclePointCoords,
   calculateMinorArcSweep,
+  rotatePoint,
+  reflectPointAcrossLine,
+  calculateCircumcircleFromThreePoints,
 } from '../../../engine/mathematics/circles/geometry';
 import type { WorldPoint, CircleObject, CircleToolId } from '../../../engine/mathematics/circles/types';
 
@@ -138,6 +141,12 @@ export const CircleCanvas: React.FC = () => {
     zoomIn,
     zoomOut,
     resetZoom,
+    currentExperimentId,
+    symmetryRotation,
+    symmetryReflectionAxis,
+    symmetryShowRotated,
+    symmetryShowReflected,
+    howManyCirclesPointCount,
   } = useCircleStore();
 
   const [isPanning, setIsPanning] = useState(false);
@@ -809,6 +818,145 @@ export const CircleCanvas: React.FC = () => {
         }
       }
     }
+
+    // 12. Draw Symmetry Transformations for Experiment 2
+    if (currentExperimentId === 'symmetry-of-circle') {
+      const primaryCircle = Object.values(circles)[0];
+      const ptP = circumferencePoints['pt_P'];
+      if (primaryCircle && ptP) {
+        const pCoords = getCircumferenceCoords(primaryCircle, ptP.angleRad);
+        const centerPos = toScreen(primaryCircle.center);
+        const rotRad = (symmetryRotation * Math.PI) / 180;
+        const axisRad = (symmetryReflectionAxis * Math.PI) / 180;
+
+        // Draw Reflection Axis Line
+        ctx.save();
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.7)';
+        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 1.8;
+        const axisLen = primaryCircle.radius * 1.35;
+        const ax1 = toScreen({
+          x: primaryCircle.center.x + axisLen * Math.cos(axisRad),
+          y: primaryCircle.center.y + axisLen * Math.sin(axisRad),
+        });
+        const ax2 = toScreen({
+          x: primaryCircle.center.x - axisLen * Math.cos(axisRad),
+          y: primaryCircle.center.y - axisLen * Math.sin(axisRad),
+        });
+        ctx.beginPath();
+        ctx.moveTo(ax1.x, ax1.y);
+        ctx.lineTo(ax2.x, ax2.y);
+        ctx.stroke();
+        drawHaloText(ctx, `Axis (${symmetryReflectionAxis}°)`, ax1.x + 8, ax1.y, {
+          font: `bold ${typography.secondaryCoordSize}px monospace`,
+          fillColor: '#a855f7',
+          haloColor: '#090d16',
+          haloWidth: typography.haloWidth,
+        });
+
+        // Rotated Point & Chord
+        if (symmetryShowRotated) {
+          const rotP = rotatePoint(pCoords, primaryCircle.center, rotRad);
+          const rotPScreen = toScreen(rotP);
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(centerPos.x, centerPos.y);
+          ctx.lineTo(rotPScreen.x, rotPScreen.y);
+          ctx.stroke();
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(rotPScreen.x, rotPScreen.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          drawPillBadge(ctx, `P′ (+${symmetryRotation}°)`, rotPScreen.x, rotPScreen.y - 18, {
+            fontSize: typography.secondaryCoordSize,
+            textColor: '#38bdf8',
+            borderColor: 'rgba(56, 189, 248, 0.6)',
+          });
+        }
+
+        // Reflected Point across Axis
+        if (symmetryShowReflected) {
+          const reflP = reflectPointAcrossLine(pCoords, primaryCircle.center, axisRad);
+          const reflPScreen = toScreen(reflP);
+          ctx.strokeStyle = 'rgba(168, 85, 247, 0.7)';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(toScreen(pCoords).x, toScreen(pCoords).y);
+          ctx.lineTo(reflPScreen.x, reflPScreen.y);
+          ctx.stroke();
+
+          ctx.fillStyle = '#a855f7';
+          ctx.beginPath();
+          ctx.arc(reflPScreen.x, reflPScreen.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          drawPillBadge(ctx, `P″ (Reflected)`, reflPScreen.x, reflPScreen.y - 18, {
+            fontSize: typography.secondaryCoordSize,
+            textColor: '#a855f7',
+            borderColor: 'rgba(168, 85, 247, 0.6)',
+          });
+        }
+        ctx.restore();
+      }
+    }
+
+    // 13. Draw Circumcenter & Perpendicular Bisectors for How Many Circles?
+    if (currentExperimentId === 'how-many-circles') {
+      const ptA = circumferencePoints['pt_A'];
+      const ptB = circumferencePoints['pt_B'];
+      const ptC = circumferencePoints['pt_C'];
+      const primaryCircle = Object.values(circles)[0];
+
+      if (ptA && ptB && ptC && primaryCircle && howManyCirclesPointCount === 3) {
+        const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+        const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+        const wC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
+        const circum = calculateCircumcircleFromThreePoints(wA, wB, wC);
+
+        ctx.save();
+        if (circum.isCollinear) {
+          drawPillBadge(ctx, '⚠ Collinear Points: Perpendicular bisectors are parallel and never intersect. No finite circle exists!', width / 2, 40, {
+            fontSize: typography.pointLabelSize,
+            textColor: '#ef4444',
+            borderColor: 'rgba(239, 68, 68, 0.8)',
+            bgColor: 'rgba(69, 10, 10, 0.95)',
+            paddingX: 16,
+            paddingY: 8,
+          });
+        } else if (circum.circumcenter && circum.radius) {
+          const cPos = toScreen(circum.circumcenter);
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.arc(cPos.x, cPos.y, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          drawHaloText(ctx, `Circumcenter O (${circum.triangleType.toUpperCase()})`, cPos.x + 12, cPos.y - 10, {
+            font: `bold ${typography.secondaryCoordSize}px Inter, sans-serif`,
+            fillColor: '#f59e0b',
+            haloColor: '#090d16',
+            haloWidth: typography.haloWidth,
+          });
+
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.5;
+          [wA, wB, wC].forEach((vertex) => {
+            const vPos = toScreen(vertex);
+            ctx.beginPath();
+            ctx.moveTo(cPos.x, cPos.y);
+            ctx.lineTo(vPos.x, vPos.y);
+            ctx.stroke();
+          });
+        }
+        ctx.restore();
+      }
+    }
   }, [
     circles,
     circumferencePoints,
@@ -826,6 +974,12 @@ export const CircleCanvas: React.FC = () => {
     showAxes,
     showCoordinates,
     previewPoint,
+    currentExperimentId,
+    symmetryRotation,
+    symmetryReflectionAxis,
+    symmetryShowRotated,
+    symmetryShowReflected,
+    howManyCirclesPointCount,
   ]);
 
   // Pointer Interaction Lifecycle with Screen-Space Hit Tolerance

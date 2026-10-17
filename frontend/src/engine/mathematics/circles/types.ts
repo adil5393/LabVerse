@@ -122,6 +122,7 @@ export interface CircleExperimentDefinition {
   title: string;
   subtitle: string;
   description: string;
+  category?: 'foundations' | 'chords' | 'angles_theorems' | 'practice_revision' | 'extension';
   curriculumClassification: 'direct_chapter' | 'supporting_prerequisite' | 'optional_extension';
   ncertTopicReference: string;
   initialScene: {

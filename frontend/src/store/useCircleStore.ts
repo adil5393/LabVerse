@@ -124,9 +124,23 @@ interface CircleState {
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-
   // Practice runner
   submitPracticeAnswer: (questionId: string, answer: string, isCorrect: boolean) => void;
+
+  // Experiment-specific interactive state & actions
+  symmetryRotation: number;
+  symmetryReflectionAxis: number;
+  symmetryShowRotated: boolean;
+  symmetryShowReflected: boolean;
+  equalChordsLocked: boolean;
+  howManyCirclesPointCount: 1 | 2 | 3;
+
+  setSymmetryRotation: (deg: number) => void;
+  setSymmetryReflectionAxis: (deg: number) => void;
+  toggleSymmetryShowRotated: () => void;
+  toggleSymmetryShowReflected: () => void;
+  setEqualChordsLocked: (locked: boolean) => void;
+  setHowManyCirclesPointCount: (count: 1 | 2 | 3) => void;
 }
 
 function createSceneFromExperiment(experimentId: string): {
@@ -199,6 +213,21 @@ export const useCircleStore = create<CircleState>((set, get) => {
 
     investigationStepIndex: 0,
     practiceAnswers: {},
+
+    // Experiment-specific interactive state & actions
+    symmetryRotation: 45,
+    symmetryReflectionAxis: 0,
+    symmetryShowRotated: true,
+    symmetryShowReflected: true,
+    equalChordsLocked: true,
+    howManyCirclesPointCount: 3,
+
+    setSymmetryRotation: (deg) => set({ symmetryRotation: deg }),
+    setSymmetryReflectionAxis: (deg) => set({ symmetryReflectionAxis: deg }),
+    toggleSymmetryShowRotated: () => set((state) => ({ symmetryShowRotated: !state.symmetryShowRotated })),
+    toggleSymmetryShowReflected: () => set((state) => ({ symmetryShowReflected: !state.symmetryShowReflected })),
+    setEqualChordsLocked: (locked) => set({ equalChordsLocked: locked }),
+    setHowManyCirclesPointCount: (count) => set({ howManyCirclesPointCount: count }),
 
     pushHistory: () => {
       const state = get();
@@ -380,6 +409,17 @@ export const useCircleStore = create<CircleState>((set, get) => {
             }
           }
         });
+
+        // In Equal Chords experiment: if equalChordsLocked, sync angular span between AB and CD
+        if (state.currentExperimentId === 'equal-chords-central-angles' && state.equalChordsLocked) {
+          if ((id === 'pt_A' || id === 'pt_B') && updatedPoints['pt_A'] && updatedPoints['pt_B'] && updatedPoints['pt_C'] && updatedPoints['pt_D']) {
+            let spanAB = (updatedPoints['pt_B'].angleRad - updatedPoints['pt_A'].angleRad) % (2 * Math.PI);
+            if (spanAB < 0) spanAB += 2 * Math.PI;
+            if (spanAB > Math.PI) spanAB = 2 * Math.PI - spanAB;
+            const newAngleD = (updatedPoints['pt_C'].angleRad + spanAB) % (2 * Math.PI);
+            updatedPoints['pt_D'] = { ...updatedPoints['pt_D'], angleRad: Number(newAngleD.toFixed(4)) };
+          }
+        }
 
         return {
           circumferencePoints: updatedPoints,

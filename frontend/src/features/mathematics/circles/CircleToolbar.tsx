@@ -71,11 +71,34 @@ export const CircleToolbar: React.FC = () => {
           onChange={(e) => setExperiment(e.target.value)}
           className="bg-surface-card border border-surface-border text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-400 transition-colors font-medium max-w-xs"
         >
-          {CIRCLE_EXPERIMENTS.map((exp) => (
-            <option key={exp.id} value={exp.id} className="bg-surface-elevated text-slate-100">
-              {exp.title}
-            </option>
-          ))}
+          <optgroup label="1. Foundations" className="bg-surface-lowest text-slate-400 font-bold">
+            {CIRCLE_EXPERIMENTS.filter((e) => e.category === 'foundations').map((exp) => (
+              <option key={exp.id} value={exp.id} className="bg-surface-elevated text-slate-100">
+                {exp.title}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="2. Chords & Distance" className="bg-surface-lowest text-slate-400 font-bold">
+            {CIRCLE_EXPERIMENTS.filter((e) => e.category === 'chords').map((exp) => (
+              <option key={exp.id} value={exp.id} className="bg-surface-elevated text-slate-100">
+                {exp.title}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="3. Angles & Theorems" className="bg-surface-lowest text-slate-400 font-bold">
+            {CIRCLE_EXPERIMENTS.filter((e) => e.category === 'angles_theorems').map((exp) => (
+              <option key={exp.id} value={exp.id} className="bg-surface-elevated text-slate-100">
+                {exp.title}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="4. Practice & Extensions" className="bg-surface-lowest text-slate-400 font-bold">
+            {CIRCLE_EXPERIMENTS.filter((e) => e.category === 'practice_revision' || e.category === 'extension').map((exp) => (
+              <option key={exp.id} value={exp.id} className="bg-surface-elevated text-slate-100">
+                {exp.title}
+              </option>
+            ))}
+          </optgroup>
         </select>
 
         {/* Mode Tabs */}

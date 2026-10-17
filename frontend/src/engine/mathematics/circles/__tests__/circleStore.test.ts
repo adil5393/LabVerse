@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useCircleStore } from '../../../../store/useCircleStore';
 import { useMathStore } from '../../../../store/useMathStore';
+import { NCERT_CIRCLES_CURRICULUM_REGISTRY } from '../curriculumRegistry';
+import { CIRCLE_EXPERIMENTS } from '../circleExperiments';
 
 describe('useCircleStore & Architectural Module Isolation', () => {
   beforeEach(() => {
@@ -331,6 +333,109 @@ describe('useCircleStore & Architectural Module Isolation', () => {
       expect(useCircleStore.getState().circles[circleId]).toBeDefined();
       expect(useCircleStore.getState().circumferencePoints[pAId]).toBeDefined();
       expect(useCircleStore.getState().circumferencePoints[pBId]).toBeDefined();
+    });
+  });
+
+  describe('Milestone M2.3: Comprehensive Curriculum Registry & New Experiments', () => {
+    it('verifies that the NCERT curriculum registry maps to valid existing experiments', () => {
+      expect(NCERT_CIRCLES_CURRICULUM_REGISTRY.length).toBeGreaterThanOrEqual(13);
+
+      const expIds = new Set(CIRCLE_EXPERIMENTS.map((e) => e.id));
+      NCERT_CIRCLES_CURRICULUM_REGISTRY.forEach((topic) => {
+        expect(expIds.has(topic.experimentId)).toBe(true);
+        expect(topic.statement).toBeTruthy();
+        expect(topic.learningOutcomes.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('switches between all 13 canonical experiments and resets scenes cleanly', () => {
+      const store = useCircleStore.getState();
+
+      const requiredExpIds = [
+        'understanding-circle',
+        'symmetry-of-circle',
+        'how-many-circles',
+        'chords-and-properties',
+        'equal-chords-central-angles',
+        'chord-distance-comparison',
+        'angles-in-a-circle',
+        'angles-in-same-segment',
+        'cyclic-quadrilaterals',
+        'concyclicity-and-converses',
+        'tangents-and-radius',
+        'theorem-proof-lab',
+        'chapter-practice-revision',
+      ];
+
+      requiredExpIds.forEach((id) => {
+        store.setExperiment(id);
+        const state = useCircleStore.getState();
+        expect(state.currentExperimentId).toBe(id);
+        expect(Object.keys(state.circles).length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('updates symmetry rotation and reflection axis in Symmetry of a Circle experiment', () => {
+      const store = useCircleStore.getState();
+      store.setExperiment('symmetry-of-circle');
+
+      store.setSymmetryRotation(120);
+      expect(useCircleStore.getState().symmetryRotation).toBe(120);
+
+      store.setSymmetryReflectionAxis(45);
+      expect(useCircleStore.getState().symmetryReflectionAxis).toBe(45);
+
+      store.toggleSymmetryShowRotated();
+      expect(useCircleStore.getState().symmetryShowRotated).toBe(false);
+
+      store.toggleSymmetryShowReflected();
+      expect(useCircleStore.getState().symmetryShowReflected).toBe(false);
+    });
+
+    it('switches point count (1, 2, 3) in How Many Circles experiment', () => {
+      const store = useCircleStore.getState();
+      store.setExperiment('how-many-circles');
+
+      store.setHowManyCirclesPointCount(1);
+      expect(useCircleStore.getState().howManyCirclesPointCount).toBe(1);
+
+      store.setHowManyCirclesPointCount(2);
+      expect(useCircleStore.getState().howManyCirclesPointCount).toBe(2);
+
+      store.setHowManyCirclesPointCount(3);
+      expect(useCircleStore.getState().howManyCirclesPointCount).toBe(3);
+    });
+
+    it('synchronizes equal chords when equalChordsLocked is true', () => {
+      const store = useCircleStore.getState();
+      store.setExperiment('equal-chords-central-angles');
+
+      expect(useCircleStore.getState().equalChordsLocked).toBe(true);
+
+      // Point A is at 0.5, drag point B from 2.1 to 1.5 => span = 1.0 rad
+      store.updateCircumferencePoint('pt_B', 1.5);
+
+      const ptA = useCircleStore.getState().circumferencePoints['pt_A'];
+      const ptB = useCircleStore.getState().circumferencePoints['pt_B'];
+      const ptC = useCircleStore.getState().circumferencePoints['pt_C'];
+      const ptD = useCircleStore.getState().circumferencePoints['pt_D'];
+
+      const spanAB = Math.abs(ptB.angleRad - ptA.angleRad);
+      const spanCD = Math.abs(ptD.angleRad - ptC.angleRad);
+
+      expect(spanCD).toBeCloseTo(spanAB, 2);
+    });
+
+    it('submits practice answers and records evaluation', () => {
+      const store = useCircleStore.getState();
+      store.setExperiment('understanding-circle');
+
+      store.submitPracticeAnswer('q1_radius_diameter', '9 cm, 28.26 cm', true);
+      const ans = useCircleStore.getState().practiceAnswers['q1_radius_diameter'];
+
+      expect(ans).toBeDefined();
+      expect(ans.isCorrect).toBe(true);
+      expect(ans.userAnswer).toBe('9 cm, 28.26 cm');
     });
   });
 });

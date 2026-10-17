@@ -693,3 +693,262 @@ export function validatePracticeAnswer(
   return false;
 }
 
+/**
+ * Rotates a world point p around a given center by angleRad (counterclockwise).
+ */
+export function rotatePoint(p: WorldPoint, center: WorldPoint, angleRad: number): WorldPoint {
+  const dx = p.x - center.x;
+  const dy = p.y - center.y;
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  return {
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos,
+  };
+}
+
+/**
+ * Reflects a world point p across a line passing through lineOrigin with inclination angle lineAngleRad.
+ */
+export function reflectPointAcrossLine(
+  p: WorldPoint,
+  lineOrigin: WorldPoint,
+  lineAngleRad: number
+): WorldPoint {
+  const ux = Math.cos(lineAngleRad);
+  const uy = Math.sin(lineAngleRad);
+  const vx = p.x - lineOrigin.x;
+  const vy = p.y - lineOrigin.y;
+  const dot = vx * ux + vy * uy;
+  const reflX = 2 * dot * ux - vx;
+  const reflY = 2 * dot * uy - vy;
+  return {
+    x: lineOrigin.x + reflX,
+    y: lineOrigin.y + reflY,
+  };
+}
+
+/**
+ * Calculates the perpendicular bisector of segment p1-p2.
+ */
+export function calculatePerpendicularBisector(
+  p1: WorldPoint,
+  p2: WorldPoint
+): { midpoint: WorldPoint; normalDirection: WorldPoint; angleRad: number } {
+  const midX = (p1.x + p2.x) / 2;
+  const midY = (p1.y + p2.y) / 2;
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const len = Math.hypot(dx, dy);
+
+  // Normal perpendicular direction (-dy, dx)
+  const normX = len > 0 ? -dy / len : 0;
+  const normY = len > 0 ? dx / len : 1;
+  const angleRad = Math.atan2(normY, normX);
+
+  return {
+    midpoint: { x: midX, y: midY },
+    normalDirection: { x: normX, y: normY },
+    angleRad,
+  };
+}
+
+/**
+ * Calculates the unique circumcircle passing through three points A, B, C.
+ * Handles acute, right, and obtuse triangles, and explicitly rejects collinear points.
+ */
+export function calculateCircumcircleFromThreePoints(
+  p1: WorldPoint,
+  p2: WorldPoint,
+  p3: WorldPoint
+): {
+  isCollinear: boolean;
+  circumcenter: WorldPoint | null;
+  radius: number | null;
+  triangleType: 'acute' | 'right' | 'obtuse' | 'collinear';
+  oa: number;
+  ob: number;
+  oc: number;
+} {
+  // Determinant D = 2 * (x1(y2 - y3) + x2(y3 - y1) + x3(y1 - y2))
+  const D = 2 * (p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y));
+
+  // If determinant is zero within floating-point tolerance, points are collinear
+  if (Math.abs(D) < 1e-6) {
+    return {
+      isCollinear: true,
+      circumcenter: null,
+      radius: null,
+      triangleType: 'collinear',
+      oa: 0,
+      ob: 0,
+      oc: 0,
+    };
+  }
+
+  const p1Sq = p1.x * p1.x + p1.y * p1.y;
+  const p2Sq = p2.x * p2.x + p2.y * p2.y;
+  const p3Sq = p3.x * p3.x + p3.y * p3.y;
+
+  const cx =
+    (p1Sq * (p2.y - p3.y) + p2Sq * (p3.y - p1.y) + p3Sq * (p1.y - p2.y)) / D;
+  const cy =
+    (p1Sq * (p3.x - p2.x) + p2Sq * (p1.x - p3.x) + p3Sq * (p2.x - p1.x)) / D;
+
+  const circumcenter: WorldPoint = { x: cx, y: cy };
+  const oa = distanceBetween(circumcenter, p1);
+  const ob = distanceBetween(circumcenter, p2);
+  const oc = distanceBetween(circumcenter, p3);
+  const radius = (oa + ob + oc) / 3;
+
+  // Classify triangle based on side lengths and Law of Cosines
+  const a = distanceBetween(p2, p3);
+  const b = distanceBetween(p1, p3);
+  const c = distanceBetween(p1, p2);
+
+  const cosA = (b * b + c * c - a * a) / (2 * b * c);
+  const cosB = (a * a + c * c - b * b) / (2 * a * c);
+  const cosC = (a * a + b * b - c * c) / (2 * a * b);
+
+  let triangleType: 'acute' | 'right' | 'obtuse' = 'acute';
+  if (Math.abs(cosA) < 0.02 || Math.abs(cosB) < 0.02 || Math.abs(cosC) < 0.02) {
+    triangleType = 'right';
+  } else if (cosA < -0.02 || cosB < -0.02 || cosC < -0.02) {
+    triangleType = 'obtuse';
+  }
+
+  return {
+    isCollinear: false,
+    circumcenter,
+    radius,
+    triangleType,
+    oa,
+    ob,
+    oc,
+  };
+}
+
+/**
+ * Calculates perpendicular distance from circle center to a chord using Pythagoras: d² = r² - (L/2)².
+ */
+export function calculateChordDistancePythagorean(
+  radius: number,
+  chordLength: number
+): { distance: number; isValid: boolean } {
+  if (chordLength < 0 || chordLength > 2 * radius + 1e-4) {
+    return { distance: 0, isValid: false };
+  }
+  const half = Math.min(radius, chordLength / 2);
+  const dSq = Math.max(0, radius * radius - half * half);
+  return { distance: Math.sqrt(dSq), isValid: true };
+}
+
+/**
+ * Evaluates whether four arbitrary points A, B, C, D in cyclic order are concyclic.
+ * Evaluates opposite interior angle sums (∠A + ∠C and ∠B + ∠D) and verifies simple convexity.
+ */
+export function testConcyclicityFourPoints(
+  pA: WorldPoint,
+  pB: WorldPoint,
+  pC: WorldPoint,
+  pD: WorldPoint
+): {
+  isCyclic: boolean;
+  deviationDeg: number;
+  sumOpposite1: number;
+  sumOpposite2: number;
+  circumcenter: WorldPoint | null;
+  radius: number | null;
+  isSimpleConvex: boolean;
+} {
+  // Verify simple convexity (cross products of consecutive edges must all share the same sign)
+  const cross = (o: WorldPoint, a: WorldPoint, b: WorldPoint) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+  const c1 = cross(pA, pB, pC);
+  const c2 = cross(pB, pC, pD);
+  const c3 = cross(pC, pD, pA);
+  const c4 = cross(pD, pA, pB);
+
+  const isSimpleConvex =
+    (c1 > 0 && c2 > 0 && c3 > 0 && c4 > 0) || (c1 < 0 && c2 < 0 && c3 < 0 && c4 < 0);
+
+  // Compute circumcircle of first three points ΔABC
+  const circum = calculateCircumcircleFromThreePoints(pA, pB, pC);
+  if (circum.isCollinear || !circum.circumcenter || !circum.radius) {
+    return {
+      isCyclic: false,
+      deviationDeg: 180,
+      sumOpposite1: 0,
+      sumOpposite2: 0,
+      circumcenter: null,
+      radius: null,
+      isSimpleConvex,
+    };
+  }
+
+  // Calculate opposite angles
+  const angA = calculateAngleDegrees(pD, pA, pB);
+  const angB = calculateAngleDegrees(pA, pB, pC);
+  const angC = calculateAngleDegrees(pB, pC, pD);
+  const angD = calculateAngleDegrees(pC, pD, pA);
+
+  const sumOpposite1 = angA + angC;
+  const sumOpposite2 = angB + angD;
+  const deviationDeg = Math.abs(sumOpposite1 - 180);
+
+  // Distance of fourth point D from circumcenter
+  const distD = distanceBetween(circum.circumcenter, pD);
+  const radialDiff = Math.abs(distD - circum.radius);
+
+  // Point is concyclic if opposite angles sum to 180° within tolerance AND D lies on circumcircle
+  const isCyclic = isSimpleConvex && (deviationDeg < 2.0 || radialDiff < 0.1);
+
+  return {
+    isCyclic,
+    deviationDeg,
+    sumOpposite1,
+    sumOpposite2,
+    circumcenter: circum.circumcenter,
+    radius: circum.radius,
+    isSimpleConvex,
+  };
+}
+
+/**
+ * Investigates converse of same segment theorem:
+ * Given segment AB and two points P and Q, tests if P and Q lie on the same side and subtend equal angles.
+ */
+export function testSameSegmentAngles(
+  a: WorldPoint,
+  b: WorldPoint,
+  p: WorldPoint,
+  q: WorldPoint
+): {
+  areSameSide: boolean;
+  angleP: number;
+  angleQ: number;
+  areEqual: boolean;
+  isConcyclic: boolean;
+} {
+  // Cross product sign determines which side of AB each point lies on
+  const crossP = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+  const crossQ = (b.x - a.x) * (q.y - a.y) - (b.y - a.y) * (q.x - a.x);
+
+  const areSameSide = (crossP > 0 && crossQ > 0) || (crossP < 0 && crossQ < 0);
+
+  const angleP = calculateAngleDegrees(a, p, b);
+  const angleQ = calculateAngleDegrees(a, q, b);
+  const areEqual = Math.abs(angleP - angleQ) <= 1.5;
+
+  const isConcyclic = areSameSide && areEqual;
+
+  return {
+    areSameSide,
+    angleP,
+    angleQ,
+    areEqual,
+    isConcyclic,
+  };
+}
+

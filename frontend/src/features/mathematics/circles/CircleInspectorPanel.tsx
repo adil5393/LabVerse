@@ -26,6 +26,8 @@ import {
   verifyCyclicQuadOppositeAngles,
   validatePracticeAnswer,
   resolveCirclePointCoords,
+  calculateCircumcircleFromThreePoints,
+  testConcyclicityFourPoints,
 } from '../../../engine/mathematics/circles/geometry';
 
 export const CircleInspectorPanel: React.FC = () => {
@@ -49,6 +51,18 @@ export const CircleInspectorPanel: React.FC = () => {
     deleteSelected,
     submitPracticeAnswer,
     practiceAnswers,
+    symmetryRotation,
+    symmetryReflectionAxis,
+    symmetryShowRotated,
+    symmetryShowReflected,
+    setSymmetryRotation,
+    setSymmetryReflectionAxis,
+    toggleSymmetryShowRotated,
+    toggleSymmetryShowReflected,
+    equalChordsLocked,
+    setEqualChordsLocked,
+    howManyCirclesPointCount,
+    setHowManyCirclesPointCount,
   } = useCircleStore();
 
   const currentExperiment =
@@ -368,6 +382,314 @@ export const CircleInspectorPanel: React.FC = () => {
                 })}
               </div>
             )}
+
+            {/* SPECIALIZED CARD: Symmetry of a Circle */}
+            {currentExperimentId === 'symmetry-of-circle' && primaryCircle && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-amber-500/30 space-y-3">
+                <div className="text-xs font-mono font-bold text-amber-400 uppercase flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">rotate_right</span>
+                  <span>Symmetry & Invariants Laboratory</span>
+                </div>
+
+                {/* Rotation Slider */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] font-mono text-slate-300">
+                    <span>Rotation around O:</span>
+                    <span className="text-sky-400 font-bold">{symmetryRotation}°</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={symmetryRotation}
+                    onChange={(e) => setSymmetryRotation(Number(e.target.value))}
+                    className="w-full accent-sky-400 cursor-pointer"
+                  />
+                </div>
+
+                {/* Reflection Axis Slider */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] font-mono text-slate-300">
+                    <span>Reflection Axis (Diameter):</span>
+                    <span className="text-purple-400 font-bold">{symmetryReflectionAxis}°</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="180"
+                    value={symmetryReflectionAxis}
+                    onChange={(e) => setSymmetryReflectionAxis(Number(e.target.value))}
+                    className="w-full accent-purple-400 cursor-pointer"
+                  />
+                </div>
+
+                {/* Toggles */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={toggleSymmetryShowRotated}
+                    className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-mono font-semibold border transition-all ${
+                      symmetryShowRotated
+                        ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                        : 'bg-surface-lowest text-slate-400 border-surface-border'
+                    }`}
+                  >
+                    Rotated P′ ({symmetryShowRotated ? 'ON' : 'OFF'})
+                  </button>
+                  <button
+                    onClick={toggleSymmetryShowReflected}
+                    className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-mono font-semibold border transition-all ${
+                      symmetryShowReflected
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                        : 'bg-surface-lowest text-slate-400 border-surface-border'
+                    }`}
+                  >
+                    Reflected P″ ({symmetryShowReflected ? 'ON' : 'OFF'})
+                  </button>
+                </div>
+
+                {/* Invariant metrics */}
+                <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-[11px] font-mono space-y-1 text-slate-300">
+                  <div className="text-[10px] font-bold text-amber-400 uppercase">Metric Invariants:</div>
+                  <div className="flex justify-between">
+                    <span>Radius OP:</span>
+                    <span className="text-emerald-400">{primaryCircle.radius.toFixed(2)} u</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rotated OP′:</span>
+                    <span className="text-sky-400">{primaryCircle.radius.toFixed(2)} u</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Reflected OP″:</span>
+                    <span className="text-purple-400">{primaryCircle.radius.toFixed(2)} u</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 pt-1 border-t border-surface-border">
+                    Radial distance is invariant under any rotation or reflection.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SPECIALIZED CARD: How Many Circles? */}
+            {currentExperimentId === 'how-many-circles' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-sky-500/30 space-y-3">
+                <div className="text-xs font-mono font-bold text-sky-400 uppercase flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">all_inclusive</span>
+                  <span>Circles Through Points</span>
+                </div>
+
+                {/* Investigation Tabs */}
+                <div className="flex gap-1 bg-surface-lowest p-1 rounded-lg border border-surface-border text-[10px] font-mono">
+                  {([1, 2, 3] as const).map((cnt) => (
+                    <button
+                      key={cnt}
+                      onClick={() => setHowManyCirclesPointCount(cnt)}
+                      className={`flex-1 py-1 rounded text-center font-bold transition-all ${
+                        howManyCirclesPointCount === cnt
+                          ? 'bg-sky-500/25 text-sky-300 border border-sky-500/40'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {cnt} Point{cnt > 1 ? 's' : ''}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Circumcenter Telemetry for 3 Points */}
+                {howManyCirclesPointCount === 3 && (() => {
+                  const ptA = circumferencePoints['pt_A'];
+                  const ptB = circumferencePoints['pt_B'];
+                  const ptC = circumferencePoints['pt_C'];
+                  if (ptA && ptB && ptC && primaryCircle) {
+                    const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+                    const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+                    const wC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
+                    const circum = calculateCircumcircleFromThreePoints(wA, wB, wC);
+
+                    return (
+                      <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1.5">
+                        {circum.isCollinear ? (
+                          <div className="p-2 rounded bg-red-950/40 border border-red-700/60 text-red-300 text-[11px] leading-relaxed">
+                            <strong>Collinear Points:</strong> Perpendicular bisectors are parallel and never intersect. No finite circle passes through three distinct collinear points!
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Circumcenter O:</span>
+                              <span className="text-sky-400 font-bold">
+                                ({circum.circumcenter?.x.toFixed(2)}, {circum.circumcenter?.y.toFixed(2)})
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Circumradius (R):</span>
+                              <span className="text-emerald-400 font-bold">{circum.radius?.toFixed(2)} u</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Triangle Classification:</span>
+                              <span className="text-amber-400 font-bold uppercase">{circum.triangleType}</span>
+                            </div>
+                            <div className="flex justify-between text-[11px] text-slate-400 pt-1 border-t border-surface-border">
+                              <span>OA = OB = OC:</span>
+                              <span className="text-slate-200">
+                                {circum.oa.toFixed(2)} = {circum.ob.toFixed(2)} = {circum.oc.toFixed(2)}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {howManyCirclesPointCount === 1 && (
+                  <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-[11px] text-slate-300 leading-relaxed">
+                    <strong>1 Point:</strong> Infinitely many circles of arbitrary radii pass through a single point on the plane.
+                  </div>
+                )}
+
+                {howManyCirclesPointCount === 2 && (
+                  <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-[11px] text-slate-300 leading-relaxed">
+                    <strong>2 Points:</strong> Infinitely many circles pass through points A and B. Their centers strictly lie on the <em>perpendicular bisector</em> of segment AB.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SPECIALIZED CARD: Equal Chords & Central Angles */}
+            {currentExperimentId === 'equal-chords-central-angles' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-emerald-500/30 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-mono font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">balance</span>
+                    <span>Equal Chords & Angles</span>
+                  </span>
+                  <button
+                    onClick={() => setEqualChordsLocked(!equalChordsLocked)}
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-all ${
+                      equalChordsLocked
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    }`}
+                  >
+                    {equalChordsLocked ? 'Locked (Theorem)' : 'Free (Counterexamples)'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  {Object.values(chords).map((ch) => {
+                    const ptA = circumferencePoints[ch.pointAId];
+                    const ptB = circumferencePoints[ch.pointBId];
+                    if (!ptA || !ptB || !primaryCircle) return null;
+                    const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+                    const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+                    const m = calculateChordMetrics(primaryCircle, wA, wB);
+                    const deg = calculateAngleDegrees(wA, primaryCircle.center, wB);
+
+                    return (
+                      <div key={ch.id} className="p-2 bg-surface-lowest rounded-lg border border-surface-border space-y-1">
+                        <div className="text-[10px] font-bold text-slate-300">{ch.name}</div>
+                        <div className="text-xs text-amber-400 font-bold">L = {m.length} u</div>
+                        <div className="text-[11px] text-sky-400">∠ = {deg.toFixed(1)}°</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[11px] text-slate-300 bg-surface-lowest p-2 rounded border border-surface-border leading-relaxed">
+                  <strong>Theorem:</strong> Equal chords subtend equal angles at center (ΔAOB ≅ ΔCOD by SSS).<br />
+                  <strong>Converse:</strong> Equal central angles correspond to equal chords (SAS).
+                </div>
+              </div>
+            )}
+
+            {/* SPECIALIZED CARD: Distance of Chords from Center */}
+            {currentExperimentId === 'chord-distance-comparison' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-amber-500/30 space-y-3">
+                <div className="text-xs font-mono font-bold text-amber-400 uppercase flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">compare_arrows</span>
+                  <span>Chord Distance Comparison</span>
+                </div>
+
+                <div className="space-y-2">
+                  {Object.values(chords).map((ch) => {
+                    const ptA = circumferencePoints[ch.pointAId];
+                    const ptB = circumferencePoints[ch.pointBId];
+                    if (!ptA || !ptB || !primaryCircle) return null;
+                    const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+                    const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+                    const m = calculateChordMetrics(primaryCircle, wA, wB);
+
+                    return (
+                      <div key={ch.id} className="p-2 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-slate-200">{ch.name}</span>
+                          <span className="text-[10px] text-slate-400 block">Length: {m.length} u</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-amber-400 font-bold">d = {m.distFromCenter} u</span>
+                          <span className="text-[10px] text-slate-400 block">from Center</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-2.5 rounded bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-300 leading-relaxed font-mono">
+                  <strong>Pythagoras Law:</strong> d² = r² - (L/2)².<br />
+                  As chord length increases, its perpendicular distance from the center strictly decreases!
+                </div>
+              </div>
+            )}
+
+            {/* SPECIALIZED CARD: Concyclicity & Converses */}
+            {currentExperimentId === 'concyclicity-and-converses' && primaryCircle && (() => {
+              const ptA = circumferencePoints['pt_A'];
+              const ptB = circumferencePoints['pt_B'];
+              const ptC = circumferencePoints['pt_C'];
+              const ptD = circumferencePoints['pt_D'];
+              if (ptA && ptB && ptC && ptD) {
+                const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+                const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+                const wC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
+                const wD = getCircumferenceCoords(primaryCircle, ptD.angleRad);
+                const concyclicTest = testConcyclicityFourPoints(wA, wB, wC, wD);
+
+                return (
+                  <div className="p-3.5 bg-surface-card rounded-xl border border-purple-500/30 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-mono font-bold text-purple-400 uppercase flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px]">change_circle</span>
+                        <span>Concyclicity Test</span>
+                      </span>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                        concyclicTest.isCyclic
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-red-500/20 text-red-300 border-red-500/40'
+                      }`}>
+                        {concyclicTest.isCyclic ? 'CONCYCLIC' : 'NON-CYCLIC'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
+                        <div className="text-[10px] text-slate-400">∠A + ∠C Sum</div>
+                        <div className="text-sm font-bold text-amber-400">{concyclicTest.sumOpposite1.toFixed(1)}°</div>
+                      </div>
+                      <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
+                        <div className="text-[10px] text-slate-400">∠B + ∠D Sum</div>
+                        <div className="text-sm font-bold text-sky-400">{concyclicTest.sumOpposite2.toFixed(1)}°</div>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-300 bg-surface-lowest p-2 rounded border border-surface-border leading-relaxed font-mono">
+                      Deviation from 180°: <span className="text-amber-400 font-bold">{concyclicTest.deviationDeg.toFixed(1)}°</span>.<br />
+                      Drag point D until opposite sum reaches exactly 180° to achieve concyclicity!
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Delete button if object selected */}
             {selectedId && (

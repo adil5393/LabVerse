@@ -68,76 +68,112 @@ export const CirclesLab: React.FC = () => {
           </div>
         </div>
 
-        {/* Experiment Cards Grid */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-white">Interactive Experiments & Theorems</h2>
-              <p className="text-xs text-slate-400">
-                Choose an experiment to open the workbench pre-configured with canonical geometric scenes
-              </p>
-            </div>
-            <span className="text-xs font-mono text-amber-400 font-bold">
-              {CIRCLE_EXPERIMENTS.length} Experiments
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {CIRCLE_EXPERIMENTS.map((exp) => (
-              <div
-                key={exp.id}
-                className="p-5 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-500/50 transition-all flex flex-col justify-between group shadow-lg"
-              >
-                <div className="space-y-3">
-                  <div className="flex justify-between items-start">
-                    <span className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[20px]">radio_button_unchecked</span>
-                    </span>
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                        exp.curriculumClassification === 'direct_chapter'
-                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                          : exp.curriculumClassification === 'supporting_prerequisite'
-                          ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-                          : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                      }`}
-                    >
-                      {exp.curriculumClassification === 'direct_chapter'
-                        ? 'Direct Chapter'
-                        : exp.curriculumClassification === 'supporting_prerequisite'
-                        ? 'Prerequisite'
-                        : 'Extension'}
-                    </span>
-                  </div>
-
+        {/* Thematic Experiment Units */}
+        <div className="space-y-10">
+          {[
+            {
+              key: 'foundations',
+              title: 'Unit 1: Foundations & Symmetries',
+              badge: '3 Experiments',
+              description: 'Anatomy of a circle, continuous rotational symmetry, infinite reflection axes, and circles through points',
+              filter: (exp: typeof CIRCLE_EXPERIMENTS[0]) => exp.category === 'foundations',
+            },
+            {
+              key: 'chords',
+              title: 'Unit 2: Chords & Perpendicular Properties',
+              badge: '3 Experiments',
+              description: 'Perpendicular bisectors, equal chord central angles, and distance comparison laws derived from Pythagoras',
+              filter: (exp: typeof CIRCLE_EXPERIMENTS[0]) => exp.category === 'chords',
+            },
+            {
+              key: 'angles_theorems',
+              title: 'Unit 3: Angles & Circle Theorems',
+              badge: '4 Experiments',
+              description: 'Subtended central vs inscribed angles, angle invariance in the same segment, and cyclic quadrilaterals',
+              filter: (exp: typeof CIRCLE_EXPERIMENTS[0]) => exp.category === 'angles_theorems',
+            },
+            {
+              key: 'practice_revision',
+              title: 'Unit 4: Practice, Synthesis & Extensions',
+              badge: '3 Experiments',
+              description: 'Formal Euclidean deduction steps, tangent-radius extension, and comprehensive chapter-wide examination challenges',
+              filter: (exp: typeof CIRCLE_EXPERIMENTS[0]) => exp.category === 'practice_revision' || exp.category === 'extension',
+            },
+          ].map((unit) => {
+            const unitExperiments = CIRCLE_EXPERIMENTS.filter(unit.filter);
+            return (
+              <div key={unit.key} className="space-y-4">
+                <div className="flex justify-between items-end border-b border-surface-border/60 pb-3">
                   <div>
-                    <h3 className="font-bold text-base text-white group-hover:text-amber-400 transition-colors">
-                      {exp.title}
-                    </h3>
-                    <div className="text-xs text-amber-400/80 font-medium">{exp.subtitle}</div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <span>{unit.title}</span>
+                      <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                        {unit.badge}
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">{unit.description}</p>
                   </div>
-
-                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">
-                    {exp.description}
-                  </p>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-surface-border/60 flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-slate-500">
-                    {exp.theorems.length} Theorem{exp.theorems.length > 1 ? 's' : ''} • {exp.practiceQuestions.length} Practice
-                  </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {unitExperiments.map((exp) => (
+                    <div
+                      key={exp.id}
+                      className="p-5 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-500/50 transition-all flex flex-col justify-between group shadow-lg"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <span className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[20px]">radio_button_unchecked</span>
+                          </span>
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                              exp.curriculumClassification === 'direct_chapter'
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : exp.curriculumClassification === 'supporting_prerequisite'
+                                ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                                : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                            }`}
+                          >
+                            {exp.curriculumClassification === 'direct_chapter'
+                              ? 'Direct Chapter'
+                              : exp.curriculumClassification === 'supporting_prerequisite'
+                              ? 'Prerequisite'
+                              : 'Extension'}
+                          </span>
+                        </div>
 
-                  <Link
-                    to={`/mathematics/circles/workbench?exp=${exp.id}`}
-                    className="px-3.5 py-1.5 rounded-lg bg-surface-elevated group-hover:bg-amber-500 group-hover:text-slate-950 text-slate-200 text-xs font-bold transition-all flex items-center gap-1"
-                  >
-                    <span>Launch</span>
-                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                  </Link>
+                        <div>
+                          <h3 className="font-bold text-base text-white group-hover:text-amber-400 transition-colors">
+                            {exp.title}
+                          </h3>
+                          <div className="text-xs text-amber-400/80 font-medium">{exp.subtitle}</div>
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">
+                          {exp.description}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 mt-4 border-t border-surface-border/60 flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-slate-500">
+                          {exp.theorems.length} Theorem{exp.theorems.length > 1 ? 's' : ''} • {exp.practiceQuestions.length} Practice
+                        </span>
+
+                        <Link
+                          to={`/mathematics/circles/workbench?exp=${exp.id}`}
+                          className="px-3.5 py-1.5 rounded-lg bg-surface-elevated group-hover:bg-amber-500 group-hover:text-slate-950 text-slate-200 text-xs font-bold transition-all flex items-center gap-1"
+                        >
+                          <span>Launch</span>
+                          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </main>
     </div>

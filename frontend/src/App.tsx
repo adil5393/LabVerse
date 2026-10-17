@@ -7,6 +7,8 @@ import { MathematicsLab } from './features/mathematics/MathematicsLab';
 import { MathWorkbenchPage } from './features/mathematics/MathWorkbenchPage';
 import { ChemistryLab } from './features/chemistry/ChemistryLab';
 import { StatesOfMatterWorkbench } from './features/chemistry/StatesOfMatterWorkbench';
+import { CirclesLab } from './features/mathematics/circles/CirclesLab';
+import { CircleWorkbenchPage } from './features/mathematics/circles/CircleWorkbenchPage';
 
 export const App: React.FC = () => {
   return (
@@ -24,13 +26,23 @@ export const App: React.FC = () => {
         {/* Route 4: Mathematics Laboratory Landing Page */}
         <Route path="/mathematics" element={<MathematicsLab />} />
 
-        {/* Route 5: Interactive Mathematics Workbench */}
+        {/* Route 5: Interactive Mathematics Workbench (Coordinate Geometry) */}
         <Route path="/mathematics/workbench" element={<MathWorkbenchPage />} />
+        <Route
+          path="/mathematics/coordinate-geometry"
+          element={<Navigate to="/mathematics/workbench?module=coordinate-geometry&experiment=distance" replace />}
+        />
 
-        {/* Route 6: Chemistry Laboratory Landing Page */}
+        {/* Route 6: Circles Module Landing Page */}
+        <Route path="/mathematics/circles" element={<CirclesLab />} />
+
+        {/* Route 7: Interactive Circles Workbench */}
+        <Route path="/mathematics/circles/workbench" element={<CircleWorkbenchPage />} />
+
+        {/* Route 8: Chemistry Laboratory Landing Page */}
         <Route path="/chemistry" element={<ChemistryLab />} />
 
-        {/* Route 7: Interactive Chemistry States of Matter Workbench */}
+        {/* Route 9: Interactive Chemistry States of Matter Workbench */}
         <Route path="/chemistry/states-of-matter" element={<StatesOfMatterWorkbench />} />
 
         {/* Catch-all fallback */}

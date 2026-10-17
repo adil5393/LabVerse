@@ -1,0 +1,141 @@
+/**
+ * Header Toolbar Component for Class 9 Circles Laboratory
+ *
+ * Implements navigation back to Mathematics selector, experiment switcher,
+ * mode selector (Explore, Investigate, Practice), undo/redo, and fullscreen.
+ */
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useCircleStore } from '../../../store/useCircleStore';
+import { CIRCLE_EXPERIMENTS } from '../../../engine/mathematics/circles/circleExperiments';
+import type { CircleMode } from '../../../engine/mathematics/circles/types';
+
+export const CircleToolbar: React.FC = () => {
+  const {
+    currentExperimentId,
+    setExperiment,
+    mode,
+    setMode,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    resetExperiment,
+  } = useCircleStore();
+
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  return (
+    <header className="h-14 bg-surface-low border-b border-surface-border px-4 flex items-center justify-between select-none shrink-0 z-20">
+      {/* Left: Back & Title */}
+      <div className="flex items-center gap-3">
+        <Link
+          to="/mathematics"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors flex items-center justify-center"
+          title="Return to Mathematics Labs"
+        >
+          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+        </Link>
+
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-amber-400 text-[18px]">radio_button_unchecked</span>
+              <span>Class 9 Circles Laboratory</span>
+            </span>
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+              NCERT Ganita Manjari
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-400 hidden sm:block">
+            I'm Up and Down, and Round and Round — Interactive Theorems & Proofs
+          </div>
+        </div>
+      </div>
+
+      {/* Center: Experiment Selector & Learning Modes */}
+      <div className="flex items-center gap-3">
+        {/* Experiment Selector */}
+        <select
+          value={currentExperimentId}
+          onChange={(e) => setExperiment(e.target.value)}
+          className="bg-surface-card border border-surface-border text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-400 transition-colors font-medium max-w-xs"
+        >
+          {CIRCLE_EXPERIMENTS.map((exp) => (
+            <option key={exp.id} value={exp.id} className="bg-surface-elevated text-slate-100">
+              {exp.title}
+            </option>
+          ))}
+        </select>
+
+        {/* Mode Tabs */}
+        <div className="bg-surface-card p-1 rounded-xl border border-surface-border flex items-center gap-1">
+          {(['explore', 'investigate', 'practice'] as CircleMode[]).map((m) => {
+            const isActive = mode === m;
+            return (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`py-1 px-2.5 rounded-lg text-xs font-semibold capitalize transition-all flex items-center gap-1 ${
+                  isActive
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-surface-elevated'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">
+                  {m === 'explore' ? 'draw' : m === 'investigate' ? 'lightbulb' : 'quiz'}
+                </span>
+                <span>{m}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right: History, Reset & Fullscreen */}
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+          title="Undo (Ctrl+Z)"
+        >
+          <span className="material-symbols-outlined text-[18px]">undo</span>
+        </button>
+
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+          title="Redo (Ctrl+Y)"
+        >
+          <span className="material-symbols-outlined text-[18px]">redo</span>
+        </button>
+
+        <button
+          onClick={resetExperiment}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-surface-elevated transition-all flex items-center gap-1 text-xs"
+          title="Reset Experiment to Initial Scene"
+        >
+          <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+          <span className="hidden md:inline font-mono">Reset</span>
+        </button>
+
+        <button
+          onClick={handleToggleFullscreen}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors ml-1"
+          title="Toggle Fullscreen"
+        >
+          <span className="material-symbols-outlined text-[18px]">fullscreen</span>
+        </button>
+      </div>
+    </header>
+  );
+};

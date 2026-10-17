@@ -17,4 +17,19 @@ describe('Subject Navigation & Routing Consistency', () => {
     expect(ptB).toBeDefined();
     expect(segAB).toBeDefined();
   });
+
+  it('confirms Chemistry is registered with States of Matter experiment', async () => {
+    const { SUBSTANCES, WATER_SUBSTANCE } = await import('../../../engine/chemistry/substances');
+    const { HEATING_WATER_EXPERIMENT_STEPS } = await import('../../../engine/chemistry/guidedExperiment');
+
+    expect(SUBSTANCES.water).toBeDefined();
+    expect(WATER_SUBSTANCE.chemicalFormula).toBe('H₂O');
+    expect(WATER_SUBSTANCE.meltingPointC).toBe(0);
+    expect(WATER_SUBSTANCE.boilingPointC).toBe(100);
+
+    expect(HEATING_WATER_EXPERIMENT_STEPS.length).toBe(6);
+    expect(HEATING_WATER_EXPERIMENT_STEPS[0].targetPhase).toBe('solid');
+    expect(HEATING_WATER_EXPERIMENT_STEPS[2].targetPhase).toBe('solid-liquid');
+    expect(HEATING_WATER_EXPERIMENT_STEPS[4].targetPhase).toBe('liquid-gas');
+  });
 });

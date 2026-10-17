@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useMathStore } from '../../../store/useMathStore';
 import { mathToScreen } from '../coordinates';
-import type { FreehandStroke, MathSaveFile, MathViewportTransform } from '../types';
+import type { FreehandStroke, MathSaveFile, MathPoint } from '../types';
 
 describe('Milestone M1.2D: Mathematics Workbench: Freehand Drawing & Isolated Drawing Eraser', () => {
   beforeEach(() => {
@@ -196,8 +196,9 @@ describe('Milestone M1.2D: Mathematics Workbench: Freehand Drawing & Isolated Dr
 
     // When tool is draw, activeTool is 'draw' and geometry layers have pointer-events: none
     expect(useMathStore.getState().activeTool).toBe('draw');
-    expect(useMathStore.getState().objects['pt_A'].x).toBe(2);
-    expect(useMathStore.getState().objects['pt_A'].y).toBe(3);
+    const ptA = useMathStore.getState().objects['pt_A'] as MathPoint;
+    expect(ptA.x).toBe(2);
+    expect(ptA.y).toBe(3);
   });
 
   // Test 10: Pan/zoom alignment

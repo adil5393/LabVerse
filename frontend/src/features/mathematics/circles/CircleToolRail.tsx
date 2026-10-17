@@ -83,8 +83,23 @@ const CIRCLE_TOOLS: ToolDef[] = [
   },
 ];
 
-export const CircleToolRail: React.FC = () => {
+interface CircleToolRailProps {
+  allowedTools?: string[];
+}
+
+export const CircleToolRail: React.FC<CircleToolRailProps> = ({ allowedTools }) => {
   const { activeTool, setActiveTool, deleteSelected } = useCircleStore();
+
+  const visibleTools = allowedTools
+    ? CIRCLE_TOOLS.filter((t) => allowedTools.includes(t.id))
+    : CIRCLE_TOOLS;
+
+  // If active tool is hidden by the current lesson filter, switch to select
+  useEffect(() => {
+    if (allowedTools && allowedTools.length > 0 && !allowedTools.includes(activeTool)) {
+      setActiveTool('select');
+    }
+  }, [allowedTools, activeTool, setActiveTool]);
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -92,7 +107,7 @@ export const CircleToolRail: React.FC = () => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       const key = e.key.toUpperCase();
-      const matched = CIRCLE_TOOLS.find((t) => t.shortcut === key);
+      const matched = visibleTools.find((t) => t.shortcut === key);
       if (matched) {
         e.preventDefault();
         setActiveTool(matched.id);
@@ -104,11 +119,11 @@ export const CircleToolRail: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTool, deleteSelected]);
+  }, [visibleTools, setActiveTool, deleteSelected]);
 
   return (
     <aside className="w-14 bg-surface-low border-r border-surface-border flex flex-col items-center py-3 gap-2 shrink-0 select-none z-10">
-      {CIRCLE_TOOLS.map((tool) => {
+      {visibleTools.map((tool) => {
         const isActive = activeTool === tool.id;
         return (
           <button
@@ -142,3 +157,4 @@ export const CircleToolRail: React.FC = () => {
     </aside>
   );
 };
+

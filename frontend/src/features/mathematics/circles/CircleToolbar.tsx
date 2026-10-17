@@ -40,11 +40,20 @@ export const CircleToolbar: React.FC = () => {
       {/* Left: Back & Title */}
       <div className="flex items-center gap-3">
         <Link
-          to="/mathematics"
+          to="/mathematics/circles"
           className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors flex items-center justify-center"
-          title="Return to Mathematics Labs"
+          title="Return to Circles Chapter Roadmap"
         >
           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+        </Link>
+
+        <Link
+          to="/mathematics/circles/workbench?lesson=circles-l1"
+          className="px-2.5 py-1 rounded-xl bg-surface-card hover:bg-amber-500 hover:text-slate-950 text-amber-400 border border-surface-border hover:border-amber-500 text-xs font-bold transition-all flex items-center gap-1.5"
+          title="Switch to Guided Chapter Learning Path"
+        >
+          <span className="material-symbols-outlined text-[16px]">school</span>
+          <span className="hidden md:inline">Guided Path</span>
         </Link>
 
         <div>

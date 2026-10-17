@@ -24,13 +24,20 @@ import type {
   CircleViewportTransform,
   CircleConstructionStep,
   WorldPoint,
+  InvestigationStageId,
+  CapturedObservation,
+  PracticeDifficulty,
 } from '../engine/mathematics/circles/types';
 import { CIRCLE_EXPERIMENTS } from '../engine/mathematics/circles/circleExperiments';
+import { CHAPTER_PRACTICE_BANK } from '../engine/mathematics/circles/practiceBank';
 import {
   calculateOppositeDiameterPoint,
   computeConstructionBoundingBox,
   calculateFitViewport,
   resolveCirclePointCoords,
+  getCircumferenceCoords,
+  calculateAngleDegrees,
+  calculateChordMetrics,
 } from '../engine/mathematics/circles/geometry';
 
 interface CircleSceneSnapshot {
@@ -71,17 +78,30 @@ interface CircleState {
   cyclicQuads: Record<string, CyclicQuadrilateral>;
   drawings: Record<string, FreehandDrawingStroke>;
 
-  // Selection
+  // Selection & Protection
   selectedId: string | null;
   selectedType: 'circle' | 'point' | 'chord' | 'radius_diameter' | 'angle' | 'tangent' | 'cyclic_quad' | null;
+  lockedElementIds: string[];
+  exploreSceneSnapshot: CircleSceneSnapshot | null;
 
   // History / Undo / Redo
   history: CircleSceneSnapshot[];
   historyIndex: number;
 
-  // Investigation & Practice state
-  investigationStepIndex: number;
-  practiceAnswers: Record<string, { userAnswer: string; isCorrect: boolean }>;
+  // Progressive Investigation state (Milestone M2.4 Part A)
+  investigationStage: InvestigationStageId;
+  investigationPredictions: Record<string, string>;
+  manipulationPositionsRecorded: number[];
+  capturedObservations: CapturedObservation[];
+  proofStepIndex: number;
+  selectedMissingReasons: Record<number, string>;
+  investigationTeacherBypassed: boolean;
+
+  // Practice Engine state (Milestone M2.4 Part B)
+  activePracticeTopicId: string;
+  activePracticeDifficulty: PracticeDifficulty | 'all';
+  activePracticeQuestionId: string;
+  practiceAnswers: Record<string, { userAnswer: string; isCorrect: boolean; showSolution?: boolean; hintsRevealed?: number }>;
 
   // Actions
   setExperiment: (id: string) => void;
@@ -99,6 +119,9 @@ interface CircleState {
   toggleCoordinates: () => void;
   toggleConstructions: () => void;
   selectObject: (id: string | null, type?: CircleState['selectedType']) => void;
+
+  // Circle Resizing (Milestone M2.4 Part C)
+  setCircleRadius: (circleId: string, radius: number) => void;
 
   // Entity mutations
   addCircle: (center: WorldPoint, radius: number) => string;
@@ -124,8 +147,30 @@ interface CircleState {
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-  // Practice runner
+
+  // Progressive Investigation actions
+  setInvestigationStage: (stage: InvestigationStageId) => void;
+  submitInvestigationPrediction: (experimentId: string, prediction: string) => void;
+  recordManipulationAngle: (angleRad: number) => void;
+  captureCurrentObservation: () => void;
+  clearObservations: () => void;
+  setProofStepIndex: (index: number) => void;
+  nextProofStep: () => void;
+  prevProofStep: () => void;
+  selectMissingReason: (stepIndex: number, reason: string) => void;
+  resetInvestigation: () => void;
+  bypassInvestigationGate: () => void;
+
+  // Practice Engine actions
+  loadPracticeQuestion: (questionId: string) => void;
+  nextPracticeQuestion: () => void;
+  prevPracticeQuestion: () => void;
+  setPracticeTopic: (topicId: string) => void;
+  setPracticeDifficulty: (diff: PracticeDifficulty | 'all') => void;
   submitPracticeAnswer: (questionId: string, answer: string, isCorrect: boolean) => void;
+  revealPracticeHint: (questionId: string) => void;
+  togglePracticeSolution: (questionId: string) => void;
+  retryPracticeQuestion: (questionId: string) => void;
 
   // Experiment-specific interactive state & actions
   symmetryRotation: number;
@@ -211,7 +256,22 @@ export const useCircleStore = create<CircleState>((set, get) => {
     history: [initialSnapshot],
     historyIndex: 0,
 
-    investigationStepIndex: 0,
+    lockedElementIds: [],
+    exploreSceneSnapshot: null,
+
+    // Progressive Investigation State
+    investigationStage: 'understand',
+    investigationPredictions: {},
+    manipulationPositionsRecorded: [],
+    capturedObservations: [],
+    proofStepIndex: 0,
+    selectedMissingReasons: {},
+    investigationTeacherBypassed: false,
+
+    // Practice Engine State
+    activePracticeTopicId: 'all',
+    activePracticeDifficulty: 'all',
+    activePracticeQuestionId: CHAPTER_PRACTICE_BANK[0]?.id || 'q_ncert_def_1',
     practiceAnswers: {},
 
     // Experiment-specific interactive state & actions
@@ -272,11 +332,91 @@ export const useCircleStore = create<CircleState>((set, get) => {
         historyIndex: 0,
         activeTool: 'select',
         constructionStep: { type: 'idle' },
-        investigationStepIndex: 0,
+        investigationStage: 'understand',
+        manipulationPositionsRecorded: [],
+        capturedObservations: [],
+        proofStepIndex: 0,
+        selectedMissingReasons: {},
+        investigationTeacherBypassed: false,
       });
     },
 
-    setMode: (mode) => set({ mode }),
+    setMode: (nextMode) => {
+      const state = get();
+      if (state.mode === nextMode) return;
+
+      // 1. Transitioning into Practice Mode: isolate explore scene and load practice question diagram
+      if (nextMode === 'practice' && state.mode !== 'practice') {
+        const exploreSnapshot: CircleSceneSnapshot = {
+          circles: { ...state.circles },
+          circumferencePoints: { ...state.circumferencePoints },
+          chords: { ...state.chords },
+          radiusDiameters: { ...state.radiusDiameters },
+          angles: { ...state.angles },
+          tangents: { ...state.tangents },
+          cyclicQuads: { ...state.cyclicQuads },
+          drawings: { ...state.drawings },
+          selectedId: state.selectedId,
+          selectedType: state.selectedType,
+        };
+
+        const qId = state.activePracticeQuestionId || CHAPTER_PRACTICE_BANK[0]?.id;
+        const q = CHAPTER_PRACTICE_BANK.find((item) => item.id === qId) || CHAPTER_PRACTICE_BANK[0];
+
+        const practiceCircles: Record<string, CircleObject> = {};
+        const practicePoints: Record<string, CircumferencePoint> = {};
+        const practiceChords: Record<string, CircleChord> = {};
+        const practiceRadii: Record<string, CircleRadiusDiameter> = {};
+        const practiceAngles: Record<string, CircleAngleMeasurement> = {};
+        const practiceTangents: Record<string, CircleTangent> = {};
+        const practiceQuads: Record<string, CyclicQuadrilateral> = {};
+
+        if (q.diagram) {
+          q.diagram.circles.forEach((c) => (practiceCircles[c.id] = { ...c }));
+          q.diagram.circumferencePoints.forEach((p) => (practicePoints[p.id] = { ...p }));
+          q.diagram.chords.forEach((c) => (practiceChords[c.id] = { ...c }));
+          q.diagram.radiusDiameters.forEach((r) => (practiceRadii[r.id] = { ...r }));
+          q.diagram.angles.forEach((a) => (practiceAngles[a.id] = { ...a }));
+          q.diagram.tangents.forEach((t) => (practiceTangents[t.id] = { ...t }));
+          q.diagram.cyclicQuads.forEach((k) => (practiceQuads[k.id] = { ...k }));
+        }
+
+        set({
+          mode: 'practice',
+          exploreSceneSnapshot: exploreSnapshot,
+          activePracticeQuestionId: q.id,
+          circles: practiceCircles,
+          circumferencePoints: practicePoints,
+          chords: practiceChords,
+          radiusDiameters: practiceRadii,
+          angles: practiceAngles,
+          tangents: practiceTangents,
+          cyclicQuads: practiceQuads,
+          lockedElementIds: q.diagram?.lockedElementIds || [],
+          selectedId: null,
+          selectedType: null,
+          activeTool: 'select',
+        });
+        return;
+      }
+
+      // 2. Transitioning out of Practice Mode: restore intact explore scene
+      if (state.mode === 'practice' && nextMode !== 'practice') {
+        if (state.exploreSceneSnapshot) {
+          set({
+            mode: nextMode,
+            ...state.exploreSceneSnapshot,
+            exploreSceneSnapshot: null,
+            lockedElementIds: [],
+            selectedId: null,
+            selectedType: null,
+          });
+          return;
+        }
+      }
+
+      set({ mode: nextMode });
+    },
     setActiveTool: (activeTool) => set({ activeTool, constructionStep: { type: 'idle' } }),
     setConstructionStep: (constructionStep) => set({ constructionStep }),
     setViewport: (transform) =>
@@ -725,13 +865,289 @@ export const useCircleStore = create<CircleState>((set, get) => {
     canUndo: () => get().historyIndex > 0,
     canRedo: () => get().historyIndex < get().history.length - 1,
 
+    setCircleRadius: (circleId, radius) => {
+      const safeRadius = Math.max(1.0, Math.min(15.0, Number(radius) || 1.0));
+      set((state) => {
+        const c = state.circles[circleId];
+        if (!c) return state;
+        return {
+          circles: {
+            ...state.circles,
+            [circleId]: { ...c, radius: Number(safeRadius.toFixed(2)) },
+          },
+        };
+      });
+      get().pushHistory();
+    },
+
+    // Progressive Investigation actions (Milestone M2.4 Part A)
+    setInvestigationStage: (stage) => set({ investigationStage: stage }),
+
+    submitInvestigationPrediction: (experimentId, prediction) => {
+      set((state) => ({
+        investigationPredictions: {
+          ...state.investigationPredictions,
+          [experimentId]: prediction,
+        },
+      }));
+    },
+
+    recordManipulationAngle: (angleRad) => {
+      set((state) => {
+        const recorded = [...state.manipulationPositionsRecorded];
+        const isDistinct = recorded.every((prev) => {
+          let diff = Math.abs(prev - angleRad) % (2 * Math.PI);
+          if (diff > Math.PI) diff = 2 * Math.PI - diff;
+          return diff >= 0.436; // 25 degrees separation
+        });
+        if (isDistinct) {
+          recorded.push(angleRad);
+          return { manipulationPositionsRecorded: recorded };
+        }
+        return state;
+      });
+    },
+
+    captureCurrentObservation: () => {
+      const state = get();
+      const primaryCircle = Object.values(state.circles)[0];
+      const count = state.capturedObservations.length + 1;
+      const metrics: Record<string, string | number> = {};
+      let invariantSummary = '';
+
+      if (primaryCircle) {
+        metrics['Radius (r)'] = `${primaryCircle.radius.toFixed(1)} cm`;
+        const ptA = state.circumferencePoints['pt_A'];
+        const ptB = state.circumferencePoints['pt_B'];
+        if (ptA) {
+          const posA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+          metrics['Point A'] = `(${posA.x.toFixed(1)}, ${posA.y.toFixed(1)})`;
+          metrics['Angle A'] = `${((ptA.angleRad * 180) / Math.PI).toFixed(0)}°`;
+          metrics['Dist OA'] = `${primaryCircle.radius.toFixed(1)} cm`;
+          invariantSummary = `OA = ${primaryCircle.radius.toFixed(1)} cm (Constant radial locus)`;
+        }
+        if (ptA && ptB) {
+          const posA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+          const posB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+          const chordMetrics = calculateChordMetrics(primaryCircle, posA, posB);
+          metrics['Chord AB'] = `${chordMetrics.length.toFixed(1)} cm`;
+          metrics['Dist from Center'] = `${chordMetrics.distFromCenter.toFixed(1)} cm`;
+        }
+      }
+
+      const quad = Object.values(state.cyclicQuads)[0];
+      if (quad && primaryCircle) {
+        const ptA = state.circumferencePoints[quad.pointAId];
+        const ptB = state.circumferencePoints[quad.pointBId];
+        const ptC = state.circumferencePoints[quad.pointCId];
+        const ptD = state.circumferencePoints[quad.pointDId];
+        if (ptA && ptB && ptC && ptD) {
+          const posA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+          const posB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+          const posC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
+          const posD = getCircumferenceCoords(primaryCircle, ptD.angleRad);
+          const angA = calculateAngleDegrees(posD, posA, posB);
+          const angC = calculateAngleDegrees(posB, posC, posD);
+          metrics['∠A'] = `${angA.toFixed(1)}°`;
+          metrics['∠C'] = `${angC.toFixed(1)}°`;
+          metrics['∠A + ∠C'] = `${(angA + angC).toFixed(1)}°`;
+          invariantSummary = `∠A + ∠C = ${(angA + angC).toFixed(1)}° (Opposite angles supplementary)`;
+        }
+      }
+
+      const newObs: CapturedObservation = {
+        id: `obs_${Date.now()}_${count}`,
+        trialNumber: count,
+        timestamp: Date.now(),
+        configurationLabel: `Trial ${count}`,
+        measurements: metrics,
+        invariantEvaluated: invariantSummary || 'Geometric configuration recorded',
+      };
+
+      set((prev) => ({
+        capturedObservations: [...prev.capturedObservations, newObs],
+      }));
+    },
+
+    clearObservations: () => set({ capturedObservations: [] }),
+
+    setProofStepIndex: (index) => set({ proofStepIndex: index }),
+
+    nextProofStep: () => {
+      set((state) => ({ proofStepIndex: state.proofStepIndex + 1 }));
+    },
+
+    prevProofStep: () => {
+      set((state) => ({ proofStepIndex: Math.max(0, state.proofStepIndex - 1) }));
+    },
+
+    selectMissingReason: (stepIndex, reason) => {
+      set((state) => ({
+        selectedMissingReasons: {
+          ...state.selectedMissingReasons,
+          [stepIndex]: reason,
+        },
+      }));
+    },
+
+    resetInvestigation: () => {
+      set({
+        investigationStage: 'understand',
+        manipulationPositionsRecorded: [],
+        capturedObservations: [],
+        proofStepIndex: 0,
+        selectedMissingReasons: {},
+        investigationTeacherBypassed: false,
+      });
+      get().resetExperiment();
+    },
+
+    bypassInvestigationGate: () => {
+      set({ investigationTeacherBypassed: true });
+    },
+
+    // Practice Engine actions (Milestone M2.4 Part B)
+    loadPracticeQuestion: (questionId) => {
+      const q = CHAPTER_PRACTICE_BANK.find((item) => item.id === questionId);
+      if (!q) return;
+
+      const practiceCircles: Record<string, CircleObject> = {};
+      const practicePoints: Record<string, CircumferencePoint> = {};
+      const practiceChords: Record<string, CircleChord> = {};
+      const practiceRadii: Record<string, CircleRadiusDiameter> = {};
+      const practiceAngles: Record<string, CircleAngleMeasurement> = {};
+      const practiceTangents: Record<string, CircleTangent> = {};
+      const practiceQuads: Record<string, CyclicQuadrilateral> = {};
+
+      if (q.diagram) {
+        q.diagram.circles.forEach((c) => (practiceCircles[c.id] = { ...c }));
+        q.diagram.circumferencePoints.forEach((p) => (practicePoints[p.id] = { ...p }));
+        q.diagram.chords.forEach((c) => (practiceChords[c.id] = { ...c }));
+        q.diagram.radiusDiameters.forEach((r) => (practiceRadii[r.id] = { ...r }));
+        q.diagram.angles.forEach((a) => (practiceAngles[a.id] = { ...a }));
+        q.diagram.tangents.forEach((t) => (practiceTangents[t.id] = { ...t }));
+        q.diagram.cyclicQuads.forEach((k) => (practiceQuads[k.id] = { ...k }));
+      }
+
+      set({
+        activePracticeQuestionId: q.id,
+        circles: practiceCircles,
+        circumferencePoints: practicePoints,
+        chords: practiceChords,
+        radiusDiameters: practiceRadii,
+        angles: practiceAngles,
+        tangents: practiceTangents,
+        cyclicQuads: practiceQuads,
+        lockedElementIds: q.diagram?.lockedElementIds || [],
+        selectedId: null,
+        selectedType: null,
+      });
+    },
+
+    nextPracticeQuestion: () => {
+      const state = get();
+      const filtered = CHAPTER_PRACTICE_BANK.filter((q) => {
+        const matchTopic = state.activePracticeTopicId === 'all' || q.topicId === state.activePracticeTopicId;
+        const matchDiff = state.activePracticeDifficulty === 'all' || q.difficulty === state.activePracticeDifficulty;
+        return matchTopic && matchDiff;
+      });
+      if (filtered.length === 0) return;
+      const currentIdx = filtered.findIndex((q) => q.id === state.activePracticeQuestionId);
+      const nextQ = filtered[(currentIdx + 1) % filtered.length];
+      if (nextQ) get().loadPracticeQuestion(nextQ.id);
+    },
+
+    prevPracticeQuestion: () => {
+      const state = get();
+      const filtered = CHAPTER_PRACTICE_BANK.filter((q) => {
+        const matchTopic = state.activePracticeTopicId === 'all' || q.topicId === state.activePracticeTopicId;
+        const matchDiff = state.activePracticeDifficulty === 'all' || q.difficulty === state.activePracticeDifficulty;
+        return matchTopic && matchDiff;
+      });
+      if (filtered.length === 0) return;
+      const currentIdx = filtered.findIndex((q) => q.id === state.activePracticeQuestionId);
+      const prevIdx = (currentIdx - 1 + filtered.length) % filtered.length;
+      const prevQ = filtered[prevIdx];
+      if (prevQ) get().loadPracticeQuestion(prevQ.id);
+    },
+
+    setPracticeTopic: (topicId) => {
+      set({ activePracticeTopicId: topicId });
+      const state = get();
+      const filtered = CHAPTER_PRACTICE_BANK.filter((q) => {
+        const matchTopic = topicId === 'all' || q.topicId === topicId;
+        const matchDiff = state.activePracticeDifficulty === 'all' || q.difficulty === state.activePracticeDifficulty;
+        return matchTopic && matchDiff;
+      });
+      if (filtered.length > 0) {
+        get().loadPracticeQuestion(filtered[0].id);
+      }
+    },
+
+    setPracticeDifficulty: (difficulty) => {
+      set({ activePracticeDifficulty: difficulty });
+      const state = get();
+      const filtered = CHAPTER_PRACTICE_BANK.filter((q) => {
+        const matchTopic = state.activePracticeTopicId === 'all' || q.topicId === state.activePracticeTopicId;
+        const matchDiff = difficulty === 'all' || q.difficulty === difficulty;
+        return matchTopic && matchDiff;
+      });
+      if (filtered.length > 0) {
+        get().loadPracticeQuestion(filtered[0].id);
+      }
+    },
+
     submitPracticeAnswer: (questionId, answer, isCorrect) => {
       set((state) => ({
         practiceAnswers: {
           ...state.practiceAnswers,
-          [questionId]: { userAnswer: answer, isCorrect },
+          [questionId]: {
+            ...(state.practiceAnswers[questionId] || {}),
+            userAnswer: answer,
+            isCorrect,
+          },
         },
       }));
+    },
+
+    revealPracticeHint: (questionId) => {
+      set((state) => {
+        const current = state.practiceAnswers[questionId];
+        const hintsRevealed = (current?.hintsRevealed || 0) + 1;
+        return {
+          practiceAnswers: {
+            ...state.practiceAnswers,
+            [questionId]: {
+              ...(current || { userAnswer: '', isCorrect: false, showSolution: false }),
+              hintsRevealed,
+            },
+          },
+        };
+      });
+    },
+
+    togglePracticeSolution: (questionId) => {
+      set((state) => {
+        const current = state.practiceAnswers[questionId];
+        return {
+          practiceAnswers: {
+            ...state.practiceAnswers,
+            [questionId]: {
+              ...(current || { userAnswer: '', isCorrect: false, hintsRevealed: 0 }),
+              showSolution: !current?.showSolution,
+            },
+          },
+        };
+      });
+    },
+
+    retryPracticeQuestion: (questionId) => {
+      set((state) => {
+        const updated = { ...state.practiceAnswers };
+        delete updated[questionId];
+        return { practiceAnswers: updated };
+      });
+      get().loadPracticeQuestion(questionId);
     },
   };
 });

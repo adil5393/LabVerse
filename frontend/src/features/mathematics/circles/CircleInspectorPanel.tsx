@@ -1,299 +1,305 @@
 /**
- * Scientific Properties Inspector & Theorem Lab for Class 9 Circles (Milestone M2 & M2.1)
+ * Scientific Properties Inspector & Theorem Lab for Class 9 Circles (Milestone M2.4)
  *
  * Implements:
- * 1. Synchronized Explore, Investigate, and Practice learning workflows
- * 2. Live Properties & Geometric Telemetry (Circles, Radii, Diameters, Chords, Angles, Tangents)
- * 3. Structured 7-stage Theorem Investigations:
- *    - Mathematical Objective
- *    - Initial Construction
- *    - Prediction Prompt & Hypothesis
- *    - Interactive Manipulation Checklist
- *    - Dynamic Observations & Invariants
- *    - Explanation
- *    - Guided Euclidean Mathematical Proof
- * 4. Interactive Practice Problems with tolerance-aware answer verification & step-by-step solutions
+ * 1. Single-authority mode rendering:
+ *    - Explore: Live entity telemetry, circle resizing (numerical + slider), experiment controls
+ *    - Investigate: Progressive 6-stage guided discovery (Understand -> Predict -> Experiment -> Observe -> Explain -> Prove)
+ *    - Practice: Multi-difficulty question engine with 100% diagram/givens synchronization
+ * 2. Circle Resizing with positive validation and live constraint preservation
+ * 3. Dynamic observation capture table taking real values from the mathematical engine
+ * 4. Stepwise Euclidean proof viewer with interactive missing-reason validation
+ * 5. Full NCERT chapter question bank with isolated diagram scenes
  */
 
 import React, { useState } from 'react';
 import { useCircleStore } from '../../../store/useCircleStore';
 import { CIRCLE_EXPERIMENTS } from '../../../engine/mathematics/circles/circleExperiments';
+import { CHAPTER_PRACTICE_BANK } from '../../../engine/mathematics/circles/practiceBank';
 import {
   getCircumferenceCoords,
   calculateChordMetrics,
-  calculateAngleDegrees,
-  verifyInscribedAngleTheorem,
-  verifyCyclicQuadOppositeAngles,
   validatePracticeAnswer,
-  resolveCirclePointCoords,
-  calculateCircumcircleFromThreePoints,
-  testConcyclicityFourPoints,
 } from '../../../engine/mathematics/circles/geometry';
+import type { InvestigationStageId, PracticeDifficulty } from '../../../engine/mathematics/circles/types';
 
 export const CircleInspectorPanel: React.FC = () => {
-  const [selectedPrediction, setSelectedPrediction] = useState<number | null>(null);
-  const [showPredictionResult, setShowPredictionResult] = useState(false);
   const [practiceInput, setPracticeInput] = useState('');
-  const [showPracticeSolution, setShowPracticeSolution] = useState(false);
+  const [selectedMcqOption, setSelectedMcqOption] = useState<number | null>(null);
+  const [localRadiusInput, setLocalRadiusInput] = useState<string>('');
 
   const {
     currentExperimentId,
     mode,
-    setMode,
     circles,
     circumferencePoints,
     chords,
     radiusDiameters,
-    angles,
-    cyclicQuads,
     selectedId,
     selectedType,
     deleteSelected,
-    submitPracticeAnswer,
+    setCircleRadius,
+
+    // Progressive Investigate State (M2.4 Part A)
+    investigationStage,
+    investigationPredictions,
+    manipulationPositionsRecorded,
+    capturedObservations,
+    proofStepIndex,
+    selectedMissingReasons,
+    investigationTeacherBypassed,
+    setInvestigationStage,
+    submitInvestigationPrediction,
+    captureCurrentObservation,
+    clearObservations,
+    nextProofStep,
+    prevProofStep,
+    selectMissingReason,
+    resetInvestigation,
+    bypassInvestigationGate,
+
+    // Practice Engine State (M2.4 Part B)
+    activePracticeTopicId,
+    activePracticeDifficulty,
+    activePracticeQuestionId,
     practiceAnswers,
+    nextPracticeQuestion,
+    prevPracticeQuestion,
+    setPracticeDifficulty,
+    submitPracticeAnswer,
+    revealPracticeHint,
+    togglePracticeSolution,
+    retryPracticeQuestion,
+
+    // Experiment-specific interactive states
     symmetryRotation,
-    symmetryReflectionAxis,
-    symmetryShowRotated,
-    symmetryShowReflected,
     setSymmetryRotation,
-    setSymmetryReflectionAxis,
-    toggleSymmetryShowRotated,
-    toggleSymmetryShowReflected,
-    equalChordsLocked,
-    setEqualChordsLocked,
-    howManyCirclesPointCount,
-    setHowManyCirclesPointCount,
   } = useCircleStore();
 
   const currentExperiment =
     CIRCLE_EXPERIMENTS.find((e) => e.id === currentExperimentId) || CIRCLE_EXPERIMENTS[0];
   const primaryTheorem = currentExperiment.theorems[0];
-  const primaryQuestion = currentExperiment.practiceQuestions[0];
   const primaryCircle = Object.values(circles)[0];
 
-  // Helper calculation for cyclic quad opposite angles
-  const quad = Object.values(cyclicQuads)[0];
-  let quadVerification: { sumAC: number; sumBD: number; isSupplementary: boolean } | null = null;
-  if (quad && primaryCircle) {
-    const ptA = circumferencePoints[quad.pointAId];
-    const ptB = circumferencePoints[quad.pointBId];
-    const ptC = circumferencePoints[quad.pointCId];
-    const ptD = circumferencePoints[quad.pointDId];
-    if (ptA && ptB && ptC && ptD) {
-      const posA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
-      const posB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
-      const posC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
-      const posD = getCircumferenceCoords(primaryCircle, ptD.angleRad);
+  // Selected Circle for Explore resizing
+  const selectedCircle = selectedType === 'circle' && selectedId ? circles[selectedId] : primaryCircle;
 
-      const angA = calculateAngleDegrees(posD, posA, posB);
-      const angB = calculateAngleDegrees(posA, posB, posC);
-      const angC = calculateAngleDegrees(posB, posC, posD);
-      const angD = calculateAngleDegrees(posC, posD, posA);
+  // Active Practice Question
+  const activeQuestion =
+    CHAPTER_PRACTICE_BANK.find((q) => q.id === activePracticeQuestionId) || CHAPTER_PRACTICE_BANK[0];
+  const activeQuestionState = practiceAnswers[activeQuestion.id];
 
-      const vAC = verifyCyclicQuadOppositeAngles(angA, angC);
-      const vBD = verifyCyclicQuadOppositeAngles(angB, angD);
+  // Filtered Practice Questions for Navigator
+  const filteredPracticeQuestions = CHAPTER_PRACTICE_BANK.filter((q) => {
+    const matchTopic = activePracticeTopicId === 'all' || q.topicId === activePracticeTopicId;
+    const matchDiff = activePracticeDifficulty === 'all' || q.difficulty === activePracticeDifficulty;
+    return matchTopic && matchDiff;
+  });
+  const currentQuestionIndex = filteredPracticeQuestions.findIndex((q) => q.id === activeQuestion.id);
 
-      quadVerification = {
-        sumAC: vAC.sum,
-        sumBD: vBD.sum,
-        isSupplementary: vAC.isSupplementary && vBD.isSupplementary,
-      };
+  // Investigation Stages Configuration
+  const stagesList: { id: InvestigationStageId; title: string; icon: string }[] = [
+    { id: 'understand', title: '1. Understand', icon: 'lightbulb' },
+    { id: 'predict', title: '2. Predict', icon: 'psychology' },
+    { id: 'experiment', title: '3. Experiment', icon: 'touch_app' },
+    { id: 'observe', title: '4. Observations', icon: 'table_chart' },
+    { id: 'explain', title: '5. Explain', icon: 'auto_awesome' },
+    {
+      id: 'prove_or_conclude',
+      title: primaryTheorem?.category === 'definition' ? '6. Conclusion' : '6. Euclidean Proof',
+      icon: 'verified',
+    },
+  ];
+
+  const currentStageIndex = stagesList.findIndex((s) => s.id === investigationStage);
+
+  // Verification of Practice Answer
+  const handleCheckPracticeAnswer = () => {
+    if (!activeQuestion) return;
+
+    if (activeQuestion.type === 'numeric') {
+      const isCorrect = validatePracticeAnswer(
+        practiceInput,
+        activeQuestion.correctAnswer,
+        activeQuestion.tolerance || 0.1
+      );
+      submitPracticeAnswer(activeQuestion.id, practiceInput, isCorrect);
+    } else if (activeQuestion.type === 'multiple_choice' || activeQuestion.type === 'diagram_reasoning') {
+      if (selectedMcqOption === null) return;
+      const chosenText = activeQuestion.options ? activeQuestion.options[selectedMcqOption] : '';
+      const isCorrect = selectedMcqOption === activeQuestion.correctOptionIndex || chosenText === String(activeQuestion.correctAnswer);
+      submitPracticeAnswer(activeQuestion.id, chosenText, isCorrect);
+    } else if (activeQuestion.type === 'construction') {
+      // Dynamic verification of construction requirement
+      let isVerified = false;
+      const v = activeQuestion.constructionVerification;
+      if (v?.expectedCount && v.expectedCount.diameters !== undefined) {
+        const diaCount = Object.values(radiusDiameters).filter((r) => r.type === 'diameter').length;
+        if (diaCount >= v.expectedCount.diameters) isVerified = true;
+      }
+      if (v?.expectedCount && v.expectedCount.chords !== undefined) {
+        const chordCount = Object.values(chords).length;
+        if (chordCount >= v.expectedCount.chords) isVerified = true;
+      }
+      if (v?.minPointsCount) {
+        const ptCount = Object.values(circumferencePoints).length;
+        if (ptCount >= v.minPointsCount) isVerified = true;
+      }
+      submitPracticeAnswer(activeQuestion.id, isVerified ? 'Constructed successfully' : 'Incomplete construction', isVerified);
     }
-  }
-
-  // Helper calculation for Central vs Inscribed angle
-  let angleTheoremData: { central: number; inscribed: number; ratio: number; valid: boolean } | null = null;
-  const centralAngle = Object.values(angles).find((a) => a.isCentral);
-  const inscribedAngle = Object.values(angles).find((a) => !a.isCentral);
-  if (centralAngle && inscribedAngle && primaryCircle) {
-    const p1 = circumferencePoints[centralAngle.point1Id];
-    const p2 = circumferencePoints[centralAngle.point2Id];
-    const vInscribed = circumferencePoints[inscribedAngle.vertexId];
-    if (p1 && p2 && vInscribed) {
-      const w1 = getCircumferenceCoords(primaryCircle, p1.angleRad);
-      const w2 = getCircumferenceCoords(primaryCircle, p2.angleRad);
-      const wV = getCircumferenceCoords(primaryCircle, vInscribed.angleRad);
-
-      const degCentral = calculateAngleDegrees(w1, primaryCircle.center, w2);
-      const degInscribed = calculateAngleDegrees(w1, wV, w2);
-      const verif = verifyInscribedAngleTheorem(degCentral, degInscribed);
-
-      angleTheoremData = {
-        central: degCentral,
-        inscribed: degInscribed,
-        ratio: verif.ratio,
-        valid: verif.isValid,
-      };
-    }
-  }
-
-  const handleCheckAnswer = () => {
-    if (!primaryQuestion || !practiceInput.trim()) return;
-    const isCorrect = validatePracticeAnswer(
-      practiceInput,
-      primaryQuestion.correctAnswer,
-      primaryQuestion.tolerance || 0.1
-    );
-    submitPracticeAnswer(primaryQuestion.id, practiceInput, isCorrect);
   };
 
   return (
     <aside className="w-80 lg:w-96 bg-surface-low border-l border-surface-border flex flex-col h-full overflow-hidden shrink-0 select-none">
-      {/* Top Tabs: Two-way synchronized with learning mode */}
-      <div className="flex border-b border-surface-border bg-surface-card/60 p-1.5 gap-1 shrink-0">
-        <button
-          onClick={() => setMode('explore')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-            mode === 'explore'
-              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-surface-elevated'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[16px]">tune</span>
-          <span>Explore</span>
-        </button>
-
-        <button
-          onClick={() => setMode('investigate')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-            mode === 'investigate'
-              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-surface-elevated'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[16px]">menu_book</span>
-          <span>Investigate</span>
-        </button>
-
-        <button
-          onClick={() => setMode('practice')}
-          className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-            mode === 'practice'
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-surface-elevated'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[16px]">quiz</span>
-          <span>Practice</span>
-        </button>
+      {/* Mode Status Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-surface-card/80 border-b border-surface-border shrink-0">
+        <div className="flex items-center gap-2">
+          <span className={`w-2.5 h-2.5 rounded-full ${
+            mode === 'explore' ? 'bg-amber-400' : mode === 'investigate' ? 'bg-sky-400' : 'bg-emerald-400'
+          }`} />
+          <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200">
+            {mode === 'explore' ? 'Explore & Properties' : mode === 'investigate' ? 'Progressive Investigation' : 'Practice Engine'}
+          </span>
+        </div>
+        <span className="text-[11px] font-mono text-slate-400">
+          {mode === 'explore' ? 'Free Construction' : mode === 'investigate' ? `Stage ${currentStageIndex + 1}/6` : `NCERT Chapter Bank`}
+        </span>
       </div>
 
-      {/* Main Tab Content */}
+      {/* Main Mode Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        {/* TAB 1: EXPLORE / PROPERTIES */}
+
+        {/* ============================================================ */}
+        {/* MODE 1: EXPLORE & PROPERTIES (Part C: Resizing & Geometry) */}
+        {/* ============================================================ */}
         {mode === 'explore' && (
           <div className="space-y-4">
-            {/* Primary Circle Card */}
-            {primaryCircle && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2.5">
+            {/* Circle Resizing & Geometry Card */}
+            {selectedCircle && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                  <span className="text-xs font-mono font-bold text-slate-200 uppercase flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-amber-400 text-[16px]">radio_button_unchecked</span>
-                    <span>{primaryCircle.name}</span>
+                    <span>{selectedCircle.name}</span>
                   </span>
                   <span className="text-[10px] font-mono text-slate-400">
-                    O({primaryCircle.center.x.toFixed(1)}, {primaryCircle.center.y.toFixed(1)})
+                    Center O({selectedCircle.center.x.toFixed(1)}, {selectedCircle.center.y.toFixed(1)})
                   </span>
                 </div>
 
+                {/* Radius Controls: Slider & Numerical Input (M2.4 Part C) */}
+                <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border space-y-2">
+                  <div className="flex justify-between items-center text-xs font-mono">
+                    <span className="text-slate-400">Radius (r):</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1.0"
+                        max="15.0"
+                        step="0.1"
+                        value={localRadiusInput !== '' ? localRadiusInput : selectedCircle.radius.toFixed(1)}
+                        onChange={(e) => {
+                          setLocalRadiusInput(e.target.value);
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 1.0 && val <= 15.0) {
+                            setCircleRadius(selectedCircle.id, val);
+                          }
+                        }}
+                        onBlur={() => setLocalRadiusInput('')}
+                        className="w-16 px-1.5 py-0.5 bg-surface-elevated text-amber-400 font-bold text-right rounded border border-surface-border text-xs font-mono focus:outline-none focus:border-amber-400"
+                      />
+                      <span className="text-slate-400 text-[11px]">cm</span>
+                    </div>
+                  </div>
+
+                  {/* Slider */}
+                  <div className="space-y-1">
+                    <input
+                      type="range"
+                      min="1.0"
+                      max="10.0"
+                      step="0.1"
+                      value={selectedCircle.radius}
+                      onChange={(e) => setCircleRadius(selectedCircle.id, parseFloat(e.target.value))}
+                      className="w-full h-1.5 bg-surface-elevated rounded-lg appearance-none cursor-pointer accent-amber-400"
+                    />
+                    <div className="flex justify-between text-[10px] font-mono text-slate-500">
+                      <span>1.0 cm</span>
+                      <span className="text-amber-400 font-semibold">{selectedCircle.radius.toFixed(1)} cm</span>
+                      <span>10.0 cm</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Derived Metrics: Diameter, Circumference, Area */}
                 <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                   <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                    <div className="text-[10px] text-slate-400">Radius (r)</div>
-                    <div className="text-sm font-bold text-amber-400">{primaryCircle.radius.toFixed(2)} u</div>
-                  </div>
-                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                    <div className="text-[10px] text-slate-400">Diameter (d = 2r)</div>
-                    <div className="text-sm font-bold text-sky-400">{(primaryCircle.radius * 2).toFixed(2)} u</div>
+                    <div className="text-[10px] text-slate-400">Diameter (2r)</div>
+                    <div className="text-sm font-bold text-sky-400">{(selectedCircle.radius * 2).toFixed(2)} cm</div>
                   </div>
                   <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
                     <div className="text-[10px] text-slate-400">Circumference (2πr)</div>
                     <div className="text-sm font-bold text-slate-200">
-                      {(2 * Math.PI * primaryCircle.radius).toFixed(2)} u
+                      {(2 * Math.PI * selectedCircle.radius).toFixed(2)} cm
                     </div>
                   </div>
-                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
+                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border col-span-2">
                     <div className="text-[10px] text-slate-400">Area (πr²)</div>
                     <div className="text-sm font-bold text-emerald-400">
-                      {(Math.PI * primaryCircle.radius * primaryCircle.radius).toFixed(2)} u²
+                      {(Math.PI * selectedCircle.radius * selectedCircle.radius).toFixed(2)} cm²
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Diameters Live Readout */}
-            {Object.values(radiusDiameters).filter((r) => r.type === 'diameter').length > 0 && primaryCircle && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sky-400 text-[16px]">line_start_circle</span>
-                  <span>Constructed Diameters</span>
+            {/* Selected Element Telemetry */}
+            {selectedId && selectedType === 'point' && circumferencePoints[selectedId] && (
+              <div className="p-3 bg-surface-card rounded-xl border border-surface-border space-y-2 text-xs font-mono">
+                <div className="flex justify-between items-center text-sky-400 font-bold uppercase">
+                  <span>Point {circumferencePoints[selectedId].name}</span>
+                  <span className="text-[10px] text-slate-400">On Circumference</span>
                 </div>
-                {Object.values(radiusDiameters)
-                  .filter((r) => r.type === 'diameter')
-                  .map((dia) => {
-                    const pt1 = circumferencePoints[dia.pointId];
-                    const pt2 = dia.point2Id ? circumferencePoints[dia.point2Id] : null;
-                    return (
-                      <div
-                        key={dia.id}
-                        className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1"
-                      >
-                        <div className="flex justify-between font-bold text-slate-200">
-                          <span>{dia.name}</span>
-                          <span className="text-sky-400">d = {(primaryCircle.radius * 2).toFixed(2)} u</span>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-slate-400">
-                          <span>Endpoints:</span>
-                          <span className="text-slate-300">
-                            {pt1?.name || 'A'} and {pt2?.name || "A'"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-slate-400">
-                          <span>Passes Through:</span>
-                          <span className="text-slate-300">
-                            Center O({primaryCircle.center.x.toFixed(1)}, {primaryCircle.center.y.toFixed(1)})
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-surface-lowest rounded">
+                    <div className="text-[10px] text-slate-400">Angle (θ)</div>
+                    <div className="font-bold text-slate-200">
+                      {((circumferencePoints[selectedId].angleRad * 180) / Math.PI).toFixed(1)}°
+                    </div>
+                  </div>
+                  <div className="p-2 bg-surface-lowest rounded">
+                    <div className="text-[10px] text-slate-400">Distance from O</div>
+                    <div className="font-bold text-amber-400">
+                      {primaryCircle?.radius.toFixed(1)} cm
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Chords Live Readout */}
             {Object.keys(chords).length > 0 && primaryCircle && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
+              <div className="p-3 bg-surface-card rounded-xl border border-surface-border space-y-2">
                 <div className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-amber-400 text-[16px]">linear_scale</span>
-                  <span>Chords & Perpendiculars</span>
+                  <span>Chords ({Object.keys(chords).length})</span>
                 </div>
-
-                {Object.values(chords).map((chord) => {
-                  const ptA = circumferencePoints[chord.pointAId];
-                  const ptB = circumferencePoints[chord.pointBId];
+                {Object.values(chords).map((ch) => {
+                  const ptA = circumferencePoints[ch.pointAId];
+                  const ptB = circumferencePoints[ch.pointBId];
                   if (!ptA || !ptB) return null;
-                  const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
-                  const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
-                  const m = calculateChordMetrics(primaryCircle, wA, wB);
-
+                  const posA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
+                  const posB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
+                  const m = calculateChordMetrics(primaryCircle, posA, posB);
                   return (
-                    <div
-                      key={chord.id}
-                      className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1"
-                    >
+                    <div key={ch.id} className="p-2 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1">
                       <div className="flex justify-between font-bold text-slate-200">
-                        <span>{chord.name}</span>
-                        <span className="text-amber-400">L = {m.length} u</span>
+                        <span>{ch.name}</span>
+                        <span className="text-amber-400">L = {m.length.toFixed(2)} cm</span>
                       </div>
                       <div className="flex justify-between text-[11px] text-slate-400">
-                        <span>Dist from Center (d):</span>
-                        <span className="text-slate-300 font-bold">{m.distFromCenter} u</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-slate-400">
-                        <span>Midpoint M:</span>
-                        <span className="text-slate-300">
-                          ({m.midpoint.x}, {m.midpoint.y})
-                        </span>
+                        <span>Distance from O:</span>
+                        <span className="text-sky-400 font-bold">{m.distFromCenter.toFixed(2)} cm</span>
                       </div>
                     </div>
                   );
@@ -301,101 +307,14 @@ export const CircleInspectorPanel: React.FC = () => {
               </div>
             )}
 
-            {/* Central vs Inscribed Live Telemetry */}
-            {angleTheoremData && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center justify-between">
-                  <span>Arc Subtended Angles</span>
-                  <span className="text-amber-400 text-[10px]">∠AOB = 2 × ∠APB</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                    <div className="text-[10px] text-slate-400">Central ∠AOB</div>
-                    <div className="text-base font-bold text-sky-400">{angleTheoremData.central}°</div>
-                  </div>
-                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                    <div className="text-[10px] text-slate-400">Inscribed ∠APB</div>
-                    <div className="text-base font-bold text-amber-400">{angleTheoremData.inscribed}°</div>
-                  </div>
-                </div>
-                <div className="text-[11px] font-mono text-emerald-400 bg-emerald-950/30 p-2 rounded border border-emerald-800/40 text-center">
-                  Ratio: Central / Inscribed = {angleTheoremData.ratio} (Exact 2.00)
-                </div>
-              </div>
-            )}
-
-            {/* Cyclic Quad Telemetry */}
-            {quadVerification && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center justify-between">
-                  <span>Cyclic Quad Angles</span>
-                  <span className="text-emerald-400 text-[10px]">Opposite = 180°</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                    <div className="text-[10px] text-slate-400">∠A + ∠C Sum</div>
-                    <div className="text-sm font-bold text-amber-400">{quadVerification.sumAC}°</div>
-                  </div>
-                  <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                    <div className="text-[10px] text-slate-400">∠B + ∠D Sum</div>
-                    <div className="text-sm font-bold text-emerald-400">{quadVerification.sumBD}°</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Committed Angle Measurements */}
-            {Object.keys(angles).length > 0 && primaryCircle && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-amber-400 text-[16px]">square_foot</span>
-                  <span>Angle Measurements ({Object.keys(angles).length})</span>
-                </div>
-                {Object.values(angles).map((ang) => {
-                  const p1 = resolveCirclePointCoords(ang.point1Id, circles, circumferencePoints);
-                  const v = resolveCirclePointCoords(ang.vertexId, circles, circumferencePoints);
-                  const p2 = resolveCirclePointCoords(ang.point2Id, circles, circumferencePoints);
-                  if (!p1 || !v || !p2) return null;
-                  const deg = calculateAngleDegrees(p1.coords, v.coords, p2.coords);
-
-                  return (
-                    <div
-                      key={ang.id}
-                      className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1"
-                    >
-                      <div className="flex justify-between font-bold text-slate-200">
-                        <span>{ang.name}</span>
-                        <span className={ang.isCentral ? 'text-sky-400' : 'text-amber-400'}>{deg.toFixed(1)}°</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-slate-400">
-                        <span>Classification:</span>
-                        <span className="text-slate-300">{ang.isCentral ? 'Central Angle' : 'Inscribed Angle'}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-slate-400">
-                        <span>Points:</span>
-                        <span className="text-slate-300">
-                          {p1.name} — {v.name} (Vertex) — {p2.name}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* SPECIALIZED CARD: Symmetry of a Circle */}
-            {currentExperimentId === 'symmetry-of-circle' && primaryCircle && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-amber-500/30 space-y-3">
-                <div className="text-xs font-mono font-bold text-amber-400 uppercase flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px]">rotate_right</span>
-                  <span>Symmetry & Invariants Laboratory</span>
-                </div>
-
-                {/* Rotation Slider */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] font-mono text-slate-300">
-                    <span>Rotation around O:</span>
-                    <span className="text-sky-400 font-bold">{symmetryRotation}°</span>
+            {/* Experiment Controls: Symmetries, Equal Chords, Point count */}
+            {currentExperimentId === 'symmetry-of-circle' && (
+              <div className="p-3 bg-surface-card rounded-xl border border-surface-border space-y-2.5">
+                <div className="text-xs font-mono font-bold text-sky-400 uppercase">Symmetry Controls</div>
+                <div className="space-y-1 text-xs font-mono">
+                  <div className="flex justify-between text-slate-300">
+                    <span>Rotation:</span>
+                    <span className="text-amber-400 font-bold">{symmetryRotation}°</span>
                   </div>
                   <input
                     type="range"
@@ -403,293 +322,11 @@ export const CircleInspectorPanel: React.FC = () => {
                     max="360"
                     value={symmetryRotation}
                     onChange={(e) => setSymmetryRotation(Number(e.target.value))}
-                    className="w-full accent-sky-400 cursor-pointer"
+                    className="w-full h-1.5 bg-surface-elevated rounded appearance-none cursor-pointer accent-sky-400"
                   />
                 </div>
-
-                {/* Reflection Axis Slider */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] font-mono text-slate-300">
-                    <span>Reflection Axis (Diameter):</span>
-                    <span className="text-purple-400 font-bold">{symmetryReflectionAxis}°</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="180"
-                    value={symmetryReflectionAxis}
-                    onChange={(e) => setSymmetryReflectionAxis(Number(e.target.value))}
-                    className="w-full accent-purple-400 cursor-pointer"
-                  />
-                </div>
-
-                {/* Toggles */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={toggleSymmetryShowRotated}
-                    className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-mono font-semibold border transition-all ${
-                      symmetryShowRotated
-                        ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                        : 'bg-surface-lowest text-slate-400 border-surface-border'
-                    }`}
-                  >
-                    Rotated P′ ({symmetryShowRotated ? 'ON' : 'OFF'})
-                  </button>
-                  <button
-                    onClick={toggleSymmetryShowReflected}
-                    className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-mono font-semibold border transition-all ${
-                      symmetryShowReflected
-                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                        : 'bg-surface-lowest text-slate-400 border-surface-border'
-                    }`}
-                  >
-                    Reflected P″ ({symmetryShowReflected ? 'ON' : 'OFF'})
-                  </button>
-                </div>
-
-                {/* Invariant metrics */}
-                <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-[11px] font-mono space-y-1 text-slate-300">
-                  <div className="text-[10px] font-bold text-amber-400 uppercase">Metric Invariants:</div>
-                  <div className="flex justify-between">
-                    <span>Radius OP:</span>
-                    <span className="text-emerald-400">{primaryCircle.radius.toFixed(2)} u</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Rotated OP′:</span>
-                    <span className="text-sky-400">{primaryCircle.radius.toFixed(2)} u</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Reflected OP″:</span>
-                    <span className="text-purple-400">{primaryCircle.radius.toFixed(2)} u</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 pt-1 border-t border-surface-border">
-                    Radial distance is invariant under any rotation or reflection.
-                  </div>
-                </div>
               </div>
             )}
-
-            {/* SPECIALIZED CARD: How Many Circles? */}
-            {currentExperimentId === 'how-many-circles' && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-sky-500/30 space-y-3">
-                <div className="text-xs font-mono font-bold text-sky-400 uppercase flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px]">all_inclusive</span>
-                  <span>Circles Through Points</span>
-                </div>
-
-                {/* Investigation Tabs */}
-                <div className="flex gap-1 bg-surface-lowest p-1 rounded-lg border border-surface-border text-[10px] font-mono">
-                  {([1, 2, 3] as const).map((cnt) => (
-                    <button
-                      key={cnt}
-                      onClick={() => setHowManyCirclesPointCount(cnt)}
-                      className={`flex-1 py-1 rounded text-center font-bold transition-all ${
-                        howManyCirclesPointCount === cnt
-                          ? 'bg-sky-500/25 text-sky-300 border border-sky-500/40'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {cnt} Point{cnt > 1 ? 's' : ''}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Circumcenter Telemetry for 3 Points */}
-                {howManyCirclesPointCount === 3 && (() => {
-                  const ptA = circumferencePoints['pt_A'];
-                  const ptB = circumferencePoints['pt_B'];
-                  const ptC = circumferencePoints['pt_C'];
-                  if (ptA && ptB && ptC && primaryCircle) {
-                    const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
-                    const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
-                    const wC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
-                    const circum = calculateCircumcircleFromThreePoints(wA, wB, wC);
-
-                    return (
-                      <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1.5">
-                        {circum.isCollinear ? (
-                          <div className="p-2 rounded bg-red-950/40 border border-red-700/60 text-red-300 text-[11px] leading-relaxed">
-                            <strong>Collinear Points:</strong> Perpendicular bisectors are parallel and never intersect. No finite circle passes through three distinct collinear points!
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Circumcenter O:</span>
-                              <span className="text-sky-400 font-bold">
-                                ({circum.circumcenter?.x.toFixed(2)}, {circum.circumcenter?.y.toFixed(2)})
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Circumradius (R):</span>
-                              <span className="text-emerald-400 font-bold">{circum.radius?.toFixed(2)} u</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Triangle Classification:</span>
-                              <span className="text-amber-400 font-bold uppercase">{circum.triangleType}</span>
-                            </div>
-                            <div className="flex justify-between text-[11px] text-slate-400 pt-1 border-t border-surface-border">
-                              <span>OA = OB = OC:</span>
-                              <span className="text-slate-200">
-                                {circum.oa.toFixed(2)} = {circum.ob.toFixed(2)} = {circum.oc.toFixed(2)}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-
-                {howManyCirclesPointCount === 1 && (
-                  <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-[11px] text-slate-300 leading-relaxed">
-                    <strong>1 Point:</strong> Infinitely many circles of arbitrary radii pass through a single point on the plane.
-                  </div>
-                )}
-
-                {howManyCirclesPointCount === 2 && (
-                  <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-[11px] text-slate-300 leading-relaxed">
-                    <strong>2 Points:</strong> Infinitely many circles pass through points A and B. Their centers strictly lie on the <em>perpendicular bisector</em> of segment AB.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SPECIALIZED CARD: Equal Chords & Central Angles */}
-            {currentExperimentId === 'equal-chords-central-angles' && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-emerald-500/30 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-mono font-bold text-emerald-400 uppercase flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px]">balance</span>
-                    <span>Equal Chords & Angles</span>
-                  </span>
-                  <button
-                    onClick={() => setEqualChordsLocked(!equalChordsLocked)}
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-all ${
-                      equalChordsLocked
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    }`}
-                  >
-                    {equalChordsLocked ? 'Locked (Theorem)' : 'Free (Counterexamples)'}
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  {Object.values(chords).map((ch) => {
-                    const ptA = circumferencePoints[ch.pointAId];
-                    const ptB = circumferencePoints[ch.pointBId];
-                    if (!ptA || !ptB || !primaryCircle) return null;
-                    const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
-                    const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
-                    const m = calculateChordMetrics(primaryCircle, wA, wB);
-                    const deg = calculateAngleDegrees(wA, primaryCircle.center, wB);
-
-                    return (
-                      <div key={ch.id} className="p-2 bg-surface-lowest rounded-lg border border-surface-border space-y-1">
-                        <div className="text-[10px] font-bold text-slate-300">{ch.name}</div>
-                        <div className="text-xs text-amber-400 font-bold">L = {m.length} u</div>
-                        <div className="text-[11px] text-sky-400">∠ = {deg.toFixed(1)}°</div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="text-[11px] text-slate-300 bg-surface-lowest p-2 rounded border border-surface-border leading-relaxed">
-                  <strong>Theorem:</strong> Equal chords subtend equal angles at center (ΔAOB ≅ ΔCOD by SSS).<br />
-                  <strong>Converse:</strong> Equal central angles correspond to equal chords (SAS).
-                </div>
-              </div>
-            )}
-
-            {/* SPECIALIZED CARD: Distance of Chords from Center */}
-            {currentExperimentId === 'chord-distance-comparison' && (
-              <div className="p-3.5 bg-surface-card rounded-xl border border-amber-500/30 space-y-3">
-                <div className="text-xs font-mono font-bold text-amber-400 uppercase flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px]">compare_arrows</span>
-                  <span>Chord Distance Comparison</span>
-                </div>
-
-                <div className="space-y-2">
-                  {Object.values(chords).map((ch) => {
-                    const ptA = circumferencePoints[ch.pointAId];
-                    const ptB = circumferencePoints[ch.pointBId];
-                    if (!ptA || !ptB || !primaryCircle) return null;
-                    const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
-                    const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
-                    const m = calculateChordMetrics(primaryCircle, wA, wB);
-
-                    return (
-                      <div key={ch.id} className="p-2 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono flex justify-between items-center">
-                        <div>
-                          <span className="font-bold text-slate-200">{ch.name}</span>
-                          <span className="text-[10px] text-slate-400 block">Length: {m.length} u</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-amber-400 font-bold">d = {m.distFromCenter} u</span>
-                          <span className="text-[10px] text-slate-400 block">from Center</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="p-2.5 rounded bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-300 leading-relaxed font-mono">
-                  <strong>Pythagoras Law:</strong> d² = r² - (L/2)².<br />
-                  As chord length increases, its perpendicular distance from the center strictly decreases!
-                </div>
-              </div>
-            )}
-
-            {/* SPECIALIZED CARD: Concyclicity & Converses */}
-            {currentExperimentId === 'concyclicity-and-converses' && primaryCircle && (() => {
-              const ptA = circumferencePoints['pt_A'];
-              const ptB = circumferencePoints['pt_B'];
-              const ptC = circumferencePoints['pt_C'];
-              const ptD = circumferencePoints['pt_D'];
-              if (ptA && ptB && ptC && ptD) {
-                const wA = getCircumferenceCoords(primaryCircle, ptA.angleRad);
-                const wB = getCircumferenceCoords(primaryCircle, ptB.angleRad);
-                const wC = getCircumferenceCoords(primaryCircle, ptC.angleRad);
-                const wD = getCircumferenceCoords(primaryCircle, ptD.angleRad);
-                const concyclicTest = testConcyclicityFourPoints(wA, wB, wC, wD);
-
-                return (
-                  <div className="p-3.5 bg-surface-card rounded-xl border border-purple-500/30 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-mono font-bold text-purple-400 uppercase flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px]">change_circle</span>
-                        <span>Concyclicity Test</span>
-                      </span>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
-                        concyclicTest.isCyclic
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                          : 'bg-red-500/20 text-red-300 border-red-500/40'
-                      }`}>
-                        {concyclicTest.isCyclic ? 'CONCYCLIC' : 'NON-CYCLIC'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                      <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                        <div className="text-[10px] text-slate-400">∠A + ∠C Sum</div>
-                        <div className="text-sm font-bold text-amber-400">{concyclicTest.sumOpposite1.toFixed(1)}°</div>
-                      </div>
-                      <div className="p-2 bg-surface-lowest rounded-lg border border-surface-border">
-                        <div className="text-[10px] text-slate-400">∠B + ∠D Sum</div>
-                        <div className="text-sm font-bold text-sky-400">{concyclicTest.sumOpposite2.toFixed(1)}°</div>
-                      </div>
-                    </div>
-
-                    <div className="text-[11px] text-slate-300 bg-surface-lowest p-2 rounded border border-surface-border leading-relaxed font-mono">
-                      Deviation from 180°: <span className="text-amber-400 font-bold">{concyclicTest.deviationDeg.toFixed(1)}°</span>.<br />
-                      Drag point D until opposite sum reaches exactly 180° to achieve concyclicity!
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
 
             {/* Delete button if object selected */}
             {selectedId && (
@@ -704,217 +341,650 @@ export const CircleInspectorPanel: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: INVESTIGATE - 7 Structured Stages */}
+        {/* ============================================================ */}
+        {/* MODE 2: INVESTIGATE (Part A: Progressive 6 Stages) */}
+        {/* ============================================================ */}
         {mode === 'investigate' && primaryTheorem && (
           <div className="space-y-4">
-            {/* 1. Mathematical Objective & Statement */}
-            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">flag</span>
-                  <span>1. Mathematical Objective</span>
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">Theorem Investigation</span>
+            {/* Stage Progress Ribbon */}
+            <div className="p-2.5 bg-surface-card rounded-xl border border-surface-border space-y-1.5">
+              <div className="flex justify-between items-center text-[11px] font-mono">
+                <span className="text-slate-400">Stage {currentStageIndex + 1} of 6</span>
+                <span className="text-sky-400 font-bold uppercase">{stagesList[currentStageIndex]?.title}</span>
               </div>
-              <div className="text-sm font-bold text-white">{primaryTheorem.title}</div>
-              <div className="text-xs text-slate-300 bg-surface-lowest p-2.5 rounded-lg border border-surface-border leading-relaxed">
-                <strong className="text-amber-400 block mb-0.5">Formal Statement:</strong>
-                {primaryTheorem.statement}
-              </div>
-            </div>
-
-            {/* 2. Initial Canonical Construction */}
-            <div className="p-3 bg-surface-card rounded-xl border border-surface-border space-y-2">
-              <div className="text-xs font-bold text-sky-400 uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">architecture</span>
-                <span>2. Canonical Construction</span>
-              </div>
-              <div className="text-xs text-slate-300">
-                {currentExperiment.description}
-              </div>
-            </div>
-
-            {/* 3. Prediction Prompt & Hypothesis */}
-            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2.5">
-              <div className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">psychology</span>
-                <span>3. Prediction Prompt</span>
-              </div>
-              <div className="text-xs text-slate-200 font-medium leading-relaxed">
-                {primaryTheorem.predictionQuestion.question}
-              </div>
-              <div className="space-y-1.5">
-                {primaryTheorem.predictionQuestion.options.map((opt, idx) => (
+              <div className="grid grid-cols-6 gap-1 h-1.5">
+                {stagesList.map((st, idx) => (
                   <button
-                    key={idx}
-                    onClick={() => {
-                      setSelectedPrediction(idx);
-                      setShowPredictionResult(true);
-                    }}
-                    className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${
-                      selectedPrediction === idx
-                        ? idx === primaryTheorem.predictionQuestion.correctIndex
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                          : 'bg-red-500/20 border-red-500 text-red-300'
-                        : 'bg-surface-lowest border-surface-border text-slate-300 hover:bg-surface-elevated'
+                    key={st.id}
+                    onClick={() => setInvestigationStage(st.id)}
+                    className={`h-full rounded-full transition-all ${
+                      idx === currentStageIndex
+                        ? 'bg-amber-400 shadow-sm'
+                        : idx < currentStageIndex
+                        ? 'bg-sky-500'
+                        : 'bg-surface-elevated'
                     }`}
-                  >
-                    {opt}
-                  </button>
+                    title={st.title}
+                  />
                 ))}
               </div>
-              {showPredictionResult && (
-                <div className="text-[11px] p-2.5 rounded-lg bg-surface-lowest border border-surface-border text-slate-300 mt-2 leading-relaxed">
-                  <strong className="text-amber-400 block mb-0.5">Explanation:</strong>
-                  {primaryTheorem.predictionQuestion.explanation}
-                </div>
-              )}
             </div>
 
-            {/* 4. Interactive Manipulation Checklist */}
-            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
-              <div className="text-xs font-bold text-sky-400 uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">touch_app</span>
-                <span>4. Interactive Manipulation</span>
-              </div>
-              <div className="text-xs text-slate-300 bg-surface-lowest p-2.5 rounded-lg border border-surface-border leading-relaxed">
-                {primaryTheorem.instructions}
-              </div>
+            {/* Category Badge & Concept Overview */}
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] border ${
+                primaryTheorem.category === 'definition'
+                  ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
+                  : primaryTheorem.category === 'property'
+                  ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                  : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+              }`}>
+                {primaryTheorem.category || 'Theorem'} Investigation
+              </span>
+              <button
+                onClick={resetInvestigation}
+                className="text-slate-400 hover:text-slate-200 text-[11px] flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                <span>Reset</span>
+              </button>
             </div>
 
-            {/* 5. Dynamic Observations & Invariants */}
-            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2">
-              <div className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">query_stats</span>
-                <span>5. Dynamic Observations</span>
-              </div>
-              {angleTheoremData && (
-                <div className="text-xs font-mono text-slate-200 bg-surface-lowest p-2 rounded border border-surface-border space-y-1">
-                  <div>Central Angle: <span className="text-sky-400 font-bold">{angleTheoremData.central}°</span></div>
-                  <div>Inscribed Angle: <span className="text-amber-400 font-bold">{angleTheoremData.inscribed}°</span></div>
-                  <div className="text-emerald-400 font-bold">Ratio (Central / Inscribed): {angleTheoremData.ratio}</div>
+            {/* STAGE 1: UNDERSTAND THE PROBLEM */}
+            {investigationStage === 'understand' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+                <div className="text-sm font-bold text-white">{primaryTheorem.title}</div>
+                <div className="text-xs text-slate-300 bg-surface-lowest p-2.5 rounded-lg border border-surface-border leading-relaxed space-y-1">
+                  <strong className="text-sky-400 block font-mono text-[11px] uppercase">Mathematical Statement:</strong>
+                  <p>{primaryTheorem.statement}</p>
                 </div>
-              )}
-              {quadVerification && (
-                <div className="text-xs font-mono text-slate-200 bg-surface-lowest p-2 rounded border border-surface-border space-y-1">
-                  <div>∠A + ∠C = <span className="text-amber-400 font-bold">{quadVerification.sumAC}°</span></div>
-                  <div>∠B + ∠D = <span className="text-emerald-400 font-bold">{quadVerification.sumBD}°</span></div>
-                  <div className="text-emerald-400">Condition: Supplementary (180°)</div>
+                {primaryTheorem.givenContext && (
+                  <div className="text-xs text-slate-300 bg-surface-lowest p-2.5 rounded-lg border border-surface-border leading-relaxed">
+                    <strong className="text-amber-400 block font-mono text-[11px] uppercase">Given Conditions:</strong>
+                    <p>{primaryTheorem.givenContext}</p>
+                  </div>
+                )}
+                <div className="text-xs text-slate-400 leading-relaxed">
+                  Carefully inspect the construction on the canvas. Next, formulate your prediction before performing geometric manipulations.
                 </div>
-              )}
-              <div className="text-[11px] text-slate-400 leading-relaxed italic">
-                {primaryTheorem.mathematicalConclusion}
+                <button
+                  onClick={() => setInvestigationStage('predict')}
+                  className="w-full py-2 bg-sky-500 hover:bg-sky-400 text-slate-900 font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>Proceed to Prediction</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
               </div>
-            </div>
+            )}
 
-            {/* 6. Guided Mathematical Proof */}
-            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-2.5">
-              <div className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-                <span>6. Guided Mathematical Proof</span>
-              </div>
-              <div className="space-y-1.5">
-                {primaryTheorem.proofSteps.map((step, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded-lg bg-surface-lowest border border-surface-border text-[11px] space-y-0.5 leading-relaxed"
+            {/* STAGE 2: PREDICT */}
+            {investigationStage === 'predict' && primaryTheorem.predictionQuestion && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+                <div className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1 font-mono">
+                  <span className="material-symbols-outlined text-[16px]">psychology</span>
+                  <span>Conceptual Prediction</span>
+                </div>
+                <div className="text-xs text-slate-200 font-medium leading-relaxed">
+                  {primaryTheorem.predictionQuestion.question}
+                </div>
+                <div className="space-y-1.5">
+                  {primaryTheorem.predictionQuestion.options.map((opt, idx) => {
+                    const isSelected = investigationPredictions[currentExperimentId] === opt;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => submitInvestigationPrediction(currentExperimentId, opt)}
+                        className={`w-full text-left p-2.5 rounded-lg text-xs transition-all border ${
+                          isSelected
+                            ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold'
+                            : 'bg-surface-lowest border-surface-border text-slate-300 hover:bg-surface-elevated'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="text-[11px] text-slate-400 italic">
+                  * Note: Theorem conclusions are intentionally withheld until you experiment on the canvas.
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setInvestigationStage('understand')}
+                    className="flex-1 py-1.5 bg-surface-elevated text-slate-300 font-semibold rounded-lg text-xs"
                   >
-                    <div className="font-semibold text-slate-200">
-                      {idx + 1}. {step.statement}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono italic">
-                      [Reason: {step.reason}]
+                    Back
+                  </button>
+                  <button
+                    onClick={() => setInvestigationStage('experiment')}
+                    disabled={!investigationPredictions[currentExperimentId]}
+                    className="flex-1 py-1.5 bg-sky-500 disabled:opacity-40 text-slate-900 font-bold rounded-lg text-xs transition-all"
+                  >
+                    Confirm & Experiment
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STAGE 3: EXPERIMENT & MANIPULATION */}
+            {investigationStage === 'experiment' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+                <div className="text-xs font-bold text-sky-400 uppercase flex items-center gap-1 font-mono">
+                  <span className="material-symbols-outlined text-[16px]">touch_app</span>
+                  <span>Geometric Manipulation Task</span>
+                </div>
+                <div className="text-xs text-slate-200 bg-surface-lowest p-2.5 rounded-lg border border-surface-border leading-relaxed space-y-1">
+                  <strong className="text-amber-400 block font-mono text-[11px]">Instructions:</strong>
+                  <p>{primaryTheorem.instructions}</p>
+                </div>
+
+                {/* Meaningful Interaction Progress Tracker */}
+                <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border space-y-1.5">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-slate-400">Meaningful Positions Explored:</span>
+                    <span className="text-amber-400 font-bold">
+                      {Math.min(3, manipulationPositionsRecorded.length)} / 3
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 h-1.5">
+                    {[0, 1, 2].map((idx) => (
+                      <div
+                        key={idx}
+                        className={`h-full rounded-full ${
+                          manipulationPositionsRecorded.length > idx || investigationTeacherBypassed
+                            ? 'bg-emerald-400'
+                            : 'bg-surface-elevated'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Drag the circumference point to at least 3 distinct angular positions (separated by ≥25°).
+                  </div>
+                </div>
+
+                {/* Teacher Demonstration Bypass */}
+                <div className="flex justify-between items-center text-[11px] text-slate-500 pt-1">
+                  <span>Classroom TV / Demo:</span>
+                  <button
+                    onClick={bypassInvestigationGate}
+                    className="text-sky-400 hover:text-sky-300 font-mono underline"
+                  >
+                    Skip Gate (Demonstrate)
+                  </button>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setInvestigationStage('predict')}
+                    className="flex-1 py-1.5 bg-surface-elevated text-slate-300 font-semibold rounded-lg text-xs"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => setInvestigationStage('observe')}
+                    disabled={manipulationPositionsRecorded.length < 3 && !investigationTeacherBypassed}
+                    className="flex-1 py-1.5 bg-sky-500 disabled:opacity-40 text-slate-900 font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-1"
+                  >
+                    <span>Record Observations</span>
+                    <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STAGE 4: RECORD OBSERVATIONS */}
+            {investigationStage === 'observe' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-sky-400 uppercase flex items-center gap-1 font-mono">
+                    <span className="material-symbols-outlined text-[16px]">table_chart</span>
+                    <span>Observation Table</span>
+                  </span>
+                  <button
+                    onClick={captureCurrentObservation}
+                    className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded text-xs flex items-center gap-1 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    <span>Capture Live Values</span>
+                  </button>
+                </div>
+
+                {/* Dynamic Observation Table (M2.4 Part A.5) */}
+                {capturedObservations.length === 0 ? (
+                  <div className="p-4 rounded-lg bg-surface-lowest border border-dashed border-surface-border text-center text-xs text-slate-400 space-y-1">
+                    <div>No observations recorded yet.</div>
+                    <div className="text-[11px] text-slate-500">
+                      Drag geometry on the canvas and click "Capture Live Values" to record geometric trials.
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: PRACTICE */}
-        {mode === 'practice' && primaryQuestion && (
-          <div className="space-y-4">
-            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
-              <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-emerald-400 text-[18px]">quiz</span>
-                <span>{primaryQuestion.title}</span>
-              </div>
-
-              <div className="text-xs text-slate-200 leading-relaxed bg-surface-lowest p-3 rounded-lg border border-surface-border">
-                {primaryQuestion.question}
-              </div>
-
-              {/* Input for Answer */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-mono text-slate-400">Your Answer:</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={practiceInput}
-                    onChange={(e) => setPracticeInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCheckAnswer();
-                    }}
-                    placeholder={`e.g. ${primaryQuestion.correctAnswer}`}
-                    className="flex-1 bg-surface-lowest border border-surface-border rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400"
-                  />
-                  <button
-                    onClick={handleCheckAnswer}
-                    className="py-1.5 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md"
-                  >
-                    Check
-                  </button>
-                </div>
-              </div>
-
-              {/* Feedback */}
-              {practiceAnswers[primaryQuestion.id] && (
-                <div
-                  className={`p-2.5 rounded-lg text-xs font-bold flex items-center gap-2 ${
-                    practiceAnswers[primaryQuestion.id].isCorrect
-                      ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-700/60'
-                      : 'bg-red-950/40 text-red-300 border border-red-700/60'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {practiceAnswers[primaryQuestion.id].isCorrect ? 'check_circle' : 'cancel'}
-                  </span>
-                  <span>
-                    {practiceAnswers[primaryQuestion.id].isCorrect
-                      ? 'Correct! Excellent application of the theorem.'
-                      : 'Incorrect. Try reviewing the theorem hint below.'}
-                  </span>
-                </div>
-              )}
-
-              {/* Hint & Solution toggle */}
-              <div className="pt-2 border-t border-surface-border space-y-2">
-                <div className="text-[11px] text-amber-300 bg-amber-950/30 p-2.5 rounded-lg border border-amber-800/40 leading-relaxed">
-                  <strong>Hint:</strong> {primaryQuestion.hint}
-                </div>
-
-                <button
-                  onClick={() => setShowPracticeSolution(!showPracticeSolution)}
-                  className="text-xs text-slate-400 hover:text-white underline font-mono block"
-                >
-                  {showPracticeSolution ? 'Hide Step-by-Step Solution' : 'Show Step-by-Step Solution'}
-                </button>
-
-                {showPracticeSolution && (
-                  <div className="p-3 rounded-lg bg-surface-lowest border border-surface-border text-xs text-slate-300 space-y-1.5 leading-relaxed">
-                    <strong className="text-emerald-400 block">Step-by-Step Solution:</strong>
-                    {primaryQuestion.stepByStepSolution.map((s, idx) => (
-                      <p key={idx} className="text-[11px] text-slate-300">
-                        • {s}
-                      </p>
+                ) : (
+                  <div className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar">
+                    {capturedObservations.map((obs) => (
+                      <div
+                        key={obs.id}
+                        className="p-2 bg-surface-lowest rounded-lg border border-surface-border text-xs font-mono space-y-1"
+                      >
+                        <div className="flex justify-between font-bold text-slate-200">
+                          <span>{obs.configurationLabel || obs.label || 'Trial'}</span>
+                          <span className="text-sky-400">{obs.invariantEvaluated || obs.notes || ''}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-400 pt-1 border-t border-surface-border">
+                          {Object.entries(obs.measurements || obs.metrics || {}).map(([k, v]) => (
+                            <div key={k} className="flex justify-between">
+                              <span>{k}:</span>
+                              <span className="text-slate-200">{String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                    <div className="text-[10px] text-slate-400 pt-1 font-mono">
-                      Theorem Applied: {primaryQuestion.theoremApplied}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={clearObservations}
+                        className="text-[11px] text-red-400 hover:text-red-300 font-mono"
+                      >
+                        Clear Trials
+                      </button>
                     </div>
                   </div>
                 )}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setInvestigationStage('experiment')}
+                    className="flex-1 py-1.5 bg-surface-elevated text-slate-300 font-semibold rounded-lg text-xs"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => setInvestigationStage('explain')}
+                    className="flex-1 py-1.5 bg-sky-500 text-slate-900 font-bold rounded-lg text-xs transition-all"
+                  >
+                    Proceed to Explanation
+                  </button>
+                </div>
               </div>
+            )}
+
+            {/* STAGE 5: EXPLAIN & INVARIANTS */}
+            {investigationStage === 'explain' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+                <div className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1 font-mono">
+                  <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                  <span>Hypothesis Comparison & Explanation</span>
+                </div>
+
+                {/* Prediction comparison */}
+                <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs space-y-1.5">
+                  <div className="text-[11px] text-slate-400 font-mono uppercase">Your Submitted Prediction:</div>
+                  <div className="text-amber-300 font-semibold">
+                    "{investigationPredictions[currentExperimentId] || 'No prediction recorded'}"
+                  </div>
+                </div>
+
+                {/* Mathematical Synthesis */}
+                <div className="p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs text-slate-200 leading-relaxed space-y-1">
+                  <strong className="text-emerald-400 block font-mono text-[11px] uppercase">Why This Invariant Holds:</strong>
+                  <p>{primaryTheorem.predictionQuestion?.explanation || primaryTheorem.statement}</p>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setInvestigationStage('observe')}
+                    className="flex-1 py-1.5 bg-surface-elevated text-slate-300 font-semibold rounded-lg text-xs"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => setInvestigationStage('prove_or_conclude')}
+                    className="flex-1 py-1.5 bg-sky-500 text-slate-900 font-bold rounded-lg text-xs transition-all"
+                  >
+                    {primaryTheorem.category === 'definition' ? 'Final Conclusion' : 'Stepwise Proof'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STAGE 6: PROVE OR CONCLUDE (M2.4 Part A.6) */}
+            {investigationStage === 'prove_or_conclude' && (
+              <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+                <div className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-1 font-mono">
+                  <span className="material-symbols-outlined text-[16px]">verified</span>
+                  <span>{primaryTheorem.category === 'definition' ? 'Conceptual Conclusion' : 'Stepwise Euclidean Proof'}</span>
+                </div>
+
+                {primaryTheorem.category === 'definition' ? (
+                  <div className="space-y-3">
+                    <div className="text-xs text-slate-200 bg-surface-lowest p-3 rounded-lg border border-surface-border leading-relaxed space-y-2">
+                      <p>{primaryTheorem.mathematicalConclusion}</p>
+                      <div className="text-[11px] text-emerald-400 font-mono">
+                        ✓ Definition explored and validated through interactive radial locus.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Stepwise Euclidean Proof Viewer with Missing Reason selectors
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-xs font-mono text-slate-400">
+                      <span>Step {proofStepIndex + 1} of {primaryTheorem.proofSteps.length}</span>
+                      <span className="text-emerald-400 font-bold">Q.E.D. Progress</span>
+                    </div>
+
+                    {primaryTheorem.proofSteps[proofStepIndex] && (
+                      <div className="p-3 bg-surface-lowest rounded-lg border border-surface-border space-y-2 text-xs">
+                        <div className="text-slate-100 font-medium leading-relaxed">
+                          <strong className="text-sky-400 block font-mono text-[11px]">Statement:</strong>
+                          {primaryTheorem.proofSteps[proofStepIndex].statement}
+                        </div>
+
+                        {/* Interactive Missing Reason Selector */}
+                        {primaryTheorem.proofSteps[proofStepIndex].missingReasonOptions ? (
+                          <div className="space-y-1.5 pt-1">
+                            <strong className="text-amber-400 block font-mono text-[11px]">Choose Correct Reason:</strong>
+                            {primaryTheorem.proofSteps[proofStepIndex].missingReasonOptions?.map((reason, rIdx) => {
+                              const isSelected = selectedMissingReasons[proofStepIndex] === reason;
+                              const isCorrect = rIdx === primaryTheorem.proofSteps[proofStepIndex].correctReasonIndex;
+                              return (
+                                <button
+                                  key={rIdx}
+                                  onClick={() => selectMissingReason(proofStepIndex, reason)}
+                                  className={`w-full text-left p-2 rounded text-[11px] transition-all border ${
+                                    isSelected
+                                      ? isCorrect
+                                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                                        : 'bg-red-500/20 border-red-500 text-red-300 font-bold'
+                                      : 'bg-surface-elevated border-surface-border text-slate-300 hover:bg-surface-high'
+                                  }`}
+                                >
+                                  {reason}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-slate-300 pt-1 border-t border-surface-border leading-relaxed">
+                            <strong className="text-amber-400 block font-mono text-[11px]">Reason:</strong>
+                            {primaryTheorem.proofSteps[proofStepIndex].reason}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Step Navigation */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={prevProofStep}
+                        disabled={proofStepIndex === 0}
+                        className="flex-1 py-1.5 bg-surface-elevated disabled:opacity-30 text-slate-300 font-semibold rounded-lg text-xs"
+                      >
+                        Previous Step
+                      </button>
+                      <button
+                        onClick={nextProofStep}
+                        disabled={proofStepIndex >= primaryTheorem.proofSteps.length - 1}
+                        className="flex-1 py-1.5 bg-sky-500 disabled:opacity-30 text-slate-900 font-bold rounded-lg text-xs"
+                      >
+                        Next Step
+                      </button>
+                    </div>
+
+                    {proofStepIndex >= primaryTheorem.proofSteps.length - 1 && (
+                      <div className="p-2.5 rounded bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs font-mono text-center">
+                        ✓ Theorem Complete & Mathematically Validated (Q.E.D.)
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setInvestigationStage('explain')}
+                    className="w-full py-1.5 bg-surface-elevated text-slate-300 font-semibold rounded-lg text-xs"
+                  >
+                    Back to Explanation
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* MODE 3: PRACTICE ENGINE (Part B: Diagram Synchronization) */}
+        {/* ============================================================ */}
+        {mode === 'practice' && (
+          <div className="space-y-4">
+            {/* Topic Filter & Difficulty Selector */}
+            <div className="p-3 bg-surface-card rounded-xl border border-surface-border space-y-2">
+              <div className="flex justify-between items-center text-xs font-mono text-slate-400">
+                <span>Filter Practice Bank</span>
+                <span className="text-emerald-400 font-bold">{filteredPracticeQuestions.length} Questions</span>
+              </div>
+
+              {/* Difficulty Selector */}
+              <div className="flex gap-1">
+                {(['all', 'basic', 'standard', 'challenge'] as (PracticeDifficulty | 'all')[]).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setPracticeDifficulty(d)}
+                    className={`flex-1 py-1 rounded text-[10px] font-mono font-bold uppercase transition-all ${
+                      activePracticeDifficulty === d
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                        : 'bg-surface-lowest text-slate-400 hover:text-slate-200 border border-surface-border'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Question Navigator Header */}
+            <div className="flex justify-between items-center bg-surface-card p-2.5 rounded-xl border border-surface-border">
+              <button
+                onClick={prevPracticeQuestion}
+                className="p-1 rounded hover:bg-surface-elevated text-slate-300"
+                title="Previous Question"
+              >
+                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+              </button>
+              <div className="text-center font-mono">
+                <span className="text-xs font-bold text-white">
+                  Question {currentQuestionIndex + 1} of {filteredPracticeQuestions.length}
+                </span>
+                <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                  <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                    activeQuestion.difficulty === 'basic'
+                      ? 'bg-sky-500/20 text-sky-400'
+                      : activeQuestion.difficulty === 'standard'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-purple-500/20 text-purple-400'
+                  }`}>
+                    {activeQuestion.difficulty}
+                  </span>
+                  <span className="text-[10px] text-slate-400">{activeQuestion.marks} Marks</span>
+                  {activeQuestion.isNCERTSourced && (
+                    <span className="text-[9px] px-1 rounded bg-emerald-500/20 text-emerald-400 font-bold">
+                      NCERT
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={nextPracticeQuestion}
+                className="p-1 rounded hover:bg-surface-elevated text-slate-300"
+                title="Next Question"
+              >
+                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+              </button>
+            </div>
+
+            {/* Authoritative Matching Givens Card (Part B.7: Single Source of Truth) */}
+            <div className="p-3 bg-surface-card rounded-xl border border-emerald-500/30 space-y-2">
+              <div className="flex justify-between items-center text-xs font-mono">
+                <span className="text-emerald-400 font-bold uppercase flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px]">verified</span>
+                  <span>Matching Diagram Givens</span>
+                </span>
+                <span className="text-[10px] text-slate-400">Isolated Practice Scene</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
+                {Object.entries(activeQuestion.givens || {}).map(([key, val]) => (
+                  <div key={key} className="p-1.5 bg-surface-lowest rounded border border-surface-border">
+                    <span className="text-[10px] text-slate-400 block capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                    <span className="text-slate-200 font-bold">{String(val)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Question Text Card */}
+            <div className="p-3.5 bg-surface-card rounded-xl border border-surface-border space-y-3">
+              <div className="text-sm font-bold text-white leading-relaxed">
+                {activeQuestion.question}
+              </div>
+
+              {/* Type-Specific Answer Submission Card */}
+              {activeQuestion.type === 'numeric' && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-[11px] font-mono text-slate-400 block">
+                    Enter your calculated answer:
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. 8 cm"
+                      value={practiceInput}
+                      onChange={(e) => setPracticeInput(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-surface-lowest border border-surface-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      onClick={handleCheckPracticeAnswer}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-lg text-xs transition-all"
+                    >
+                      Check
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {(activeQuestion.type === 'multiple_choice' || activeQuestion.type === 'diagram_reasoning') && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-[11px] font-mono text-slate-400 block">Select the correct option:</label>
+                  <div className="space-y-1.5">
+                    {activeQuestion.options?.map((opt, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedMcqOption(idx)}
+                        className={`w-full text-left p-2.5 rounded-lg text-xs transition-all border ${
+                          selectedMcqOption === idx
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                            : 'bg-surface-lowest border-surface-border text-slate-300 hover:bg-surface-elevated'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleCheckPracticeAnswer}
+                    disabled={selectedMcqOption === null}
+                    className="w-full py-2 bg-emerald-500 disabled:opacity-40 hover:bg-emerald-400 text-slate-900 font-bold rounded-lg text-xs transition-all"
+                  >
+                    Submit Choice
+                  </button>
+                </div>
+              )}
+
+              {activeQuestion.type === 'construction' && (
+                <div className="space-y-2 pt-1">
+                  <div className="text-xs text-slate-300 bg-surface-lowest p-2.5 rounded-lg border border-surface-border leading-relaxed">
+                    Use the toolbar construction tools (Diameter, Chord, Point) on the canvas to build the required geometry.
+                  </div>
+                  <button
+                    onClick={handleCheckPracticeAnswer}
+                    className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold rounded-lg text-xs transition-all"
+                  >
+                    Verify Construction Geometry
+                  </button>
+                </div>
+              )}
+
+              {/* Result Banner */}
+              {activeQuestionState && (
+                <div className={`p-3 rounded-lg border text-xs font-mono ${
+                  activeQuestionState.isCorrect
+                    ? 'bg-emerald-950/40 border-emerald-700/60 text-emerald-300'
+                    : 'bg-red-950/40 border-red-700/60 text-red-300'
+                }`}>
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">
+                      {activeQuestionState.isCorrect ? 'check_circle' : 'cancel'}
+                    </span>
+                    <span>{activeQuestionState.isCorrect ? 'Correct! Full Marks Awarded' : 'Incorrect. Check your calculations.'}</span>
+                  </div>
+                  {!activeQuestionState.isCorrect && (
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      Expected answer: {String(activeQuestion.correctAnswer)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Hints & Solution Controls */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => revealPracticeHint(activeQuestion.id)}
+                  disabled={Boolean(activeQuestionState?.hintsRevealed && activeQuestion.hintSteps && activeQuestionState.hintsRevealed >= activeQuestion.hintSteps.length)}
+                  className="flex-1 py-1.5 bg-surface-elevated text-slate-300 hover:text-white rounded-lg text-xs font-mono"
+                >
+                  Hint ({activeQuestionState?.hintsRevealed || 0}/{activeQuestion.hintSteps?.length || 0})
+                </button>
+                <button
+                  onClick={() => togglePracticeSolution(activeQuestion.id)}
+                  className="flex-1 py-1.5 bg-surface-elevated text-slate-300 hover:text-white rounded-lg text-xs font-mono"
+                >
+                  {activeQuestionState?.showSolution ? 'Hide Solution' : 'Worked Solution'}
+                </button>
+                <button
+                  onClick={() => {
+                    retryPracticeQuestion(activeQuestion.id);
+                    setPracticeInput('');
+                    setSelectedMcqOption(null);
+                  }}
+                  className="px-2.5 py-1.5 bg-surface-elevated text-slate-400 hover:text-slate-200 rounded-lg text-xs font-mono"
+                  title="Retry"
+                >
+                  <span className="material-symbols-outlined text-[16px]">refresh</span>
+                </button>
+              </div>
+
+              {/* Progressive Hint Reveal */}
+              {activeQuestionState?.hintsRevealed && activeQuestionState.hintsRevealed > 0 && activeQuestion.hintSteps && (
+                <div className="space-y-1.5 p-2.5 bg-surface-lowest rounded-lg border border-surface-border text-xs">
+                  <div className="font-bold text-amber-400 font-mono text-[11px]">Hints:</div>
+                  {activeQuestion.hintSteps.slice(0, activeQuestionState.hintsRevealed).map((h, i) => (
+                    <div key={i} className="text-slate-300 leading-relaxed">
+                      {i + 1}. {h}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Step-by-Step Worked Solution */}
+              {activeQuestionState?.showSolution && (
+                <div className="space-y-2 p-3 bg-surface-lowest rounded-lg border border-surface-border text-xs">
+                  <div className="font-bold text-emerald-400 font-mono text-[11px] uppercase">
+                    Step-by-Step Mathematical Solution:
+                  </div>
+                  {activeQuestion.stepByStepSolution.map((step, idx) => (
+                    <div key={idx} className="text-slate-300 leading-relaxed font-mono text-[11px]">
+                      • {step}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

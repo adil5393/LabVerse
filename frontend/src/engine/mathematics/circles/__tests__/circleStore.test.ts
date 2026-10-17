@@ -210,12 +210,12 @@ describe('useCircleStore & Architectural Module Isolation', () => {
       expect(useCircleStore.getState().mode).toBe('investigate');
       expect(useCircleStore.getState().circles[circleId]).toBeDefined();
 
-      // Switch to practice
+      // Switch to practice (M2.4: Practice scene is isolated to match question givens)
       store.setMode('practice');
       expect(useCircleStore.getState().mode).toBe('practice');
-      expect(useCircleStore.getState().circles[circleId]).toBeDefined();
+      expect(useCircleStore.getState().exploreSceneSnapshot?.circles[circleId]).toBeDefined();
 
-      // Switch back to explore
+      // Switch back to explore: student's explore scene is restored completely
       store.setMode('explore');
       expect(useCircleStore.getState().mode).toBe('explore');
       expect(useCircleStore.getState().circles[circleId]).toBeDefined();

@@ -117,6 +117,9 @@ export const CircleCanvas: React.FC = () => {
     tangents,
     cyclicQuads,
     selectedId,
+    selectedType,
+    mode,
+    lockedElementIds,
     activeTool,
     constructionStep,
     viewport,
@@ -128,6 +131,8 @@ export const CircleCanvas: React.FC = () => {
     setViewport,
     updateCircle,
     updateCircumferencePoint,
+    setCircleRadius,
+    recordManipulationAngle,
     addCircle,
     addCircumferencePoint,
     addChord,
@@ -142,6 +147,7 @@ export const CircleCanvas: React.FC = () => {
     zoomOut,
     resetZoom,
     currentExperimentId,
+    activePracticeQuestionId,
     symmetryRotation,
     symmetryReflectionAxis,
     symmetryShowRotated,
@@ -153,6 +159,7 @@ export const CircleCanvas: React.FC = () => {
   const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [draggedPointId, setDraggedPointId] = useState<string | null>(null);
   const [draggedCircleCenterId, setDraggedCircleCenterId] = useState<string | null>(null);
+  const [draggedResizeCircleId, setDraggedResizeCircleId] = useState<string | null>(null);
   const [previewPoint, setPreviewPoint] = useState<WorldPoint | null>(null);
   const [pointMissedNotice, setPointMissedNotice] = useState<string | null>(null);
 
@@ -163,6 +170,17 @@ export const CircleCanvas: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [pointMissedNotice]);
+
+  // Auto-fit construction on experiment, practice question or mode change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (canvas && canvas.width > 0 && canvas.height > 0) {
+        fitToConstruction(canvas.width, canvas.height);
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [currentExperimentId, activePracticeQuestionId, mode]);
 
   // Resize canvas to parent container
   useEffect(() => {
@@ -365,6 +383,39 @@ export const CircleCanvas: React.FC = () => {
             fillColor: '#94a3b8',
             haloColor: '#090d16',
             haloWidth: typography.haloWidth,
+          }
+        );
+      }
+
+      // Drag-to-resize handle (Explore Mode & Selected)
+      if (isSelected && mode === 'explore') {
+        const handleX = centerScreen.x + radiusScreen;
+        const handleY = centerScreen.y;
+
+        // Outer glow ring
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(handleX, handleY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Handle center
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(handleX, handleY, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Resize badge
+        drawPillBadge(
+          ctx,
+          `Resize: r=${circle.radius.toFixed(1)}`,
+          handleX + 14,
+          handleY - 14,
+          {
+            bgColor: 'rgba(15, 23, 42, 0.90)',
+            textColor: '#f59e0b',
+            borderColor: '#f59e0b',
+            fontSize: 11,
           }
         );
       }
@@ -1007,6 +1058,19 @@ export const CircleCanvas: React.FC = () => {
 
     // 1. SELECT TOOL
     if (activeTool === 'select') {
+      // Check circle resize handle first (Explore Mode & Selected Circle)
+      if (mode === 'explore' && selectedType === 'circle' && selectedId && circles[selectedId]) {
+        const selCircle = circles[selectedId];
+        const centerScreen = toScreen(selCircle.center);
+        const handleX = centerScreen.x + selCircle.radius * zoom;
+        const handleY = centerScreen.y;
+        if (pointHitsScreenPoint(screenX, screenY, handleX, handleY, HIT_TOLERANCE_PX + 4)) {
+          setDraggedResizeCircleId(selectedId);
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          return;
+        }
+      }
+
       // Check circumference points first
       for (const pt of Object.values(circumferencePoints)) {
         const circle = circles[pt.circleId];
@@ -1014,6 +1078,10 @@ export const CircleCanvas: React.FC = () => {
         const ptScreen = toScreen(getCircumferenceCoords(circle, pt.angleRad));
         if (pointHitsScreenPoint(screenX, screenY, ptScreen.x, ptScreen.y, HIT_TOLERANCE_PX)) {
           selectObject(pt.id, 'point');
+          if (mode === 'practice' && lockedElementIds.includes(pt.id)) {
+            setPointMissedNotice(`Point "${pt.name}" is a locked given for this question and cannot be moved.`);
+            return;
+          }
           setDraggedPointId(pt.id);
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
           return;
@@ -1025,6 +1093,10 @@ export const CircleCanvas: React.FC = () => {
         const centerScreen = toScreen(circle.center);
         if (pointHitsScreenPoint(screenX, screenY, centerScreen.x, centerScreen.y, HIT_TOLERANCE_PX)) {
           selectObject(circle.id, 'circle');
+          if (mode === 'practice' && lockedElementIds.includes(circle.id)) {
+            setPointMissedNotice(`Center of ${circle.name} is a locked given for this question.`);
+            return;
+          }
           setDraggedCircleCenterId(circle.id);
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
           return;
@@ -1355,6 +1427,10 @@ export const CircleCanvas: React.FC = () => {
         if (!circle) continue;
         const ptScreen = toScreen(getCircumferenceCoords(circle, pt.angleRad));
         if (pointHitsScreenPoint(screenX, screenY, ptScreen.x, ptScreen.y, HIT_TOLERANCE_PX)) {
+          if (mode === 'practice' && lockedElementIds.includes(pt.id)) {
+            setPointMissedNotice('Cannot delete question givens in Practice mode.');
+            return;
+          }
           deleteObject(pt.id, 'point');
           return;
         }
@@ -1376,6 +1452,10 @@ export const CircleCanvas: React.FC = () => {
           distanceToScreenSegment(screenX, screenY, vPos.x, vPos.y, p1Pos.x, p1Pos.y) <= HIT_TOLERANCE_PX ||
           distanceToScreenSegment(screenX, screenY, vPos.x, vPos.y, p2Pos.x, p2Pos.y) <= HIT_TOLERANCE_PX
         ) {
+          if (mode === 'practice' && lockedElementIds.includes(ang.id)) {
+            setPointMissedNotice('Cannot delete question givens in Practice mode.');
+            return;
+          }
           deleteObject(ang.id, 'angle');
           return;
         }
@@ -1389,6 +1469,10 @@ export const CircleCanvas: React.FC = () => {
         const posA = toScreen(getCircumferenceCoords(circle, ptA.angleRad));
         const posB = toScreen(getCircumferenceCoords(circle, ptB.angleRad));
         if (distanceToScreenSegment(screenX, screenY, posA.x, posA.y, posB.x, posB.y) <= HIT_TOLERANCE_PX) {
+          if (mode === 'practice' && lockedElementIds.includes(chord.id)) {
+            setPointMissedNotice('Cannot delete question givens in Practice mode.');
+            return;
+          }
           deleteObject(chord.id, 'chord');
           return;
         }
@@ -1401,6 +1485,10 @@ export const CircleCanvas: React.FC = () => {
         const pos1 = toScreen(getCircumferenceCoords(circle, pt1.angleRad));
         const centerPos = toScreen(circle.center);
         if (distanceToScreenSegment(screenX, screenY, pos1.x, pos1.y, centerPos.x, centerPos.y) <= HIT_TOLERANCE_PX) {
+          if (mode === 'practice' && lockedElementIds.includes(item.id)) {
+            setPointMissedNotice('Cannot delete question givens in Practice mode.');
+            return;
+          }
           deleteObject(item.id, 'radius_diameter');
           return;
         }
@@ -1418,6 +1506,10 @@ export const CircleCanvas: React.FC = () => {
             HIT_TOLERANCE_PX
           )
         ) {
+          if (mode === 'practice' && lockedElementIds.includes(circle.id)) {
+            setPointMissedNotice('Cannot delete question givens in Practice mode.');
+            return;
+          }
           deleteObject(circle.id, 'circle');
           return;
         }
@@ -1446,6 +1538,17 @@ export const CircleCanvas: React.FC = () => {
       return;
     }
 
+    // Dragging Circle Resize Handle
+    if (draggedResizeCircleId) {
+      const circle = circles[draggedResizeCircleId];
+      if (circle) {
+        const newRadius = distanceBetween(currentWorld, circle.center);
+        const clamped = Math.max(1.0, Math.min(15.0, Number(newRadius.toFixed(2))));
+        updateCircle(draggedResizeCircleId, { radius: clamped });
+      }
+      return;
+    }
+
     // Dragging Circumference Point
     if (draggedPointId) {
       const pt = circumferencePoints[draggedPointId];
@@ -1455,6 +1558,9 @@ export const CircleCanvas: React.FC = () => {
 
       const angleRad = projectPointToCircleAngle(circle.center, currentWorld);
       updateCircumferencePoint(draggedPointId, angleRad);
+      if (mode === 'investigate') {
+        recordManipulationAngle(angleRad);
+      }
       return;
     }
 
@@ -1476,6 +1582,18 @@ export const CircleCanvas: React.FC = () => {
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (isPanning) {
       setIsPanning(false);
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignored
+      }
+    }
+    if (draggedResizeCircleId) {
+      const circle = circles[draggedResizeCircleId];
+      if (circle) {
+        setCircleRadius(draggedResizeCircleId, circle.radius);
+      }
+      setDraggedResizeCircleId(null);
       try {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {

@@ -117,6 +117,29 @@ export type CircleConstructionStep =
   | { type: 'measuring_angle'; circleId?: string; points: string[] }
   | { type: 'creating_tangent'; circleId?: string };
 
+export type InvestigationCategory = 'definition' | 'property' | 'theorem';
+
+export type InvestigationStageId =
+  | 'understand'
+  | 'predict'
+  | 'experiment'
+  | 'observe'
+  | 'explain'
+  | 'prove_or_conclude';
+
+export interface CapturedObservation {
+  id: string;
+  stepNumber?: number;
+  trialNumber?: number;
+  timestamp: number;
+  label?: string;
+  configurationLabel?: string;
+  metrics?: Record<string, number | string>;
+  measurements?: Record<string, number | string>;
+  notes?: string;
+  invariantEvaluated?: string;
+}
+
 export interface CircleExperimentDefinition {
   id: string;
   title: string;
@@ -141,8 +164,10 @@ export interface CircleExperimentDefinition {
 export interface TheoremInvestigation {
   id: string;
   title: string;
+  category?: InvestigationCategory;
   statement: string;
-  hypothesis: string;
+  hypothesis?: string;
+  givenContext?: string;
   instructions: string;
   predictionQuestion: {
     question: string;
@@ -150,23 +175,82 @@ export interface TheoremInvestigation {
     correctIndex: number;
     explanation: string;
   };
+  experimentTask?: {
+    instruction: string;
+    actionHint: string;
+    requiredInteractionType:
+      | 'drag_circumference_point'
+      | 'transform_symmetry'
+      | 'manipulate_chords'
+      | 'drag_triangle_vertices'
+      | 'drag_quad_vertices'
+      | 'measure_angles';
+    targetMetric: string;
+    minDistinctPositions: number;
+  };
+  explainSynthesis?: string;
   proofSteps: {
     statement: string;
     reason: string;
+    missingReasonOptions?: string[];
+    correctReasonIndex?: number;
   }[];
   mathematicalConclusion: string;
 }
 
+export type PracticeQuestionType =
+  | 'numeric'
+  | 'multiple_choice'
+  | 'diagram_reasoning'
+  | 'construction'
+  | 'proof';
+
+export type PracticeDifficulty = 'basic' | 'standard' | 'challenge';
+
+export interface PracticeSceneDefinition {
+  circles: CircleObject[];
+  circumferencePoints: CircumferencePoint[];
+  chords: CircleChord[];
+  radiusDiameters: CircleRadiusDiameter[];
+  angles: CircleAngleMeasurement[];
+  tangents: CircleTangent[];
+  cyclicQuads: CyclicQuadrilateral[];
+  lockedElementIds?: string[];
+}
+
 export interface PracticeQuestion {
   id: string;
+  topicId?: string;
+  topicTitle?: string;
+  difficulty?: PracticeDifficulty;
+  type?: PracticeQuestionType;
   title: string;
   question: string;
   diagramDescription?: string;
   diagramValues?: Record<string, number | string>;
+  givens?: Record<string, number | string>;
+  diagram?: PracticeSceneDefinition;
+  options?: string[];
   correctAnswer: number | string;
+  correctOptionIndex?: number;
   tolerance?: number;
   unit?: string;
-  hint: string;
+  hint?: string;
+  hintSteps?: string[];
   stepByStepSolution: string[];
   theoremApplied: string;
+  marks?: number;
+  isNCERTSourced?: boolean;
+  constructionVerification?: {
+    requiredType:
+      | 'diameter'
+      | 'equal_chords'
+      | 'perpendicular_bisector'
+      | 'circumcircle'
+      | 'cyclic_quad'
+      | 'angle';
+    tolerance?: number;
+    expectedCount?: { diameters?: number; chords?: number };
+    minPointsCount?: number;
+  };
 }

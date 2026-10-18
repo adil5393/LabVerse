@@ -53,14 +53,15 @@ const MATH_MODULES: MathModule[] = [
   {
     id: 'quadrilaterals',
     title: 'Quadrilaterals',
-    subtitle: 'Parallelograms, Rectangles & Rhombuses',
-    category: 'Class 9 Mathematics',
+    subtitle: 'Parallelograms, Midpoint Theorem & Varignon',
+    category: 'Class 9 NCERT Ganita Manjari',
     description:
-      'Investigate diagonal bisections, opposite angle congruences, and area properties across special quadrilateral families.',
+      'Investigate parallelogram invariants, the Midpoint Theorem, triangle medians & centroids, Varignon parallelograms, and plane tiling with interactive proofs.',
     icon: 'crop_square',
-    status: 'upcoming',
-    experimentsCount: 4,
-    badge: 'Upcoming Module',
+    status: 'active',
+    experimentsCount: 14,
+    route: '/mathematics/quadrilaterals',
+    badge: 'Active Laboratory',
   },
   {
     id: 'linear-equations',
@@ -126,7 +127,7 @@ export const MathematicsLab: React.FC = () => {
 
           <div className="hidden sm:flex items-center gap-3 text-xs font-mono text-slate-400">
             <span className="px-2 py-0.5 rounded bg-surface-container border border-surface-border">
-              4 Core Modules • 1 Active
+              6 Modules • 3 Active Laboratories
             </span>
           </div>
         </div>

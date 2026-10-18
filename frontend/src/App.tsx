@@ -9,6 +9,8 @@ import { ChemistryLab } from './features/chemistry/ChemistryLab';
 import { StatesOfMatterWorkbench } from './features/chemistry/StatesOfMatterWorkbench';
 import { CirclesLab } from './features/mathematics/circles/CirclesLab';
 import { CircleWorkbenchPage } from './features/mathematics/circles/CircleWorkbenchPage';
+import { QuadrilateralsLab } from './features/mathematics/quadrilaterals/QuadrilateralsLab';
+import { QuadrilateralWorkbenchPage } from './features/mathematics/quadrilaterals/QuadrilateralWorkbenchPage';
 
 export const App: React.FC = () => {
   return (
@@ -38,6 +40,12 @@ export const App: React.FC = () => {
 
         {/* Route 7: Interactive Circles Workbench */}
         <Route path="/mathematics/circles/workbench" element={<CircleWorkbenchPage />} />
+
+        {/* Route 8: Quadrilaterals Module Landing Page */}
+        <Route path="/mathematics/quadrilaterals" element={<QuadrilateralsLab />} />
+
+        {/* Route 9: Interactive Quadrilaterals Workbench */}
+        <Route path="/mathematics/quadrilaterals/workbench" element={<QuadrilateralWorkbenchPage />} />
 
         {/* Route 8: Chemistry Laboratory Landing Page */}
         <Route path="/chemistry" element={<ChemistryLab />} />

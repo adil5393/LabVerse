@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   UNDERSTANDING_DATA_PRACTICE_BANK as BANK, checkPracticeAnswer, PRACTICE_COUNTS, getPracticeQuestionById,
 } from '../practiceBank';
-import { UD_GUIDED_LESSONS, UD_GUIDED_UNITS, UD_LESSON_ORDER } from '../curriculumPath';
+import { UD_GUIDED_LESSONS, UD_GUIDED_UNITS, UD_LESSON_ORDER, UD_OPTIONAL_LESSON_IDS } from '../curriculumPath';
 import { UD_EXPERIMENTS, getUDExperiment } from '../experimentRegistry';
 import { UD_COVERAGE } from '../curriculumRegistry';
 import { CHART_PRESETS } from '../presets';
 import { buildChallenges } from '../challenges';
 import { groupShares, groupTotal, cell, largestGroupTotal } from '../charts';
-import { formatExact, toNumber, q, eq } from '../rational';
+import { formatExact, formatSmart, toNumber, q, eq } from '../rational';
 import type { UDPracticeQuestion } from '../types';
 
 const byTitle = (t: string): UDPracticeQuestion => {
@@ -164,7 +164,7 @@ describe('practice bank integrity', () => {
       const text = x.workedSolution.join(' ');
       const exact = formatExact(x.answer.value);
       const dp = x.answer.decimals;
-      const candidates = [exact, ...(dp !== undefined ? [toNumber(x.answer.value).toFixed(dp), String(Number(toNumber(x.answer.value).toFixed(dp)))] : [])];
+      const candidates = [exact, formatSmart(x.answer.value, 3), ...(dp !== undefined ? [toNumber(x.answer.value).toFixed(dp), String(Number(toNumber(x.answer.value).toFixed(dp)))] : [])];
       expect(candidates.some((c) => text.includes(c)), `${x.id} ${x.title}: solution should mention ${candidates.join(' or ')}`).toBe(true);
     }
   });
@@ -208,10 +208,17 @@ describe('chart challenges derive from the data', () => {
 });
 
 describe('curriculum', () => {
-  it('has 13 lessons in 4 units in order', () => {
-    expect(Object.keys(UD_GUIDED_LESSONS)).toHaveLength(13);
-    expect(UD_GUIDED_UNITS).toHaveLength(4);
+  it('has 13 required lessons in 4 units in order, plus 3 optional extensions in their own unit', () => {
+    expect(UD_LESSON_ORDER).toHaveLength(13);
+    expect(UD_OPTIONAL_LESSON_IDS).toEqual(['ud-l14', 'ud-l15', 'ud-l16']);
+    expect(Object.keys(UD_GUIDED_LESSONS)).toHaveLength(16);
+    expect(UD_GUIDED_UNITS).toHaveLength(5);
     UD_LESSON_ORDER.forEach((id, i) => expect(UD_GUIDED_LESSONS[id].lessonNumber).toBe(i + 1));
+    for (const id of UD_OPTIONAL_LESSON_IDS) expect(UD_GUIDED_LESSONS[id].isOptionalExtension).toBe(true);
+    for (const id of UD_LESSON_ORDER) expect(UD_GUIDED_LESSONS[id].isOptionalExtension).toBeFalsy();
+    // the original 13 lessons keep their ids and titles, so saved progress stays attached
+    expect(UD_GUIDED_LESSONS['ud-l1'].title).toBe('Why Averages Can Mislead');
+    expect(UD_GUIDED_LESSONS['ud-l13'].title).toBe('Chapter Practice and Revision');
   });
   it('lessons reference real experiments and questions, and follow the stage order', () => {
     const order = ['understand', 'predict', 'experiment', 'observe', 'explain', 'practice'];
@@ -226,7 +233,7 @@ describe('curriculum', () => {
       if (l.stages.includes('predict')) expect(Boolean(l.predictionQuestion) !== Boolean(l.numericPrediction), `${l.id}: exactly one kind of prediction`).toBe(true);
       if (l.stages.includes('experiment')) expect(l.experimentGuide.minInteractionsNeeded ?? 0, l.id).toBeGreaterThan(0);
     }
-    expect(Object.values(UD_GUIDED_LESSONS).filter((l) => l.stages.length === 6)).toHaveLength(12);
+    expect(Object.values(UD_GUIDED_LESSONS).filter((l) => l.stages.length === 6)).toHaveLength(15); // 12 required + 3 optional
   });
   it('never states the prediction answer in the Understand stage', () => {
     for (const l of Object.values(UD_GUIDED_LESSONS)) {

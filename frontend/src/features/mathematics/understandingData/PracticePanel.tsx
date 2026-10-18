@@ -30,7 +30,7 @@ export const PracticePanel: React.FC = () => {
             </div>
             <div className="flex items-center gap-1 bg-surface-lowest p-1 rounded-xl border border-surface-border text-xs font-mono" role="tablist" aria-label="Difficulty">
               {(['all', 'basic', 'standard', 'challenge'] as const).map((d) => (
-                <button key={d} type="button" role="tab" aria-selected={filter === d} onClick={() => setFilter(d)} className={`min-h-10 px-3 rounded-lg font-bold capitalize ${filter === d ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>{d}</button>
+                <button key={d} type="button" role="tab" aria-selected={filter === d} onClick={() => setFilter(d)} className={`min-h-11 px-3 rounded-lg font-bold capitalize ${filter === d ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>{d}</button>
               ))}
             </div>
           </div>

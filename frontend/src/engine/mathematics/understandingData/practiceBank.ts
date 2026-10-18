@@ -9,7 +9,7 @@
  */
 
 import {
-  type Q, q, parseQ, formatDecimal, formatExact, eq as qEq, sub, mul, div, abs, cmp, HUNDRED,
+  type Q, q, parseQ, formatDecimal, formatExact, formatSmart, eq as qEq, add, sub, mul, div, abs, cmp, HUNDRED,
 } from './rational';
 import {
   type WeightedItem, weightedMean, naiveMean, scaleWeights, shiftWeights, meanAfterAdding,
@@ -22,6 +22,11 @@ import {
   type ChartDataset, type ChartMode, makeDataset, groupTotal, grandTotal, groupShares, cell,
   largestGroupTotal, largestSegmentInGroup, largestShareInCategory, largestAbsoluteInCategory, categoryTotal,
 } from './charts';
+import { pieSectors } from './pie';
+import { tallestColumns } from './clustered';
+import { averageDay, closestGroup, meanPerActivity, sameDistribution } from './averageDay';
+import { mixVarna, massToReachTarget, varnaToGoldPercent, type VarnaPiece } from './varna';
+import { CHART_PRESETS } from './presets';
 import type { UDPracticeQuestion, PracticeDifficulty, PracticeTopic, UserAnswer, GivensTable } from './types';
 
 const assert = (c: boolean, m: string) => {
@@ -304,12 +309,189 @@ const D = {
   sameShares: () => makeDataset('Two classes', 'students', ['Passed', 'Failed'], [{ label: 'Class P', values: [30, 10] }, { label: 'Class Q', values: [300, 100] }]),
   family: () => makeDataset('Monthly spending', '₹ hundred', ['Rent', 'Food', 'Travel'], [{ label: 'Family X', values: [40, 30, 10] }, { label: 'Family Y', values: [60, 55, 30] }]),
   schools: () => makeDataset('How students reach three schools', 'students', ['Cycle', 'Bus or walk'], [{ label: 'School A', values: [20, 80] }, { label: 'School B', values: [100, 900] }, { label: 'School C', values: [9, 21] }]),
+  homes: () => makeDataset('Weekly spending of three homes', '₹', ['Housing', 'Food', 'Travel'], [{ label: 'Home 1', values: [900, 700, 300] }, { label: 'Home 2', values: [450, 350, 150] }, { label: 'Home 3', values: [600, 1200, 500] }]),
+  pieGroup: () => makeDataset('Parts of one budget', '₹ hundred', ['Rent', 'Food', 'Travel', 'Other'], [{ label: 'Budget', values: [20, 8, 7, 5] }]),
+  sameMean: () => makeDataset('Visitors per day in two parks', 'visitors', ['Mon', 'Tue', 'Wed', 'Thu'], [{ label: 'Park X', values: [2, 4, 6, 8] }, { label: 'Park Y', values: [5, 5, 5, 5] }]),
   withEmpty: () => makeDataset('Orders', 'orders', ['Online', 'In store'], [{ label: 'Week 1', values: [0, 0] }, { label: 'Week 2', values: [30, 70] }]),
 };
 
 function chartMC(b: Base, statement: string, correct: string, distractors: string[], hints: string[], worked: string[], explanation: string, ds?: ChartDataset, mode: ChartMode = 'percent'): UDPracticeQuestion {
   return choice(b, statement, correct, distractors, hints, worked, explanation, ds ? { chart: { dataset: ds, mode } } : {});
 }
+
+// ---------------------------------------------------------------------------
+// M6.1 builders: clustered columns, pie charts, average vs distribution, varṇa
+// ---------------------------------------------------------------------------
+
+const isZeroQ = (x: Q): boolean => x.n === 0n;
+const fs = (x: Q): string => formatSmart(x, 3);
+
+function clusteredTallestQ(b: Base, ds: ChartDataset, by: 'group' | 'category'): UDPracticeQuestion {
+  const t = tallestColumns(ds);
+  assert(t.length === 1, `${b.id}: the tallest column must be unique`);
+  return {
+    ...b, inputType: 'chart_select', statement: 'Tap the tallest column in the chart.',
+    chart: { dataset: ds, mode: 'clustered', clusterBy: by }, answer: { kind: 'segment', groupId: t[0].groupId, categoryId: t[0].categoryId },
+    hints: ['Every column starts from zero, so the tallest column is simply the biggest value.', 'Compare columns across all the clusters, not just one.'],
+    workedSolution: [`The columns show: ${ds.groups.map((g) => `${g.label}: ${ds.categories.map((c) => `${c.label} ${formatExact(cell(ds, g.id, c.id)!)}`).join(', ')}`).join('; ')}.`, `The biggest value is ${labelG(ds, t[0].groupId)} / ${labelC(ds, t[0].categoryId)} = ${formatExact(cell(ds, t[0].groupId, t[0].categoryId)!)}.`],
+    explanation: 'In a clustered-column chart every column has its own base at zero, so heights compare directly.',
+  };
+}
+
+function clusteredDifferenceQ(b: Base, ds: ChartDataset, g1: string, g2: string, c: string): UDPracticeQuestion {
+  const d = sub(cell(ds, g1, c)!, cell(ds, g2, c)!);
+  assert(cmp(d, q(0)) > 0, `${b.id}: difference must be positive`);
+  return numeric(
+    b, `Using the clustered columns, how many more ${ds.unit} did ${labelG(ds, g1)} spend on ${labelC(ds, c)} than ${labelG(ds, g2)}?`, d, undefined, ds.unit,
+    ['Find the two columns for the same category.', 'Subtract the smaller value from the larger.'],
+    [`${labelG(ds, g1)}: ${formatExact(cell(ds, g1, c)!)}; ${labelG(ds, g2)}: ${formatExact(cell(ds, g2, c)!)}.`, `Difference = ${formatExact(cell(ds, g1, c)!)} − ${formatExact(cell(ds, g2, c)!)} = ${formatExact(d)}.`],
+    'Clustering by category puts the groups side by side so they are easy to compare.',
+    { chart: { dataset: ds, mode: 'clustered', clusterBy: 'category' } }
+  );
+}
+
+function pieAngleQ(b: Base, ds: ChartDataset, g: string, c: string): UDPracticeQuestion {
+  const r = pieSectors(ds, g);
+  assert(r.status === 'ok', `${b.id}: needs a valid pie`);
+  if (r.status !== 'ok') throw new Error('unreachable');
+  const sec = r.sectors.find((x) => x.categoryId === c)!;
+  return numeric(
+    b, `In the pie chart, what is the angle of the ${labelC(ds, c)} sector, in degrees?`, sec.angle, undefined, '°',
+    ['A whole pie is 360°.', 'Angle = share of the total × 360°.'],
+    [`Total = ${formatExact(r.total)}; ${labelC(ds, c)} = ${formatExact(sec.value)}.`, `Share = ${formatExact(sec.value)} ÷ ${formatExact(r.total)} = ${fs(sec.share)}.`, `Angle = ${fs(sec.share)} × 360° = ${formatExact(sec.angle)}°.`],
+    'A pie chart splits the full 360° in proportion to the values.',
+    { chart: { dataset: ds, mode: 'pie', pieGroupId: g } }
+  );
+}
+
+function pieAngleToPercentQ(b: Base, ds: ChartDataset, g: string, c: string): UDPracticeQuestion {
+  const r = pieSectors(ds, g);
+  assert(r.status === 'ok', `${b.id}: needs a valid pie`);
+  if (r.status !== 'ok') throw new Error('unreachable');
+  const sec = r.sectors.find((x) => x.categoryId === c)!;
+  return numeric(
+    b, `A pie chart has a sector of ${formatExact(sec.angle)}°. What percentage of the whole is that sector?`, sec.percent, undefined, '%',
+    ['The whole pie is 360°, which is 100%.', 'Percentage = angle ÷ 360 × 100.'],
+    [`${formatExact(sec.angle)} ÷ 360 = ${fs(sec.share)}.`, `${fs(sec.share)} × 100 = ${formatExact(sec.percent)}%.`],
+    'A sector’s angle and its percentage are two descriptions of the same share.'
+  );
+}
+
+function pieAcrossQ(b: Base, ds: ChartDataset): UDPracticeQuestion {
+  const big = largestAbsoluteInCategory(ds, 'c1')!;
+  const share = largestShareInCategory(ds, 'c1')!;
+  assert(!big.tied && !share.tied && big.ids[0] !== share.ids[0], `${b.id}: the pie share winner and the amount winner must differ`);
+  const lc = labelC(ds, 'c1').toLowerCase();
+  const correct = `${labelG(ds, big.ids[0])} (${formatExact(cell(ds, big.ids[0], 'c1')!)} ${lc})`;
+  const others = ds.groups.filter((g) => g.id !== big.ids[0]).map((g) => `${g.label} (${formatExact(cell(ds, g.id, 'c1')!)} ${lc})`);
+  const pctOf = (g: string) => formatDecimal(mul(div(cell(ds, g, 'c1')!, groupTotal(ds, g)), HUNDRED), 0);
+  return choice(
+    b, `Two pie charts show how each club is made up. In ${labelG(ds, share.ids[0])}’s pie, ${labelC(ds, 'c1')} fill ${pctOf(share.ids[0])}% of the circle; in ${labelG(ds, big.ids[0])}’s pie they fill only ${pctOf(big.ids[0])}%. Which club has more ${lc}? (The table gives the real numbers.)`,
+    correct, [...others, 'They have the same number'],
+    ['Each pie is a share of its OWN club’s total.', 'Look at the actual numbers, not the sizes of the slices.'],
+    ds.groups.map((g) => `${g.label}: ${labelC(ds, 'c1')} = ${formatExact(cell(ds, g.id, 'c1')!)} out of ${formatExact(groupTotal(ds, g.id))}.`).concat([`${labelG(ds, big.ids[0])} has more ${lc} in actual numbers.`]),
+    'Slices of pies with different totals cannot be compared by size; compare the actual values.',
+    { chart: { dataset: ds, mode: 'pie', pieGroupId: share.ids[0] }, givens: { headers: ['Club', ...ds.categories.map((c) => c.label), 'Total'], rows: ds.groups.map((g) => [g.label, ...ds.categories.map((c) => formatExact(cell(ds, g.id, c.id)!)), formatExact(groupTotal(ds, g.id))]) } }
+  );
+}
+
+function clusteredOrStackedQ(b: Base, ds: ChartDataset, catId: string): UDPracticeQuestion {
+  const lbl = labelC(ds, catId);
+  return choice(
+    b, `You want to compare how much each home spends on ${lbl} directly. Which chart makes that easiest?`,
+    'Clustered columns, grouped by category', ['Stacked bars, because they show the totals', '100% stacked bars, because they show every home equally', 'A single pie chart of one home'],
+    ['Which chart gives every home’s value a common starting line?', 'Stacked segments do not all start from zero.'],
+    [`${lbl} values: ${ds.groups.map((g) => `${g.label} ${formatExact(cell(ds, g.id, catId)!)}`).join(', ')}.`, 'Clustered columns, grouped by category, place those values side by side on one baseline.', 'In stacked bars only the first segment starts at zero, and 100% bars hide the amounts.'],
+    'The best chart depends on the question: clustered columns for comparing individual values, stacked bars when the totals also matter.',
+    { chart: { dataset: ds, mode: 'clustered', clusterBy: 'category' } }
+  );
+}
+
+function equalAveragesQ(b: Base, ds: ChartDataset): UDPracticeQuestion {
+  const mx = meanPerActivity(ds, 'g1')!;
+  const my = meanPerActivity(ds, 'g2')!;
+  assert(qEq(mx, my) && !sameDistribution(ds, 'g1', 'g2'), `${b.id}: needs equal means and different data`);
+  return choice(
+    b, `Both parks average ${fs(mx)} visitors per day over the four days. Does that mean the two parks had the same visitors each day?`,
+    'No: the daily numbers are different even though the averages are equal', ['Yes, equal averages mean equal data', 'Yes, because the totals are different', 'It cannot be known from the chart'],
+    ['Look at each day separately.', 'Add the daily numbers and divide by 4 for each park.'],
+    ds.groups.map((g) => `${g.label}: ${ds.categories.map((c) => formatExact(cell(ds, g.id, c.id)!)).join(' + ')} = ${formatExact(groupTotal(ds, g.id))}, and ${formatExact(groupTotal(ds, g.id))} ÷ 4 = ${fs(meanPerActivity(ds, g.id)!)}.`).concat(['The averages match, but Park X changes every day and Park Y never does.']),
+    'An average describes the centre of the data; it cannot tell you what the individual values are.',
+    { chart: { dataset: ds, mode: 'absolute' } }
+  );
+}
+
+function avgDayQ(b: Base, ds: ChartDataset, weights: Record<string, Q>, catId: string): UDPracticeQuestion {
+  const r = averageDay(ds, weights);
+  assert(r.ok, `${b.id}: average day must be valid`);
+  if (!r.ok) throw new Error('unreachable');
+  const row = r.rows.find((x) => x.categoryId === catId)!;
+  return numeric(
+    b, `The people of a town are made of three age groups in the proportions below. What is the average number of hours of ${labelC(ds, catId).toLowerCase()} per person per day?`, row.mean, undefined, 'hours',
+    ['This is a weighted mean: each age group is weighted by how many people it has.', 'Multiply each group’s hours by its population share, add, and divide by the total.'],
+    [`Weighted sum = ${ds.groups.map((g) => `${formatExact(weights[g.id])}×${formatExact(cell(ds, g.id, catId)!)}`).join(' + ')}.`, `Total population weight = ${formatExact(r.totalWeight)}.`, `Average = ${fs(row.mean)} hours.`],
+    'The average day is a weighted mean of the groups’ days, with population as the weights.',
+    { givens: { headers: ['Age group', `${labelC(ds, catId)} (h)`, 'Population'], rows: ds.groups.map((g) => [g.label, formatExact(cell(ds, g.id, catId)!), formatExact(weights[g.id])]) }, chart: { dataset: ds, mode: 'absolute' } }
+  );
+}
+
+function avgHidesQ(b: Base, ds: ChartDataset, weights: Record<string, Q>): UDPracticeQuestion {
+  const r = averageDay(ds, weights);
+  assert(r.ok, `${b.id}: average day must be valid`);
+  if (!r.ok) throw new Error('unreachable');
+  const c = closestGroup(ds, r.rows)!;
+  assert(!isZeroQ(c.distance), `${b.id}: no group may equal the average for this question`);
+  return choice(
+    b, `The average day of the town is ${r.rows.map((x) => `${labelC(ds, x.categoryId)} ${fs(x.mean)} h`).join(', ')}. Does any age group live that day?`,
+    `No: even the closest group, ${labelG(ds, c.groupId)}, would have to spend ${fs(c.hoursToShift)} hours of its day differently`,
+    ['Yes, the average day is what every group does', 'Yes, the group with the most people lives exactly that day', 'It cannot be checked'],
+    ['Compare the average day with each group’s day, activity by activity.', 'Add up how far each activity is from the average.'],
+    ds.groups.map((g) => `${g.label}: differs from the average by ${formatExact(r.rows.reduce((a, x) => add(a, abs(sub(cell(ds, g.id, x.categoryId)!, x.mean))), q(0)))} hours in total.`).concat([`${labelG(ds, c.groupId)} is closest, and still needs ${fs(c.hoursToShift)} hours moved.`]),
+    'An average of a diverse collection can describe nobody in it; it hides the differences between the groups.',
+    { chart: { dataset: ds, mode: 'absolute' } }
+  );
+}
+
+const vp = (id: string, mass: string, varna: string): VarnaPiece => ({ id, label: id, mass: parseQ(mass)!, unit: 'g', varna: parseQ(varna)! });
+const varnaTable = (ps: VarnaPiece[]): GivensTable => ({ headers: ['Piece', 'Mass (g)', 'Purity (varṇa)'], rows: ps.map((p) => [p.label, formatExact(p.mass), formatExact(p.varna)]) });
+
+function varnaMixQ(b: Base, ps: VarnaPiece[]): UDPracticeQuestion {
+  const r = mixVarna(ps);
+  assert(r.ok, `${b.id}: valid melt`);
+  if (!r.ok) throw new Error('unreachable');
+  return numeric(
+    b, 'In ancient India, purity of gold was measured in varṇa: k varṇa means the alloy is k/16 gold, so 16 varṇa is pure gold. The pieces below are melted together. What is the purity of the result, in varṇa?', r.finalVarna, undefined, 'varṇa',
+    ['Gold in a piece = mass × varṇa ÷ 16.', 'Or treat it as a weighted mean of the varṇa values with the masses as weights.'],
+    [...ps.map((p, i) => `${p.label}: ${formatExact(p.mass)} g × ${formatExact(p.varna)} ÷ 16 = ${fs(r.contributions[i].goldGrams)} g of gold.`), `Total gold = ${fs(r.goldGrams)} g in ${fs(r.totalGrams)} g.`, `Purity = ${fs(r.goldGrams)} ÷ ${fs(r.totalGrams)} × 16 = ${fs(r.finalVarna)} varṇa.`],
+    'Purity in varṇa is a weighted mean of the pieces’ purities, weighted by mass.',
+    { givens: varnaTable(ps) }
+  );
+}
+
+function varnaPercentQ(b: Base, k: string): UDPracticeQuestion {
+  const pct = varnaToGoldPercent(parseQ(k)!);
+  return numeric(
+    b, `An alloy has purity ${k} varṇa. (k varṇa means the alloy is k/16 gold.) What percentage of its mass is gold?`, pct, undefined, '%',
+    ['Gold fraction = k ÷ 16.', 'Multiply the fraction by 100 to get a percentage.'],
+    [`${k} ÷ 16 = ${formatExact(div(parseQ(k)!, q(16)))}.`, `${formatExact(div(parseQ(k)!, q(16)))} × 100 = ${formatExact(pct)}%.`],
+    'Varṇa and percent are different scales: percent gold = varṇa ÷ 16 × 100.'
+  );
+}
+
+function varnaTargetQ(b: Base, ps: VarnaPiece[], target: string): UDPracticeQuestion {
+  const s = massToReachTarget(ps, q(16), parseQ(target)!);
+  assert(s.kind === 'mass', `${b.id}: target must be reachable`);
+  if (s.kind !== 'mass') throw new Error('unreachable');
+  return numeric(
+    b, `How many grams of pure gold (16 varṇa) must be melted with the piece below to make gold of ${target} varṇa?`, s.grams, undefined, 'g',
+    ['Let y be the mass of pure gold. Write: (sum of mass × varṇa) ÷ (total mass) = target purity.', 'Solve the equation for y.'],
+    [`(${ps.map((p) => `${formatExact(p.mass)}×${formatExact(p.varna)}`).join(' + ')} + y×16) ÷ (${ps.map((p) => formatExact(p.mass)).join(' + ')} + y) = ${target}.`, `Solving gives y = ${fs(s.grams)} g.`],
+    'An unknown mass in a melt is found by setting the weighted mean equal to the target purity.',
+    { givens: varnaTable(ps) }
+  );
+}
+
+const DAYTIME_WEIGHTS = { g1: q(3), g2: q(5), g3: q(2) };
 
 // ---------------------------------------------------------------------------
 // The bank
@@ -408,6 +590,20 @@ export const UNDERSTANDING_DATA_PRACTICE_BANK: UDPracticeQuestion[] = [
     ['Total each bar first, then add the bar totals.'], [D.shops().groups.map((g) => `${g.label}: ${formatExact(groupTotal(D.shops(), g.id))}`).join('; ') + '.', `Grand total = ${formatExact(grandTotal(D.shops()))}.`], 'The grand total equals both the sum of bar totals and the sum of category totals.', { chart: { dataset: D.shops(), mode: 'absolute' } }),
   numeric(B('Category total across groups', 'challenge', 'stacked_reading'), 'What is the combined number of Girls across both houses?', categoryTotal(D.houses(), 'c2'), undefined, 'students',
     ['Add the Girls segment from each house.'], [`${f2(cell(D.houses(), 'g1', 'c2')!)} + ${f2(cell(D.houses(), 'g2', 'c2')!)} = ${formatExact(categoryTotal(D.houses(), 'c2'))}.`], 'Category totals add across groups.', { chart: { dataset: D.houses(), mode: 'absolute' } }),
+
+  // ----- M6.1 additions (appended so earlier question ids and saved practice progress are unchanged) -----
+  clusteredTallestQ(B('Tap the tallest column', 'basic', 'clustered_reading'), D.homes(), 'group'),
+  clusteredDifferenceQ(B('Compare two columns', 'standard', 'clustered_reading'), D.homes(), 'g1', 'g2', 'c2'),
+  clusteredOrStackedQ(B('Clustered or stacked?', 'standard', 'clustered_reading'), D.homes(), 'c2'),
+  pieAngleQ(B('Angle of a pie sector', 'basic', 'pie_charts'), D.pieGroup(), 'g1', 'c3'),
+  pieAngleToPercentQ(B('From angle to percentage', 'standard', 'pie_charts'), D.pieGroup(), 'g1', 'c2'),
+  pieAcrossQ(B('Pie slices across different pies', 'challenge', 'pie_charts'), D.smallLarge()),
+  equalAveragesQ(B('Equal averages, different days', 'standard', 'average_hides'), D.sameMean()),
+  avgDayQ(B('Average hours of the town', 'standard', 'average_hides'), CHART_PRESETS.daytime(), DAYTIME_WEIGHTS, 'c1'),
+  avgHidesQ(B('Does anyone live the average day?', 'challenge', 'average_hides'), CHART_PRESETS.daytime(), DAYTIME_WEIGHTS),
+  varnaPercentQ(B('From varṇa to percent gold', 'basic', 'gold_purity'), '12'),
+  varnaMixQ(B('Melting gold pieces', 'standard', 'gold_purity'), [vp('Piece A', '6', '14'), vp('Piece B', '4', '10')]),
+  varnaTargetQ(B('Gold needed for a target purity', 'challenge', 'gold_purity'), [vp('Piece A', '10', '12')], '14'),
 ];
 
 export const getPracticeQuestionById = (id: string): UDPracticeQuestion | undefined => UNDERSTANDING_DATA_PRACTICE_BANK.find((x) => x.id === id);

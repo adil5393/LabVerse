@@ -105,6 +105,15 @@ export const MIXTURE_SEEDS: Record<string, MixtureSeed> = {
       { label: 'Glass 2', quantity: '300', unit: 'mL', percent: '20' },
     ],
   },
+  // Gold pieces on the textbook's varṇa scale; percent below is gold by mass = k/16 × 100 (14 → 87.5, 10 → 62.5).
+  varna: {
+    solute: 'gold',
+    scale: 'varna',
+    rows: [
+      { label: 'Piece 1', quantity: '6', unit: 'g', percent: '87.5' },
+      { label: 'Piece 2', quantity: '4', unit: 'g', percent: '62.5' },
+    ],
+  },
   equalGlasses: {
     solute: 'jaggery',
     rows: [

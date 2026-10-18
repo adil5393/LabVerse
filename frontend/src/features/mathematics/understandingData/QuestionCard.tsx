@@ -8,6 +8,8 @@ import { useUnderstandingDataStore, hasAnswered } from '../../../store/useUnders
 import { checkPracticeAnswer } from '../../../engine/mathematics/understandingData/practiceBank';
 import type { UDPracticeQuestion, UserAnswer } from '../../../engine/mathematics/understandingData/types';
 import { StackedChart } from './StackedChart';
+import { ClusteredChart } from './ClusteredChart';
+import { PieChart } from './PieChart';
 
 const diff = { basic: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', standard: 'bg-sky-500/20 text-sky-300 border-sky-500/40', challenge: 'bg-rose-500/20 text-rose-300 border-rose-500/40' };
 
@@ -69,14 +71,33 @@ export const QuestionCard: React.FC<{ question: UDPracticeQuestion; compact?: bo
 
       {qn.chart && (
         <div className="rounded-xl border border-surface-border bg-surface-lowest p-2">
-          <StackedChart
-            dataset={qn.chart.dataset}
-            mode={qn.chart.mode}
-            answerMode={answerMode}
-            onSelect={answerMode === 'segment' ? (g, c) => setPicked({ groupId: g, categoryId: c }) : undefined}
-            onSelectBar={answerMode === 'bar' ? (g) => setPicked({ groupId: g }) : undefined}
-            marked={marked}
-          />
+          {qn.chart.mode === 'clustered' ? (
+            <ClusteredChart
+              dataset={qn.chart.dataset}
+              by={qn.chart.clusterBy ?? 'group'}
+              answerMode={answerMode}
+              onSelect={answerMode === 'segment' ? (g, c) => setPicked({ groupId: g, categoryId: c }) : undefined}
+              onSelectBar={answerMode === 'bar' ? (g) => setPicked({ groupId: g }) : undefined}
+              marked={marked}
+            />
+          ) : qn.chart.mode === 'pie' ? (
+            <PieChart
+              dataset={qn.chart.dataset}
+              groupId={qn.chart.pieGroupId ?? qn.chart.dataset.groups[0].id}
+              answerMode={answerMode === 'segment' ? 'segment' : 'none'}
+              onSelect={answerMode === 'segment' ? (g, c) => setPicked({ groupId: g, categoryId: c }) : undefined}
+              marked={marked}
+            />
+          ) : (
+            <StackedChart
+              dataset={qn.chart.dataset}
+              mode={qn.chart.mode}
+              answerMode={answerMode}
+              onSelect={answerMode === 'segment' ? (g, c) => setPicked({ groupId: g, categoryId: c }) : undefined}
+              onSelectBar={answerMode === 'bar' ? (g) => setPicked({ groupId: g }) : undefined}
+              marked={marked}
+            />
+          )}
         </div>
       )}
       {qn.inputType === 'chart_select' && !answered && <p className="text-xs font-mono text-slate-400">{picked ? 'Your choice is outlined. Press Submit to check it.' : 'Tap or press a segment or bar on the chart to choose it.'}</p>}

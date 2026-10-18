@@ -7,9 +7,12 @@
 import type { Q } from './rational';
 import type { WeightedItem } from './weightedMean';
 import type { Constituent } from './mixture';
-import type { ChartDataset, ChartMode } from './charts';
+import type { ChartDataset, ChartKind, ChartMode } from './charts';
 
-export type UDTab = 'weighted' | 'mixture' | 'charts';
+/** Every view of the one raw chart dataset. 'both' shows stacked and 100% stacked together. */
+export type ChartView = ChartKind | 'both';
+
+export type UDTab = 'weighted' | 'mixture' | 'charts' | 'average';
 export type UDMode = 'explore' | 'practice';
 export type PracticeDifficulty = 'basic' | 'standard' | 'challenge';
 
@@ -46,6 +49,8 @@ export interface WeightedSeed {
 
 export interface MixtureSeed {
   solute: string;
+  /** 'varna' shows purity on the textbook's 0–16 varṇa scale (stored internally as percent gold = k/16 × 100). */
+  scale?: 'percent' | 'varna';
   rows: { label: string; quantity: string; unit: Constituent['unit']; percent: string }[];
 }
 
@@ -58,7 +63,7 @@ export interface UDExperiment {
   defaultTab: UDTab;
   weighted?: WeightedSeed;
   mixture?: MixtureSeed;
-  chart?: { preset: ChartPresetId; mode: ChartMode };
+  chart?: { preset: ChartPresetId; mode: ChartMode; view?: ChartKind; pieGroup?: number; weights?: number[] };
   /** Hide advanced editing (add/remove rows, free text) for the very first lessons. */
   simpleControls: boolean;
 }
@@ -83,7 +88,11 @@ export type PracticeTopic =
   | 'chart_choice'
   | 'error_detection'
   | 'chart_comparison'
-  | 'dataset_interpretation';
+  | 'dataset_interpretation'
+  | 'clustered_reading'
+  | 'pie_charts'
+  | 'average_hides'
+  | 'gold_purity';
 
 export type AnswerSpec =
   | { kind: 'choice'; index: number }
@@ -108,7 +117,8 @@ export interface UDPracticeQuestion {
   unit?: string;
   options?: string[];
   givens?: GivensTable;
-  chart?: { dataset: ChartDataset; mode: ChartMode };
+  /** Which chart is shown with the question; 'pie' shows `pieGroupId`, 'clustered' clusters by `clusterBy`. */
+  chart?: { dataset: ChartDataset; mode: ChartKind; pieGroupId?: string; clusterBy?: 'group' | 'category' };
   answer: AnswerSpec;
   hints: string[];
   workedSolution: string[];

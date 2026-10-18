@@ -49,6 +49,8 @@ export const MAX_GROUPS = 12;
 export const MAX_CATEGORIES = 8;
 
 export type ChartMode = 'absolute' | 'percent';
+/** Every way the one raw dataset can be drawn. Only 'absolute' and 'percent' are stacked-bar modes. */
+export type ChartKind = ChartMode | 'clustered' | 'pie';
 
 export function makeDataset(
   title: string,

@@ -106,7 +106,7 @@ export const UndoRow: React.FC<{ onReset?: () => void }> = ({ onReset }) => {
 };
 
 export const Segmented = <T extends string>({ value, options, onChange, label, disabledValues = [] }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string; disabledValues?: T[] }) => (
-  <div className="inline-flex items-center gap-1 bg-surface-lowest p-1 rounded-xl border border-surface-border" role="group" aria-label={label}>
+  <div className="inline-flex flex-wrap items-center gap-0.5 sm:gap-1 bg-surface-lowest p-0.5 sm:p-1 rounded-xl border border-surface-border" role="group" aria-label={label}>
     {options.map((o) => (
       <button
         key={o.id}
@@ -114,7 +114,7 @@ export const Segmented = <T extends string>({ value, options, onChange, label, d
         aria-pressed={value === o.id}
         disabled={disabledValues.includes(o.id)}
         onClick={() => onChange(o.id)}
-        className={`min-h-10 px-3 rounded-lg text-xs font-mono font-bold disabled:opacity-40 ${value === o.id ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'}`}
+        className={`min-h-11 px-2 sm:px-3 rounded-lg text-xs font-mono font-bold disabled:opacity-40 ${value === o.id ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'}`}
       >
         {o.label}
       </button>

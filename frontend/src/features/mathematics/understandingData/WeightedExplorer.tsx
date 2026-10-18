@@ -172,7 +172,7 @@ export const WeightedExplorer: React.FC<Props> = ({ lesson }) => {
           {rows.map((r, i) => (
             <div key={r.id} className="rounded-xl border border-surface-border bg-surface-lowest p-2 space-y-2" style={{ borderLeft: `4px solid ${ROW_COLORS[i % ROW_COLORS.length]}` }}>
               <div className="flex items-center gap-2">
-                <input value={r.label} onChange={(e) => setRowLabel(r.id, e.target.value)} aria-label={`Name of row ${i + 1}`} className="flex-1 min-w-0 h-10 px-2 rounded-lg bg-surface-card border border-surface-border text-white text-sm font-semibold outline-none focus:border-purple-400" />
+                <input value={r.label} onChange={(e) => setRowLabel(r.id, e.target.value)} aria-label={`Name of row ${i + 1}`} className="flex-1 min-w-0 h-11 px-2 rounded-lg bg-surface-card border border-surface-border text-white text-sm font-semibold outline-none focus:border-purple-400" />
                 {!simple && rows.length > 1 && <button type="button" aria-label={`Remove ${r.label}`} onClick={() => removeRow(r.id)} className="w-11 h-11 rounded-lg text-slate-400 hover:text-rose-300">×</button>}
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -194,7 +194,7 @@ export const WeightedExplorer: React.FC<Props> = ({ lesson }) => {
                 </div>
               </div>
               {!simple && (
-                <label className="flex items-center gap-2 text-[11px] font-mono text-slate-400 min-h-9">
+                <label className="flex items-center gap-2 text-[11px] font-mono text-slate-400 min-h-11">
                   <input type="checkbox" checked={Boolean(r.valueIsRounded)} onChange={(e) => setRowRounded(r.id, e.target.checked)} className="w-4 h-4" />
                   This {valueLabel.toLowerCase()} is a rounded figure
                 </label>

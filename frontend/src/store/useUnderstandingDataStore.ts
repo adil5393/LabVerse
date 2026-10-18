@@ -20,15 +20,16 @@ import {
 } from '../engine/mathematics/understandingData/charts';
 import { getUDExperiment } from '../engine/mathematics/understandingData/experimentRegistry';
 import { CHART_PRESETS, weightedRowsFromSeed, constituentsFromSeed, newId } from '../engine/mathematics/understandingData/presets';
-import { UD_GUIDED_LESSONS, UD_LESSON_ORDER } from '../engine/mathematics/understandingData/curriculumPath';
-import type { InteractionKind, PracticeDifficulty, RecordedObservation, UDMode, UDTab, WeightMeaning, WeightedRow } from '../engine/mathematics/understandingData/types';
+import { UD_GUIDED_LESSONS, UD_LESSON_ORDER, UD_OPTIONAL_LESSON_IDS } from '../engine/mathematics/understandingData/curriculumPath';
+import type { ChartView, InteractionKind, PracticeDifficulty, RecordedObservation, UDMode, UDTab, WeightMeaning, WeightedRow } from '../engine/mathematics/understandingData/types';
+import { averageDay, closestGroup, type GroupWeights } from '../engine/mathematics/understandingData/averageDay';
 
 const STORAGE_KEY = 'labverse_understanding_data_progress_v1';
 const HISTORY_LIMIT = 50;
 const OBSERVATION_LIMIT = 40;
 export const MASTERY_THRESHOLD = 0.7;
 
-export type ChartView = 'absolute' | 'percent' | 'both';
+export type { ChartView };
 export type NumericVerdict = 'exact' | 'close' | 'naive' | 'other';
 export type LessonStatus = 'not_started' | 'attempted' | 'completed' | 'demonstrated' | 'mastered';
 
@@ -50,6 +51,8 @@ export interface UDLessonProgress {
   interactionsRecorded: number;
   observations: RecordedObservation[];
   countedKeys: string[];
+  /** Chart views the student has opened during the experiment (absent in progress saved before M6.1). */
+  viewsSeen?: string[];
 }
 
 export interface UDPracticeAttempt {
@@ -82,6 +85,13 @@ export interface UnderstandingDataState {
   constituents: Constituent[];
   dataset: ChartDataset;
   chartView: ChartView;
+  /** How clustered columns are grouped: one cluster per group, or per category. */
+  clusterBy: 'group' | 'category';
+  /** The single group shown by the pie chart. */
+  pieGroupId: string;
+  /** Population weights of the groups for the average-day investigation (default 1). */
+  popWeights: GroupWeights;
+  mixtureScale: 'percent' | 'varna';
   selected: { groupId: string; categoryId: string } | null;
   /** Which "opposite case" dataset is displayed in the comparison panel (0 = none). */
   oppositeCase: 0 | 1 | 2;
@@ -133,6 +143,10 @@ export interface UnderstandingDataState {
   renameChartCategory: (id: string, label: string) => void;
   replaceDataset: (ds: ChartDataset) => void;
   setChartView: (v: ChartView) => void;
+  setClusterBy: (by: 'group' | 'category') => void;
+  setPieGroup: (id: string) => void;
+  setPopWeight: (id: string, w: Q) => void;
+  allowedViews: () => ChartView[];
   selectSegment: (g: string, c: string) => void;
   showOppositeCase: (k: 1 | 2) => string | null;
   recordChallenge: (id: string, correct: boolean, text: string) => void;
@@ -213,11 +227,14 @@ function masteryEarned(p: UDLessonProgress, answers: Record<string, UDPracticeAt
   if (!lesson || p.teacherBypassed) return false;
   if (lesson.stages.includes('predict') && !p.predictionMade) return false;
   if (p.interactionsRecorded < (lesson.experimentGuide.minInteractionsNeeded ?? 0)) return false;
+  if ((lesson.mustVisitViews ?? []).some((v) => !(p.viewsSeen ?? []).includes(v))) return false;
   const ids = lesson.practiceQuestionIds;
   if (ids.length === 0) return true;
   if (ids.some((id) => !hasAnswered(answers[id]))) return false;
   return ids.filter((id) => answers[id].firstAttemptCorrect).length / ids.length >= MASTERY_THRESHOLD;
 }
+
+const VIEW_NAME: Record<string, string> = { clustered: 'clustered-column', percent: '100% stacked', pie: 'pie', absolute: 'stacked', both: 'side-by-side' };
 
 function evaluateGate(s: UnderstandingDataState): { ok: boolean; reason: string } {
   const lesson = UD_GUIDED_LESSONS[s.activeLessonId];
@@ -228,7 +245,10 @@ function evaluateGate(s: UnderstandingDataState): { ok: boolean; reason: string 
       return p.predictionMade ? { ok: true, reason: '' } : { ok: false, reason: 'Make your prediction first.' };
     case 'experiment': {
       const need = lesson.experimentGuide.minInteractionsNeeded ?? 0;
-      return p.interactionsRecorded >= need ? { ok: true, reason: '' } : { ok: false, reason: `Do the experiment first: ${p.interactionsRecorded} of ${need} done.` };
+      if (p.interactionsRecorded < need) return { ok: false, reason: `Do the experiment first: ${p.interactionsRecorded} of ${need} done.` };
+      const missing = (lesson.mustVisitViews ?? []).filter((v) => !(p.viewsSeen ?? []).includes(v));
+      if (missing.length > 0) return { ok: false, reason: `Also open the ${missing.map((v) => VIEW_NAME[v] ?? v).join(' and ')} view of the chart.` };
+      return { ok: true, reason: '' };
     }
     case 'observe':
       return p.observations.length > 0 ? { ok: true, reason: '' } : { ok: false, reason: 'Your experiment results will be listed here once you have done the experiment.' };
@@ -298,6 +318,10 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
     constituents: constituentsFromSeed({ solute: 'jaggery', rows: [{ label: 'Glass 1', quantity: '200', unit: 'mL', percent: '10' }, { label: 'Glass 2', quantity: '300', unit: 'mL', percent: '20' }] }),
     dataset: CHART_PRESETS.houses(),
     chartView: 'absolute',
+    clusterBy: 'group',
+    pieGroupId: 'g1',
+    popWeights: {},
+    mixtureScale: 'percent',
     selected: null,
     oppositeCase: 0,
     challengeResults: {},
@@ -336,10 +360,17 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
       if (e.mixture) {
         next.solute = e.mixture.solute;
         next.constituents = constituentsFromSeed(e.mixture);
+        next.mixtureScale = e.mixture.scale ?? 'percent';
       }
       if (e.chart) {
-        next.dataset = CHART_PRESETS[e.chart.preset]();
-        next.chartView = e.chart.mode;
+        const ds = CHART_PRESETS[e.chart.preset]();
+        next.dataset = ds;
+        next.chartView = e.chart.view ?? e.chart.mode;
+        next.clusterBy = 'group';
+        next.pieGroupId = ds.groups[Math.min(e.chart.pieGroup ?? 0, ds.groups.length - 1)].id;
+        const w: GroupWeights = {};
+        e.chart.weights?.forEach((n, i) => { if (ds.groups[i]) w[ds.groups[i].id] = q(n); });
+        next.popWeights = w;
       }
       set(next);
     },
@@ -458,7 +489,13 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
       const ds = r.dataset;
       const gl = ds.groups.find((x) => x.id === g)!.label;
       const cl = ds.categories.find((x) => x.id === c)!.label;
-      get().recordInteraction('chart_edit', `${gl} / ${cl} set to ${v ? f(v) : 'missing'}; ${gl} total is now ${f(groupTotal(ds, g))} ${ds.unit}`, dsSig(ds));
+      let extra = '';
+      if (get().activeTab === 'average') {
+        const r = averageDay(ds, get().popWeights);
+        const row = r.ok ? r.rows.find((x) => x.categoryId === c) : undefined;
+        if (row) extra = `; average ${cl} is now ${f(row.mean)} h`;
+      }
+      get().recordInteraction('chart_edit', `${gl} / ${cl} set to ${v ? f(v) : 'missing'}; ${gl} total is now ${f(groupTotal(ds, g))} ${ds.unit}${extra}`, dsSig(ds) + '|' + Object.values(get().popWeights).map(formatExact).join(','));
       return null;
     },
     addChartGroup: () => {
@@ -473,7 +510,7 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
       const r = removeGroup(get().dataset, id);
       if (!r.ok) return r.error;
       pushHistory();
-      set({ dataset: r.dataset, selected: null, oppositeCase: 0 });
+      set({ dataset: r.dataset, selected: null, oppositeCase: 0, pieGroupId: get().pieGroupId === id ? r.dataset.groups[0].id : get().pieGroupId });
       get().recordInteraction('chart_edit', `Removed a group (${r.dataset.groups.length} groups left)`, `rmg:${dsSig(r.dataset)}`);
       return null;
     },
@@ -505,10 +542,38 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
       pushHistory();
       set({ dataset: ds, selected: null, oppositeCase: 0 });
     },
+    allowedViews: () => {
+      const s = get();
+      if (s.isLocked()) return ['absolute'];
+      if (!s.guidedActive) return ['absolute', 'percent', 'clustered', 'pie', 'both'];
+      return UD_GUIDED_LESSONS[s.activeLessonId]?.allowedViews ?? ['absolute', 'percent', 'both'];
+    },
     setChartView: (v) => {
-      if (get().isLocked() && v !== 'absolute') return;
+      if (!get().allowedViews().includes(v)) return;
       set({ chartView: v });
-      get().recordInteraction('chart_toggle', `Switched to the ${v === 'absolute' ? 'stacked (actual values)' : v === 'percent' ? '100% stacked' : 'side-by-side'} view of the same data`, `to:${v}`);
+      const { guidedActive, activeLessonId, lessons, activeStage } = get();
+      const cur = lessons[activeLessonId];
+      if (guidedActive && cur && activeStage !== 'understand' && activeStage !== 'predict' && !(cur.viewsSeen ?? []).includes(v)) {
+        commit({ ...lessons, [activeLessonId]: { ...cur, viewsSeen: [...(cur.viewsSeen ?? []), v] } });
+      }
+      const names: Record<string, string> = { absolute: 'stacked (actual values)', percent: '100% stacked', both: 'side-by-side stacked and 100%', clustered: 'clustered-column', pie: 'pie' };
+      get().recordInteraction('chart_toggle', `Switched to the ${names[v]} view of the same data`, `to:${v}`);
+    },
+    setClusterBy: (by) => set({ clusterBy: by }),
+    setPieGroup: (id) => {
+      set({ pieGroupId: id, selected: null });
+    },
+    setPopWeight: (id, w) => {
+      if (isNeg(w)) return;
+      const weights = { ...get().popWeights, [id]: w };
+      set({ popWeights: weights });
+      const ds = get().dataset;
+      const r = averageDay(ds, weights);
+      if (r.ok) {
+        const c = closestGroup(ds, r.rows);
+        const parts = r.rows.map((x) => `${ds.categories.find((k) => k.id === x.categoryId)?.label} ${f(x.mean)} h`).join(', ');
+        get().recordInteraction('chart_edit', `Population weights ${ds.groups.map((g) => f(weights[g.id] ?? q(1))).join(' : ')} → average day: ${parts}${c ? `; closest real group: ${ds.groups.find((g) => g.id === c.groupId)?.label}, ${f(c.hoursToShift)} h different` : ''}`, `w:${Object.values(weights).map(formatExact).join(',')}`);
+      }
     },
     selectSegment: (g, c) => {
       set({ selected: { groupId: g, categoryId: c } });
@@ -541,10 +606,14 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
     setTeacherMode: (on) => set({ teacherMode: on }),
     setGuidedActive: (on) => set({ guidedActive: on }),
 
-    selectLesson: (id, stage = 'understand') => {
+    selectLesson: (id, requestedStage) => {
       const lesson = UD_GUIDED_LESSONS[id];
       if (!lesson) return;
-      const existing = get().lessons[id] ?? blankLesson(id, stage);
+      const saved = get().lessons[id];
+      // Resume where an unfinished lesson was left; finished lessons reopen at the start for review.
+      const resume = saved && !saved.completed && lesson.stages.includes(saved.activeStage) ? saved.activeStage : 'understand';
+      const stage: GuidedStageId = requestedStage ?? resume;
+      const existing = saved ?? blankLesson(id, stage);
       get().setExperiment(lesson.experimentId);
       // A lesson whose results are hidden until the prediction must not open on the revealing view.
       const hidden = lesson.hidesResultsUntilPrediction && !existing.predictionMade;
@@ -657,9 +726,10 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
     getCompletionStats: () => {
       const { lessons } = get();
       const total = UD_LESSON_ORDER.length;
+      // Only the 13 required lessons count toward the chapter percentage; optional extensions have their own status.
       const completed = UD_LESSON_ORDER.filter((id) => lessons[id]?.completed).length;
       const mastered = UD_LESSON_ORDER.filter((id) => lessons[id]?.mastered).length;
-      const inProgress = UD_LESSON_ORDER.find((id) => lessonStatus(lessons[id]) === 'attempted');
+      const inProgress = UD_LESSON_ORDER.find((id) => lessonStatus(lessons[id]) === 'attempted') ?? UD_OPTIONAL_LESSON_IDS.find((id) => lessonStatus(lessons[id]) === 'attempted');
       const next = inProgress ?? UD_LESSON_ORDER.find((id) => !lessons[id]?.completed) ?? UD_LESSON_ORDER[0];
       return { completed, mastered, total, percentage: total ? Math.round((completed / total) * 100) : 0, nextRecommendedLessonId: next };
     },

@@ -39,12 +39,12 @@ export const UnderstandingDataLab: React.FC = () => {
             <span className="text-purple-400 font-bold">Understanding Data</span>
           </nav>
           {!confirmReset ? (
-            <button type="button" onClick={() => setConfirmReset(true)} className="min-h-10 text-xs font-mono text-slate-500 hover:text-red-400 flex items-center gap-1.5 px-3 rounded-lg border border-surface-border"><span className="material-symbols-outlined text-[15px]">restart_alt</span>Reset chapter progress</button>
+            <button type="button" onClick={() => setConfirmReset(true)} className="min-h-11 text-xs font-mono text-slate-500 hover:text-red-400 flex items-center gap-1.5 px-3 rounded-lg border border-surface-border"><span className="material-symbols-outlined text-[15px]">restart_alt</span>Reset chapter progress</button>
           ) : (
             <div className="flex items-center gap-2 bg-red-950/40 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs">
               <span className="text-red-300">Reset all progress?</span>
-              <button type="button" onClick={() => { resetProgress(); setConfirmReset(false); }} className="min-h-9 px-3 rounded bg-red-500 text-slate-950 font-bold font-mono">Yes, reset</button>
-              <button type="button" onClick={() => setConfirmReset(false)} className="min-h-9 px-3 rounded bg-surface-elevated text-slate-300 font-mono">Cancel</button>
+              <button type="button" onClick={() => { resetProgress(); setConfirmReset(false); }} className="min-h-11 px-3 rounded bg-red-500 text-slate-950 font-bold font-mono">Yes, reset</button>
+              <button type="button" onClick={() => setConfirmReset(false)} className="min-h-11 px-3 rounded bg-surface-elevated text-slate-300 font-mono">Cancel</button>
             </div>
           )}
         </div>
@@ -91,7 +91,7 @@ export const UnderstandingDataLab: React.FC = () => {
 
         <section className="space-y-6">
           <div className="flex items-center gap-2 border-b border-surface-border pb-3 overflow-x-auto" role="tablist">
-            {([['guided', 'Lesson roadmap (13)'], ['experiments', 'Laboratory presets'], ['coverage', 'Chapter coverage']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-11 px-4 rounded-xl text-xs font-mono font-bold whitespace-nowrap ${tab === id ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>{label}</button>)}
+            {([['guided', 'Lesson roadmap (13 + 3 optional)'], ['experiments', 'Laboratory presets'], ['coverage', 'Chapter coverage']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-11 px-4 rounded-xl text-xs font-mono font-bold whitespace-nowrap ${tab === id ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>{label}</button>)}
           </div>
 
           {tab === 'guided' && (
@@ -106,9 +106,9 @@ export const UnderstandingDataLab: React.FC = () => {
                       return (
                         <button key={id} type="button" onClick={() => open(id)} className={`text-left p-4 rounded-2xl border min-h-24 flex flex-col justify-between gap-2 ${st === 'mastered' || st === 'completed' ? 'bg-emerald-950/15 border-emerald-500/40' : st === 'attempted' ? 'bg-amber-950/10 border-amber-500/30' : 'bg-surface-card border-surface-border hover:border-purple-500/50'}`}>
                           <div>
-                            <div className="flex items-center justify-between"><span className="text-xs font-mono font-bold text-amber-400">Lesson {l.lessonNumber}</span>{STATUS_BADGE[st] && <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">{STATUS_BADGE[st]}</span>}</div>
+                            <div className="flex items-center justify-between"><span className="text-xs font-mono font-bold text-amber-400">Lesson {l.lessonNumber}</span>{STATUS_BADGE[st] && <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">{STATUS_BADGE[st]}</span>}</div>
                             <h4 className="text-sm font-bold text-white">{l.title}</h4>
-                            <p className="text-xs text-slate-400">{l.subtitle}</p>
+                            <p className="text-xs text-slate-400">{l.subtitle}</p>{l.isOptionalExtension && <span className="text-[11px] font-mono text-slate-500">Optional extension</span>}
                           </div>
                         </button>
                       );
@@ -123,7 +123,7 @@ export const UnderstandingDataLab: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {UD_EXPERIMENTS.filter((e) => e.id !== 'ud-practice').map((e) => (
                 <Link key={e.id} to={`/mathematics/understanding-data/workbench?exp=${e.id}`} className="p-4 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-500/40 min-h-24 block">
-                  <span className="text-[10px] font-mono text-amber-400 uppercase font-bold">{e.defaultTab === 'weighted' ? 'Weighted average' : e.defaultTab === 'mixture' ? 'Mixture' : 'Charts'}</span>
+                  <span className="text-[11px] font-mono text-amber-400 uppercase font-bold">{e.defaultTab === 'weighted' ? 'Weighted average' : e.defaultTab === 'mixture' ? 'Mixture' : e.defaultTab === 'average' ? 'Average day' : 'Charts'}</span>
                   <h4 className="text-sm font-bold text-white">{e.title}</h4>
                   <p className="text-xs text-slate-400">{e.subtitle}</p>
                 </Link>

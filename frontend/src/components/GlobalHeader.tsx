@@ -112,7 +112,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onOpenGuide, onImpor
           {/* Mobile Menu Hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated border border-surface-border transition-colors flex items-center justify-center"
+            className="lg:hidden p-2 min-w-11 min-h-11 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated border border-surface-border transition-colors flex items-center justify-center"
             title="Toggle Subject Navigation"
             aria-label="Toggle Subject Navigation"
           >

@@ -9,7 +9,7 @@
 
 import type { GuidedChapterCurriculum, GuidedLessonDefinition, GuidedStageId, GuidedUnitDefinition } from '../guidedLearning/types';
 import { UNDERSTANDING_DATA_PRACTICE_BANK } from './practiceBank';
-import type { InteractionKind } from './types';
+import type { ChartView, InteractionKind } from './types';
 import { q, type Q } from './rational';
 
 const FULL: GuidedStageId[] = ['understand', 'predict', 'experiment', 'observe', 'explain', 'practice'];
@@ -31,6 +31,10 @@ export interface UDLessonDefinition extends GuidedLessonDefinition {
   targetMetric: InteractionKind;
   /** True while predictions are pending: hides computed results in the experiment. */
   hidesResultsUntilPrediction: boolean;
+  /** Chart views offered in this lesson (default: stacked, 100% and both). Keeps new chart types from arriving all at once. */
+  allowedViews?: ChartView[];
+  /** Views the student must actually open during the experiment before moving on. */
+  mustVisitViews?: ChartView[];
 }
 
 const idByTitle = (title: string): string => {
@@ -44,6 +48,7 @@ export const UD_GUIDED_UNITS: GuidedUnitDefinition[] = [
   { id: 'ud-unit-2', unitNumber: 2, title: 'Applying Weights', badge: 'Unit 2', description: 'Importance weights, mixtures and weighted-average problems.', lessonIds: ['ud-l4', 'ud-l5', 'ud-l6'] },
   { id: 'ud-unit-3', unitNumber: 3, title: 'Visualising Multi-Part Data', badge: 'Unit 3', description: 'Stacked bars, 100% stacked bars, and what each one can answer.', lessonIds: ['ud-l7', 'ud-l8', 'ud-l9', 'ud-l10'] },
   { id: 'ud-unit-4', unitNumber: 4, title: 'Interpretation and Mastery', badge: 'Unit 4', description: 'Choose the right chart, spot misleading conclusions, and practise.', lessonIds: ['ud-l11', 'ud-l12', 'ud-l13'] },
+  { id: 'ud-unit-5', unitNumber: 5, title: 'Optional Extensions', badge: 'Optional', description: 'Short extra investigations from the chapter: pie charts, what an average hides, and gold purity in varṇa. They do not count toward the chapter percentage.', lessonIds: ['ud-l14', 'ud-l15', 'ud-l16'] },
 ];
 
 const unitTitle = (id: string) => UD_GUIDED_UNITS.find((u) => u.id === id)?.title ?? '';
@@ -143,16 +148,17 @@ const seeds: Seed[] = [
   },
   {
     id: 'ud-l7', unitId: 'ud-unit-3', lessonNumber: 7, title: 'Reading Stacked Bar Charts', subtitle: 'Totals and parts together',
-    learningObjective: 'Read both the totals and the parts from a stacked bar chart.', experimentId: 'ud-stacked-read', targetMetric: 'segment_select',
+    learningObjective: 'Read both the totals and the parts from a stacked bar chart, and compare it with clustered columns.', experimentId: 'ud-stacked-read', targetMetric: 'segment_select',
+    allowedViews: ['absolute', 'clustered'], mustVisitViews: ['clustered'],
     concept: {
       summary: 'A stacked bar chart joins the parts of a group one after another into a single bar. This chart shows what three households spend each week.',
-      detailedPoints: ['Each bar is one household.', 'Each coloured segment is one kind of spending.', 'Tap a segment to read its exact value.'],
+      detailedPoints: ['Each bar is one household.', 'Each coloured segment is one kind of spending.', 'Tap a segment to read its exact value.', 'The same table can also be drawn as clustered columns, with every column starting from zero. You will switch between the two.'],
     },
     predictionQuestion: { question: 'What does the full length of one stacked bar tell you?', options: ['The household’s total spending', 'Only its largest expense', 'The average of its expenses'], correctIndex: 0, explanation: 'The segments are joined end to end, so the whole bar is their sum.' },
-    experimentGuide: { instruction: 'Tap at least 3 different segments and read each value and its percentage of its own bar.', actionHint: 'The reading appears under the chart.', targetActionDescription: 'Read 3 different segments', minInteractionsNeeded: 3 },
-    observeGuide: { prompt: 'Which bar is longest? Which household’s biggest segment is the biggest in actual money?', expectedPattern: 'The longest bar has the largest total; the biggest segment is not always in the longest bar.', invariantsDescription: 'A bar’s total equals the sum of its segments.' },
-    whyGuide: { explanationType: 'definition', explanation: 'Segments after the first do not start at zero, so they are a little harder to compare across bars. Stacked bars are used when you care about the totals and the parts.', deductiveTakeaway: 'Stacked bar charts show totals (whole bar) and components (segments).' },
-    practice: ['Largest segment', 'Total of a bar', 'Tap the largest total'],
+    experimentGuide: { instruction: 'Tap at least 3 different segments and read each value. Then switch to the clustered-column view and find the same values there.', actionHint: 'Use the Stacked / Clustered switch above the chart. The reading appears under the chart.', targetActionDescription: 'Read 3 different values', minInteractionsNeeded: 3 },
+    observeGuide: { prompt: 'Which bar is longest? In which chart was it easier to compare one category across the households, and in which was it easier to see each household’s total?', expectedPattern: 'Clustered columns make single values easy to compare because every column starts from zero; stacked bars make the totals easy to see.', invariantsDescription: 'A bar’s total equals the sum of its segments, and both charts show the same table.' },
+    whyGuide: { explanationType: 'definition', explanation: 'In clustered columns every value has its own base at zero. In a stacked bar only the first segment starts at zero, so segments are a little harder to compare across bars, but the whole bar shows the total. Choose clustered columns when single values matter, and stacked bars when the totals matter too.', deductiveTakeaway: 'Stacked bars may replace clustered columns when the total of each cluster is also of interest.' },
+    practice: ['Largest segment', 'Total of a bar', 'Tap the largest total', 'Tap the tallest column'],
   },
   {
     id: 'ud-l8', unitId: 'ud-unit-3', lessonNumber: 8, title: 'Constructing Stacked Bar Charts', subtitle: 'Enter data, watch the bars',
@@ -197,7 +203,8 @@ const seeds: Seed[] = [
   },
   {
     id: 'ud-l11', unitId: 'ud-unit-4', lessonNumber: 11, title: 'Choosing the Right Representation', subtitle: 'Which chart answers which question?',
-    learningObjective: 'Choose between stacked and 100% stacked charts for a given question.', experimentId: 'ud-choose', targetMetric: 'challenge_answer',
+    learningObjective: 'Choose between clustered, stacked and 100% stacked charts (and know what a pie chart shows) for a given question.', experimentId: 'ud-choose', targetMetric: 'challenge_answer',
+    allowedViews: ['absolute', 'clustered', 'percent', 'pie'],
     concept: {
       summary: 'This dataset records how age groups spend a 24-hour day. Answer the challenge questions and notice which chart makes each one easy or impossible.',
       detailedPoints: ['Some questions are about totals, some about shares.', 'Feedback is based on the actual numbers.'],
@@ -206,7 +213,7 @@ const seeds: Seed[] = [
     experimentGuide: { instruction: 'Answer at least 3 different challenges. Tap bars and segments, or choose answers.', actionHint: 'Switch the chart type if a question seems hard to answer with the current one.', targetActionDescription: 'Answer 3 challenges', minInteractionsNeeded: 3 },
     observeGuide: { prompt: 'Which questions were easier on the stacked chart and which on the 100% chart?', expectedPattern: 'Totals and counts: stacked. Shares within groups: 100% stacked.', invariantsDescription: 'The underlying table is the same in both charts.' },
     whyGuide: { explanationType: 'property', explanation: 'Use a stacked chart when the total of each group matters as well as its parts. Use a 100% stacked chart when you want to compare proportions between groups of different sizes.', deductiveTakeaway: 'The chart you choose decides which questions you can answer.' },
-    practice: ['Which chart type?', 'Why not stacked → percent?', 'Biggest share, spending data'],
+    practice: ['Which chart type?', 'Why not stacked → percent?', 'Biggest share, spending data', 'Clustered or stacked?'],
   },
   {
     id: 'ud-l12', unitId: 'ud-unit-4', lessonNumber: 12, title: 'Investigating Misleading Conclusions', subtitle: 'Same percentages, different truths',
@@ -220,6 +227,47 @@ const seeds: Seed[] = [
     observeGuide: { prompt: 'Compare the two datasets: what is identical and what is different?', expectedPattern: 'The percentages are identical, the actual counts and even which garden has more are different.', invariantsDescription: 'Both datasets give exactly the same 100% chart.' },
     whyGuide: { explanationType: 'property', explanation: 'A 100% chart discards the totals, so you cannot recover counts from it. Any claim about actual numbers across groups needs the totals as well.', deductiveTakeaway: 'Question claims that compare counts using only percentages.' },
     practice: ['Spot the invalid inference', 'Pick the matching raw data', 'Which group has more?'],
+  },
+  {
+    id: 'ud-l14', unitId: 'ud-unit-5', lessonNumber: 14, title: 'Pie Charts: Parts of One Whole', subtitle: 'Shares, percentages and angles',
+    learningObjective: 'Read a pie chart as the parts of one whole, and see why slices of different pies cannot be compared by size.', experimentId: 'ud-pie', targetMetric: 'segment_select', isOptionalExtension: true,
+    hidesResults: true, allowedViews: ['absolute', 'percent', 'pie'],
+    concept: {
+      summary: 'The textbook recalls pie charts from last year as another way to show proportions. A pie chart splits one full circle of 360° among the parts of ONE group. Here it will show how one household spends its weekly money.',
+      detailedPoints: ['Pick one group to draw as a pie.', 'The whole circle is that group’s total.', 'Tap a slice to read its quantity, percentage and angle.'],
+      keyTerms: [{ term: 'sector angle', definition: 'The angle of a slice, equal to 360° times its share of the total.' }],
+    },
+    predictionQuestion: { question: 'Home 1 spends ₹ 900 of its ₹ 2000 weekly total on Housing. What angle will the Housing sector have?', options: ['90°', '162°', '180°', '45°'], correctIndex: 1, explanation: 'Housing is 900 ÷ 2000 = 45% of the total, and 45% of 360° is 162°.' },
+    experimentGuide: { instruction: 'Open the pie view, tap at least 3 different slices (and try another group’s pie). Read the quantity, percentage and angle of each.', actionHint: 'Choose the group with the “Pie of” selector.', targetActionDescription: 'Inspect 3 different slices', minInteractionsNeeded: 3 },
+    observeGuide: { prompt: 'Add up the angles of all the slices of one pie. What do you get? How do the percentages compare with the 100% stacked bar of the same group?', expectedPattern: 'The angles add up to 360° and the percentages to 100%, and the percentages are the same as in the 100% stacked bar.', invariantsDescription: 'angle = 360° × share, and share = quantity ÷ total.' },
+    whyGuide: { explanationType: 'property', explanation: 'A pie chart and a 100% stacked bar both show shares of a whole. Each pie is a share of its own total, so a bigger slice in one pie does not mean a bigger quantity than a smaller slice in another pie.', deductiveTakeaway: 'Pie charts show the composition of one whole; compare quantities across groups with the actual values.' },
+    practice: ['Angle of a pie sector', 'From angle to percentage', 'Pie slices across different pies'],
+  },
+  {
+    id: 'ud-l15', unitId: 'ud-unit-5', lessonNumber: 15, title: 'What an Average Hides', subtitle: 'The average day versus real days', isOptionalExtension: true,
+    learningObjective: 'See that an average can describe nobody in a diverse population, and that equal averages need not mean equal data.', experimentId: 'ud-average-day', targetMetric: 'chart_edit', hidesResults: true,
+    concept: {
+      summary: 'A town has children, adults and elderly people. Each group spends its 24-hour day differently. The “average day” of the town is found by averaging each activity over all its people, so bigger groups count for more.',
+      detailedPoints: ['Each bar is one group’s day, adding up to 24 hours.', 'The population numbers are the weights.', 'You can change the hours and the population numbers and watch the average day respond.'],
+    },
+    predictionQuestion: { question: 'The town’s average day is computed from the three groups’ days. Will the average day be exactly the day of one of the groups?', options: ['Yes, it will match the largest group', 'No, it will usually match none of them', 'Yes, it matches the group in the middle'], correctIndex: 1, explanation: 'The average mixes the three different days, so it is usually a day that no group actually lives.' },
+    experimentGuide: { instruction: 'Change at least 3 things: a group’s hours or the population weights. After each change, compare the average day with the real groups’ days.', actionHint: 'Edit the table, or change the population numbers.', targetActionDescription: 'Make 3 different changes', minInteractionsNeeded: 3 },
+    observeGuide: { prompt: 'Which real group is closest to the average day, and how many hours of its day would have to change to match it? What stays equal for every group?', expectedPattern: 'No group lives the average day, and every group has the same mean of hours per activity even though their days are very different.', invariantsDescription: 'Each group’s day adds up to 24 hours, so every group has the same average hours per activity.' },
+    whyGuide: { explanationType: 'property', explanation: 'An average describes the centre of a collection but not the individual values. Looking only at the average of a diverse collection hides the differences; breaking the data into groups reveals them.', deductiveTakeaway: 'Equal averages do not imply identical data, and an overall average can describe none of its parts.' },
+    practice: ['Equal averages, different days', 'Average hours of the town', 'Does anyone live the average day?'],
+  },
+  {
+    id: 'ud-l16', unitId: 'ud-unit-5', lessonNumber: 16, title: 'Gold Purity in Varṇa', subtitle: 'Melting pieces of different purity', isOptionalExtension: true,
+    learningObjective: 'Find the purity of melted gold on the varṇa scale as a weighted mean by mass.', experimentId: 'ud-varna', targetMetric: 'mixture_edit', hidesResults: true,
+    concept: {
+      summary: 'In ancient India gold purity was measured in varṇa. The textbook says: 16 varṇa is pure gold, and k varṇa means the alloy is k/16 gold and the rest impurities. A goldsmith melts a 6 g piece of 14 varṇa together with a 4 g piece of 10 varṇa.',
+      detailedPoints: ['Gold in a piece = mass × varṇa ÷ 16.', 'Varṇa, percent and karat are different scales; this lab works in varṇa and shows the others only as labelled equivalents.', 'This is an idealised model of mixing, not an assay.'],
+    },
+    predictionQuestion: { question: 'The two pieces are 14 varṇa (6 g) and 10 varṇa (4 g). Midway between 14 and 10 is 12. Will the melted gold be below 12, exactly 12, or above 12 varṇa?', options: ['Below 12 varṇa', 'Exactly 12 varṇa', 'Above 12 varṇa'], correctIndex: 2, explanation: 'There is more of the purer 14-varṇa gold, so the result is closer to 14 than to 10.' },
+    experimentGuide: { instruction: 'Change the masses and purities of the pieces. Try equal masses, then very different masses. Make at least 3 different melts.', actionHint: 'Watch the gold contributions and the calculation steps change together.', targetActionDescription: 'Make 3 different melts', minInteractionsNeeded: 3 },
+    observeGuide: { prompt: 'Compare the final purity with the purities of the pieces in each melt.', expectedPattern: 'It is always between the lowest and highest purity, closer to the piece with more mass, and equal masses give the midpoint.', invariantsDescription: 'Final varṇa = Σ(mass × varṇa) ÷ Σ mass.' },
+    whyGuide: { explanationType: 'property', explanation: 'Each piece brings (mass × varṇa ÷ 16) of gold. Adding these and dividing by the total mass gives the gold fraction, and multiplying by 16 returns to varṇa. That is exactly the weighted mean of the varṇa values with the masses as weights.', deductiveTakeaway: 'Purity of a melt is a weighted mean of the pieces’ purities, weighted by mass.' },
+    practice: ['From varṇa to percent gold', 'Melting gold pieces', 'Gold needed for a target purity'],
   },
   {
     id: 'ud-l13', unitId: 'ud-unit-4', lessonNumber: 13, title: 'Chapter Practice and Revision', subtitle: 'Mixed questions across the chapter',
@@ -245,7 +293,9 @@ const entries = seeds.map(({ stages, practice, hidesResults, ...rest }): [string
 });
 
 export const UD_GUIDED_LESSONS: Record<string, UDLessonDefinition> = Object.fromEntries(entries);
-export const UD_LESSON_ORDER: string[] = UD_GUIDED_UNITS.flatMap((u) => u.lessonIds);
+/** The 13 required lessons, in order. Only these count toward chapter completion. */
+export const UD_LESSON_ORDER: string[] = UD_GUIDED_UNITS.filter((u) => u.badge !== 'Optional').flatMap((u) => u.lessonIds);
+export const UD_OPTIONAL_LESSON_IDS: string[] = UD_GUIDED_UNITS.filter((u) => u.badge === 'Optional').flatMap((u) => u.lessonIds);
 
 export const UD_CURRICULUM: GuidedChapterCurriculum = {
   chapterId: 'how-quantities-combine',

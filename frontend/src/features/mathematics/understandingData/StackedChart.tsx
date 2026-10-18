@@ -9,8 +9,9 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { type ChartDataset, type ChartMode, cell, groupTotal, groupShares, niceAxis, categoryTotal } from '../../../engine/mathematics/understandingData/charts';
+import { type ChartDataset, type ChartKind, type ChartMode, cell, groupTotal, groupShares, niceAxis, categoryTotal } from '../../../engine/mathematics/understandingData/charts';
 import { toNumber, formatSmart } from '../../../engine/mathematics/understandingData/rational';
+import { labelFits } from './chartHelpers';
 
 export const CATEGORY_COLORS = ['#38bdf8', '#f59e0b', '#34d399', '#f472b6', '#a78bfa', '#fb7185', '#facc15', '#94a3b8'];
 
@@ -48,7 +49,10 @@ export const StackedChart: React.FC<Props> = ({ dataset: ds, mode, selected, onS
 
   const phone = width < 440;
   const gutterL = phone ? 64 : 100;
-  const gutterR = phone ? 58 : 84;
+  const fontPx = phone ? 11 : 12;
+  const longestTotal = Math.max(...ds.groups.map((g) => (mode === 'percent' ? `total ${f(groupTotal(ds, g.id))}` : `= ${f(groupTotal(ds, g.id))}`).length), 4);
+  // wide enough for the longest total label at this font size (monospace ≈ 0.62em per character) plus padding
+  const gutterR = Math.max(phone ? 58 : 84, Math.ceil(longestTotal * fontPx * 0.62) + 14);
   const barH = phone ? 32 : 40;
   const gap = phone ? 12 : 16;
   const top = 8;
@@ -71,11 +75,11 @@ export const StackedChart: React.FC<Props> = ({ dataset: ds, mode, selected, onS
         {axis.ticks.map((t) => (
           <g key={t}>
             <line x1={sx(t)} y1={top - 2} x2={sx(t)} y2={height - axisH + 4} stroke="rgba(148,163,184,0.16)" />
-            <text x={sx(t)} y={height - axisH + 20} textAnchor="middle" fontSize={phone ? 10 : 11} fill="#94a3b8" fontFamily="ui-monospace, monospace">{mode === 'percent' ? `${t}%` : Number(t.toPrecision(6))}</text>
+            <text x={sx(t)} y={height - axisH + 20} textAnchor="middle" fontSize={phone ? 11 : 12} fill="#94a3b8" fontFamily="ui-monospace, monospace">{mode === 'percent' ? `${t}%` : Number(t.toPrecision(6))}</text>
           </g>
         ))}
         <line x1={gutterL} y1={height - axisH + 4} x2={gutterL + plotW} y2={height - axisH + 4} stroke="rgba(226,232,240,0.7)" strokeWidth={1.5} />
-        <text x={gutterL + plotW / 2} y={height - 6} textAnchor="middle" fontSize={phone ? 10 : 11} fill="#94a3b8" fontFamily="ui-monospace, monospace">
+        <text x={gutterL + plotW / 2} y={height - 6} textAnchor="middle" fontSize={phone ? 11 : 12} fill="#94a3b8" fontFamily="ui-monospace, monospace">
           {mode === 'percent' ? 'share of each group’s own total (%)' : ds.unit}
         </text>
 
@@ -134,13 +138,13 @@ export const StackedChart: React.FC<Props> = ({ dataset: ds, mode, selected, onS
                     >
                       <title>{accName}</title>
                       <rect x={x0} y={y} width={w} height={barH} fill={CATEGORY_COLORS[ci % CATEGORY_COLORS.length]} stroke={isMarked ? (marked!.correct === null ? '#c4b5fd' : marked!.correct ? '#34d399' : '#f87171') : isSel ? '#ffffff' : '#0b1220'} strokeWidth={isMarked || isSel ? 3 : 1} />
-                      {w >= (phone ? 30 : 34) && <text x={x0 + w / 2} y={y + barH / 2 + 4} textAnchor="middle" fontSize={phone ? 10 : 11} fontWeight={700} fill="#0b1220" fontFamily="ui-monospace, monospace" pointerEvents="none">{hidePercentText && mode === 'percent' ? '' : label}</text>}
+                      {labelFits(hidePercentText && mode === 'percent' ? '' : label, w, phone ? 11 : 12) && label !== '' && <text x={x0 + w / 2} y={y + barH / 2 + 4} textAnchor="middle" fontSize={phone ? 11 : 12} fontWeight={700} fill="#0b1220" fontFamily="ui-monospace, monospace" pointerEvents="none">{hidePercentText && mode === 'percent' ? '' : label}</text>}
                     </g>
                   );
                 })
               )}
               {barMark && <rect x={gutterL - 2} y={y - 2} width={plotW + 4} height={barH + 4} fill="none" stroke={barMark.correct === null ? '#c4b5fd' : barMark.correct ? '#34d399' : '#f87171'} strokeWidth={3} rx={4} />}
-              <text x={gutterL + plotW + 8} y={y + barH / 2 + 4} fontSize={phone ? 10 : 11} fill={mode === 'percent' ? '#94a3b8' : '#e2e8f0'} fontStyle={mode === 'percent' ? 'italic' : 'normal'} fontFamily="ui-monospace, monospace">
+              <text x={gutterL + plotW + 8} y={y + barH / 2 + 4} fontSize={phone ? 11 : 12} fill={mode === 'percent' ? '#94a3b8' : '#e2e8f0'} fontStyle={mode === 'percent' ? 'italic' : 'normal'} fontFamily="ui-monospace, monospace">
                 {mode === 'percent' ? `total ${f(total)}` : `= ${f(total)}`}
               </text>
             </g>
@@ -153,7 +157,7 @@ export const StackedChart: React.FC<Props> = ({ dataset: ds, mode, selected, onS
 };
 
 export const Legend: React.FC<{ ds: ChartDataset }> = ({ ds }) => (
-  <ul className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] font-mono text-slate-200" aria-label="Legend">
+  <ul className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs font-mono text-slate-200" aria-label="Legend">
     {ds.categories.map((c, i) => (
       <li key={c.id} className="flex items-center gap-1.5">
         <span className="inline-block w-3 h-3 rounded-sm" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
@@ -164,7 +168,7 @@ export const Legend: React.FC<{ ds: ChartDataset }> = ({ ds }) => (
 );
 
 /** Serialise the chart SVG to a PNG and trigger a download. Returns false if it could not. */
-export async function downloadChartPng(container: HTMLElement | null, mode: ChartMode, filename: string): Promise<boolean> {
+export async function downloadChartPng(container: HTMLElement | null, mode: ChartKind, filename: string): Promise<boolean> {
   const svg = container?.querySelector<SVGSVGElement>(`svg[data-chart-svg="${mode}"]`);
   if (!svg) return false;
   const clone = svg.cloneNode(true) as SVGSVGElement;

@@ -9,7 +9,22 @@
  * layout down; the structure itself changes.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+/** True when the viewport matches the media query; updates on resize/rotation. */
+function useMediaQuery(query: string): boolean {
+  const get = () => (typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false);
+  const [matches, setMatches] = useState(get);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
 
 interface Props {
   canvas: React.ReactNode;
@@ -20,6 +35,8 @@ interface Props {
 }
 
 export const WorkbenchShell: React.FC<Props> = ({ canvas, tools, lesson, defaultSheetTab }) => {
+  // Mount only the layout that is on screen, so there is one copy of every input (not a hidden duplicate).
+  const desktop = useMediaQuery('(min-width: 1024px)');
   const [sheetTab, setSheetTab] = useState<'lesson' | 'tools'>(lesson ? (defaultSheetTab ?? 'lesson') : 'tools');
   const [sheetOpen, setSheetOpen] = useState(true);
   const [lessonOpen, setLessonOpen] = useState(true);
@@ -28,7 +45,7 @@ export const WorkbenchShell: React.FC<Props> = ({ canvas, tools, lesson, default
   return (
     <div className="flex-1 min-h-0 flex flex-col lg:flex-row [@media(max-height:520px)_and_(orientation:landscape)]:flex-row overflow-hidden">
       {/* Desktop lesson column */}
-      {lesson && (
+      {desktop && lesson && (
         <aside className={`hidden lg:flex flex-col shrink-0 border-r border-surface-border bg-surface-low transition-[width] duration-200 ${lessonOpen ? 'w-[360px] xl:w-[400px]' : 'w-10'}`}>
           <button
             type="button"
@@ -48,7 +65,7 @@ export const WorkbenchShell: React.FC<Props> = ({ canvas, tools, lesson, default
       <main className="flex-1 min-h-0 min-w-0 relative bg-background">{canvas}</main>
 
       {/* Desktop tools column */}
-      <aside className={`hidden lg:flex flex-col shrink-0 border-l border-surface-border bg-surface-low transition-[width] duration-200 ${toolsOpen ? 'w-[340px] xl:w-[380px]' : 'w-10'}`}>
+      {desktop && <aside className={`hidden lg:flex flex-col shrink-0 border-l border-surface-border bg-surface-low transition-[width] duration-200 ${toolsOpen ? 'w-[340px] xl:w-[380px]' : 'w-10'}`}>
         <button
           type="button"
           onClick={() => setToolsOpen(!toolsOpen)}
@@ -60,10 +77,10 @@ export const WorkbenchShell: React.FC<Props> = ({ canvas, tools, lesson, default
           {toolsOpen && <span>Inspector</span>}
         </button>
         {toolsOpen && <div className="flex-1 min-h-0 overflow-y-auto">{tools}</div>}
-      </aside>
+      </aside>}
 
       {/* Phone / tablet bottom sheet */}
-      <section className={`lg:hidden shrink-0 flex flex-col border-t border-surface-border bg-surface-low [@media(max-height:520px)_and_(orientation:landscape)]:border-t-0 [@media(max-height:520px)_and_(orientation:landscape)]:border-l [@media(max-height:520px)_and_(orientation:landscape)]:w-[44vw] [@media(max-height:520px)_and_(orientation:landscape)]:h-full ${sheetOpen ? (sheetTab === 'lesson' && lesson ? 'h-[50vh]' : 'h-[40vh]') : ''}`} aria-label="Lesson and tools">
+      {!desktop && <section className={`lg:hidden shrink-0 flex flex-col border-t border-surface-border bg-surface-low [@media(max-height:520px)_and_(orientation:landscape)]:border-t-0 [@media(max-height:520px)_and_(orientation:landscape)]:border-l [@media(max-height:520px)_and_(orientation:landscape)]:w-[44vw] [@media(max-height:520px)_and_(orientation:landscape)]:h-full ${sheetOpen ? (sheetTab === 'lesson' && lesson ? 'h-[50vh]' : 'h-[40vh]') : ''}`} aria-label="Lesson and tools">
         <div className="flex items-stretch shrink-0 border-b border-surface-border">
           {lesson && (
             <button
@@ -98,7 +115,7 @@ export const WorkbenchShell: React.FC<Props> = ({ canvas, tools, lesson, default
           </button>
         </div>
         {sheetOpen && <div className="flex-1 min-h-0 overflow-y-auto">{sheetTab === 'lesson' && lesson ? lesson : tools}</div>}
-      </section>
+      </section>}
     </div>
   );
 };

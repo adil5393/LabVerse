@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUnderstandingDataStore, lessonStatus } from '../../../store/useUnderstandingDataStore';
-import { UD_GUIDED_LESSONS, UD_LESSON_ORDER } from '../../../engine/mathematics/understandingData/curriculumPath';
+import { UD_GUIDED_LESSONS, UD_LESSON_ORDER, UD_OPTIONAL_LESSON_IDS } from '../../../engine/mathematics/understandingData/curriculumPath';
 import { getPracticeQuestionById } from '../../../engine/mathematics/understandingData/practiceBank';
 import { formatSmart } from '../../../engine/mathematics/understandingData/rational';
 import type { GuidedStageId } from '../../../engine/mathematics/guidedLearning/types';
@@ -49,7 +49,8 @@ export const GuidedPanel: React.FC = () => {
   const gate = canAdvance();
   const isLast = idx === lesson.stages.length - 1;
   const done = Boolean(progress?.completed) && isLast;
-  const nextId = UD_LESSON_ORDER[UD_LESSON_ORDER.indexOf(lessonId) + 1];
+  const sequence = lesson.isOptionalExtension ? UD_OPTIONAL_LESSON_IDS : UD_LESSON_ORDER;
+  const nextId = sequence[sequence.indexOf(lessonId) + 1];
   const need = lesson.experimentGuide.minInteractionsNeeded ?? 0;
   const count = progress?.interactionsRecorded ?? 0;
   const np = lesson.numericPrediction;
@@ -60,8 +61,8 @@ export const GuidedPanel: React.FC = () => {
     <div className="flex flex-col min-h-full">
       <div className="p-3 sm:p-4 border-b border-surface-border space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[11px] font-mono font-bold text-amber-400">Lesson {lesson.lessonNumber} · {lesson.unitTitle}</div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-surface-border text-slate-300" data-status={status}>{STATUS_TEXT[status]}</span>
+          <div className="text-[11px] font-mono font-bold text-amber-400">Lesson {lesson.lessonNumber}{lesson.isOptionalExtension ? ' (optional)' : ''} · {lesson.unitTitle}</div>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-surface-border text-slate-300" data-status={status}>{STATUS_TEXT[status]}</span>
         </div>
         <h2 className="text-base font-bold text-white leading-snug">{lesson.title}</h2>
         <p className="text-xs text-slate-400 hidden sm:block">{lesson.learningObjective}</p>
@@ -70,7 +71,7 @@ export const GuidedPanel: React.FC = () => {
             const completed = progress?.stagesCompleted[st];
             return (
               <li key={st} className="shrink-0">
-                <button type="button" disabled={!(i <= idx || completed)} aria-current={st === stage ? 'step' : undefined} onClick={() => setStage(st)} className={`min-h-9 px-2.5 rounded-lg text-[11px] font-mono font-bold border ${st === stage ? 'bg-purple-600 text-white border-purple-300' : completed ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' : 'bg-surface-card text-slate-400 border-surface-border'} disabled:opacity-40`}>{completed && st !== stage ? '✓ ' : ''}{STAGE_LABEL[st]}</button>
+                <button type="button" disabled={!(i <= idx || completed)} aria-current={st === stage ? 'step' : undefined} onClick={() => setStage(st)} className={`min-h-11 px-2.5 rounded-lg text-[11px] font-mono font-bold border ${st === stage ? 'bg-purple-600 text-white border-purple-300' : completed ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' : 'bg-surface-card text-slate-400 border-surface-border'} disabled:opacity-40`}>{completed && st !== stage ? '✓ ' : ''}{STAGE_LABEL[st]}</button>
               </li>
             );
           })}
@@ -191,7 +192,8 @@ export const GuidedPanel: React.FC = () => {
             <div className={`p-3 rounded-xl text-xs font-bold border ${status === 'mastered' ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-200' : 'bg-amber-500/10 border-amber-500/40 text-amber-200'}`}>
               {status === 'mastered' ? 'Lesson complete: mastery earned from your own prediction, experiments and practice.' : status === 'demonstrated' ? 'Shown as a teacher demonstration. Marked complete but NOT as mastery.' : 'Lesson complete. Mastery needs most practice questions right on the first try.'}
             </div>
-            {nextId && <button type="button" onClick={() => navigate(`/mathematics/understanding-data/workbench?lesson=${nextId}`)} className="w-full min-h-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs">Next lesson: {UD_GUIDED_LESSONS[nextId].title} →</button>}
+            {nextId ? <button type="button" onClick={() => navigate(`/mathematics/understanding-data/workbench?lesson=${nextId}`)} className="w-full min-h-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs">Next lesson: {UD_GUIDED_LESSONS[nextId].title} →</button>
+              : <button type="button" onClick={() => navigate('/mathematics/understanding-data')} className="w-full min-h-11 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs">Back to the chapter →</button>}
           </div>
         ) : (
           <>
@@ -202,7 +204,7 @@ export const GuidedPanel: React.FC = () => {
             </div>
           </>
         )}
-        <label className="flex items-center gap-2 text-[11px] font-mono text-slate-400 min-h-9">
+        <label className="flex items-center gap-2 text-[11px] font-mono text-slate-400 min-h-11">
           <input type="checkbox" title="Teacher demonstration: skips the gates and is never recorded as mastery" checked={teacherMode} onChange={(e) => setTeacherMode(e.target.checked)} className="w-4 h-4" />
           Teacher demo (skips gates, no mastery)
         </label>

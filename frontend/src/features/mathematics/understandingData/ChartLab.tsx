@@ -16,6 +16,10 @@ import { buildChallenges, type ChartChallenge } from '../../../engine/mathematic
 import { formatSmart } from '../../../engine/mathematics/understandingData/rational';
 import { NumberField, Card, UndoRow, Segmented, LockedNotice } from './Controls';
 import { StackedChart, CATEGORY_COLORS, downloadChartPng } from './StackedChart';
+import { ClusteredChart } from './ClusteredChart';
+import { PieChart } from './PieChart';
+import { pieSectors } from '../../../engine/mathematics/understandingData/pie';
+import type { ChartKind } from '../../../engine/mathematics/understandingData/charts';
 import { WorkbenchShell } from './WorkbenchShell';
 
 const f = (x: Parameters<typeof formatSmart>[0]) => formatSmart(x, 2);
@@ -24,7 +28,7 @@ interface Props {
   lesson?: React.ReactNode;
 }
 
-const DatasetEditor: React.FC<{ simple: boolean }> = ({ simple }) => {
+export const DatasetEditor: React.FC<{ simple: boolean }> = ({ simple }) => {
   const ds = useUnderstandingDataStore((s) => s.dataset);
   const setCellV = useUnderstandingDataStore((s) => s.setChartCell);
   const addG = useUnderstandingDataStore((s) => s.addChartGroup);
@@ -45,8 +49,8 @@ const DatasetEditor: React.FC<{ simple: boolean }> = ({ simple }) => {
         <div className="flex flex-wrap gap-2 mb-2" aria-label="Categories">
           {ds.categories.map((c, i) => (
             <div key={c.id} className="flex items-center gap-1 rounded-lg border border-surface-border bg-surface-lowest pl-1.5" style={{ borderLeft: `4px solid ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}` }}>
-              <input value={c.label} onChange={(e) => renC(c.id, e.target.value)} aria-label={`Name of category ${i + 1}`} className="w-24 h-10 px-1 bg-transparent text-white text-xs font-semibold outline-none" />
-              {ds.categories.length > 1 && <button type="button" aria-label={`Remove category ${c.label}`} onClick={() => run(rmC(c.id))} className="w-9 h-10 text-slate-400 hover:text-rose-300">×</button>}
+              <input value={c.label} onChange={(e) => renC(c.id, e.target.value)} aria-label={`Name of category ${i + 1}`} className="w-24 h-11 px-1 bg-transparent text-white text-xs font-semibold outline-none" />
+              {ds.categories.length > 1 && <button type="button" aria-label={`Remove category ${c.label}`} onClick={() => run(rmC(c.id))} className="w-9 h-11 text-slate-400 hover:text-rose-300">×</button>}
             </div>
           ))}
           <button type="button" className={btn} onClick={() => run(addC())} disabled={ds.categories.length >= MAX_CATEGORIES}>+ Category</button>
@@ -56,7 +60,7 @@ const DatasetEditor: React.FC<{ simple: boolean }> = ({ simple }) => {
         {ds.groups.map((g) => (
           <div key={g.id} className="rounded-xl border border-surface-border bg-surface-lowest p-2 space-y-2">
             <div className="flex items-center gap-2">
-              {simple ? <div className="flex-1 text-sm font-bold text-white">{g.label}</div> : <input value={g.label} onChange={(e) => renG(g.id, e.target.value)} aria-label={`Name of ${g.label}`} className="flex-1 min-w-0 h-10 px-2 rounded-lg bg-surface-card border border-surface-border text-white text-sm font-semibold outline-none focus:border-purple-400" />}
+              {simple ? <div className="flex-1 text-sm font-bold text-white">{g.label}</div> : <input value={g.label} onChange={(e) => renG(g.id, e.target.value)} aria-label={`Name of ${g.label}`} className="flex-1 min-w-0 h-11 px-2 rounded-lg bg-surface-card border border-surface-border text-white text-sm font-semibold outline-none focus:border-purple-400" />}
               <span className="text-[11px] font-mono text-slate-400">total {f(groupTotal(ds, g.id))}</span>
               {!simple && ds.groups.length > 1 && <button type="button" aria-label={`Remove group ${g.label}`} onClick={() => run(rmG(g.id))} className="w-11 h-11 rounded-lg text-slate-400 hover:text-rose-300">×</button>}
             </div>
@@ -79,10 +83,9 @@ const DatasetEditor: React.FC<{ simple: boolean }> = ({ simple }) => {
   );
 };
 
-const DataIO: React.FC<{ chartRef: React.RefObject<HTMLDivElement | null> }> = ({ chartRef }) => {
+const DataIO: React.FC<{ chartRef: React.RefObject<HTMLDivElement | null>; exportKind: ChartKind }> = ({ chartRef, exportKind }) => {
   const ds = useUnderstandingDataStore((s) => s.dataset);
   const replace = useUnderstandingDataStore((s) => s.replaceDataset);
-  const view = useUnderstandingDataStore((s) => s.chartView);
   const [paste, setPaste] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -119,7 +122,7 @@ const DataIO: React.FC<{ chartRef: React.RefObject<HTMLDivElement | null> }> = (
       <div className="flex flex-wrap gap-2">
         <button type="button" className={btn} onClick={() => fileRef.current?.click()}>Import CSV file</button>
         <button type="button" className={btn} onClick={exportCsv}>Export CSV</button>
-        <button type="button" className={btn} onClick={async () => setNote((await downloadChartPng(chartRef.current, view === 'percent' ? 'percent' : 'absolute', 'labverse-chart.png')) ? 'Chart image saved.' : 'Could not create the image in this browser.')}>Download chart image</button>
+        <button type="button" className={btn} onClick={async () => setNote((await downloadChartPng(chartRef.current, exportKind, `labverse-${exportKind}-chart.png`)) ? 'Chart image saved.' : 'Could not create the image in this browser.')}>Download chart image</button>
         <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" aria-label="Choose a CSV file" onChange={async (e) => { const file = e.target.files?.[0]; if (file) importText(await file.text()); e.target.value = ''; }} />
       </div>
       <details>
@@ -135,7 +138,7 @@ const DataIO: React.FC<{ chartRef: React.RefObject<HTMLDivElement | null> }> = (
   );
 };
 
-const Challenges: React.FC<{ onActive: (c: ChartChallenge | null) => void; setMarked: (m: { groupId: string; categoryId?: string; correct: boolean } | null) => void; pending: { g?: string; c?: string } | null; clearPending: () => void; armed: boolean; setArmed: (a: boolean) => void }> = ({ onActive, setMarked, pending, clearPending, armed, setArmed }) => {
+const Challenges: React.FC<{ onActive: (c: ChartChallenge | null) => void; setMarked: (m: { groupId: string; categoryId?: string; correct: boolean } | null) => void; pending: { g?: string; c?: string } | null; clearPending: () => void; armed: boolean; setArmed: (a: boolean) => void; blocked: string | null }> = ({ onActive, setMarked, pending, clearPending, armed, setArmed, blocked }) => {
   const ds = useUnderstandingDataStore((s) => s.dataset);
   const results = useUnderstandingDataStore((s) => s.challengeResults);
   const record = useUnderstandingDataStore((s) => s.recordChallenge);
@@ -177,8 +180,11 @@ const Challenges: React.FC<{ onActive: (c: ChartChallenge | null) => void; setMa
       <p className="text-[11px] font-mono text-slate-400">{cur.concept === 'absolute' ? 'About actual amounts' : cur.concept === 'proportion' ? 'About proportions' : 'About choosing a chart'}{cur.mode === 'percent' ? ' · shown on the 100% chart' : ''}</p>
       {cur.input !== 'choice' && !feedback && (
         <div className="space-y-1">
-          <button type="button" aria-pressed={armed} onClick={() => setArmed(!armed)} className={`min-h-11 px-3 rounded-lg text-xs font-mono font-bold border ${armed ? 'bg-sky-600 border-sky-300 text-white' : 'bg-surface-card border-surface-border text-slate-100'}`}>{armed ? 'Now tap your answer on the chart…' : 'Answer on the chart'}</button>
-          <p className="text-[11px] text-slate-400">Until you press this, tapping the chart just shows a segment’s value.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" aria-pressed={armed} disabled={Boolean(blocked)} onClick={() => setArmed(!armed)} className={`min-h-11 px-3 rounded-lg text-xs font-mono font-bold border disabled:opacity-50 ${armed ? 'bg-sky-600 border-sky-300 text-white' : 'bg-surface-card border-surface-border text-slate-100'}`}>{armed ? 'Now tap your answer on the chart…' : 'Answer on the chart'}</button>
+            {armed && <button type="button" onClick={() => setArmed(false)} className="min-h-11 px-3 rounded-lg text-xs font-mono font-bold border bg-surface-card border-surface-border text-slate-100">Cancel (Esc)</button>}
+          </div>
+          {blocked ? <p className="text-[11px] text-amber-300" role="status">{blocked}</p> : <p className="text-[11px] text-slate-400">{armed ? 'Your next tap on the chart is your answer.' : 'Until you press this, tapping the chart only shows a value.'}</p>}
         </div>
       )}
       {cur.input === 'choice' && (
@@ -207,6 +213,11 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
   const ds = useUnderstandingDataStore((s) => s.dataset);
   const view = useUnderstandingDataStore((s) => s.chartView);
   const setView = useUnderstandingDataStore((s) => s.setChartView);
+  const clusterBy = useUnderstandingDataStore((s) => s.clusterBy);
+  const setClusterBy = useUnderstandingDataStore((s) => s.setClusterBy);
+  const pieGroupId = useUnderstandingDataStore((s) => s.pieGroupId);
+  const setPieGroup = useUnderstandingDataStore((s) => s.setPieGroup);
+  const allowedViews = useUnderstandingDataStore((s) => s.allowedViews)();
   const selected = useUnderstandingDataStore((s) => s.selected);
   const select = useUnderstandingDataStore((s) => s.selectSegment);
   const locked = useUnderstandingDataStore((s) => s.isLocked());
@@ -225,7 +236,17 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
   const showChallenges = !guided || ['ud-choose', 'ud-claims'].includes(experimentId) || !simple;
 
   const effective: ChartView = active && active.mode === 'percent' && !locked ? 'percent' : view;
-  const answerMode = active && armed && !marked ? (active.input === 'bar' ? 'bar' : active.input === 'segment' ? 'segment' : 'none') : 'none';
+  const pieGroup = ds.groups.some((g) => g.id === pieGroupId) ? pieGroupId : ds.groups[0].id;
+  const blocked = active && active.input === 'bar' && effective === 'pie' ? 'A pie shows one group only, so this question cannot be answered on it. Switch to a stacked or clustered view.' : null;
+
+  // Escape leaves Answer Mode without answering.
+  React.useEffect(() => {
+    if (!armed) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setArmed(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [armed]);
+  const answerMode = active && armed && !marked && !blocked ? (active.input === 'bar' ? 'bar' : active.input === 'segment' ? 'segment' : 'none') : 'none';
 
   const opp = useMemo(() => (ds.groups.length >= 2 && ds.categories.length >= 1 ? buildOppositeCases(ds, ds.groups[0].id, ds.groups[1].id, ds.categories[0].id) : null), [ds]);
   const oppDs: ChartDataset | null = opp && oppositeCase > 0 ? (oppositeCase === 1 ? opp.case1 : opp.case2) : null;
@@ -240,6 +261,8 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
   const selCat = sel ? ds.categories.find((c) => c.id === sel.categoryId)! : null;
   const selShare = sel ? groupShares(ds, sel.groupId) : null;
   const selPct = selShare && selShare.status === 'ok' ? selShare.rows.find((r) => r.categoryId === sel!.categoryId)?.text : null;
+  const pieInfo = useMemo(() => pieSectors(ds, pieGroup), [ds, pieGroup]);
+  const selAngle = sel && view === 'pie' && pieInfo.status === 'ok' && sel.groupId === pieGroup ? pieInfo.sectors.find((x) => x.categoryId === sel.categoryId) : undefined;
   const roundingNotes = useMemo(() => ds.groups.map((g) => ({ g, s: groupShares(ds, g.id) })).filter((x) => x.s.status === 'ok' && x.s.roundingNote), [ds]);
   const noData = ds.groups.filter((g) => groupShares(ds, g.id).status === 'no_data');
 
@@ -248,11 +271,37 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
       <div className="max-w-3xl mx-auto p-3 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-white">{ds.title}</h2>
-          <Segmented<ChartView> label="Chart type" value={view} onChange={setView} disabledValues={locked ? ['percent', 'both'] : []} options={[{ id: 'absolute', label: 'Stacked' }, { id: 'percent', label: '100%' }, { id: 'both', label: 'Both' }]} />
+          <Segmented<ChartView> label="Chart type" value={view} onChange={setView} options={([{ id: 'absolute', label: 'Stacked' }, { id: 'percent', label: '100%' }, { id: 'clustered', label: 'Clustered' }, { id: 'pie', label: 'Pie' }, { id: 'both', label: 'Both' }] as { id: ChartView; label: string }[]).filter((o) => allowedViews.includes(o.id))} />
         </div>
         {locked && <LockedNotice />}
+        {view === 'clustered' && effective === 'clustered' && (
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-300">
+            <span>Group the columns by</span>
+            <Segmented<'group' | 'category'> label="Group columns by" value={clusterBy} onChange={setClusterBy} options={[{ id: 'group', label: 'Group (one cluster each)' }, { id: 'category', label: 'Category (one cluster each)' }]} />
+          </div>
+        )}
+        {view === 'pie' && effective === 'pie' && (
+          <label className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-300">
+            Pie of
+            <select value={pieGroup} onChange={(e) => setPieGroup(e.target.value)} aria-label="Group shown as a pie" className="min-h-11 px-3 rounded-lg bg-surface-card border border-surface-border text-white text-sm font-sans font-semibold">
+              {ds.groups.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+            </select>
+            <span className="text-slate-500">(a pie shows one group at a time)</span>
+          </label>
+        )}
 
         <div ref={chartRef} className="space-y-4">
+          {effective === 'clustered' && (
+            <div className="rounded-xl border border-surface-border bg-surface-lowest p-2 sm:p-3">
+              <ClusteredChart dataset={ds} by={clusterBy} selected={sel} onSelect={handleSelect} onSelectBar={(g) => setPending({ g })} answerMode={answerMode === 'segment' ? 'segment' : answerMode === 'bar' ? 'bar' : 'none'} marked={marked} title={`Clustered columns: actual values, one cluster per ${clusterBy}`} />
+              <p className="mt-2 text-[11px] text-slate-400">Every column starts from zero, so single values are easy to compare. Clustered columns do not show each group’s total; use a stacked bar for that.</p>
+            </div>
+          )}
+          {effective === 'pie' && (
+            <div className="rounded-xl border border-surface-border bg-surface-lowest p-2 sm:p-3">
+              <PieChart dataset={ds} groupId={pieGroup} selected={sel} onSelect={handleSelect} answerMode={answerMode === 'segment' ? 'segment' : 'none'} marked={marked} hideNumbers={locked} title="Pie chart: parts of one whole" />
+            </div>
+          )}
           {(effective === 'absolute' || effective === 'both') && (
             <div className="rounded-xl border border-surface-border bg-surface-lowest p-2 sm:p-3">
               <StackedChart dataset={ds} mode="absolute" selected={sel} onSelect={handleSelect} onSelectBar={(g) => setPending({ g })} answerMode={answerMode} marked={marked} title="Stacked bars: actual values" />
@@ -266,21 +315,22 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
           )}
         </div>
 
-        {(effective !== 'absolute') && roundingNotes.map(({ g, s }) => s.status === 'ok' && (
+        {(effective === 'percent' || effective === 'both') && roundingNotes.map(({ g, s }) => s.status === 'ok' && (
           <p key={g.id} className="text-xs text-amber-200" role="note">{g.label}: {s.roundingNote}</p>
         ))}
-        {effective !== 'absolute' && noData.map((g) => <p key={g.id} className="text-xs text-amber-200" role="note">{g.label} has a total of 0, so its percentages are undefined and nothing is drawn.</p>)}
+        {(effective === 'percent' || effective === 'both') && noData.map((g) => <p key={g.id} className="text-xs text-amber-200" role="note">{g.label} has a total of 0, so its percentages are undefined and nothing is drawn.</p>)}
 
         <div aria-live="polite">
           {sel && selGroup && selCat ? (
             <div className="rounded-xl border border-sky-500/40 bg-sky-950/20 p-3 text-sm text-slate-100" role="status">
               <strong>{selGroup.label} · {selCat.label}:</strong> {cell(ds, sel.groupId, sel.categoryId) ? f(cell(ds, sel.groupId, sel.categoryId)!) : 'missing'} {ds.unit}
               {!locked && selPct && <> = <strong>{selPct}%</strong> of {selGroup.label}’s total ({f(groupTotal(ds, sel.groupId))}).</>}
+              {!locked && selAngle && <> Its pie sector is <strong>{selAngle.angleText}°</strong> (360° × {selAngle.percentText}%).</>}
               {!locked && <> Across all groups, {selCat.label} totals {f(categoryTotal(ds, sel.categoryId))} {ds.unit}.</>}
               {locked && <> (Percentages stay hidden until you predict.)</>}
             </div>
           ) : (
-            <p className="text-xs text-slate-500">Tap or press a segment to read its exact value.</p>
+            <p className="text-xs text-slate-500">Tap or press a segment, column or slice to read its exact value.</p>
           )}
         </div>
 
@@ -296,6 +346,9 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
         <details className="rounded-xl border border-surface-border bg-surface-card">
           <summary className="p-3 min-h-11 text-xs font-mono font-bold text-slate-300 cursor-pointer">Text description of the chart</summary>
           <div className="px-3 pb-3 space-y-2 text-xs text-slate-200">
+            {view === 'pie' && pieInfo.status === 'ok' && <ul className="list-disc pl-4 space-y-1"><li>Pie of {ds.groups.find((g) => g.id === pieGroup)?.label}, total {f(pieInfo.total)} {ds.unit}: {pieInfo.sectors.map((x) => `${ds.categories.find((c) => c.id === x.categoryId)?.label} ${x.percentText}% (${x.angleText}°)`).join(', ')}.</li></ul>}
+            {view === 'pie' && pieInfo.status === 'no_data' && <p>{pieInfo.message}</p>}
+            {view === 'clustered' && <ul className="list-disc pl-4 space-y-1"><li>Clustered columns, one cluster per {clusterBy}; the values are in the table below.</li></ul>}
             {(['absolute', 'percent'] as const).map((m) => <ul key={m} className="list-disc pl-4 space-y-1">{describeChart(ds, m).map((l, i) => <li key={i}>{l}</li>)}</ul>)}
             <table className="w-full text-[11px] font-mono mt-2">
               <caption className="sr-only">Data table</caption>
@@ -325,10 +378,10 @@ export const ChartLab: React.FC<Props> = ({ lesson }) => {
         </Card>
       )}
       {showChallenges && !locked && (
-        <Challenges onActive={setActive} setMarked={setMarked} pending={pending} clearPending={() => setPending(null)} armed={armed} setArmed={setArmed} />
+        <Challenges onActive={setActive} setMarked={setMarked} pending={pending} clearPending={() => setPending(null)} armed={armed} setArmed={setArmed} blocked={blocked} />
       )}
       <DatasetEditor simple={simple} />
-      {!simple && <DataIO chartRef={chartRef} />}
+      {!simple && <DataIO chartRef={chartRef} exportKind={effective === 'percent' ? 'percent' : effective === 'clustered' ? 'clustered' : effective === 'pie' ? 'pie' : 'absolute'} />}
     </div>
   );
 

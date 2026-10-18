@@ -17,8 +17,12 @@ export const UD_EXPERIMENTS: UDExperiment[] = [
   { id: 'ud-stacked-build', title: 'Building Stacked Bars', subtitle: 'Enter your own data', defaultTab: 'charts', chart: { preset: 'houses', mode: 'absolute' }, simpleControls: false },
   { id: 'ud-percent', title: '100% Stacked Bars', subtitle: 'Shares inside each group', defaultTab: 'charts', chart: { preset: 'spending', mode: 'percent' }, simpleControls: true },
   { id: 'ud-compare', title: 'Counts versus Percentages', subtitle: 'Same data, two charts', defaultTab: 'charts', chart: { preset: 'blooms', mode: 'absolute' }, simpleControls: true },
+  { id: 'ud-clustered', title: 'Clustered Columns or Stacked Bars?', subtitle: 'Same table, two ways to draw it', defaultTab: 'charts', chart: { preset: 'spending', mode: 'absolute', view: 'clustered' }, simpleControls: true },
+  { id: 'ud-pie', title: 'Pie Chart of One Group', subtitle: 'Parts of one whole, with angles', defaultTab: 'charts', chart: { preset: 'spending', mode: 'absolute', view: 'pie', pieGroup: 0 }, simpleControls: true },
   { id: 'ud-choose', title: 'Choosing the Chart', subtitle: 'Which chart answers which question?', defaultTab: 'charts', chart: { preset: 'daytime', mode: 'absolute' }, simpleControls: true },
   { id: 'ud-claims', title: 'Misleading Conclusions', subtitle: 'What a chart cannot tell you', defaultTab: 'charts', chart: { preset: 'blooms', mode: 'percent' }, simpleControls: true },
+  { id: 'ud-average-day', title: 'What an Average Hides', subtitle: 'The average day versus real days', defaultTab: 'average', chart: { preset: 'daytime', mode: 'absolute', weights: [3, 5, 2] }, simpleControls: false },
+  { id: 'ud-varna', title: 'Gold Purity in Varṇa', subtitle: 'Melting pieces of different purity', defaultTab: 'mixture', mixture: MIXTURE_SEEDS.varna, simpleControls: false },
   { id: 'ud-practice', title: 'Chapter Practice', subtitle: 'Basic, Standard and Challenge', defaultTab: 'weighted', weighted: WEIGHTED_SEEDS.classes, simpleControls: false },
 ];
 

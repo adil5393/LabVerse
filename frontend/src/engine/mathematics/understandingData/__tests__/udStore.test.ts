@@ -126,22 +126,34 @@ describe('Understanding Data store', () => {
     const ds = s().dataset;
     for (const [g, c] of [[0, 0], [0, 1], [1, 2]]) s().selectSegment(ds.groups[g].id, ds.categories[c].id);
     expect(s().lessons['ud-l7'].interactionsRecorded).toBe(3);
+    // Lesson 7 also requires the student to open the clustered-column view.
+    expect(s().canAdvance().ok).toBe(false);
+    expect(s().canAdvance().reason).toMatch(/clustered-column view/);
+    s().advanceToNextStage();
+    expect(s().activeStage).toBe('experiment'); // still blocked
+    s().setChartView('pie'); // not offered in this lesson
+    expect(s().chartView).toBe('absolute');
+    s().setChartView('clustered');
+    expect(s().chartView).toBe('clustered');
+    expect(s().canAdvance().ok).toBe(true);
     for (let i = 0; i < 3; i++) s().advanceToNextStage(); // observe, explain, practice
     expect(s().activeStage).toBe('practice');
     const ids = UD_GUIDED_LESSONS['ud-l7'].practiceQuestionIds;
     expect(s().canAdvance().ok).toBe(false);
     s().revealPracticeHint(ids[0]); // a hint alone is not an answer
     expect(s().canAdvance().ok).toBe(false);
+    expect(ids).toHaveLength(4);
     s().submitPracticeAnswer(ids[0], 'x', true);
     s().submitPracticeAnswer(ids[1], 'x', false);
     s().retryPracticeQuestion(ids[1]);
     s().submitPracticeAnswer(ids[1], 'x', true); // retry success does not rewrite the first attempt
     expect(s().practiceAnswers[ids[1]].firstAttemptCorrect).toBe(false);
-    s().submitPracticeAnswer(ids[2], 'x', true);
+    s().submitPracticeAnswer(ids[2], 'x', false);
+    s().submitPracticeAnswer(ids[3], 'x', true);
     s().advanceToNextStage();
     let p = s().lessons['ud-l7'];
     expect(p.completed).toBe(true);
-    expect(p.mastered).toBe(false); // 2 of 3 = 66.7% < 70%
+    expect(p.mastered).toBe(false); // 2 of 4 first-try correct = 50% < 70%
     expect(lessonStatus(p)).toBe('completed');
 
     // second lesson, everything right the first time

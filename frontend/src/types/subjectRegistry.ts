@@ -93,17 +93,17 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
   {
     id: 'mathematics',
     name: 'Mathematics',
-    category: 'Coordinate Geometry, Circles, Quadrilaterals & Propositions',
+    category: 'Coordinate Geometry, Circles, Quadrilaterals, Propositions & Linear Equations',
     description:
-      'Four independent Class 9 mathematics laboratories: dynamic Cartesian coordinate plane, Euclidean circle theorems, quadrilateral classifications, and formal mathematical reasoning with propositions, converses, and counterexamples.',
+      'Five independent Class 9 mathematics laboratories: dynamic Cartesian coordinate plane, Euclidean circle theorems, quadrilateral classifications, formal mathematical reasoning with propositions and counterexamples, and linear equations in two variables with graphs and simultaneous solutions.',
     icon: 'calculate',
     status: 'ready',
     route: '/mathematics',
     accentColor: '#a855f7',
     badgeText: 'Active Laboratory',
     buttonText: 'Explore Mathematics',
-    topicsCount: 4,
-    experimentsCount: 38,
+    topicsCount: 5,
+    experimentsCount: 51,
     features: [
       {
         title: 'Coordinate Geometry',
@@ -124,6 +124,11 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
         title: 'Propositions & Converses',
         description: 'Logic of hypotheses & conclusions, converse truth independence, counterexample discovery, and deductive proofs.',
         icon: 'psychology',
+      },
+      {
+        title: 'Two Variables, One Line',
+        description: 'Interactive equation graphs, two-line systems, parallel and coincident lines, substitution and elimination.',
+        icon: 'show_chart',
       },
     ],
   },

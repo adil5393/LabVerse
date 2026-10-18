@@ -43,6 +43,16 @@ const PropositionsWorkbenchPage = lazy(() =>
     default: m.PropositionsWorkbenchPage,
   }))
 );
+const TwoVariablesLab = lazy(() =>
+  import('./features/mathematics/twoVariables/TwoVariablesLab').then((m) => ({
+    default: m.TwoVariablesLab,
+  }))
+);
+const TwoVariablesWorkbenchPage = lazy(() =>
+  import('./features/mathematics/twoVariables/TwoVariablesWorkbenchPage').then((m) => ({
+    default: m.TwoVariablesWorkbenchPage,
+  }))
+);
 const ChemistryLab = lazy(() =>
   import('./features/chemistry/ChemistryLab').then((m) => ({ default: m.ChemistryLab }))
 );
@@ -102,6 +112,10 @@ export const App: React.FC = () => {
 
           {/* Route 11: Interactive Propositions Workbench */}
           <Route path="/mathematics/propositions/workbench" element={<PropositionsWorkbenchPage />} />
+
+          {/* Route 11b: Two Variables, One Line landing page and workbench */}
+          <Route path="/mathematics/two-variables" element={<TwoVariablesLab />} />
+          <Route path="/mathematics/two-variables/workbench" element={<TwoVariablesWorkbenchPage />} />
 
           {/* Route 12: Chemistry Laboratory Landing Page */}
           <Route path="/chemistry" element={<ChemistryLab />} />

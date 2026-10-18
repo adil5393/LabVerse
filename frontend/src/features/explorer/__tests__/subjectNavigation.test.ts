@@ -94,14 +94,14 @@ describe('Subject Navigation & Routing Consistency (Milestone M3.2)', () => {
       expect(featureTitles).not.toContain('DC Loop Simulation');
     });
 
-    it('confirms Mathematics metadata accurately reflects all 4 independent laboratories', () => {
+    it('confirms Mathematics metadata accurately reflects all 5 independent laboratories', () => {
       const math = getSubjectById('mathematics')!;
       expect(math).toBeDefined();
       expect(math.status).toBe('ready');
       expect(math.route).toBe('/mathematics');
       expect(math.buttonText).toBe('Explore Mathematics');
       expect(math.badgeText).toBe('Active Laboratory');
-      expect(math.topicsCount).toBe(4);
+      expect(math.topicsCount).toBe(5);
       expect(isSubjectActive('mathematics')).toBe(true);
 
       const featureTitles = math.features?.map((f) => f.title) || [];
@@ -109,6 +109,7 @@ describe('Subject Navigation & Routing Consistency (Milestone M3.2)', () => {
       expect(featureTitles).toContain('Circles Laboratory');
       expect(featureTitles).toContain('Quadrilaterals Laboratory');
       expect(featureTitles).toContain('Propositions & Converses');
+      expect(featureTitles).toContain('Two Variables, One Line');
     });
 
     it('confirms Biology and Robotics are clearly marked Coming Soon without active routes', () => {

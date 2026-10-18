@@ -278,10 +278,13 @@ export interface QuadrilateralAnalysis {
   isConvex: boolean;
   isSimple: boolean;
   isDegenerate: boolean;
+  isCrossed: boolean;
   sideLengths: [number, number, number, number]; // [AB, BC, CD, DA]
   diagonalLengths: [number, number]; // [AC, BD]
   interiorAngles: [number, number, number, number]; // [A, B, C, D]
   angleSum: number;
+  reflexVertexIndex: number | null; // 0 for A, 1 for B, 2 for C, 3 for D, or null if convex
+  isReflex: [boolean, boolean, boolean, boolean];
   oppSidesParallel: [boolean, boolean]; // [AB || CD, BC || DA]
   oppSidesEqual: [boolean, boolean]; // [AB = CD, BC = DA]
   adjSidesEqual: [boolean, boolean, boolean, boolean]; // [AB=BC, BC=CD, CD=DA, DA=AB]
@@ -326,31 +329,34 @@ export function classifyQuadrilateral(
   const isCrossed = crossed1 || crossed2;
   const isSimple = !isCrossed && !isDegenerate;
 
-  // Convexity: check cross products of consecutive edges
-  const e1 = vectorBetween(a, b);
-  const e2 = vectorBetween(b, c);
-  const e3 = vectorBetween(c, d);
-  const e4 = vectorBetween(d, a);
-
-  const cp1 = crossProduct(e1, e2);
-  const cp2 = crossProduct(e2, e3);
-  const cp3 = crossProduct(e3, e4);
-  const cp4 = crossProduct(e4, e1);
-
-  const allPos = cp1 > 0 && cp2 > 0 && cp3 > 0 && cp4 > 0;
-  const allNeg = cp1 < 0 && cp2 < 0 && cp3 < 0 && cp4 < 0;
-  const isConvex = isSimple && (allPos || allNeg);
-
-  // Interior angles
+  // Interior angles calculation based on polygon traversal order and winding
   const ccw = isPolygonCCW(pts);
   const angleA = calculateInteriorAngle(d, a, b, ccw);
   const angleB = calculateInteriorAngle(a, b, c, ccw);
   const angleC = calculateInteriorAngle(b, c, d, ccw);
   const angleD = calculateInteriorAngle(c, d, a, ccw);
   const interiorAngles: [number, number, number, number] = [angleA, angleB, angleC, angleD];
-  const angleSum = angleA + angleB + angleC + angleD;
+  const angleSum = isSimple ? angleA + angleB + angleC + angleD : 0;
+
+  // Convexity & Reflex classification
+  // In any simple quadrilateral, it is convex iff all 4 angles are < 180°
+  // If one angle is > 180°, it is concave, and that vertex is reflex
+  const isReflex: [boolean, boolean, boolean, boolean] = [
+    angleA > 180 + EPSILON,
+    angleB > 180 + EPSILON,
+    angleC > 180 + EPSILON,
+    angleD > 180 + EPSILON,
+  ];
+  const reflexIdx = isReflex.findIndex((r) => r);
+  const reflexVertexIndex = reflexIdx !== -1 ? reflexIdx : null;
+  const isConvex = isSimple && reflexVertexIndex === null;
 
   // Parallelism & Equalities
+  const e1 = vectorBetween(a, b);
+  const e2 = vectorBetween(b, c);
+  const e3 = vectorBetween(c, d);
+  const e4 = vectorBetween(d, a);
+
   const abParallelCD = areVectorsParallel(e1, { x: -e3.x, y: -e3.y });
   const bcParallelDA = areVectorsParallel(e2, { x: -e4.x, y: -e4.y });
   const oppSidesParallel: [boolean, boolean] = [abParallelCD, bcParallelDA];
@@ -402,10 +408,12 @@ export function classifyQuadrilateral(
     explanation = 'Degenerate quadrilateral: 3 or more vertices are collinear or sides have zero length.';
   } else if (isCrossed) {
     kind = 'crossed';
-    explanation = 'Crossed (self-intersecting) quadrilateral. Non-consecutive edges cross each other.';
-  } else if (!isConvex) {
+    explanation = 'Crossed (self-intersecting) quadrilateral. Non-consecutive edges cross each other. Interior angles are undefined.';
+  } else if (!isConvex && reflexVertexIndex !== null) {
     kind = 'concave';
-    explanation = 'Concave quadrilateral: One interior angle exceeds 180°, and one diagonal lies outside.';
+    const vName = ['A', 'B', 'C', 'D'][reflexVertexIndex];
+    const rDeg = interiorAngles[reflexVertexIndex].toFixed(1);
+    explanation = `Concave quadrilateral: Vertex ${vName} has a reflex interior angle (${rDeg}° > 180°). All 4 interior angles still sum to 360°.`;
   } else {
     // Convex family
     const allSidesEqual = oppEqual1 && oppEqual2 && adjEqual1;
@@ -446,10 +454,13 @@ export function classifyQuadrilateral(
     isConvex,
     isSimple,
     isDegenerate,
+    isCrossed,
     sideLengths,
     diagonalLengths,
     interiorAngles,
     angleSum,
+    reflexVertexIndex,
+    isReflex,
     oppSidesParallel,
     oppSidesEqual,
     adjSidesEqual,
@@ -459,6 +470,193 @@ export function classifyQuadrilateral(
     area,
     varignonArea,
     explanation,
+  };
+}
+
+// ============================================================================
+// 6b. True Polygon Vertex Angle Geometry & Label Placement Helpers
+// ============================================================================
+
+export interface PolygonVertexAngle {
+  vertexIndex: number;
+  vertexPoint: WorldPoint;
+  screenVertex: { x: number; y: number };
+  interiorDegrees: number;
+  isReflex: boolean; // true if interior angle > 180°
+  arcStartAngle: number; // Screen radians
+  arcSweep: number; // Positive sweep in screen radians (CW)
+  arcRadius: number; // Adaptive screen px
+  bisectorScreenAngle: number; // Screen angle pointing directly into polygon interior
+  exteriorScreenAngle: number; // Screen angle pointing outward (for vertex name)
+  badgePosition: { x: number; y: number }; // Screen position for angle value badge
+  pointLabelPosition: { x: number; y: number }; // Screen position for point name label
+}
+
+/**
+ * Computes exact interior angle geometry for each vertex of a polygon,
+ * determining whether each vertex is convex (< 180°) or reflex/concave (> 180°),
+ * drawing arcs that consistently stay inside the polygon interior without collapsing,
+ * and positioning value badges on the interior bisector and vertex names on the exterior bisector.
+ */
+export function computePolygonVertexAngles(
+  pts: WorldPoint[],
+  viewport: QuadViewportTransform,
+  width: number,
+  height: number
+): PolygonVertexAngle[] {
+  const n = pts.length;
+  if (n < 3) return [];
+
+  // Determine polygon winding in Cartesian world coordinates
+  const isCCW = isPolygonCCW(pts);
+  const screenPts = pts.map((p) => worldToScreen(p, viewport, width, height));
+
+  const result: PolygonVertexAngle[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const prevIdx = (i + n - 1) % n;
+    const nextIdx = (i + 1) % n;
+
+    const pVertex = pts[i];
+    const sVertex = screenPts[i];
+    const sPrev = screenPts[prevIdx];
+    const sNext = screenPts[nextIdx];
+
+    const vPrevScreen = { x: sPrev.x - sVertex.x, y: sPrev.y - sVertex.y };
+    const vNextScreen = { x: sNext.x - sVertex.x, y: sNext.y - sVertex.y };
+
+    const anglePrev = Math.atan2(vPrevScreen.y, vPrevScreen.x);
+    const angleNext = Math.atan2(vNextScreen.y, vNextScreen.x);
+
+    let arcStart: number;
+    let arcEnd: number;
+
+    // In HTML5 screen coords (where Y is down):
+    // If Cartesian is CCW, screen traversal is CCW, so interior sweeps from prev to next CW
+    // If Cartesian is CW, screen traversal is CW, so interior sweeps from next to prev CW
+    if (isCCW) {
+      arcStart = anglePrev;
+      arcEnd = angleNext;
+    } else {
+      arcStart = angleNext;
+      arcEnd = anglePrev;
+    }
+
+    let sweep = arcEnd - arcStart;
+    while (sweep < 0) sweep += 2 * Math.PI;
+    while (sweep >= 2 * Math.PI) sweep -= 2 * Math.PI;
+
+    const interiorDegrees = (sweep * 180) / Math.PI;
+    const isReflex = interiorDegrees > 180;
+
+    // Interior bisector is the continuous midpoint of the interior sweep
+    const bisectorScreenAngle = arcStart + sweep / 2;
+    // Exterior direction is opposite the interior bisector
+    const exteriorScreenAngle = bisectorScreenAngle + Math.PI;
+
+    // Adaptive arc radius: scales with edge length so arcs never clip past corners
+    const dPrev = Math.hypot(vPrevScreen.x, vPrevScreen.y);
+    const dNext = Math.hypot(vNextScreen.x, vNextScreen.y);
+    const minEdge = Math.max(16, Math.min(dPrev, dNext));
+
+    const arcRadius = isReflex
+      ? Math.min(30, Math.max(20, minEdge * 0.28))
+      : Math.min(24, Math.max(16, minEdge * 0.22));
+
+    // Place angle value badge on interior bisector
+    const badgeDistance = isReflex ? arcRadius + 24 : arcRadius + 18;
+    const badgePosition = {
+      x: sVertex.x + Math.cos(bisectorScreenAngle) * badgeDistance,
+      y: sVertex.y + Math.sin(bisectorScreenAngle) * badgeDistance,
+    };
+
+    // Place point name label on exterior direction to prevent collision
+    const pointLabelDistance = 16;
+    const pointLabelPosition = {
+      x: sVertex.x + Math.cos(exteriorScreenAngle) * pointLabelDistance,
+      y: sVertex.y + Math.sin(exteriorScreenAngle) * pointLabelDistance,
+    };
+
+    result.push({
+      vertexIndex: i,
+      vertexPoint: pVertex,
+      screenVertex: sVertex,
+      interiorDegrees,
+      isReflex,
+      arcStartAngle: arcStart,
+      arcSweep: sweep,
+      arcRadius,
+      bisectorScreenAngle,
+      exteriorScreenAngle,
+      badgePosition,
+      pointLabelPosition,
+    });
+  }
+
+  return result;
+}
+
+export interface StandaloneAngleGeometry {
+  degrees: number;
+  arcStartAngle: number;
+  arcSweep: number;
+  arcRadius: number;
+  bisectorScreenAngle: number;
+  badgePosition: { x: number; y: number };
+}
+
+/**
+ * Computes robust minor-angle arc and badge placement for 3 standalone points (P1 -> Vertex -> P2)
+ * without branch-cut discontinuity or label inversion across the negative X-axis.
+ */
+export function computeStandaloneAngleGeometry(
+  p1: WorldPoint,
+  vertex: WorldPoint,
+  p2: WorldPoint,
+  viewport: QuadViewportTransform,
+  width: number,
+  height: number
+): StandaloneAngleGeometry {
+  const sV = worldToScreen(vertex, viewport, width, height);
+  const s1 = worldToScreen(p1, viewport, width, height);
+  const s2 = worldToScreen(p2, viewport, width, height);
+
+  const v1 = { x: s1.x - sV.x, y: s1.y - sV.y };
+  const v2 = { x: s2.x - sV.x, y: s2.y - sV.y };
+
+  const a1 = Math.atan2(v1.y, v1.x);
+  const a2 = Math.atan2(v2.y, v2.x);
+
+  let delta = a2 - a1;
+  while (delta < 0) delta += 2 * Math.PI;
+  while (delta >= 2 * Math.PI) delta -= 2 * Math.PI;
+
+  let arcStart: number;
+  let arcSweep: number;
+
+  if (delta <= Math.PI) {
+    arcStart = a1;
+    arcSweep = delta;
+  } else {
+    arcStart = a2;
+    arcSweep = 2 * Math.PI - delta;
+  }
+
+  const degrees = (arcSweep * 180) / Math.PI;
+  const bisectorScreenAngle = arcStart + arcSweep / 2;
+  const arcRadius = 24;
+  const badgeDistance = arcRadius + 18;
+
+  return {
+    degrees,
+    arcStartAngle: arcStart,
+    arcSweep,
+    arcRadius,
+    bisectorScreenAngle,
+    badgePosition: {
+      x: sV.x + Math.cos(bisectorScreenAngle) * badgeDistance,
+      y: sV.y + Math.sin(bisectorScreenAngle) * badgeDistance,
+    },
   };
 }
 

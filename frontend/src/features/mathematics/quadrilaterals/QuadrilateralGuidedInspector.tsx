@@ -142,7 +142,9 @@ export const QuadrilateralGuidedInspector: React.FC = () => {
 
     if (quadAnalysis) {
       metricName = `Angle Sum (A+B+C+D)`;
-      value = `${quadAnalysis.angleSum.toFixed(1)}° (${quadAnalysis.kind})`;
+      value = quadAnalysis.isSimple
+        ? `${quadAnalysis.angleSum.toFixed(1)}° (${quadAnalysis.kind.toUpperCase()})`
+        : `N/A (${quadAnalysis.kind.toUpperCase()} - Undefined)`;
     } else if (triangleMedians) {
       metricName = `Centroid Ratio (AG : GD)`;
       value = `${triangleMedians.ratioA.toFixed(2)}:1`;

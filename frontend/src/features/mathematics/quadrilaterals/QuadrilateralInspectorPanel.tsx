@@ -124,27 +124,43 @@ export const QuadrilateralInspectorPanel: React.FC = () => {
               <div className="bg-surface-lowest/70 p-2 rounded-lg border border-surface-border/40">
                 <span className="text-[10px] font-mono text-slate-400 block">Angle Sum (360°)</span>
                 <span className="font-bold text-amber-400 font-mono text-sm">
-                  {quadAnalysis.angleSum.toFixed(1)}°
+                  {quadAnalysis.isSimple ? `${quadAnalysis.angleSum.toFixed(1)}°` : 'N/A'}
                 </span>
               </div>
               <div className="bg-surface-lowest/70 p-2 rounded-lg border border-surface-border/40">
                 <span className="text-[10px] font-mono text-slate-400 block">Polygon Area</span>
                 <span className="font-bold text-white font-mono text-sm">
-                  {quadAnalysis.area.toFixed(2)}
+                  {quadAnalysis.isSimple ? quadAnalysis.area.toFixed(2) : '0.00'}
                 </span>
               </div>
             </div>
 
             {/* Angles Grid */}
             <div className="space-y-1">
-              <span className="text-[10px] font-mono text-slate-400 uppercase">Interior Angles</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase">
+                {quadAnalysis.isSimple ? 'Interior Angles' : 'Interior Angles (Undefined)'}
+              </span>
               <div className="grid grid-cols-4 gap-1 text-center font-mono text-xs">
-                {quadAnalysis.interiorAngles.map((ang, idx) => (
-                  <div key={idx} className="bg-surface-lowest p-1.5 rounded border border-surface-border/40">
-                    <span className="text-[9px] text-slate-500 block">∠{['A', 'B', 'C', 'D'][idx]}</span>
-                    <span className="text-slate-200 font-bold">{ang.toFixed(0)}°</span>
-                  </div>
-                ))}
+                {quadAnalysis.interiorAngles.map((ang, idx) => {
+                  const isReflex = quadAnalysis.isSimple && quadAnalysis.isReflex[idx];
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-1.5 rounded border ${
+                        isReflex
+                          ? 'bg-amber-500/15 border-amber-500/40'
+                          : 'bg-surface-lowest border-surface-border/40'
+                      }`}
+                    >
+                      <span className={`text-[9px] block ${isReflex ? 'text-amber-400 font-bold' : 'text-slate-500'}`}>
+                        ∠{['A', 'B', 'C', 'D'][idx]} {isReflex ? '★' : ''}
+                      </span>
+                      <span className={isReflex ? 'text-amber-300 font-bold' : 'text-slate-200 font-bold'}>
+                        {quadAnalysis.isSimple ? `${ang.toFixed(0)}°` : '—'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

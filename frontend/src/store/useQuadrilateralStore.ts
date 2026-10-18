@@ -811,13 +811,30 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
 
         if (p1 && p2 && p3 && p4) {
           const analysis = classifyQuadrilateral(p1, p2, p3, p4);
+          let metricLabel = `Angles: A=${analysis.interiorAngles[0].toFixed(1)}°, B=${analysis.interiorAngles[1].toFixed(1)}°, C=${analysis.interiorAngles[2].toFixed(1)}°, D=${analysis.interiorAngles[3].toFixed(1)}°`;
+          let currentValue = `Sum = ${analysis.angleSum.toFixed(1)}° | Kind: ${analysis.kind.toUpperCase()}`;
+          let expectedInvariant = 'Interior angle sum = 360.0°';
+          let isConsistent = Math.abs(analysis.angleSum - 360) < 1.0;
+
+          if (!analysis.isSimple) {
+            metricLabel = `Configuration: ${analysis.kind.toUpperCase()}`;
+            currentValue = analysis.isCrossed
+              ? 'Crossed (Self-Intersecting): interior angles undefined'
+              : 'Degenerate: 3+ collinear vertices';
+            expectedInvariant = 'Requires a simple quadrilateral (Angle Sum Theorem applies to simple polygons)';
+            isConsistent = false;
+          } else if (!analysis.isConvex && analysis.reflexVertexIndex !== null) {
+            const vName = ['A', 'B', 'C', 'D'][analysis.reflexVertexIndex];
+            currentValue = `Sum = ${analysis.angleSum.toFixed(1)}° | Reflex at ${vName} (${analysis.interiorAngles[analysis.reflexVertexIndex].toFixed(1)}°)`;
+          }
+
           const obs: CapturedObservation = {
             id: `obs_${Date.now()}`,
             timestamp: Date.now(),
-            metricLabel: `Angles: A=${analysis.interiorAngles[0].toFixed(1)}°, B=${analysis.interiorAngles[1].toFixed(1)}°, C=${analysis.interiorAngles[2].toFixed(1)}°, D=${analysis.interiorAngles[3].toFixed(1)}°`,
-            currentValue: `Sum = ${analysis.angleSum.toFixed(1)}° | Kind: ${analysis.kind}`,
-            expectedInvariant: 'Interior angle sum = 360.0°',
-            isConsistent: Math.abs(analysis.angleSum - 360) < 1.0,
+            metricLabel,
+            currentValue,
+            expectedInvariant,
+            isConsistent,
           };
           set((s) => ({ capturedObservations: [...s.capturedObservations, obs] }));
           return;

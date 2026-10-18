@@ -20,8 +20,9 @@ import {
   worldToScreen,
   screenToWorld,
   distanceBetween,
-  calculateAngleDegrees,
   classifyQuadrilateral,
+  computePolygonVertexAngles,
+  computeStandaloneAngleGeometry,
   generateQuadrilateralTiling,
   pointHitsScreenPoint,
   distanceToScreenSegment,
@@ -292,6 +293,9 @@ export const QuadrilateralCanvas: React.FC = () => {
       }
     }
 
+    // Map to hold exterior label positions for quadrilateral vertices to prevent badge collision
+    const pointLabelPositions: Record<string, { x: number; y: number }> = {};
+
     // 3. Render Quadrilaterals & Triangles Polygons
     Object.values(quadrilaterals).forEach((quad) => {
       const p1 = points[quad.p1Id];
@@ -332,7 +336,7 @@ export const QuadrilateralCanvas: React.FC = () => {
       ctx.stroke();
       ctx.restore();
 
-      // Show classification badge in center
+      // Show classification badge in center & interior angles at vertices
       const analysis = classifyQuadrilateral(p1, p2, p3, p4);
       const centerScreen = {
         x: (sp1.x + sp2.x + sp3.x + sp4.x) / 4,
@@ -340,17 +344,108 @@ export const QuadrilateralCanvas: React.FC = () => {
       };
 
       if (!quad.isVarignon) {
-        const badgeLabel = `${analysis.kind.toUpperCase()} • ${analysis.angleSum.toFixed(0)}°`;
-        drawPillBadge(
-          ctx,
-          badgeLabel,
-          centerScreen.x,
-          centerScreen.y - 12,
-          11,
-          'rgba(15, 23, 42, 0.85)',
-          analysis.isConvex ? 'rgba(56, 189, 248, 0.5)' : 'rgba(239, 68, 68, 0.6)',
-          analysis.isConvex ? '#38bdf8' : '#f87171'
-        );
+        if (analysis.isCrossed) {
+          // Explicit warning for crossed / self-intersecting state
+          drawPillBadge(
+            ctx,
+            '⚠️ CROSSED (Self-Intersecting) • Interior angles undefined',
+            centerScreen.x,
+            centerScreen.y - 12,
+            11,
+            'rgba(30, 10, 10, 0.92)',
+            'rgba(239, 68, 68, 0.8)',
+            '#f87171'
+          );
+        } else if (analysis.isDegenerate) {
+          // Explicit warning for degenerate state
+          drawPillBadge(
+            ctx,
+            '⚠️ DEGENERATE • Collinear or collapsed vertices',
+            centerScreen.x,
+            centerScreen.y - 12,
+            11,
+            'rgba(30, 20, 10, 0.92)',
+            'rgba(245, 158, 11, 0.8)',
+            '#fbbf24'
+          );
+        } else {
+          // Simple polygon: show classification badge
+          const badgeLabel = analysis.isConvex
+            ? `${analysis.kind.toUpperCase()} • ${analysis.angleSum.toFixed(0)}°`
+            : `CONCAVE (Reflex at ${['A', 'B', 'C', 'D'][analysis.reflexVertexIndex!]}) • 360°`;
+          drawPillBadge(
+            ctx,
+            badgeLabel,
+            centerScreen.x,
+            centerScreen.y - 12,
+            11,
+            'rgba(15, 23, 42, 0.88)',
+            analysis.isConvex ? 'rgba(56, 189, 248, 0.5)' : 'rgba(245, 158, 11, 0.7)',
+            analysis.isConvex ? '#38bdf8' : '#fbbf24'
+          );
+
+          // Render true interior angles at each polygon vertex
+          if (quad.showAngles !== false) {
+            const quadAngles = computePolygonVertexAngles([p1, p2, p3, p4], viewport, width, height);
+
+            // Record safe exterior label positions for the 4 vertices
+            quadAngles.forEach((qAng, idx) => {
+              const ptId = [quad.p1Id, quad.p2Id, quad.p3Id, quad.p4Id][idx];
+              pointLabelPositions[ptId] = qAng.pointLabelPosition;
+            });
+
+            // Render each interior angle arc, fill wedge, and degree badge
+            quadAngles.forEach((qAng) => {
+              ctx.save();
+              // 1. Shaded interior angle wedge
+              ctx.beginPath();
+              ctx.moveTo(qAng.screenVertex.x, qAng.screenVertex.y);
+              ctx.arc(
+                qAng.screenVertex.x,
+                qAng.screenVertex.y,
+                qAng.arcRadius,
+                qAng.arcStartAngle,
+                qAng.arcStartAngle + qAng.arcSweep,
+                false
+              );
+              ctx.closePath();
+              ctx.fillStyle = qAng.isReflex
+                ? 'rgba(245, 158, 11, 0.16)'
+                : 'rgba(56, 189, 248, 0.1)';
+              ctx.fill();
+
+              // 2. Interior angle arc
+              ctx.beginPath();
+              ctx.arc(
+                qAng.screenVertex.x,
+                qAng.screenVertex.y,
+                qAng.arcRadius,
+                qAng.arcStartAngle,
+                qAng.arcStartAngle + qAng.arcSweep,
+                false
+              );
+              ctx.strokeStyle = qAng.isReflex ? '#f59e0b' : '#38bdf8';
+              ctx.lineWidth = qAng.isReflex ? 2.5 : 1.8;
+              ctx.stroke();
+
+              // 3. Stable degree badge along interior bisector
+              const labelText = qAng.isReflex
+                ? `${qAng.interiorDegrees.toFixed(1)}° (Reflex)`
+                : `${qAng.interiorDegrees.toFixed(1)}°`;
+              drawPillBadge(
+                ctx,
+                labelText,
+                qAng.badgePosition.x,
+                qAng.badgePosition.y,
+                10,
+                'rgba(15, 23, 42, 0.92)',
+                qAng.isReflex ? '#f59e0b' : 'rgba(56, 189, 248, 0.6)',
+                qAng.isReflex ? '#fbbf24' : '#38bdf8'
+              );
+              ctx.restore();
+            });
+          }
+        }
       }
     });
 
@@ -425,32 +520,43 @@ export const QuadrilateralCanvas: React.FC = () => {
       }
     });
 
-    // 6. Render Angles
+    // 6. Render Angles (Manual Angle Tool)
     Object.values(angles).forEach((ang) => {
       const p1 = points[ang.point1Id];
       const v = points[ang.vertexId];
       const p2 = points[ang.point2Id];
       if (!p1 || !v || !p2) return;
 
+      const angGeo = computeStandaloneAngleGeometry(p1, v, p2, viewport, width, height);
       const sv = worldToScreen(v, viewport, width, height);
-      const deg = calculateAngleDegrees(p1, v, p2);
-
-      // Draw arc
-      const angle1 = Math.atan2(-(p1.y - v.y), p1.x - v.x);
-      const angle2 = Math.atan2(-(p2.y - v.y), p2.x - v.x);
 
       ctx.save();
+      // Wedge
       ctx.beginPath();
-      ctx.arc(sv.x, sv.y, 22, Math.min(angle1, angle2), Math.max(angle1, angle2));
+      ctx.moveTo(sv.x, sv.y);
+      ctx.arc(sv.x, sv.y, angGeo.arcRadius, angGeo.arcStartAngle, angGeo.arcStartAngle + angGeo.arcSweep, false);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.1)';
+      ctx.fill();
+
+      // Arc
+      ctx.beginPath();
+      ctx.arc(sv.x, sv.y, angGeo.arcRadius, angGeo.arcStartAngle, angGeo.arcStartAngle + angGeo.arcSweep, false);
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Angle degree badge
-      const midAngle = (angle1 + angle2) / 2;
-      const badgeX = sv.x + Math.cos(midAngle) * 36;
-      const badgeY = sv.y + Math.sin(midAngle) * 36;
-      drawPillBadge(ctx, `${deg.toFixed(1)}°`, badgeX, badgeY, 11, 'rgba(15, 23, 42, 0.9)', '#38bdf8', '#38bdf8');
+      // Badge along bisector
+      drawPillBadge(
+        ctx,
+        `${angGeo.degrees.toFixed(1)}°`,
+        angGeo.badgePosition.x,
+        angGeo.badgePosition.y,
+        11,
+        'rgba(15, 23, 42, 0.9)',
+        '#38bdf8',
+        '#38bdf8'
+      );
       ctx.restore();
     });
 
@@ -486,15 +592,19 @@ export const QuadrilateralCanvas: React.FC = () => {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Label with halo
+      // Label with halo: use exterior position if part of a quadrilateral angle, else standard offset
       const labelText = showCoordinates
         ? `${pt.name}(${pt.x.toFixed(1)}, ${pt.y.toFixed(1)})`
         : pt.name;
+      const exteriorPos = pointLabelPositions[pt.id];
+      const labelX = exteriorPos ? exteriorPos.x : sp.x + (isCentroid ? 16 : 14);
+      const labelY = exteriorPos ? exteriorPos.y : sp.y - 12;
+
       drawHaloText(
         ctx,
         labelText,
-        sp.x + (isCentroid ? 16 : 14),
-        sp.y - 12,
+        labelX,
+        labelY,
         typography.fontSize,
         isCentroid ? '#f59e0b' : '#ffffff'
       );

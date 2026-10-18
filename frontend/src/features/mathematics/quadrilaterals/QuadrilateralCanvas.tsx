@@ -69,9 +69,9 @@ const TOOL_INSTRUCTIONS: Record<QuadToolId, { name: string; instruction: string;
     instruction: 'Select two opposite vertices of a quadrilateral to construct a diagonal.',
   },
   parallel_constraint: {
-    name: 'Parallel Constraint',
+    name: 'Parallelogram Constraint',
     shortcut: 'L',
-    instruction: 'Click opposite vertices to constrain opposite sides to remain parallel (Parallelogram).',
+    instruction: 'Click any quadrilateral or its vertices to constrain opposite sides to remain parallel (Parallelogram: AB ∥ CD & AD ∥ BC).',
   },
   perpendicular_constraint: {
     name: 'Perpendicular',
@@ -128,6 +128,7 @@ export const QuadrilateralCanvas: React.FC = () => {
     addQuadrilateral,
     addAngleMeasurement,
     addDistanceMeasurement,
+    addConstraint,
     deleteObject,
     setConstructionStep,
     fitToConstruction,
@@ -825,6 +826,47 @@ export const QuadrilateralCanvas: React.FC = () => {
         } else {
           setConstructionStep({ type: 'measuring_distance', startPointId: clickedPt.id });
         }
+      }
+      return;
+    }
+
+    if (activeTool === 'parallel_constraint') {
+      let targetQuad: (typeof quadrilaterals)[string] | null = null;
+      if (clickedPt) {
+        targetQuad =
+          Object.values(quadrilaterals).find((q) =>
+            [q.p1Id, q.p2Id, q.p3Id, q.p4Id].includes(clickedPt.id)
+          ) || null;
+      }
+      if (!targetQuad) {
+        if (selectedId && quadrilaterals[selectedId]) {
+          targetQuad = quadrilaterals[selectedId];
+        } else {
+          const quadList = Object.values(quadrilaterals);
+          if (quadList.length > 0) {
+            targetQuad = quadList[0];
+          }
+        }
+      }
+
+      if (targetQuad) {
+        const existing = Object.values(constraints).find(
+          (c) =>
+            c.type === 'parallel_opposite' &&
+            c.targetEntityIds.length >= 4 &&
+            c.targetEntityIds[0] === targetQuad.p1Id &&
+            c.targetEntityIds[1] === targetQuad.p2Id &&
+            c.targetEntityIds[2] === targetQuad.p3Id &&
+            c.targetEntityIds[3] === targetQuad.p4Id
+        );
+        if (!existing) {
+          addConstraint(
+            'parallel_opposite',
+            [targetQuad.p1Id, targetQuad.p2Id, targetQuad.p3Id, targetQuad.p4Id],
+            `Parallelogram Invariant: ${targetQuad.name || 'ABCD'}`
+          );
+        }
+        selectObject(targetQuad.id, 'quadrilateral');
       }
       return;
     }

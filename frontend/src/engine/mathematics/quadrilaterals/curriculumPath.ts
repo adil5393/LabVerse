@@ -428,7 +428,7 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
       'Prove Theorem 12.9: The segment joining the midpoints of two sides of a triangle is parallel to the third side and half of it.',
     experimentId: 'midpoint-theorem',
     stages: ['understand', 'predict', 'experiment', 'observe', 'explain', 'practice'],
-    allowedTools: ['select', 'point', 'segment', 'midpoint', 'distance_measure', 'parallel_constraint'],
+    allowedTools: ['select', 'point', 'segment', 'midpoint', 'distance_measure'],
     concept: {
       summary:
         'Theorem 12.9 is one of the most powerful theorems in Euclidean geometry: In ΔABC, if D and E are midpoints of AB and AC, then DE || BC and DE = 1/2 BC.',

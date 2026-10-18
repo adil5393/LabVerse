@@ -63,10 +63,10 @@ const QUAD_TOOLS: ToolDef[] = [
   },
   {
     id: 'parallel_constraint',
-    label: 'Parallel Constraint',
+    label: 'Parallelogram Constraint',
     shortcut: 'L',
     icon: 'parallel',
-    description: 'Constrain opposite sides to remain parallel (AB || CD)',
+    description: 'Constrain a quadrilateral to remain a parallelogram (AB ∥ CD & AD ∥ BC)',
   },
   {
     id: 'perpendicular_constraint',

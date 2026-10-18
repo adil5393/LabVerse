@@ -1,98 +1,62 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../components/GlobalHeader';
+import {
+  LABVERSE_SUBJECTS,
+  type SubjectId,
+  getAllSubjects,
+  getAvailableSubjects,
+  getInDevelopmentSubjects,
+} from '../../types/subjectRegistry';
 
 type FilterType = 'all' | 'ready' | 'dev';
-
-interface SubjectInfo {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  icon: string;
-  topicsCount: number;
-  experimentsCount: number;
-  status: 'ready' | 'in_development';
-  route?: string;
-  accentColor: string;
-  badgeText: string;
-}
-
-const SUBJECTS_DATA: SubjectInfo[] = [
-  {
-    id: 'physics',
-    name: 'Physics',
-    category: 'Circuits, Waves & Classical Mechanics',
-    description: 'Explore fundamental natural laws through interactive DC electrical circuits, wave optics, kinematics, and electromagnetic induction with physical solvers.',
-    icon: 'electric_bolt',
-    topicsCount: 4,
-    experimentsCount: 6,
-    status: 'ready',
-    route: '/physics/electricity',
-    accentColor: '#4d8eff',
-    badgeText: 'Active MVP Milestone',
-  },
-  {
-    id: 'chemistry',
-    name: 'Chemistry',
-    category: 'States of Matter, Thermodynamics & Particle Motion',
-    description: 'Explore molecular arrangements, kinetic theory, phase transitions, latent heat plateaus, and gas compressibility in interactive simulation chambers.',
-    icon: 'science',
-    topicsCount: 6,
-    experimentsCount: 6,
-    status: 'ready',
-    route: '/chemistry',
-    accentColor: '#10b981',
-    badgeText: 'Active Laboratory',
-  },
-  {
-    id: 'biology',
-    name: 'Biology',
-    category: 'Microscopy, Genetics & Cell Respiration',
-    description: 'Virtual compound light microscopy, Mendelian punnett square genetics, cellular photosynthesis, and physiological organ systems.',
-    icon: 'biotech',
-    topicsCount: 5,
-    experimentsCount: 8,
-    status: 'in_development',
-    accentColor: '#38bdf8',
-    badgeText: 'In Development',
-  },
-  {
-    id: 'mathematics',
-    name: 'Mathematics',
-    category: 'Geometry, Cartesian Planes & Trigonometry',
-    description: 'Dynamic Cartesian coordinate planes, Euclidean distance with Pythagorean theorem, linear functions, and geometric proofs.',
-    icon: 'calculate',
-    topicsCount: 4,
-    experimentsCount: 1,
-    status: 'ready',
-    route: '/mathematics',
-    accentColor: '#a855f7',
-    badgeText: 'Active Laboratory',
-  },
-  {
-    id: 'robotics',
-    name: 'Robotics',
-    category: 'Microcontrollers, Sensors & Actuator Logic',
-    description: 'Virtual microcontroller development boards, ultrasonic distance sensing, motor H-bridges, and control loop feedback.',
-    icon: 'precision_manufacturing',
-    topicsCount: 4,
-    experimentsCount: 6,
-    status: 'in_development',
-    accentColor: '#f59e0b',
-    badgeText: 'In Development',
-  },
-];
 
 export const SubjectExplorer: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [guideModalOpen, setGuideModalOpen] = useState(false);
 
-  const filteredSubjects = SUBJECTS_DATA.filter((subj) => {
+  const filteredSubjects = LABVERSE_SUBJECTS.filter((subj) => {
     if (activeFilter === 'ready') return subj.status === 'ready';
     if (activeFilter === 'dev') return subj.status === 'in_development';
     return true;
   });
+
+  const getSubjectColorStyles = (id: SubjectId) => {
+    switch (id) {
+      case 'physics':
+        return {
+          border: 'border-sky-500/50 hover:border-sky-400',
+          iconBg: 'bg-sky-500/20 text-sky-400',
+          categoryText: 'text-sky-400',
+          btnBg: 'bg-sky-600 hover:bg-sky-500 shadow-sky-500/25',
+          featureIcon: 'text-sky-400',
+        };
+      case 'chemistry':
+        return {
+          border: 'border-emerald-500/50 hover:border-emerald-400',
+          iconBg: 'bg-emerald-500/20 text-emerald-400',
+          categoryText: 'text-emerald-400',
+          btnBg: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25',
+          featureIcon: 'text-emerald-400',
+        };
+      case 'mathematics':
+        return {
+          border: 'border-purple-500/50 hover:border-purple-400',
+          iconBg: 'bg-purple-500/20 text-purple-400',
+          categoryText: 'text-purple-400',
+          btnBg: 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/25',
+          featureIcon: 'text-purple-400',
+        };
+      default:
+        return {
+          border: 'border-surface-border',
+          iconBg: 'bg-surface-elevated text-slate-400',
+          categoryText: 'text-slate-400',
+          btnBg: 'bg-surface-elevated text-slate-400',
+          featureIcon: 'text-slate-400',
+        };
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f17] text-slate-100 lab-grid select-none">
@@ -111,7 +75,7 @@ export const SubjectExplorer: React.FC = () => {
               Choose a Subject to Explore
             </h1>
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-              Open-ended virtual laboratory workbenches for students and educators. Real physical geometry, live circuit simulation, and zero login barriers.
+              Open-ended virtual laboratory workbenches for students and educators. Real physical geometry, live circuit simulation, thermodynamic modeling, and zero login barriers.
             </p>
           </div>
 
@@ -125,7 +89,7 @@ export const SubjectExplorer: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              All Subjects ({SUBJECTS_DATA.length})
+              All Subjects ({getAllSubjects().length})
             </button>
             <button
               onClick={() => setActiveFilter('ready')}
@@ -135,7 +99,7 @@ export const SubjectExplorer: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Available Now ({SUBJECTS_DATA.filter((s) => s.status === 'ready').length})
+              Available Now ({getAvailableSubjects().length})
             </button>
             <button
               onClick={() => setActiveFilter('dev')}
@@ -145,7 +109,7 @@ export const SubjectExplorer: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              In Development ({SUBJECTS_DATA.filter((s) => s.status === 'in_development').length})
+              In Development ({getInDevelopmentSubjects().length})
             </button>
           </div>
         </section>
@@ -154,32 +118,29 @@ export const SubjectExplorer: React.FC = () => {
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredSubjects.map((subject) => {
             const isReady = subject.status === 'ready';
+            const colors = getSubjectColorStyles(subject.id);
 
-            if (isReady) {
-              const isMath = subject.id === 'mathematics';
-
+            if (isReady && subject.route) {
               return (
                 <article
                   key={subject.id}
-                  className={`md:col-span-2 lg:col-span-2 rounded-2xl bg-gradient-to-b from-surface-card to-[#121620] border-2 ${
-                    isMath ? 'border-purple-500/50 hover:border-purple-400' : 'border-primary/50 hover:border-primary'
-                  } transition-all duration-300 shadow-xl shadow-primary/5 flex flex-col justify-between overflow-hidden relative group`}
+                  className={`md:col-span-2 lg:col-span-2 rounded-2xl bg-gradient-to-b from-surface-card to-[#121620] border-2 ${colors.border} transition-all duration-300 shadow-xl shadow-primary/5 flex flex-col justify-between overflow-hidden relative group`}
                 >
                   {/* Top Bar Banner */}
                   <div className="px-6 py-4 bg-surface-elevated/70 border-b border-surface-border flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg ${isMath ? 'bg-purple-500/20 text-purple-300' : 'bg-primary/20 text-primary'} flex items-center justify-center`}>
+                      <div className={`w-9 h-9 rounded-lg ${colors.iconBg} flex items-center justify-center`}>
                         <span className="material-symbols-outlined text-[22px]">{subject.icon}</span>
                       </div>
                       <div>
-                        <span className={`text-xs font-mono font-medium tracking-wider ${isMath ? 'text-purple-400' : 'text-primary'} uppercase`}>
+                        <span className={`text-xs font-mono font-medium tracking-wider ${colors.categoryText} uppercase`}>
                           {subject.name} Laboratory
                         </span>
                         <h2 className="text-xl font-bold text-white tracking-tight">{subject.category}</h2>
                       </div>
                     </div>
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-tertiary/15 border border-tertiary/40 text-tertiary text-xs font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                       {subject.badgeText}
                     </span>
                   </div>
@@ -191,53 +152,30 @@ export const SubjectExplorer: React.FC = () => {
                     </p>
 
                     {/* Active Lab Topics Preview */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {isMath ? (
-                        <>
-                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
-                            <span className="material-symbols-outlined text-purple-400 text-xl mt-0.5">grid_4x4</span>
+                    {subject.features && subject.features.length > 0 && (
+                      <div
+                        className={`grid grid-cols-1 ${
+                          subject.features.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+                        } gap-4`}
+                      >
+                        {subject.features.map((feat, idx) => (
+                          <div
+                            key={idx}
+                            className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3"
+                          >
+                            <span className={`material-symbols-outlined ${colors.featureIcon} text-xl mt-0.5`}>
+                              {feat.icon}
+                            </span>
                             <div>
-                              <h4 className="text-sm font-semibold text-white">Cartesian Coordinate Plane</h4>
-                              <p className="text-xs text-slate-400 mt-1">
-                                Mathematically consistent 2D coordinate system, upward positive Y, and snap-to-grid.
+                              <h4 className="text-sm font-semibold text-white">{feat.title}</h4>
+                              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                                {feat.description}
                               </p>
                             </div>
                           </div>
-
-                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
-                            <span className="material-symbols-outlined text-tertiary text-xl mt-0.5">square_foot</span>
-                            <div>
-                              <h4 className="text-sm font-semibold text-white">Distance & Pythagorean Proofs</h4>
-                              <p className="text-xs text-slate-400 mt-1">
-                                Euclidean distance d = √[(x₂-x₁)² + (y₂-y₁)²], live Δx/Δy triangle, and Predict & Reveal.
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
-                            <span className="material-symbols-outlined text-primary text-xl mt-0.5">schema</span>
-                            <div>
-                              <h4 className="text-sm font-semibold text-white">Solderless Breadboarding</h4>
-                              <p className="text-xs text-slate-400 mt-1">
-                                Standard 400-tie-point terminal pitch (2.54mm), dual power rails & central trough.
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3">
-                            <span className="material-symbols-outlined text-tertiary text-xl mt-0.5">bolt</span>
-                            <div>
-                              <h4 className="text-sm font-semibold text-white">DC Loop Simulation</h4>
-                              <p className="text-xs text-slate-400 mt-1">
-                                Real scientific DC solver. Reference 5V + 330Ω + LED circuit verifies 9.09 mA current.
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Footer Action */}
@@ -245,21 +183,19 @@ export const SubjectExplorer: React.FC = () => {
                     <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
                       <span className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm text-slate-500">grid_view</span>
-                        {isMath ? '4 Core Modules' : '1 Active Topic'}
+                        {subject.topicsCount} Core {subject.topicsCount === 1 ? 'Topic' : 'Modules'}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-sm text-slate-500">science</span>
-                        {isMath ? 'Interactive Workbench' : '2 Workbench Modes'}
+                        {subject.experimentsCount} Experiments
                       </span>
                     </div>
 
                     <Link
-                      to={subject.route || '#'}
-                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${
-                        isMath ? 'bg-purple-600 hover:bg-purple-500' : 'bg-primary hover:bg-primary-dim'
-                      } text-white font-semibold text-sm shadow-lg shadow-primary/25 transition-all group-hover:gap-3`}
+                      to={subject.route}
+                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${colors.btnBg} text-white font-semibold text-sm shadow-lg transition-all group-hover:gap-3`}
                     >
-                      <span>{isMath ? 'Enter Mathematics Lab' : 'Enter Electricity Lab'}</span>
+                      <span>{subject.buttonText}</span>
                       <span className="material-symbols-outlined text-base">arrow_forward</span>
                     </Link>
                   </div>
@@ -300,8 +236,9 @@ export const SubjectExplorer: React.FC = () => {
                   <button
                     disabled
                     className="text-xs font-medium text-slate-500 cursor-not-allowed flex items-center gap-1"
+                    title={`${subject.name} is currently in development`}
                   >
-                    <span>Locked</span>
+                    <span>{subject.buttonText}</span>
                     <span className="material-symbols-outlined text-sm">lock</span>
                   </button>
                 </div>
@@ -323,17 +260,17 @@ export const SubjectExplorer: React.FC = () => {
           </div>
 
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-tertiary text-2xl mt-0.5">precision_manufacturing</span>
+            <span className="material-symbols-outlined text-emerald-400 text-2xl mt-0.5">precision_manufacturing</span>
             <div>
               <h4 className="text-sm font-semibold text-white">Scientific Physical Modeling</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Authoritative calculations from real electrical graph topology, not cosmetic animations.
+                Authoritative calculations from real electrical graph topology, thermodynamic kinematics, and Euclidean geometry.
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-secondary text-2xl mt-0.5">save</span>
+            <span className="material-symbols-outlined text-purple-400 text-2xl mt-0.5">save</span>
             <div>
               <h4 className="text-sm font-semibold text-white">Browser Local Storage</h4>
               <p className="text-xs text-slate-400 mt-1">
@@ -362,13 +299,14 @@ export const SubjectExplorer: React.FC = () => {
             </div>
 
             <p className="text-sm text-slate-300 leading-relaxed">
-              LabVerse is a scientific educational laboratory platform. It allows students to assemble real circuits using solderless breadboards, DC sources, resistors, LEDs, and wires, with authoritative electrical calculation.
+              LabVerse is a scientific educational laboratory platform. It allows students to assemble real circuits using solderless breadboards, explore thermodynamic states of matter, and interact with Class 9 Euclidean geometry laboratories with authoritative physical solvers.
             </p>
 
             <div className="p-3 rounded-lg bg-surface-lowest border border-surface-border text-xs text-slate-400 space-y-1 font-mono">
-              <div>• Route: Subject Explorer (/)</div>
-              <div>• Route: Electricity Hub (/physics/electricity)</div>
-              <div>• Route: Interactive Workbench (/physics/electricity/workbench)</div>
+              <div>• Subject Explorer: (/)</div>
+              <div>• Physics Electricity: (/physics/electricity)</div>
+              <div>• Chemistry States of Matter: (/chemistry)</div>
+              <div>• Mathematics Lab Hub: (/mathematics)</div>
             </div>
 
             <div className="flex justify-end pt-2">

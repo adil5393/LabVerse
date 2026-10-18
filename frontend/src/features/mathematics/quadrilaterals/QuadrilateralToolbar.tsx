@@ -52,10 +52,11 @@ export const QuadrilateralToolbar: React.FC = () => {
       <div className="flex items-center gap-3">
         <Link
           to="/mathematics/quadrilaterals"
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors flex items-center justify-center"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-slate-300 hover:text-white text-xs font-semibold transition-all group"
           title="Return to Quadrilaterals Chapter Roadmap"
         >
-          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          <span className="material-symbols-outlined text-[17px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+          <span className="hidden sm:inline">Quadrilaterals</span>
         </Link>
 
         <div className="h-4 w-[1px] bg-surface-border" />

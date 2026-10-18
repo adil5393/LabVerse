@@ -152,15 +152,23 @@ interface QuadrilateralState {
   addAngleMeasurement: (
     point1Id: string,
     vertexId: string,
-    point2Id: string
+    point2Id: string,
+    isReflex?: boolean
   ) => string;
+  toggleAngleReflex: (id: string) => void;
+  clearAngleMeasurements: () => void;
+  clearDistanceMeasurements: () => void;
+  clearAllMeasurements: () => void;
+  toggleQuadAnglesVisibility: (quadId?: string) => void;
   addDistanceMeasurement: (pointAId: string, pointBId: string) => string;
   addConstraint: (
     type: ConstraintType,
     targetIds: string[],
     desc: string
   ) => string;
+  addParallelSegmentsConstraint: (seg1Id: string, seg2Id: string) => string;
   toggleConstraint: (id: string) => void;
+  deleteConstraint: (id: string) => void;
   setTiling: (config: TilingConfig | null) => void;
   toggleTiling: () => void;
 
@@ -444,7 +452,8 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
         const solved = solveQuadConstraints(
           updated,
           Object.values(state.constraints),
-          id
+          id,
+          state.segments
         );
         return { points: solved };
       });
@@ -463,7 +472,8 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
         const solvedPoints = solveQuadConstraints(
           updatedPoints,
           Object.values(state.constraints),
-          id
+          id,
+          state.segments
         );
 
         return {
@@ -553,7 +563,7 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
       return id;
     },
 
-    addAngleMeasurement: (point1Id, vertexId, point2Id) => {
+    addAngleMeasurement: (point1Id, vertexId, point2Id, isReflex) => {
       const id = `ang_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
       const pts = get().points;
       const name = `∠${pts[point1Id]?.name || 'A'}${pts[vertexId]?.name || 'B'}${pts[point2Id]?.name || 'C'}`;
@@ -564,12 +574,57 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
         point1Id,
         vertexId,
         point2Id,
+        isReflex: isReflex || false,
         color: '#38bdf8',
       };
 
       set((state) => ({ angles: { ...state.angles, [id]: newAngle } }));
       get().pushHistory();
       return id;
+    },
+
+    toggleAngleReflex: (id: string) => {
+      set((state) => {
+        const ang = state.angles[id];
+        if (!ang) return state;
+        return {
+          angles: {
+            ...state.angles,
+            [id]: { ...ang, isReflex: !ang.isReflex },
+          },
+        };
+      });
+      get().pushHistory();
+    },
+
+    clearAngleMeasurements: () => {
+      set({ angles: {} });
+      get().pushHistory();
+    },
+
+    clearDistanceMeasurements: () => {
+      set({ distances: {} });
+      get().pushHistory();
+    },
+
+    clearAllMeasurements: () => {
+      set({ angles: {}, distances: {} });
+      get().pushHistory();
+    },
+
+    toggleQuadAnglesVisibility: (quadId?: string) => {
+      set((state) => {
+        const targetId = quadId || Object.keys(state.quadrilaterals)[0];
+        if (!targetId || !state.quadrilaterals[targetId]) return state;
+        const q = state.quadrilaterals[targetId];
+        return {
+          quadrilaterals: {
+            ...state.quadrilaterals,
+            [targetId]: { ...q, showAngles: q.showAngles === false ? true : false },
+          },
+        };
+      });
+      get().pushHistory();
     },
 
     addDistanceMeasurement: (pointAId, pointBId) => {
@@ -582,7 +637,7 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
         name,
         pointAId,
         pointBId,
-        color: '#10b981',
+        color: '#a855f7',
       };
 
       set((state) => ({ distances: { ...state.distances, [id]: newDist } }));
@@ -602,11 +657,21 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
 
       set((state) => {
         const updated = { ...state.constraints, [id]: newConstraint };
-        const solved = solveQuadConstraints(state.points, Object.values(updated));
+        const solved = solveQuadConstraints(state.points, Object.values(updated), undefined, state.segments);
         return { constraints: updated, points: solved };
       });
       get().pushHistory();
       return id;
+    },
+
+    addParallelSegmentsConstraint: (seg1Id: string, seg2Id: string) => {
+      const seg1 = get().segments[seg1Id];
+      const seg2 = get().segments[seg2Id];
+      const pts = get().points;
+      const s1Name = seg1 ? `${pts[seg1.pointAId]?.name || ''}${pts[seg1.pointBId]?.name || ''}` : 'Seg1';
+      const s2Name = seg2 ? `${pts[seg2.pointAId]?.name || ''}${pts[seg2.pointBId]?.name || ''}` : 'Seg2';
+      const desc = `Parallel Constraint: ${s1Name} ∥ ${s2Name}`;
+      return get().addConstraint('parallel_segments', [seg1Id, seg2Id], desc);
     },
 
     toggleConstraint: (id) => {
@@ -617,7 +682,17 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
           ...state.constraints,
           [id]: { ...c, active: !c.active },
         };
-        const solved = solveQuadConstraints(state.points, Object.values(updated));
+        const solved = solveQuadConstraints(state.points, Object.values(updated), undefined, state.segments);
+        return { constraints: updated, points: solved };
+      });
+      get().pushHistory();
+    },
+
+    deleteConstraint: (id: string) => {
+      set((state) => {
+        const updated = { ...state.constraints };
+        delete updated[id];
+        const solved = solveQuadConstraints(state.points, Object.values(updated), undefined, state.segments);
         return { constraints: updated, points: solved };
       });
       get().pushHistory();
@@ -661,6 +736,7 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
         const newTriangles = { ...state.triangles };
         const newAngles = { ...state.angles };
         const newDistances = { ...state.distances };
+        const newConstraints = { ...state.constraints };
 
         if (type === 'point') {
           delete newPoints[id];
@@ -682,6 +758,8 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
           delete newAngles[id];
         } else if (type === 'distance') {
           delete newDistances[id];
+        } else if (type === 'constraint') {
+          delete newConstraints[id];
         }
 
         return {
@@ -691,6 +769,7 @@ export const useQuadrilateralStore = create<QuadrilateralState>((set, get) => {
           triangles: newTriangles,
           angles: newAngles,
           distances: newDistances,
+          constraints: newConstraints,
           selectedId: state.selectedId === id ? null : state.selectedId,
           selectedType: state.selectedId === id ? null : state.selectedType,
         };

@@ -20,6 +20,7 @@ import type {
   QuadrilateralKind,
   LabelSizePreference,
   QuadPoint,
+  QuadSegment,
   QuadConstraint,
 } from './types';
 
@@ -615,7 +616,8 @@ export function computeStandaloneAngleGeometry(
   p2: WorldPoint,
   viewport: QuadViewportTransform,
   width: number,
-  height: number
+  height: number,
+  isReflex?: boolean
 ): StandaloneAngleGeometry {
   const sV = worldToScreen(vertex, viewport, width, height);
   const s1 = worldToScreen(p1, viewport, width, height);
@@ -642,13 +644,21 @@ export function computeStandaloneAngleGeometry(
     arcSweep = 2 * Math.PI - delta;
   }
 
-  const degrees = (arcSweep * 180) / Math.PI;
-  const bisectorScreenAngle = arcStart + arcSweep / 2;
+  let finalDegrees = (arcSweep * 180) / Math.PI;
+  let bisectorScreenAngle = arcStart + arcSweep / 2;
+
+  if (isReflex) {
+    arcStart = arcStart + arcSweep;
+    arcSweep = 2 * Math.PI - arcSweep;
+    finalDegrees = 360 - finalDegrees;
+    bisectorScreenAngle = (bisectorScreenAngle + Math.PI) % (2 * Math.PI);
+  }
+
   const arcRadius = 24;
   const badgeDistance = arcRadius + 18;
 
   return {
-    degrees,
+    degrees: finalDegrees,
     arcStartAngle: arcStart,
     arcSweep,
     arcRadius,
@@ -928,7 +938,8 @@ export function generateQuadrilateralTiling(
 export function solveQuadConstraints(
   points: Record<string, QuadPoint>,
   constraints: QuadConstraint[],
-  draggedPointId?: string
+  draggedPointId?: string,
+  segments?: Record<string, QuadSegment>
 ): Record<string, QuadPoint> {
   const updated = { ...points };
 
@@ -973,10 +984,11 @@ export function solveQuadConstraints(
     }
   }
 
-  // 2. Active Geometric Constraints (e.g. Parallelogram: D = A + (C - B))
+  // 2. Active Geometric Constraints
   for (const c of constraints) {
     if (!c.active) continue;
 
+    // Parallelogram: D = A + (C - B)
     if (c.type === 'parallel_opposite' && c.targetEntityIds.length >= 4) {
       const [idA, idB, idC, idD] = c.targetEntityIds;
       const ptA = updated[idA];
@@ -985,37 +997,31 @@ export function solveQuadConstraints(
       const ptD = updated[idD];
 
       if (ptA && ptB && ptC && ptD) {
-        // If student dragged D, preserve C and B by adjusting D or A
         if (draggedPointId === idD) {
-          // Keep parallelogram: D was moved, adjust C = B + (D - A)
           updated[idC] = {
             ...ptC,
             x: ptB.x + (ptD.x - ptA.x),
             y: ptB.y + (ptD.y - ptA.y),
           };
         } else if (draggedPointId === idC) {
-          // C was moved, adjust D = A + (C - B)
           updated[idD] = {
             ...ptD,
             x: ptA.x + (ptC.x - ptB.x),
             y: ptA.y + (ptC.y - ptB.y),
           };
         } else if (draggedPointId === idA) {
-          // A was moved, adjust D = A + (C - B)
           updated[idD] = {
             ...ptD,
             x: ptA.x + (ptC.x - ptB.x),
             y: ptA.y + (ptC.y - ptB.y),
           };
         } else if (draggedPointId === idB) {
-          // B was moved, adjust C = B + (D - A)
           updated[idC] = {
             ...ptC,
             x: ptB.x + (ptD.x - ptA.x),
             y: ptB.y + (ptD.y - ptA.y),
           };
         } else {
-          // Default enforcement: ensure D = A + (C - B)
           updated[idD] = {
             ...ptD,
             x: ptA.x + (ptC.x - ptB.x),
@@ -1024,9 +1030,86 @@ export function solveQuadConstraints(
         }
       }
     }
+
+    // Generic Arbitrary Segments Parallel Constraint: Seg2 is constrained parallel to Seg1
+    if (c.type === 'parallel_segments' && c.targetEntityIds.length >= 2 && segments) {
+      const seg1 = segments[c.targetEntityIds[0]];
+      const seg2 = segments[c.targetEntityIds[1]];
+      if (!seg1 || !seg2) continue;
+
+      const p1A = updated[seg1.pointAId];
+      const p1B = updated[seg1.pointBId];
+      const p2A = updated[seg2.pointAId];
+      const p2B = updated[seg2.pointBId];
+      if (!p1A || !p1B || !p2A || !p2B) continue;
+
+      const u = { x: p1B.x - p1A.x, y: p1B.y - p1A.y };
+      const lenU = Math.hypot(u.x, u.y);
+      if (lenU < 1e-6) continue;
+      const uHat = { x: u.x / lenU, y: u.y / lenU };
+
+      const v = { x: p2B.x - p2A.x, y: p2B.y - p2A.y };
+      const lenV = Math.hypot(v.x, v.y);
+      if (lenV < 1e-6) continue;
+
+      const dot = v.x * uHat.x + v.y * uHat.y;
+      const dirSign = dot >= 0 ? 1 : -1;
+
+      if (draggedPointId === p2B.id && !p2B.locked) {
+        const t = (p2B.x - p2A.x) * uHat.x + (p2B.y - p2A.y) * uHat.y;
+        updated[p2B.id] = {
+          ...p2B,
+          x: p2A.x + t * uHat.x,
+          y: p2A.y + t * uHat.y,
+        };
+      } else if (draggedPointId === p2A.id && !p2A.locked) {
+        const t = (p2A.x - p2B.x) * uHat.x + (p2A.y - p2B.y) * uHat.y;
+        updated[p2A.id] = {
+          ...p2A,
+          x: p2B.x + t * uHat.x,
+          y: p2A.y + t * uHat.y,
+        };
+      } else {
+        if (!p2B.locked && p2B.role !== 'midpoint') {
+          updated[p2B.id] = {
+            ...p2B,
+            x: p2A.x + dirSign * lenV * uHat.x,
+            y: p2A.y + dirSign * lenV * uHat.y,
+          };
+        } else if (!p2A.locked && p2A.role !== 'midpoint') {
+          updated[p2A.id] = {
+            ...p2A,
+            x: p2B.x - dirSign * lenV * uHat.x,
+            y: p2B.y - dirSign * lenV * uHat.y,
+          };
+        }
+      }
+    }
   }
 
   return updated;
+}
+
+export function checkParallelism(
+  p1A: WorldPoint,
+  p1B: WorldPoint,
+  p2A: WorldPoint,
+  p2B: WorldPoint
+): { isParallel: boolean; angleDiffDegrees: number } {
+  const u = { x: p1B.x - p1A.x, y: p1B.y - p1A.y };
+  const v = { x: p2B.x - p2A.x, y: p2B.y - p2A.y };
+  const lenU = Math.hypot(u.x, u.y);
+  const lenV = Math.hypot(v.x, v.y);
+  if (lenU < 1e-6 || lenV < 1e-6) {
+    return { isParallel: false, angleDiffDegrees: 0 };
+  }
+  const cross = Math.abs(u.x * v.y - u.y * v.x);
+  const sinVal = Math.min(1, cross / (lenU * lenV));
+  const angleDiffDegrees = (Math.asin(sinVal) * 180) / Math.PI;
+  return {
+    isParallel: angleDiffDegrees < 0.5,
+    angleDiffDegrees,
+  };
 }
 
 // ============================================================================

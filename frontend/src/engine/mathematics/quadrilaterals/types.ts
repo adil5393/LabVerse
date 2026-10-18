@@ -113,6 +113,7 @@ export interface QuadAngleMeasurement {
   point1Id: string;
   vertexId: string;
   point2Id: string;
+  isReflex?: boolean;
   color?: string;
 }
 
@@ -126,6 +127,7 @@ export interface QuadDistanceMeasurement {
 
 export type ConstraintType =
   | 'parallel_opposite'
+  | 'parallel_segments'
   | 'equal_opposite'
   | 'midpoint'
   | 'perpendicular_diagonals'
@@ -136,6 +138,7 @@ export interface QuadConstraint {
   type: ConstraintType;
   targetEntityIds: string[];
   active: boolean;
+  enabled?: boolean;
   description: string;
 }
 
@@ -170,6 +173,7 @@ export type QuadConstructionStep =
   | { type: 'creating_midpoint'; firstPointId?: string }
   | { type: 'creating_diagonal'; startPointId?: string }
   | { type: 'creating_parallel'; baseSegmentId?: string }
+  | { type: 'creating_parallel_segments'; firstSegmentId?: string }
   | { type: 'creating_perpendicular'; baseSegmentId?: string }
   | { type: 'measuring_angle'; points: string[] }
   | { type: 'measuring_distance'; startPointId?: string }

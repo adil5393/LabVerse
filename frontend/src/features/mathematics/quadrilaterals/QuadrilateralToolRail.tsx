@@ -63,10 +63,10 @@ const QUAD_TOOLS: ToolDef[] = [
   },
   {
     id: 'parallel_constraint',
-    label: 'Parallelogram Constraint',
+    label: 'Parallel Constraint',
     shortcut: 'L',
-    icon: 'parallel',
-    description: 'Constrain a quadrilateral to remain a parallelogram (AB ∥ CD & AD ∥ BC)',
+    icon: '∥',
+    description: 'Constrain two segments to remain parallel (select 1st reference, then 2nd)',
   },
   {
     id: 'perpendicular_constraint',
@@ -79,15 +79,15 @@ const QUAD_TOOLS: ToolDef[] = [
     id: 'angle_measure',
     label: 'Angle Measure',
     shortcut: 'A',
-    icon: 'square_foot',
-    description: 'Click three points (Ray 1 -> Vertex -> Ray 2) to measure angle',
+    icon: '∠',
+    description: 'Click three points (Point 1 -> Vertex -> Point 2) to measure angle',
   },
   {
     id: 'distance_measure',
     label: 'Distance Measure',
     shortcut: 'K',
     icon: 'straighten',
-    description: 'Select two points to measure distance between them',
+    description: 'Select two points to measure Euclidean distance between them',
   },
   {
     id: 'eraser',
@@ -157,7 +157,13 @@ export const QuadrilateralToolRail: React.FC<QuadrilateralToolRailProps> = ({
             }`}
             title={`${tool.label} (${tool.shortcut})`}
           >
-            <span className="material-symbols-outlined text-[20px]">{tool.icon}</span>
+            {tool.icon === '∥' ? (
+              <span className="font-bold text-[19px] leading-none select-none tracking-tighter">∥</span>
+            ) : tool.icon === '∠' ? (
+              <span className="font-bold text-[19px] leading-none select-none">∠</span>
+            ) : (
+              <span className="material-symbols-outlined text-[20px]">{tool.icon}</span>
+            )}
 
             {/* Micro badge for shortcut key */}
             <span className="absolute -bottom-1 -right-1 text-[8px] font-mono px-1 rounded bg-surface-lowest text-slate-500 border border-surface-border">

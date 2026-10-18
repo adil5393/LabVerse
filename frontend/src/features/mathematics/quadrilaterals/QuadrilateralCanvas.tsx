@@ -69,9 +69,9 @@ const TOOL_INSTRUCTIONS: Record<QuadToolId, { name: string; instruction: string;
     instruction: 'Select two opposite vertices of a quadrilateral to construct a diagonal.',
   },
   parallel_constraint: {
-    name: 'Parallelogram Constraint',
+    name: 'Parallel Constraint',
     shortcut: 'L',
-    instruction: 'Click any quadrilateral or its vertices to constrain opposite sides to remain parallel (Parallelogram: AB ∥ CD & AD ∥ BC).',
+    instruction: 'Click first segment as reference, then click second segment to constrain parallel.',
   },
   perpendicular_constraint: {
     name: 'Perpendicular',
@@ -81,12 +81,12 @@ const TOOL_INSTRUCTIONS: Record<QuadToolId, { name: string; instruction: string;
   angle_measure: {
     name: 'Angle Measure',
     shortcut: 'A',
-    instruction: 'Select three points in order (First Ray -> Vertex -> Second Ray) to measure angle.',
+    instruction: 'Click three points in order (Point 1 -> Vertex -> Point 2) to measure angle.',
   },
   distance_measure: {
     name: 'Distance Measure',
     shortcut: 'K',
-    instruction: 'Select two vertices to measure Euclidean distance between them.',
+    instruction: 'Click two points to measure Euclidean distance between them.',
   },
   eraser: {
     name: 'Eraser',
@@ -128,7 +128,7 @@ export const QuadrilateralCanvas: React.FC = () => {
     addQuadrilateral,
     addAngleMeasurement,
     addDistanceMeasurement,
-    addConstraint,
+    addParallelSegmentsConstraint,
     deleteObject,
     setConstructionStep,
     fitToConstruction,
@@ -528,8 +528,9 @@ export const QuadrilateralCanvas: React.FC = () => {
       const p2 = points[ang.point2Id];
       if (!p1 || !v || !p2) return;
 
-      const angGeo = computeStandaloneAngleGeometry(p1, v, p2, viewport, width, height);
+      const angGeo = computeStandaloneAngleGeometry(p1, v, p2, viewport, width, height, ang.isReflex);
       const sv = worldToScreen(v, viewport, width, height);
+      const isSelected = selectedId === ang.id;
 
       ctx.save();
       // Wedge
@@ -537,28 +538,121 @@ export const QuadrilateralCanvas: React.FC = () => {
       ctx.moveTo(sv.x, sv.y);
       ctx.arc(sv.x, sv.y, angGeo.arcRadius, angGeo.arcStartAngle, angGeo.arcStartAngle + angGeo.arcSweep, false);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.1)';
+      ctx.fillStyle = ang.isReflex ? 'rgba(245, 158, 11, 0.14)' : 'rgba(56, 189, 248, 0.1)';
       ctx.fill();
 
       // Arc
       ctx.beginPath();
       ctx.arc(sv.x, sv.y, angGeo.arcRadius, angGeo.arcStartAngle, angGeo.arcStartAngle + angGeo.arcSweep, false);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isSelected ? '#38bdf8' : ang.isReflex ? '#f59e0b' : '#38bdf8';
+      ctx.lineWidth = isSelected ? 2.8 : 2;
       ctx.stroke();
 
       // Badge along bisector
+      const badgeLabel = ang.isReflex
+        ? `${angGeo.degrees.toFixed(1)}° (Reflex)`
+        : `${angGeo.degrees.toFixed(1)}°`;
+
       drawPillBadge(
         ctx,
-        `${angGeo.degrees.toFixed(1)}°`,
+        badgeLabel,
         angGeo.badgePosition.x,
         angGeo.badgePosition.y,
         11,
-        'rgba(15, 23, 42, 0.9)',
-        '#38bdf8',
-        '#38bdf8'
+        'rgba(15, 23, 42, 0.92)',
+        isSelected ? '#38bdf8' : ang.isReflex ? '#f59e0b' : '#38bdf8',
+        isSelected ? '#38bdf8' : ang.isReflex ? '#fbbf24' : '#38bdf8'
       );
       ctx.restore();
+    });
+
+    // 6b. Render Distance Measurements (Manual Distance Tool)
+    Object.values(distances).forEach((dist) => {
+      const pA = points[dist.pointAId];
+      const pB = points[dist.pointBId];
+      if (!pA || !pB) return;
+
+      const spA = worldToScreen(pA, viewport, width, height);
+      const spB = worldToScreen(pB, viewport, width, height);
+      const isSelected = selectedId === dist.id;
+
+      ctx.save();
+      // Dimension dashed line
+      ctx.beginPath();
+      ctx.moveTo(spA.x, spA.y);
+      ctx.lineTo(spB.x, spB.y);
+      ctx.strokeStyle = isSelected ? '#38bdf8' : dist.color || '#a855f7';
+      ctx.lineWidth = isSelected ? 2.5 : 1.8;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+
+      // Perpendicular end-ticks
+      const dx = spB.x - spA.x;
+      const dy = spB.y - spA.y;
+      const len = Math.hypot(dx, dy);
+      if (len > 0) {
+        const nx = (-dy / len) * 6;
+        const ny = (dx / len) * 6;
+        ctx.beginPath();
+        ctx.moveTo(spA.x - nx, spA.y - ny);
+        ctx.lineTo(spA.x + nx, spA.y + ny);
+        ctx.moveTo(spB.x - nx, spB.y - ny);
+        ctx.lineTo(spB.x + nx, spB.y + ny);
+        ctx.setLineDash([]);
+        ctx.stroke();
+      }
+
+      // Midpoint pill badge
+      const dVal = distanceBetween(pA, pB);
+      const midScreen = { x: (spA.x + spB.x) / 2, y: (spA.y + spB.y) / 2 };
+      const label = `${pA.name}${pB.name} = ${dVal.toFixed(2)}`;
+
+      drawPillBadge(
+        ctx,
+        label,
+        midScreen.x,
+        midScreen.y - 12,
+        11,
+        'rgba(15, 23, 42, 0.92)',
+        isSelected ? '#38bdf8' : dist.color || '#a855f7',
+        isSelected ? '#38bdf8' : '#e9d5ff'
+      );
+      ctx.restore();
+    });
+
+    // 6c. Render Parallel Chevron Markers on constrained segments
+    Object.values(constraints).forEach((c) => {
+      if (!c.active) return;
+      if (c.type === 'parallel_segments' && c.targetEntityIds.length >= 2) {
+        const seg1 = segments[c.targetEntityIds[0]];
+        const seg2 = segments[c.targetEntityIds[1]];
+        if (!seg1 || !seg2) return;
+
+        [seg1, seg2].forEach((seg) => {
+          const pA = points[seg.pointAId];
+          const pB = points[seg.pointBId];
+          if (!pA || !pB) return;
+          const spA = worldToScreen(pA, viewport, width, height);
+          const spB = worldToScreen(pB, viewport, width, height);
+          const mx = (spA.x + spB.x) / 2;
+          const my = (spA.y + spB.y) / 2;
+          const angle = Math.atan2(spB.y - spA.y, spB.x - spA.x);
+
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.moveTo(-6, -4);
+          ctx.lineTo(2, 0);
+          ctx.lineTo(-6, 4);
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2.4;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
     });
 
     // 7. Render Vertices & Points
@@ -613,7 +707,7 @@ export const QuadrilateralCanvas: React.FC = () => {
       ctx.restore();
     });
 
-    // 8. Construction Step Live Preview
+    // 8. Construction Step Live Previews
     if (constructionStep.type === 'creating_quadrilateral') {
       ctx.save();
       ctx.strokeStyle = '#f59e0b';
@@ -636,6 +730,137 @@ export const QuadrilateralCanvas: React.FC = () => {
         ctx.stroke();
       }
       ctx.restore();
+    }
+
+    // Distance Measure Live Preview
+    if (constructionStep.type === 'measuring_distance' && constructionStep.startPointId && previewMouseWorld) {
+      const p1 = points[constructionStep.startPointId];
+      if (p1) {
+        const sp1 = worldToScreen(p1, viewport, width, height);
+        const sm = worldToScreen(previewMouseWorld, viewport, width, height);
+        const previewDist = distanceBetween(p1, previewMouseWorld);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(sp1.x, sp1.y);
+        ctx.lineTo(sm.x, sm.y);
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+
+        drawPillBadge(
+          ctx,
+          `${previewDist.toFixed(2)}`,
+          (sp1.x + sm.x) / 2,
+          (sp1.y + sm.y) / 2 - 12,
+          10,
+          'rgba(15, 23, 42, 0.92)',
+          '#a855f7',
+          '#e9d5ff'
+        );
+        ctx.restore();
+      }
+    }
+
+    // Angle Measure Live Preview
+    if (constructionStep.type === 'measuring_angle' && previewMouseWorld) {
+      const { points: selPts } = constructionStep;
+      if (selPts.length === 1) {
+        const p1 = points[selPts[0]];
+        if (p1) {
+          const sp1 = worldToScreen(p1, viewport, width, height);
+          const sm = worldToScreen(previewMouseWorld, viewport, width, height);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(sp1.x, sp1.y);
+          ctx.lineTo(sm.x, sm.y);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else if (selPts.length === 2) {
+        const p1 = points[selPts[0]];
+        const vertex = points[selPts[1]];
+        if (p1 && vertex) {
+          const sv = worldToScreen(vertex, viewport, width, height);
+          const sp1 = worldToScreen(p1, viewport, width, height);
+          const sm = worldToScreen(previewMouseWorld, viewport, width, height);
+
+          ctx.save();
+          // Ray from vertex to p1
+          ctx.beginPath();
+          ctx.moveTo(sv.x, sv.y);
+          ctx.lineTo(sp1.x, sp1.y);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Preview ray from vertex to cursor
+          ctx.beginPath();
+          ctx.moveTo(sv.x, sv.y);
+          ctx.lineTo(sm.x, sm.y);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+
+          // Live angle arc & badge
+          const previewGeo = computeStandaloneAngleGeometry(p1, vertex, previewMouseWorld, viewport, width, height);
+          ctx.beginPath();
+          ctx.arc(sv.x, sv.y, previewGeo.arcRadius, previewGeo.arcStartAngle, previewGeo.arcStartAngle + previewGeo.arcSweep, false);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          drawPillBadge(
+            ctx,
+            `${previewGeo.degrees.toFixed(1)}°`,
+            previewGeo.badgePosition.x,
+            previewGeo.badgePosition.y,
+            10,
+            'rgba(15, 23, 42, 0.92)',
+            '#38bdf8',
+            '#38bdf8'
+          );
+          ctx.restore();
+        }
+      }
+    }
+
+    // Parallel Segments Reference Highlight
+    if (constructionStep.type === 'creating_parallel_segments' && constructionStep.firstSegmentId) {
+      const firstSeg = segments[constructionStep.firstSegmentId];
+      if (firstSeg) {
+        const pA = points[firstSeg.pointAId];
+        const pB = points[firstSeg.pointBId];
+        if (pA && pB) {
+          const spA = worldToScreen(pA, viewport, width, height);
+          const spB = worldToScreen(pB, viewport, width, height);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(spA.x, spA.y);
+          ctx.lineTo(spB.x, spB.y);
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 4.5;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          drawPillBadge(
+            ctx,
+            'Reference (∥)',
+            (spA.x + spB.x) / 2,
+            (spA.y + spB.y) / 2 - 14,
+            10,
+            'rgba(15, 23, 42, 0.95)',
+            '#f59e0b',
+            '#fbbf24'
+          );
+          ctx.restore();
+        }
+      }
     }
   }, [
     points,
@@ -831,42 +1056,52 @@ export const QuadrilateralCanvas: React.FC = () => {
     }
 
     if (activeTool === 'parallel_constraint') {
-      let targetQuad: (typeof quadrilaterals)[string] | null = null;
-      if (clickedPt) {
-        targetQuad =
-          Object.values(quadrilaterals).find((q) =>
-            [q.p1Id, q.p2Id, q.p3Id, q.p4Id].includes(clickedPt.id)
-          ) || null;
-      }
-      if (!targetQuad) {
-        if (selectedId && quadrilaterals[selectedId]) {
-          targetQuad = quadrilaterals[selectedId];
-        } else {
-          const quadList = Object.values(quadrilaterals);
-          if (quadList.length > 0) {
-            targetQuad = quadList[0];
+      let clickedSegId: string | null = null;
+      let minSegDist = 18; // screen tolerance in px
+      for (const seg of Object.values(segments)) {
+        const pA = points[seg.pointAId];
+        const pB = points[seg.pointBId];
+        if (pA && pB) {
+          const spA = worldToScreen(pA, viewport, canvas.width, canvas.height);
+          const spB = worldToScreen(pB, viewport, canvas.width, canvas.height);
+          const d = distanceToScreenSegment(screenX, screenY, spA.x, spA.y, spB.x, spB.y);
+          if (d <= minSegDist) {
+            minSegDist = d;
+            clickedSegId = seg.id;
           }
         }
       }
 
-      if (targetQuad) {
-        const existing = Object.values(constraints).find(
-          (c) =>
-            c.type === 'parallel_opposite' &&
-            c.targetEntityIds.length >= 4 &&
-            c.targetEntityIds[0] === targetQuad.p1Id &&
-            c.targetEntityIds[1] === targetQuad.p2Id &&
-            c.targetEntityIds[2] === targetQuad.p3Id &&
-            c.targetEntityIds[3] === targetQuad.p4Id
-        );
-        if (!existing) {
-          addConstraint(
-            'parallel_opposite',
-            [targetQuad.p1Id, targetQuad.p2Id, targetQuad.p3Id, targetQuad.p4Id],
-            `Parallelogram Invariant: ${targetQuad.name || 'ABCD'}`
-          );
+      if (clickedSegId) {
+        if (
+          constructionStep.type === 'creating_parallel_segments' &&
+          constructionStep.firstSegmentId
+        ) {
+          const firstSeg = segments[constructionStep.firstSegmentId];
+          const secondSeg = segments[clickedSegId];
+          if (!firstSeg || !secondSeg) {
+            setConstructionStep({ type: 'idle' });
+            return;
+          }
+
+          // Cannot make segment parallel to itself
+          if (
+            firstSeg.id === secondSeg.id ||
+            (firstSeg.pointAId === secondSeg.pointAId && firstSeg.pointBId === secondSeg.pointBId) ||
+            (firstSeg.pointAId === secondSeg.pointBId && firstSeg.pointBId === secondSeg.pointAId)
+          ) {
+            return;
+          }
+
+          addParallelSegmentsConstraint(firstSeg.id, secondSeg.id);
+          setConstructionStep({ type: 'idle' });
+        } else {
+          // Select first reference segment
+          setConstructionStep({
+            type: 'creating_parallel_segments',
+            firstSegmentId: clickedSegId,
+          });
         }
-        selectObject(targetQuad.id, 'quadrilateral');
       }
       return;
     }
@@ -929,6 +1164,37 @@ export const QuadrilateralCanvas: React.FC = () => {
   };
 
   const currentToolInfo = TOOL_INSTRUCTIONS[activeTool] || TOOL_INSTRUCTIONS.select;
+  let dynamicInstruction = currentToolInfo.instruction;
+
+  if (activeTool === 'angle_measure') {
+    if (constructionStep.type === 'measuring_angle') {
+      const cnt = constructionStep.points.length;
+      if (cnt === 1) {
+        dynamicInstruction = 'Select angle vertex (2/3)';
+      } else if (cnt === 2) {
+        dynamicInstruction = 'Select final point (3/3)';
+      }
+    } else {
+      dynamicInstruction = 'Select first point (1/3)';
+    }
+  } else if (activeTool === 'distance_measure') {
+    if (constructionStep.type === 'measuring_distance' && constructionStep.startPointId) {
+      dynamicInstruction = 'Select second point (2/2)';
+    } else {
+      dynamicInstruction = 'Select first point (1/2)';
+    }
+  } else if (activeTool === 'parallel_constraint') {
+    if (
+      constructionStep.type === 'creating_parallel_segments' &&
+      constructionStep.firstSegmentId
+    ) {
+      const seg1 = segments[constructionStep.firstSegmentId];
+      const name = seg1?.name || 'reference';
+      dynamicInstruction = `Select second segment to make parallel to ${name}`;
+    } else {
+      dynamicInstruction = 'Select the first segment as parallel reference';
+    }
+  }
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-surface-lowest">
@@ -987,7 +1253,7 @@ export const QuadrilateralCanvas: React.FC = () => {
           <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold uppercase tracking-wider text-[10px]">
             {currentToolInfo.name} [{currentToolInfo.shortcut}]
           </span>
-          <span className="text-slate-300 truncate">{currentToolInfo.instruction}</span>
+          <span className="text-slate-300 truncate">{dynamicInstruction}</span>
         </div>
 
         <div className="hidden sm:flex items-center gap-3 text-slate-500 text-[11px] shrink-0">

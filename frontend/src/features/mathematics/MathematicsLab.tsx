@@ -102,16 +102,17 @@ const MATH_MODULES: MathModule[] = [
     badge: 'Upcoming Module',
   },
   {
-    id: 'data-quantities',
+    id: 'understanding-data',
     title: 'How Quantities Combine: Understanding Data',
-    subtitle: 'Histograms, Means & Frequency Polygons',
-    category: 'Class 9 Mathematics',
+    subtitle: 'Weighted Averages, Mixtures & Stacked Charts',
+    category: 'Class 9 NCERT Ganita Manjari',
     description:
-      'Interactive data collection, central tendency calculations, and dynamic frequency distributions.',
-    icon: 'bar_chart',
-    status: 'upcoming',
-    experimentsCount: 3,
-    badge: 'Upcoming Module',
+      'Discover why averaging averages can mislead, build weighted means and mixtures, and compare stacked and 100% stacked bar charts with real datasets.',
+    icon: 'stacked_bar_chart',
+    status: 'active',
+    experimentsCount: 13,
+    route: '/mathematics/understanding-data',
+    badge: 'Active Laboratory',
   },
 ];
 

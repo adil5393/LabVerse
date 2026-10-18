@@ -93,17 +93,17 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
   {
     id: 'mathematics',
     name: 'Mathematics',
-    category: 'Coordinate Geometry, Circles, Quadrilaterals, Propositions & Linear Equations',
+    category: 'Coordinate Geometry, Circles, Quadrilaterals, Propositions, Linear Equations & Data',
     description:
-      'Five independent Class 9 mathematics laboratories: dynamic Cartesian coordinate plane, Euclidean circle theorems, quadrilateral classifications, formal mathematical reasoning with propositions and counterexamples, and linear equations in two variables with graphs and simultaneous solutions.',
+      'Six independent Class 9 mathematics laboratories: dynamic Cartesian coordinate plane, Euclidean circle theorems, quadrilateral classifications, formal mathematical reasoning, linear equations in two variables, and weighted averages, mixtures and stacked data charts.',
     icon: 'calculate',
     status: 'ready',
     route: '/mathematics',
     accentColor: '#a855f7',
     badgeText: 'Active Laboratory',
     buttonText: 'Explore Mathematics',
-    topicsCount: 5,
-    experimentsCount: 51,
+    topicsCount: 6,
+    experimentsCount: 64,
     features: [
       {
         title: 'Coordinate Geometry',
@@ -129,6 +129,11 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
         title: 'Two Variables, One Line',
         description: 'Interactive equation graphs, two-line systems, parallel and coincident lines, substitution and elimination.',
         icon: 'show_chart',
+      },
+      {
+        title: 'Understanding Data',
+        description: 'Weighted averages, mixtures and concentrations, stacked and 100% stacked bar charts, and spotting misleading conclusions.',
+        icon: 'stacked_bar_chart',
       },
     ],
   },

@@ -53,6 +53,16 @@ const TwoVariablesWorkbenchPage = lazy(() =>
     default: m.TwoVariablesWorkbenchPage,
   }))
 );
+const UnderstandingDataLab = lazy(() =>
+  import('./features/mathematics/understandingData/UnderstandingDataLab').then((m) => ({
+    default: m.UnderstandingDataLab,
+  }))
+);
+const UnderstandingDataWorkbenchPage = lazy(() =>
+  import('./features/mathematics/understandingData/UnderstandingDataWorkbenchPage').then((m) => ({
+    default: m.UnderstandingDataWorkbenchPage,
+  }))
+);
 const ChemistryLab = lazy(() =>
   import('./features/chemistry/ChemistryLab').then((m) => ({ default: m.ChemistryLab }))
 );
@@ -116,6 +126,10 @@ export const App: React.FC = () => {
           {/* Route 11b: Two Variables, One Line landing page and workbench */}
           <Route path="/mathematics/two-variables" element={<TwoVariablesLab />} />
           <Route path="/mathematics/two-variables/workbench" element={<TwoVariablesWorkbenchPage />} />
+
+          {/* Route 11c: Understanding Data landing page and workbench */}
+          <Route path="/mathematics/understanding-data" element={<UnderstandingDataLab />} />
+          <Route path="/mathematics/understanding-data/workbench" element={<UnderstandingDataWorkbenchPage />} />
 
           {/* Route 12: Chemistry Laboratory Landing Page */}
           <Route path="/chemistry" element={<ChemistryLab />} />

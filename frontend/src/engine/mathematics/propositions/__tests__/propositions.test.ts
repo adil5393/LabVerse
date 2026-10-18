@@ -449,3 +449,164 @@ describe('9. Propositions Store & State Isolation', () => {
     expect(stats.nextRecommendedLessonId).toBeTruthy();
   });
 });
+
+describe('10. M4.1 Mathematical Integrity & Performance Regression Suite', () => {
+  it('REGRESSION AUDIT: verifies prop-prime-odd is classified as both_false, NOT original_false_converse_true', () => {
+    const primeOdd = getPropositionById('prop-prime-odd');
+    expect(primeOdd).toBeDefined();
+    if (!primeOdd) return;
+
+    // 1. Classification check
+    expect(primeOdd.truthCategory).toBe('both_false');
+    expect(primeOdd.isOriginalTrue).toBe(false);
+    expect(primeOdd.isConverseTrue).toBe(false);
+
+    // 2. Original proposition: "If prime, then odd"
+    // Fails for n = 2 (2 is prime and even)
+    expect(primeOdd.hypothesis(2)).toBe(true);
+    expect(primeOdd.conclusion(2)).toBe(false);
+    const eval2 = evaluateCounterexample(primeOdd, 2);
+    expect(eval2.isCounterexample).toBe(true);
+
+    // 3. Converse proposition: "If odd, then prime"
+    const converse = createConverse(primeOdd);
+    // Fails for n = 9 (9 is odd and composite: 3 × 3)
+    expect(converse.hypothesis(9)).toBe(true);
+    expect(converse.conclusion(9)).toBe(false);
+    const eval9 = evaluateCounterexample(converse, 9);
+    expect(eval9.isCounterexample).toBe(true);
+
+    // Fails for n = 1 (1 is odd and neither prime nor composite)
+    expect(converse.hypothesis(1)).toBe(true);
+    expect(converse.conclusion(1)).toBe(false);
+    const eval1 = evaluateCounterexample(converse, 1);
+    expect(eval1.isCounterexample).toBe(true);
+  });
+
+  it('REGRESSION AUDIT: verifies mathematically valid Original False / Converse True canonical models', () => {
+    // Model 1: prop-div3-div6 (Divisibility by 3 and 6)
+    const pDiv3Div6 = getPropositionById('prop-div3-div6');
+    expect(pDiv3Div6).toBeDefined();
+    if (!pDiv3Div6) return;
+
+    expect(pDiv3Div6.truthCategory).toBe('original_false_converse_true');
+    expect(pDiv3Div6.isOriginalTrue).toBe(false);
+    expect(pDiv3Div6.isConverseTrue).toBe(true);
+
+    // Original fails for 9 (divisible by 3, but not divisible by 6)
+    const origEval9 = evaluateCounterexample(pDiv3Div6, 9);
+    expect(origEval9.isCounterexample).toBe(true);
+
+    // Converse is universally true: any multiple of 6 is 6k = 3(2k)
+    const conv = createConverse(pDiv3Div6);
+    expect(conv.hypothesis(6)).toBe(true);
+    expect(conv.conclusion(6)).toBe(true);
+    expect(conv.hypothesis(12)).toBe(true);
+    expect(conv.conclusion(12)).toBe(true);
+    expect(conv.hypothesis(18)).toBe(true);
+    expect(conv.conclusion(18)).toBe(true);
+
+    // Model 2: prop-div3-div9 (Divisibility by 3 and 9)
+    const pDiv3Div9 = getPropositionById('prop-div3-div9');
+    expect(pDiv3Div9).toBeDefined();
+    if (!pDiv3Div9) return;
+
+    expect(pDiv3Div9.truthCategory).toBe('original_false_converse_true');
+    const origEval6 = evaluateCounterexample(pDiv3Div9, 6);
+    expect(origEval6.isCounterexample).toBe(true);
+  });
+
+  it('COUNTEREXAMPLE ENGINE: rigorously tests all 4 truth combinations against formal definition', () => {
+    const p = getPropositionById('prop-div6-div3');
+    if (!p) return;
+
+    // Case 1: Hypothesis True, Conclusion True (12) -> Supporting Example, NOT Counterexample
+    const case1 = evaluateCounterexample(p, 12);
+    expect(case1.hypothesisSatisfied).toBe(true);
+    expect(case1.conclusionSatisfied).toBe(true);
+    expect(case1.isCounterexample).toBe(false);
+    expect(case1.isSupportingExample).toBe(true);
+    expect(case1.isHypothesisViolated).toBe(false);
+
+    // Case 2: Hypothesis True, Conclusion False -> Valid Counterexample
+    const conv = createConverse(p); // "If div by 3, then div by 6"
+    const case2 = evaluateCounterexample(conv, 9);
+    expect(case2.hypothesisSatisfied).toBe(true);
+    expect(case2.conclusionSatisfied).toBe(false);
+    expect(case2.isCounterexample).toBe(true);
+    expect(case2.isSupportingExample).toBe(false);
+    expect(case2.isHypothesisViolated).toBe(false);
+
+    // Case 3: Hypothesis False, Conclusion True (testing 9 on original "If div by 6, then div by 3")
+    const case3 = evaluateCounterexample(p, 9);
+    expect(case3.hypothesisSatisfied).toBe(false);
+    expect(case3.conclusionSatisfied).toBe(true);
+    expect(case3.isCounterexample).toBe(false);
+    expect(case3.isHypothesisViolated).toBe(true);
+
+    // Case 4: Hypothesis False, Conclusion False (testing 7 on original "If div by 6, then div by 3")
+    const case4 = evaluateCounterexample(p, 7);
+    expect(case4.hypothesisSatisfied).toBe(false);
+    expect(case4.conclusionSatisfied).toBe(false);
+    expect(case4.isCounterexample).toBe(false);
+    expect(case4.isHypothesisViolated).toBe(true);
+  });
+
+  it('DOMAIN INTEGRITY: handles 0, negative integers, floats, and extreme numbers without crashing', () => {
+    const p = getPropositionById('prop-div6-div3');
+    if (!p) return;
+
+    // Outside declared positive integers domain (<= 0 or non-integers)
+    const evalZero = evaluateCounterexample(p, 0);
+    expect(evalZero.validDomain).toBe(false);
+    expect(evalZero.isCounterexample).toBe(false);
+
+    const evalNeg = evaluateCounterexample(p, -12);
+    expect(evalNeg.validDomain).toBe(false);
+    expect(evalNeg.isCounterexample).toBe(false);
+
+    const evalFloat = evaluateCounterexample(p, 6.5);
+    expect(evalFloat.validDomain).toBe(false);
+    expect(evalFloat.isCounterexample).toBe(false);
+
+    // Large number within domain
+    const evalLarge = evaluateCounterexample(p, 6000000);
+    expect(evalLarge.validDomain).toBe(true);
+    expect(evalLarge.hypothesisSatisfied).toBe(true);
+    expect(evalLarge.conclusionSatisfied).toBe(true);
+    expect(evalLarge.isSupportingExample).toBe(true);
+  });
+
+  it('PRACTICE BANK INTEGRITY: systematically audits all 33 questions', () => {
+    expect(PROPOSITIONS_PRACTICE_BANK.length).toBe(33);
+
+    PROPOSITIONS_PRACTICE_BANK.forEach((q, idx) => {
+      // 1. Identification
+      expect(q.id).toBe(`q-prop-${idx + 1}`);
+      expect(q.title).toBeTruthy();
+      expect(q.statement).toBeTruthy();
+      expect(q.hints.length).toBeGreaterThanOrEqual(1);
+      expect(q.workedSolution.length).toBeGreaterThanOrEqual(1);
+      expect(q.explanation).toBeTruthy();
+
+      // 2. Type-specific verification
+      if (q.questionType === 'multiple_choice') {
+        expect(Array.isArray(q.options)).toBe(true);
+        expect(q.options!.length).toBeGreaterThanOrEqual(3);
+        const ans = Number(q.correctAnswer);
+        expect(Number.isInteger(ans)).toBe(true);
+        expect(ans).toBeGreaterThanOrEqual(0);
+        expect(ans).toBeLessThan(q.options!.length);
+      } else if (q.questionType === 'true_false') {
+        expect(Array.isArray(q.options)).toBe(true);
+        expect(q.options!.length).toBe(2);
+        const ans = Number(q.correctAnswer);
+        expect([0, 1]).toContain(ans);
+      } else if (q.questionType === 'numerical') {
+        const ans = Number(q.correctAnswer);
+        expect(Number.isFinite(ans)).toBe(true);
+        expect(q.acceptableTolerance).toBeDefined();
+      }
+    });
+  });
+});

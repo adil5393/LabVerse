@@ -245,6 +245,27 @@ export const CANONICAL_PROPOSITIONS: ConditionalProposition<number>[] = [
     converseExplanation:
       'The converse is: "If n is divisible by 9, then n is divisible by 3." Since 9 = 3 × 3, any multiple of 9 is 9k = 3(3k), which is always divisible by 3. The converse is universally true.',
   },
+  {
+    id: 'prop-div3-div6',
+    title: 'Divisibility by 3 and 6',
+    domain: POSITIVE_INTEGER_DOMAIN,
+    domainDescription: 'n ∈ {1, 2, 3, ...}',
+    naturalStatement: 'If a positive integer is divisible by 3, then it is divisible by 6.',
+    hypothesisText: 'n is divisible by 3',
+    conclusionText: 'n is divisible by 6',
+    converseNaturalStatement: 'If a positive integer is divisible by 6, then it is divisible by 3.',
+    hypothesis: (n: number) => isDivisible(n, 3),
+    conclusion: (n: number) => isDivisible(n, 6),
+    isOriginalTrue: false,
+    isConverseTrue: true,
+    truthCategory: 'original_false_converse_true',
+    originalCounterexampleHint: 'Try an odd multiple of 3, such as 3, 9, or 15.',
+    knownOriginalCounterexamples: [3, 9, 15, 21, 27, 33],
+    mathematicalExplanation:
+      'The original claims: "If n is divisible by 3, then n is divisible by 6." For n = 9: 9 is divisible by 3 (Hypothesis TRUE), but 9 is NOT divisible by 6 (Conclusion FALSE). Thus 9 is a counterexample.',
+    converseExplanation:
+      'The converse claims: "If n is divisible by 6, then n is divisible by 3." Because 6 = 2 × 3, any multiple of 6 is 6k = 3(2k), which is always divisible by 3. Hence the converse is universally true.',
+  },
 
   // --------------------------------------------------------------------------
   // Category 4: Both Original and Converse are FALSE

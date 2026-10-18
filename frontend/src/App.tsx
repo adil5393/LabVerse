@@ -1,69 +1,118 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SubjectExplorer } from './features/explorer/SubjectExplorer';
-import { ElectricityLab } from './features/electricity/ElectricityLab';
-import { WorkbenchPage } from './features/workbench/WorkbenchPage';
-import { MathematicsLab } from './features/mathematics/MathematicsLab';
-import { MathWorkbenchPage } from './features/mathematics/MathWorkbenchPage';
-import { ChemistryLab } from './features/chemistry/ChemistryLab';
-import { StatesOfMatterWorkbench } from './features/chemistry/StatesOfMatterWorkbench';
-import { CirclesLab } from './features/mathematics/circles/CirclesLab';
-import { CircleWorkbenchPage } from './features/mathematics/circles/CircleWorkbenchPage';
-import { QuadrilateralsLab } from './features/mathematics/quadrilaterals/QuadrilateralsLab';
-import { QuadrilateralWorkbenchPage } from './features/mathematics/quadrilaterals/QuadrilateralWorkbenchPage';
-import { PropositionsLab } from './features/mathematics/propositions/PropositionsLab';
-import { PropositionsWorkbenchPage } from './features/mathematics/propositions/PropositionsWorkbenchPage';
+
+// Lazy-loaded Subject & Chapter Modules
+const ElectricityLab = lazy(() =>
+  import('./features/electricity/ElectricityLab').then((m) => ({ default: m.ElectricityLab }))
+);
+const WorkbenchPage = lazy(() =>
+  import('./features/workbench/WorkbenchPage').then((m) => ({ default: m.WorkbenchPage }))
+);
+const MathematicsLab = lazy(() =>
+  import('./features/mathematics/MathematicsLab').then((m) => ({ default: m.MathematicsLab }))
+);
+const MathWorkbenchPage = lazy(() =>
+  import('./features/mathematics/MathWorkbenchPage').then((m) => ({ default: m.MathWorkbenchPage }))
+);
+const CirclesLab = lazy(() =>
+  import('./features/mathematics/circles/CirclesLab').then((m) => ({ default: m.CirclesLab }))
+);
+const CircleWorkbenchPage = lazy(() =>
+  import('./features/mathematics/circles/CircleWorkbenchPage').then((m) => ({
+    default: m.CircleWorkbenchPage,
+  }))
+);
+const QuadrilateralsLab = lazy(() =>
+  import('./features/mathematics/quadrilaterals/QuadrilateralsLab').then((m) => ({
+    default: m.QuadrilateralsLab,
+  }))
+);
+const QuadrilateralWorkbenchPage = lazy(() =>
+  import('./features/mathematics/quadrilaterals/QuadrilateralWorkbenchPage').then((m) => ({
+    default: m.QuadrilateralWorkbenchPage,
+  }))
+);
+const PropositionsLab = lazy(() =>
+  import('./features/mathematics/propositions/PropositionsLab').then((m) => ({
+    default: m.PropositionsLab,
+  }))
+);
+const PropositionsWorkbenchPage = lazy(() =>
+  import('./features/mathematics/propositions/PropositionsWorkbenchPage').then((m) => ({
+    default: m.PropositionsWorkbenchPage,
+  }))
+);
+const ChemistryLab = lazy(() =>
+  import('./features/chemistry/ChemistryLab').then((m) => ({ default: m.ChemistryLab }))
+);
+const StatesOfMatterWorkbench = lazy(() =>
+  import('./features/chemistry/StatesOfMatterWorkbench').then((m) => ({
+    default: m.StatesOfMatterWorkbench,
+  }))
+);
+
+const RouteLoadingFallback: React.FC = () => (
+  <div className="min-h-screen bg-[#0a0f1d] text-white flex flex-col items-center justify-center p-6 space-y-4">
+    <div className="w-10 h-10 border-4 border-amber-500/20 border-t-amber-400 rounded-full animate-spin" />
+    <div className="text-sm font-mono text-slate-400 animate-pulse tracking-wide">
+      Loading Laboratory Module...
+    </div>
+  </div>
+);
 
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Route 1: Subject Explorer */}
-        <Route path="/" element={<SubjectExplorer />} />
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          {/* Route 1: Subject Explorer */}
+          <Route path="/" element={<SubjectExplorer />} />
 
-        {/* Route 2: Electricity Laboratory (Physics) */}
-        <Route path="/physics/electricity" element={<ElectricityLab />} />
+          {/* Route 2: Electricity Laboratory (Physics) */}
+          <Route path="/physics/electricity" element={<ElectricityLab />} />
 
-        {/* Route 3: Interactive Physics Workbench */}
-        <Route path="/physics/electricity/workbench" element={<WorkbenchPage />} />
+          {/* Route 3: Interactive Physics Workbench */}
+          <Route path="/physics/electricity/workbench" element={<WorkbenchPage />} />
 
-        {/* Route 4: Mathematics Laboratory Landing Page */}
-        <Route path="/mathematics" element={<MathematicsLab />} />
+          {/* Route 4: Mathematics Laboratory Landing Page */}
+          <Route path="/mathematics" element={<MathematicsLab />} />
 
-        {/* Route 5: Interactive Mathematics Workbench (Coordinate Geometry) */}
-        <Route path="/mathematics/workbench" element={<MathWorkbenchPage />} />
-        <Route
-          path="/mathematics/coordinate-geometry"
-          element={<Navigate to="/mathematics/workbench?module=coordinate-geometry&experiment=distance" replace />}
-        />
+          {/* Route 5: Interactive Mathematics Workbench (Coordinate Geometry) */}
+          <Route path="/mathematics/workbench" element={<MathWorkbenchPage />} />
+          <Route
+            path="/mathematics/coordinate-geometry"
+            element={<Navigate to="/mathematics/workbench?module=coordinate-geometry&experiment=distance" replace />}
+          />
 
-        {/* Route 6: Circles Module Landing Page */}
-        <Route path="/mathematics/circles" element={<CirclesLab />} />
+          {/* Route 6: Circles Module Landing Page */}
+          <Route path="/mathematics/circles" element={<CirclesLab />} />
 
-        {/* Route 7: Interactive Circles Workbench */}
-        <Route path="/mathematics/circles/workbench" element={<CircleWorkbenchPage />} />
+          {/* Route 7: Interactive Circles Workbench */}
+          <Route path="/mathematics/circles/workbench" element={<CircleWorkbenchPage />} />
 
-        {/* Route 8: Quadrilaterals Module Landing Page */}
-        <Route path="/mathematics/quadrilaterals" element={<QuadrilateralsLab />} />
+          {/* Route 8: Quadrilaterals Module Landing Page */}
+          <Route path="/mathematics/quadrilaterals" element={<QuadrilateralsLab />} />
 
-        {/* Route 9: Interactive Quadrilaterals Workbench */}
-        <Route path="/mathematics/quadrilaterals/workbench" element={<QuadrilateralWorkbenchPage />} />
+          {/* Route 9: Interactive Quadrilaterals Workbench */}
+          <Route path="/mathematics/quadrilaterals/workbench" element={<QuadrilateralWorkbenchPage />} />
 
-        {/* Route 10: Propositions & Converses Module Landing Page */}
-        <Route path="/mathematics/propositions" element={<PropositionsLab />} />
+          {/* Route 10: Propositions & Converses Module Landing Page */}
+          <Route path="/mathematics/propositions" element={<PropositionsLab />} />
 
-        {/* Route 11: Interactive Propositions Workbench */}
-        <Route path="/mathematics/propositions/workbench" element={<PropositionsWorkbenchPage />} />
+          {/* Route 11: Interactive Propositions Workbench */}
+          <Route path="/mathematics/propositions/workbench" element={<PropositionsWorkbenchPage />} />
 
-        {/* Route 12: Chemistry Laboratory Landing Page */}
-        <Route path="/chemistry" element={<ChemistryLab />} />
+          {/* Route 12: Chemistry Laboratory Landing Page */}
+          <Route path="/chemistry" element={<ChemistryLab />} />
 
-        {/* Route 13: Interactive Chemistry States of Matter Workbench */}
-        <Route path="/chemistry/states-of-matter" element={<StatesOfMatterWorkbench />} />
+          {/* Route 13: Interactive Chemistry States of Matter Workbench */}
+          <Route path="/chemistry/states-of-matter" element={<StatesOfMatterWorkbench />} />
 
-        {/* Catch-all fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };

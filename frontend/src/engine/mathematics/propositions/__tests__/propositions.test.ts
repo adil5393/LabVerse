@@ -609,4 +609,100 @@ describe('10. M4.1 Mathematical Integrity & Performance Regression Suite', () =>
       }
     });
   });
+
+  it('MATHEMATICAL VALIDITY AUDIT: verifies q-prop-17 (Euler polynomial) and q-prop-26 (Fermat conjecture) mathematically', () => {
+    // 1. Audit q-prop-17: Euler's polynomial f(n) = n^2 + n + 41
+    const q17 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-17');
+    expect(q17).toBeDefined();
+    if (!q17) return;
+
+    expect(q17.questionType).toBe('numerical');
+    expect(q17.correctAnswer).toBe(40);
+
+    // Verify prime generation up to n=39
+    for (let n = 0; n <= 39; n++) {
+      const val = n * n + n + 41;
+      expect(isPrime(val)).toBe(true);
+    }
+    // Verify first composite failure at n=40: 40^2 + 40 + 41 = 1681 = 41^2
+    const val40 = 40 * 40 + 40 + 41;
+    expect(val40).toBe(1681);
+    expect(isPrime(val40)).toBe(false);
+    expect(val40 % 41).toBe(0);
+    expect(1681 / 41).toBe(41);
+
+    // 2. Audit q-prop-26: Fermat Prime Conjecture 2^(2^n) + 1
+    const q26 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-26');
+    expect(q26).toBeDefined();
+    if (!q26) return;
+
+    expect(q26.questionType).toBe('multiple_choice');
+    expect(q26.correctAnswer).toBe(1);
+
+    // Verify selected option text explicitly mentions Euler at n=5 and factor 641
+    const selectedOption = q26.options![q26.correctAnswer as number];
+    expect(selectedOption).toContain('Euler found a counterexample at n = 5');
+    expect(selectedOption).toContain('divisible by 641');
+
+    // Mathematically verify Fermat number F_5 = 2^(2^5) + 1 = 2^32 + 1
+    // 2^32 = 4294967296, F_5 = 4294967297
+    const F5 = BigInt(2) ** BigInt(32) + BigInt(1);
+    expect(F5).toBe(BigInt(4294967297));
+    // Verify Euler's factor 641: 4294967297 = 641 × 6700417
+    expect(F5 % BigInt(641)).toBe(BigInt(0));
+    expect(F5 / BigInt(641)).toBe(BigInt(6700417));
+  });
+
+  it('MATHEMATICAL VALIDITY AUDIT: verifies mathematical answers across all other practice bank questions', () => {
+    // q-prop-10: Counterexample for "If prime, then odd"
+    const q10 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-10')!;
+    expect(q10.correctAnswer).toBe(2);
+    expect(isPrime(2)).toBe(true);
+    expect(isEven(2)).toBe(true);
+
+    // q-prop-11: 5, 12, 13 right triangle
+    const q11 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-11')!;
+    expect(q11.correctAnswer).toBe(0); // True
+    expect(5 * 5 + 12 * 12).toBe(13 * 13);
+
+    // q-prop-13: Smallest counterexample for "If div by 3, then div by 6"
+    const q13 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-13')!;
+    expect(q13.correctAnswer).toBe(3);
+    expect(isDivisible(3, 3)).toBe(true);
+    expect(isDivisible(3, 6)).toBe(false);
+
+    // q-prop-14: Counterexample for "If div by 4 and 6, then div by 24"
+    const q14 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-14')!;
+    expect(q14.correctAnswer).toBe(0); // n = 12
+    expect(isDivisible(12, 4)).toBe(true);
+    expect(isDivisible(12, 6)).toBe(true);
+    expect(isDivisible(12, 24)).toBe(false);
+
+    // q-prop-16: Counterexample for "If ab is even, both a and b even"
+    const q16 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-16')!;
+    expect(q16.correctAnswer).toBe(1); // a = 3, b = 4
+    expect(isEven(3 * 4)).toBe(true);
+    expect(isEven(3)).toBe(false);
+
+    // q-prop-19: 7, 24, 25 right triangle
+    const q19 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-19')!;
+    expect(q19.correctAnswer).toBe(1);
+    expect(7 * 7 + 24 * 24).toBe(25 * 25);
+
+    // q-prop-23: Converse of "If x div by 9, x^2 div by 9" is false, x=3
+    const q23 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-23')!;
+    expect(q23.correctAnswer).toBe(1); // False, x = 3
+    expect(isDivisible(3 * 3, 9)).toBe(true);
+    expect(isDivisible(3, 9)).toBe(false);
+
+    // q-prop-27: 3, 4, 7 triangle inequality violation
+    const q27 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-27')!;
+    expect(q27.correctAnswer).toBe(1);
+    expect(3 + 4 <= 7).toBe(true); // violates strict a + b > c
+
+    // q-prop-32: 4, 5, 7 obtuse triangle
+    const q32 = PROPOSITIONS_PRACTICE_BANK.find((q) => q.id === 'q-prop-32')!;
+    expect(q32.correctAnswer).toBe(2); // Obtuse
+    expect(4 * 4 + 5 * 5).toBeLessThan(7 * 7); // 41 < 49
+  });
 });

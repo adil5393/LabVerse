@@ -629,12 +629,12 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
   },
   {
     id: 'q-prop-26',
-    title: 'Disproving a Prime-Generating Formula',
+    title: 'Fermat Prime Conjecture Counterexample (Euler at n = 5)',
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'empirical_vs_proof',
     ncertReference: 'Ganita Manjari, Section: Limits of Empirical Verification',
-    statement: 'A student conjectures: "For every positive integer n, 2^(2^n) + 1 is a prime number." Fermat famously made this conjecture. Who found the first counterexample, and for which n does it fail?',
+    statement: 'Pierre de Fermat conjectured that for every non-negative integer n, the formula F_n = 2^(2^n) + 1 produces only prime numbers (F₀=3, F₁=5, F₂=17, F₃=257, F₄=65537). Who discovered the first counterexample, and for which n does it fail?',
     options: [
       'It never fails; all Fermat numbers are prime.',
       'Euler found a counterexample at n = 5 (2^32 + 1 = 4,294,967,297 is divisible by 641).',

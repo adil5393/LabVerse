@@ -64,6 +64,19 @@ const MATH_MODULES: MathModule[] = [
     badge: 'Active Laboratory',
   },
   {
+    id: 'propositions',
+    title: 'Propositions & Converses',
+    subtitle: 'Logic, Counterexamples & Deductive Proofs',
+    category: 'Class 9 NCERT Ganita Manjari',
+    description:
+      'Master mathematical statements, hypotheses & conclusions, converse formation, counterexample discovery, Baudhāyana-Pythagoras reasoning, and step-by-step deductive proofs.',
+    icon: 'psychology',
+    status: 'active',
+    experimentsCount: 12,
+    route: '/mathematics/propositions',
+    badge: 'Active Laboratory',
+  },
+  {
     id: 'linear-equations',
     title: 'Two Variables, One Line',
     subtitle: 'Linear Graphs, Slopes & Intercepts',

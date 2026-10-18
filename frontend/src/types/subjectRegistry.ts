@@ -93,17 +93,17 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
   {
     id: 'mathematics',
     name: 'Mathematics',
-    category: 'Coordinate Geometry, Circles & Quadrilaterals',
+    category: 'Coordinate Geometry, Circles, Quadrilaterals & Propositions',
     description:
-      'Three independent Class 9 geometry laboratories: dynamic Cartesian coordinate plane, Euclidean circle theorems, and quadrilateral classifications with Varignon parallelogram and planar tiling.',
+      'Four independent Class 9 mathematics laboratories: dynamic Cartesian coordinate plane, Euclidean circle theorems, quadrilateral classifications, and formal mathematical reasoning with propositions, converses, and counterexamples.',
     icon: 'calculate',
     status: 'ready',
     route: '/mathematics',
     accentColor: '#a855f7',
     badgeText: 'Active Laboratory',
     buttonText: 'Explore Mathematics',
-    topicsCount: 3,
-    experimentsCount: 26,
+    topicsCount: 4,
+    experimentsCount: 38,
     features: [
       {
         title: 'Coordinate Geometry',
@@ -119,6 +119,11 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
         title: 'Quadrilaterals Laboratory',
         description: 'Convex & concave interior angles, parallelogram invariants, Midpoint theorem, and Varignon tiling.',
         icon: 'crop_square',
+      },
+      {
+        title: 'Propositions & Converses',
+        description: 'Logic of hypotheses & conclusions, converse truth independence, counterexample discovery, and deductive proofs.',
+        icon: 'psychology',
       },
     ],
   },

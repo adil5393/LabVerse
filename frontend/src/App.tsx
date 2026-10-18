@@ -11,6 +11,8 @@ import { CirclesLab } from './features/mathematics/circles/CirclesLab';
 import { CircleWorkbenchPage } from './features/mathematics/circles/CircleWorkbenchPage';
 import { QuadrilateralsLab } from './features/mathematics/quadrilaterals/QuadrilateralsLab';
 import { QuadrilateralWorkbenchPage } from './features/mathematics/quadrilaterals/QuadrilateralWorkbenchPage';
+import { PropositionsLab } from './features/mathematics/propositions/PropositionsLab';
+import { PropositionsWorkbenchPage } from './features/mathematics/propositions/PropositionsWorkbenchPage';
 
 export const App: React.FC = () => {
   return (
@@ -47,10 +49,16 @@ export const App: React.FC = () => {
         {/* Route 9: Interactive Quadrilaterals Workbench */}
         <Route path="/mathematics/quadrilaterals/workbench" element={<QuadrilateralWorkbenchPage />} />
 
-        {/* Route 8: Chemistry Laboratory Landing Page */}
+        {/* Route 10: Propositions & Converses Module Landing Page */}
+        <Route path="/mathematics/propositions" element={<PropositionsLab />} />
+
+        {/* Route 11: Interactive Propositions Workbench */}
+        <Route path="/mathematics/propositions/workbench" element={<PropositionsWorkbenchPage />} />
+
+        {/* Route 12: Chemistry Laboratory Landing Page */}
         <Route path="/chemistry" element={<ChemistryLab />} />
 
-        {/* Route 9: Interactive Chemistry States of Matter Workbench */}
+        {/* Route 13: Interactive Chemistry States of Matter Workbench */}
         <Route path="/chemistry/states-of-matter" element={<StatesOfMatterWorkbench />} />
 
         {/* Catch-all fallback */}

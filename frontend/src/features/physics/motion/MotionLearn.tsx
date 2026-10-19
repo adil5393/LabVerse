@@ -73,7 +73,7 @@ export const MotionLearnSection: React.FC = () => {
             </ol>
           </div>
         ))}
-        <p className="text-xs text-slate-400">Later units (speed and velocity, acceleration, graphs, equations of motion and circular motion) are planned and not available yet.</p>
+        <p className="text-xs text-slate-400">Later units (acceleration, graphs, equations of motion and circular motion) are planned and not available yet.</p>
       </section>
     </VisualRegistryProvider>
   );

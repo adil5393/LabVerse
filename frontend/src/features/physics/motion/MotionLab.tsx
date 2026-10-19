@@ -1,17 +1,64 @@
 /**
  * Motion Laboratory: the Free Laboratory for one-dimensional motion (PHY-1A).
- * It opens at once with an editable track: no login, gate or onboarding. The four guided
+ * It opens at once with an editable track: no login, gate or onboarding. The guided
  * investigations are optional and only compare the student's predictions with the model.
  */
 
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
-import { comparePrediction, experimentById, MOTION_EXPERIMENTS, routeValues, type MotionExperiment, type PredictionFeedback } from '../../../engine/physics/motion/experiments';
+import { compareRatePrediction, comparePrediction, experimentById, MOTION_EXPERIMENTS, routeRates, routeValues, type MotionExperiment, type PredictionFeedback } from '../../../engine/physics/motion/experiments';
 import { MotionTrackView } from './MotionTrack';
 import { PHYS } from './physicsColors';
+import { speedVelocityLines, wholeTrip, pathFromRoute } from '../../../engine/physics/motion/speed';
 
-const Prediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun: (moves: number[]) => void }> = ({ e, routeIndex, onRun }) => {
+const RatePrediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun: (moves: number[], durations?: number[]) => void }> = ({ e, routeIndex, onRun }) => {
+  const r = e.routes[routeIndex];
+  const [sp, setSp] = useState('');
+  const [ve, setVe] = useState('');
+  const [fb, setFb] = useState<ReturnType<typeof compareRatePrediction> | null>(null);
+  const [bad, setBad] = useState('');
+  const check = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const a = Number(sp.replace('−', '-')), b = Number(ve.replace('−', '-'));
+    if (sp.trim() === '' || ve.trim() === '' || !Number.isFinite(a) || !Number.isFinite(b)) { setBad('Type a number for both predictions (use a minus sign for a velocity to the left).'); setFb(null); return; }
+    setBad(''); setFb(compareRatePrediction(routeRates(e, r), { speed: a, velocity: b }));
+  };
+  const lines = speedVelocityLines(wholeTrip(pathFromRoute({ startM: e.start, legs: r.moves.map((m, i) => ({ toM: m, durationS: r.durations?.[i] ?? 1 })) }, e.range)));
+  const ok = fb && fb.speedRight && fb.velocityRight;
+  return (
+    <form onSubmit={check} className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3" data-prediction={r.id}>
+      <p className="text-sm text-slate-100 font-medium">{r.label}</p>
+      <div className="rounded-lg p-3 space-y-2" style={{ border: `1px solid ${PHYS.prediction}66`, background: `${PHYS.prediction}0D` }}>
+        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.prediction }}>{'★'} 1 · Prediction (whole trip, before you run it)</h4>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-xs text-slate-200 flex items-center gap-2"><span style={{ color: PHYS.speed }}>Average speed (m/s)</span>
+            <input value={sp} onChange={(x) => setSp(x.target.value)} inputMode="decimal" aria-label={`Predicted average speed in metres per second for ${r.label}`} className="w-24 min-h-[44px] rounded-lg border bg-surface-lowest px-2 text-white font-mono" style={{ borderColor: PHYS.prediction }} /></label>
+          <label className="text-xs text-slate-200 flex items-center gap-2"><span style={{ color: PHYS.velocity }}>Average velocity (m/s)</span>
+            <input value={ve} onChange={(x) => setVe(x.target.value)} inputMode="decimal" aria-label={`Predicted average velocity in metres per second for ${r.label}`} className="w-24 min-h-[44px] rounded-lg border bg-surface-lowest px-2 text-white font-mono" style={{ borderColor: PHYS.prediction }} /></label>
+          <button type="submit" className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.prediction }}>Check my prediction</button>
+        </div>
+      </div>
+      <div className="rounded-lg p-3 space-y-2" style={{ border: `1px solid ${PHYS.position}66`, background: `${PHYS.position}0D` }}>
+        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.position }}>{'▶'} 2 · Action</h4>
+        <button type="button" onClick={() => onRun(r.moves, r.durations)} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.position }} data-testid={`run-${r.id}`}>Run this route in the track</button>
+        <p className="text-[11px] text-slate-400">Replay speed on screen is a separate setting. It never changes the speed of the object in the model.</p>
+      </div>
+      {bad && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }}>{bad}</p>}
+      {fb && (
+        <div role="status" aria-live="polite" data-testid="prediction-feedback" className="rounded-lg p-3 text-xs text-slate-100 space-y-1" style={{ border: `1px solid ${ok ? PHYS.correct : PHYS.error}`, background: `${ok ? PHYS.correct : PHYS.error}14` }}>
+          <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: ok ? PHYS.correct : PHYS.error }}>{ok ? '✓ 3 · Observation: matches the model' : '✗ 3 · Observation: differs from the model'}</h4>
+          <p style={{ color: PHYS.speed }} data-testid="calc-speed">{lines.speed}</p>
+          <p style={{ color: PHYS.velocity }} data-testid="calc-velocity">{lines.velocity}</p>
+          <p>{lines.direction}</p>
+          {fb.messages.map((m) => <p key={m}>{m}</p>)}
+        </div>
+      )}
+    </form>
+  );
+};
+
+const Prediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun: (moves: number[], durations?: number[]) => void }> = ({ e, routeIndex, onRun }) => {
   const r = e.routes[routeIndex];
   const [dist, setDist] = useState('');
   const [disp, setDisp] = useState('');
@@ -55,7 +102,7 @@ const Prediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun: (mo
 export const MotionLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const exp = experimentById(params.get('experiment'));
-  const [load, setLoad] = useState<{ moves: number[]; key: number }>({ moves: [], key: 0 });
+  const [load, setLoad] = useState<{ moves: number[]; durations?: number[]; key: number }>({ moves: [], key: 0 });
   const range: [number, number] = exp?.range ?? [-50, 100];
   const start = exp?.start ?? 0;
 
@@ -75,7 +122,7 @@ export const MotionLab: React.FC = () => {
         </header>
 
         <section aria-label="Motion track">
-          <MotionTrackView key={`${exp?.id ?? 'free'}-${load.key}`} range={range} start={start} moves={load.moves} editable playback show={['position', 'distance', 'displacement']} stepM={5} alt="A straight track from −50 m to 100 m with the reference point O at 0 m. Move the object with the buttons, the keyboard or by typing a position; the readouts give its position, the distance travelled and the displacement." />
+          <MotionTrackView key={`${exp?.id ?? 'free'}-${load.key}`} range={range} start={start} moves={load.moves} durations={load.durations} editable playback show={['position', 'distance', 'displacement', 'speed', 'velocity']} stepM={5} alt="A straight track from −50 m or less to 100 m with the reference point O at 0 m. Move the object with the buttons, the keyboard or by typing a position; the readouts give its position, the distance travelled and the displacement." />
         </section>
 
         <section aria-label="Guided investigations" className="space-y-3">
@@ -93,7 +140,9 @@ export const MotionLab: React.FC = () => {
                 <p className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.time }}>Instructions</p>
                 <p className="text-sm text-slate-300">{exp.goal} First predict, then run the route and compare. You can then change the moves and test your own ideas.</p>
               </div>
-              {exp.routes.map((_r, i) => <Prediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves) => setLoad((l) => ({ moves, key: l.key + 1 }))} />)}
+              {exp.routes.map((_r, i) => exp.predict === 'speed'
+                ? <RatePrediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves, durations) => setLoad((l) => ({ moves, durations, key: l.key + 1 }))} />
+                : <Prediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves) => setLoad((l) => ({ moves, key: l.key + 1 }))} />)}
               <p className="text-sm text-slate-200 rounded-xl border p-3" style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}><strong style={{ color: PHYS.correct }}>{"\u2713 "}What to notice: </strong>{exp.lesson}</p>
               <p className="text-xs text-slate-400">These are <em>model</em> values for an idealised straight track. Real measurements with a tape and a stopwatch would carry small errors.</p>
             </div>

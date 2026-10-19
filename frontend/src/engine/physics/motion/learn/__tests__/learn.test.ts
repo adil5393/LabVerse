@@ -14,15 +14,15 @@ describeChapterIntegrity('Motion', CH, ['motionTrack']);
 const dist = (start: number, targets: number[]) => { let d = 0, p = start; for (const t of targets) { d += Math.abs(t - p); p = t; } return d; };
 
 describe('Motion Learn: scope and honesty', () => {
-  it('one unit with three lessons, and chapter plus unit prerequisites', () => {
-    expect(CH.units).toHaveLength(1); expect(Object.keys(CH.lessons)).toHaveLength(3);
+  it('units and lessons are all registered, with chapter plus unit prerequisites', () => {
+    expect(CH.units.length).toBeGreaterThanOrEqual(1); expect(Object.keys(CH.lessons).length).toBe(CH.units.reduce((n, u) => n + u.lessonIds.length, 0));
     expect(CH.prerequisiteIds.length).toBeGreaterThanOrEqual(3);
     expect(CH.units[0].prerequisiteIds.length).toBeGreaterThanOrEqual(3);
   });
   it('states honestly what is not yet covered and cites no exercise or section numbers the chapter lacks', () => {
     expect(CH.ncertNote).toMatch(/not yet covered/);
     const text = JSON.stringify(CH);
-    for (const m of text.matchAll(/Section[s]? (4\.\d+(?:\.\d+)?)/g)) expect(['4.1.1', '4.1.2'], m[1]).toContain(m[1]);
+    for (const m of text.matchAll(/Section[s]? (4\.\d+(?:\.\d+)?)/g)) expect(['4.1.1', '4.1.2', '4.1.3', '4.1.4', '4.2.1', '4.2.2', '4.2.3', '4.3', '4.4.1'], m[1]).toContain(m[1]);
     expect(text).not.toMatch(/Exercise \d|Question \d+ of the textbook/);
   });
   it('observation steps do not claim proof', () => {
@@ -131,7 +131,7 @@ describe('Motion exercises and curriculum map', () => {
     const sections = new Set(['4.1.1', '4.1.2', '4.1.3', '4.1.4', '4.2.1 to 4.2.3', '4.3', '4.4.1', 'Revise, Reflect, Refine', 'enrichment']);
     for (const r of MOTION_MAP) { expect(sections.has(r.section), r.id).toBe(true); if (r.status === 'planned') expect(r.lessonIds).toEqual([]); if (r.kind === 'enrichment') expect(r.section).toBe('enrichment'); }
     const c = motionCoverageCounts();
-    expect(c.planned).toBe(5); expect(c.available + c.planned).toBe(c.total);
+    expect(c.planned).toBe(4); expect(c.available + c.planned).toBe(c.total);
     for (const r of MOTION_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], `${r.id} -> ${id}`).toBeDefined();
   });
 });

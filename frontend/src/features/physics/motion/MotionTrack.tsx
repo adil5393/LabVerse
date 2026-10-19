@@ -19,6 +19,7 @@ import {
   totalDurationMs, turnCount, undoMove, type MotionPath,
 } from '../../../engine/physics/motion/kinematics';
 import { pathOf, type MotionVisualProps, type Readout } from '../../../engine/physics/motion/learn/questions';
+import { fmtRate, fmtSignedRate, intervalStats, velocityAt } from '../../../engine/physics/motion/speed';
 import { PHYS, QUANTITY, type PhysQuantity } from './physicsColors';
 
 const W = 600, H = 230, PAD = 28, TRACK_Y = 110;
@@ -32,6 +33,7 @@ interface ViewProps {
   range: [number, number];
   start: number;
   moves: number[];
+  durations?: number[];
   editable: boolean;
   show: Readout[];
   stepM: number;
@@ -64,8 +66,9 @@ const Card: React.FC<{ q: PhysQuantity; value: string; id: string }> = ({ q, val
   );
 };
 
-export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, editable, show, stepM, playback, alt, onPath }) => {
-  const initial = useMemo(() => pathOf({ range, start, moves }), [range, start, moves]);
+export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, durations, editable, show, stepM, playback, alt, onPath }) => {
+  const initial = useMemo(() => pathOf({ range, start, moves, durations }), [range, start, moves, durations]);
+  const [moveS, setMoveS] = useState(1);
   const [path, setPath] = useState<MotionPath>(initial);
   const [prevInitial, setPrevInitial] = useState(initial);
   const [tMs, setT] = useState(totalDurationMs(initial));
@@ -83,6 +86,7 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
   const s = sampleAt(path, tMs);
   const end = summary(path);
   const atEnd = tMs >= total;
+  const st = intervalStats(path, 0, tMs);
 
   useEffect(() => { onPath?.(path); }, [path, onPath]);
 
@@ -125,9 +129,9 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
     if (!r.ok) { setMsg(r.reason); return; }
     setMsg(''); setPath(r.path); setT(totalDurationMs(r.path)); setPlaying(false);
   };
-  const moveBy = (d: number) => apply(addMoveBy(path, d));
-  const goTo = (target: number) => apply(addMove(path, target));
-  const wait = () => apply(addMove(path, metres(end.positionCm)));
+  const moveBy = (d: number) => apply(addMoveBy(path, d, moveS * 1000));
+  const goTo = (target: number) => apply(addMove(path, target, moveS * 1000));
+  const wait = () => apply(addMove(path, metres(end.positionCm), moveS * 1000));
   const onType = (e: React.FormEvent) => { e.preventDefault(); const v = Number(typed.replace('−', '-')); if (typed.trim() === '' || !Number.isFinite(v)) { setMsg('Type a position in metres, such as 40 or -15.'); return; } goTo(v); setTyped(''); };
 
   const fromEvent = (e: React.PointerEvent) => {
@@ -150,7 +154,7 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
   }).filter((x) => x.frac > 0);
 
   const turned = turnCount(path) > 0 && s.distanceCm > Math.abs(s.displacementCm) + 0.5;
-  const live = `At t = ${(s.tMs / 1000).toFixed(s.tMs % 1000 ? 1 : 0)} s (simulated time) the object is at ${describePosition(s.positionCm)}. Distance travelled so far: ${fmtLength(s.distanceCm)}. Displacement from the start: ${describeDisplacement(s.displacementCm)}.${turned ? ' The object has turned back, so the distance is greater than the size of the displacement.' : ''}`;
+  const live = `At t = ${(s.tMs / 1000).toFixed(s.tMs % 1000 ? 1 : 0)} s (simulated time) the object is at ${describePosition(s.positionCm)}. Distance travelled so far: ${fmtLength(s.distanceCm)}. Displacement from the start: ${describeDisplacement(s.displacementCm)}.${turned ? ' The object has turned back, so the distance is greater than the size of the displacement.' : ''}${show.includes('speed') && st.averageSpeed !== null ? ` Average speed so far: ${fmtRate(st.averageSpeed)}.` : ''}${show.includes('velocity') && st.averageVelocity !== null ? ` Average velocity so far: ${fmtSignedRate(st.averageVelocity)}; velocity at this instant: ${fmtSignedRate(velocityAt(path, s.tMs))}.` : ''}`;
 
   return (
     <div className="space-y-3" data-visual="motionTrack" data-testid="motion-track">
@@ -216,21 +220,31 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
         {show.includes('position') && <Card q="position" value={fmtSigned(s.positionCm)} id="position" />}
         {show.includes('distance') && <Card q="distance" value={fmtLength(s.distanceCm)} id="distance" />}
         {show.includes('displacement') && <Card q="displacement" value={fmtSigned(s.displacementCm)} id="displacement" />}
+        {show.includes('speed') && <Card q="speed" value={st.averageSpeed === null ? '—' : fmtRate(st.averageSpeed)} id="speed" />}
+        {show.includes('velocity') && <Card q="velocity" value={st.averageVelocity === null ? '—' : fmtSignedRate(st.averageVelocity)} id="velocity" />}
+        {show.includes('velocity') && <Card q="instant" value={fmtSignedRate(velocityAt(path, s.tMs))} id="instant" />}
       </dl>
 
       {path.legs.length > 0 && (
         <ol className="text-xs text-slate-300 space-y-0.5 pl-5 list-decimal" aria-label="History of moves" data-testid="motion-history">
-          {path.legs.map((l, i) => <li key={i}>{l.toCm === l.fromCm ? `Stayed at ${fmtM(l.toCm)} for 1 s` : `${fmtM(l.fromCm)} → ${fmtM(l.toCm)}: ${fmtLength(l.toCm - l.fromCm)} to the ${l.toCm > l.fromCm ? 'right' : 'left'}`}</li>)}
+          {path.legs.map((l, i) => <li key={i}>{l.toCm === l.fromCm ? `Stayed at ${fmtM(l.toCm)} for ${l.durationMs / 1000} s` : `${fmtM(l.fromCm)} → ${fmtM(l.toCm)}: ${fmtLength(l.toCm - l.fromCm)} to the ${l.toCm > l.fromCm ? 'right' : 'left'} in ${l.durationMs / 1000} s`}</li>)}
         </ol>
       )}
 
       {editable && (
         <div className="space-y-3 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="motion-controls">
           <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Controls</h3>
-          <div role="group" aria-label="Move the object" className="flex flex-wrap items-center gap-2"><span className="text-[11px] font-mono text-slate-400 w-full">1 · Move (each move takes 1 s of simulated time)</span>
-            <button type="button" onClick={() => moveBy(-step)} aria-label={`Move ${step} m to the left (1 s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border font-bold text-sm text-slate-950" style={{ background: PHYS.position, borderColor: PHYS.position }}>{'◀'} Left {step} m</button>
-            <button type="button" onClick={wait} aria-label="Stay where you are for 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-100 text-sm">Wait 1 s</button>
-            <button type="button" onClick={() => moveBy(step)} aria-label={`Move ${step} m to the right (1 s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border font-bold text-sm text-slate-950" style={{ background: PHYS.position, borderColor: PHYS.position }}>Right {step} m {'▶'}</button>
+          <div role="group" aria-label="Move the object" className="flex flex-wrap items-center gap-2"><span className="text-[11px] font-mono text-slate-400 w-full">1 · Move (each move takes {moveS} s of simulated time)</span>
+            <button type="button" onClick={() => moveBy(-step)} aria-label={`Move ${step} m to the left (${moveS} s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border font-bold text-sm text-slate-950" style={{ background: PHYS.position, borderColor: PHYS.position }}>{'◀'} Left {step} m</button>
+            <button type="button" onClick={wait} aria-label={`Stay where you are for ${moveS} seconds of simulated time`} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-100 text-sm">Wait {moveS} s</button>
+            <button type="button" onClick={() => moveBy(step)} aria-label={`Move ${step} m to the right (${moveS} s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border font-bold text-sm text-slate-950" style={{ background: PHYS.position, borderColor: PHYS.position }}>Right {step} m {'▶'}</button>
+            {(show.includes('speed') || show.includes('velocity')) && (
+              <label className="flex items-center gap-2 text-xs text-slate-300" style={{ color: PHYS.time }}>Time for each move
+                <select value={moveS} onChange={(e) => setMoveS(Number(e.target.value))} aria-label="Simulated time taken by each move, in seconds" data-testid="move-seconds" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
+                  {[1, 2, 4, 5, 10].map((v) => <option key={v} value={v}>{v} s</option>)}
+                </select>
+              </label>
+            )}
             <label className="flex items-center gap-2 text-xs text-slate-300">Step size
               <select value={step} onChange={(e) => setStep(Number(e.target.value))} aria-label="Step size of the move buttons, in metres" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
                 {[1, 2, 5, 10, 20].map((v) => <option key={v} value={v}>{v} m</option>)}
@@ -245,7 +259,7 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
             <button type="button" onClick={() => { const p2 = undoMove(path); setPath(p2); setT(totalDurationMs(p2)); setPlaying(false); setMsg(''); }} disabled={path.legs.length === 0} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm disabled:opacity-40">Undo last move</button>
             <button type="button" onClick={() => { const p2 = resetPath(path); setPath(p2); setT(0); setPlaying(false); setMsg(''); }} className="min-h-[44px] px-3 rounded-lg border text-sm" style={{ borderColor: PHYS.error, color: PHYS.error }} data-testid="motion-reset">Reset</button>
           </form>
-          <p className="text-[11px] text-slate-400">Each move takes 1 s of <strong>simulated</strong> time. Positions are exact in this model; a real experiment would use a measuring tape and a stopwatch and would have measurement error.</p>
+          <p className="text-[11px] text-slate-400">Each move takes {moveS} s of <strong>simulated</strong> time. Positions are exact in this model; a real experiment would use a measuring tape and a stopwatch and would have measurement error.</p>
         </div>
       )}
       {msg && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="motion-message"><span aria-hidden>{"✗ "}</span>{msg}</p>}
@@ -272,7 +286,7 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
 
 const MotionTrack: React.FC<VisualProps> = ({ props, alt }) => {
   const p = props as unknown as MotionVisualProps;
-  return <MotionTrackView range={p.range} start={p.start} moves={p.moves} editable={Boolean(p.editable)} show={p.show ?? ['position', 'distance', 'displacement']} stepM={p.stepM ?? 5} playback={p.playback ?? (p.moves.length > 1 || Boolean(p.editable))} alt={alt} />;
+  return <MotionTrackView range={p.range} start={p.start} moves={p.moves} durations={p.durations} editable={Boolean(p.editable)} show={p.show ?? ['position', 'distance', 'displacement']} stepM={p.stepM ?? 5} playback={p.playback ?? (p.moves.length > 1 || Boolean(p.editable))} alt={alt} />;
 };
 
 export const MOTION_VISUALS: VisualRegistry = { motionTrack: MotionTrack };

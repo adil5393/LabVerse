@@ -79,7 +79,28 @@ export const PMP_LINE: Prerequisite = {
   ],
 };
 
-export const PM_PREREQUISITES: Prerequisite[] = [PMP_UNITS, PMP_SIGNED, PMP_LINE];
+export const PMP_RATE: Prerequisite = {
+  id: 'pmp-rate',
+  title: 'Rates: dividing a quantity by time',
+  why: 'Speed and velocity are rates: how much distance or displacement for each second. You need to divide a quantity by another and keep the units.',
+  connection: 'Grade 6 to 8: ratio and unitary method',
+  refresher: [
+    {
+      id: 'pmp-rt-step', title: 'Per second means divide by seconds',
+      paragraphs: [
+        'If 40 m is covered in 8 s, the distance covered in 1 s is 40 ÷ 8 = 5 m. We write 5 m/s ("5 metres per second"). A rate is one quantity divided by another, and the unit shows the division.',
+        'To find the quantity back, multiply: 5 m/s for 6 s gives 5 × 6 = 30 m.',
+      ],
+      misconception: { wrong: '40 m in 8 s is 40 × 8 = 320 m/s.', right: 'A rate divides: 40 ÷ 8 = 5 m/s. Multiplying gives a number whose unit is not m/s.' },
+    },
+  ],
+  checks: [
+    numQ('pmp-rt-c1', '30 m is covered in 6 s. How many metres are covered in each second?', 5, '30 ÷ 6 = 5 m in each second.', { unit: 'm/s', refresherId: 'pmp-rt-step', rules: [[[180], '180 comes from multiplying. A rate divides the distance by the time.', 'multiplied_not_divided'], [[0.2], '0.2 divides the time by the distance. Divide the distance by the time.', 'inverted_ratio']] }),
+    numQ('pmp-rt-c2', 'An object moves at 4 m/s for 10 s. How far does it go, in metres?', 40, '4 × 10 = 40 m.', { unit: 'm', refresherId: 'pmp-rt-step', rules: [[[2.5], '2.5 comes from dividing. To find the distance from a rate and a time, multiply.', 'divided_not_multiplied']] }),
+  ],
+};
+
+export const PM_PREREQUISITES: Prerequisite[] = [PMP_UNITS, PMP_SIGNED, PMP_LINE, PMP_RATE];
 
 export const PM_UNITS: EduUnit[] = [
   {
@@ -89,5 +110,13 @@ export const PM_UNITS: EduUnit[] = [
     vocabulary: [{ term: 'reference point', meaning: 'a fixed point from which positions are measured' }, { term: 'displacement', meaning: 'the net change in position, with a direction' }, { term: 'distance', meaning: 'the total length of the path travelled' }],
     discover: ['What a reference point is and why we need one', 'The difference between distance and displacement', 'When displacement is zero and when the two are equal'],
     prerequisiteIds: ['pmp-units', 'pmp-signed', 'pmp-line'], lessonIds: ['pm-l1', 'pm-l2', 'pm-l3'],
+  },
+  {
+    id: 'pm-unit-2', number: 2, title: 'Speed and velocity',
+    centralIdea: 'How fast an object moves is measured by dividing a quantity by time. Speed divides the distance and has no direction. Velocity divides the displacement and has a direction.',
+    connection: 'This is Section 4.1.3. It uses distance and displacement from Unit 1, and leads to acceleration and graphs.',
+    vocabulary: [{ term: 'average speed', meaning: 'total distance ÷ total time' }, { term: 'average velocity', meaning: 'displacement ÷ time, with a direction' }, { term: 'uniform motion', meaning: 'equal distances in equal intervals of time' }],
+    discover: ['How to calculate average speed and average velocity', 'Why the two can differ for the same trip', 'Why replay speed on screen is not the speed of the object'],
+    prerequisiteIds: ['pmp-units', 'pmp-signed', 'pmp-rate'], lessonIds: ['pm-l4', 'pm-l5'],
   },
 ];

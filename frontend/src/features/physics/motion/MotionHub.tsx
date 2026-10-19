@@ -32,7 +32,7 @@ export const PhysicsHub: React.FC = () => (
         <Link to="/physics/motion" data-chapter-card="motion" className="block rounded-2xl border border-sky-500/40 bg-surface-card hover:border-sky-400 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Class 9 · Chapter 4</span>
           <h2 className="text-xl font-black text-white">Describing Motion Around Us</h2>
-          <p className="text-sm text-slate-300">Position, distance and displacement, with a motion laboratory. Speed, acceleration and graphs are planned.</p>
+          <p className="text-sm text-slate-300">Position, distance, displacement, speed and velocity, with a motion laboratory. Acceleration and graphs are planned.</p>
         </Link>
         <Link to="/physics/electricity" data-chapter-card="electricity" className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Laboratory</span>
@@ -56,12 +56,12 @@ export const MotionHub: React.FC = () => {
         <header className="space-y-2">
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">{MOTION_TEXTBOOK.book} ({MOTION_TEXTBOOK.edition}) · Chapter {MOTION_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{MOTION_TEXTBOOK.title}</h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn how to describe the motion of an object in a straight line. Start with position and reference points, then distance and displacement.</p>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn how to describe the motion of an object in a straight line. Start with position and reference points, then distance, displacement, speed and velocity.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="motion-destinations">
           <div className={`${card} border-sky-500/40`} style={{ borderTop: "4px solid #38BDF8" }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">3 lessons in Unit 1, with prerequisites, worked examples and practice.</p></div>
+            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">5 lessons in 2 units, with prerequisites, worked examples and practice.</p></div>
             <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #F59E0B" }}>

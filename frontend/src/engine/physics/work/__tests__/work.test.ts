@@ -12,7 +12,8 @@ import { WORK_CHAPTER as CH } from '../learn/content';
 import { WORK_EXPERIMENTS, workRouteOutcome } from '../experiments';
 import { KINETIC_EXPERIMENTS } from '../kineticExperiments';
 import { computeKinetic } from '../kineticModel';
-import { WORK_EXERCISES, exerciseSolved, solvedWorkParts, workExerciseCounts } from '../exercises';
+import { computeEnergy, energyAtDistance } from '../energyLab';
+import { WORK_EXERCISES, exerciseSolved, workExerciseCounts } from '../exercises';
 import { WORK_MAP, WORK_TEXTBOOK_INVENTORY, workCoverageCounts } from '../curriculum';
 import { averagePower, kineticEnergy, kineticEnergyAfterWork, mechanicalEnergy, potentialEnergy, speedFromKineticEnergy } from '../energyBasics';
 import { cmToM, computeWork, cosDeg, DEFAULT_WORK, describeWork, fmtSigned, gToKg, kJToJ, kmhToMs, sinDeg, TRACK_LENGTH, validateWork, workAtProgress, type WorkSetup } from '../workModel';
@@ -21,7 +22,7 @@ import { WorkView } from '../../../../features/physics/work/WorkView';
 import { MOTION_CHAPTER } from '../../motion/learn/content';
 import { FORCES_CHAPTER } from '../../forces/learn/content';
 
-describeChapterIntegrity('Work', CH, ['workLab', 'kineticLab', 'workDerivation']);
+describeChapterIntegrity('Work', CH, ['workLab', 'kineticLab', 'workDerivation', 'energyLab']);
 
 class MemoryStorage {
   private m = new Map<string, string>();
@@ -254,16 +255,16 @@ describe('energy foundations (hand values)', () => {
 });
 
 describe('curriculum map and textbook inventory', () => {
-  it('lists every verified section of Chapter 7 with honest status, and only Sections 7.1 to 7.4.1 are claimed by the Learn lessons so far', () => {
+  it('lists every verified section of Chapter 7 with honest status, and only Sections 7.1 to 7.4.3 are claimed by the Learn lessons so far', () => {
     expect(WORK_TEXTBOOK_INVENTORY.sections).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6', '7.6.1', '7.6.2', '7.6.3']);
     expect(WORK_TEXTBOOK_INVENTORY.exercises).toBe(15);
     const sections = new Set(WORK_MAP.map((r) => r.section));
     for (const s of ['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6']) expect(sections.has(s), s).toBe(true);
     const learn = WORK_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook' && r.lessonIds.length);
-    expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1']);
+    expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3']);
     for (const r of WORK_MAP.filter((x) => x.status === 'planned')) expect(r.lessonIds).toEqual([]);
     for (const r of WORK_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], id).toBeDefined();
-    const c = workCoverageCounts(); expect(c.available + c.planned).toBe(c.total); expect(c.planned).toBeGreaterThan(5);
+    const c = workCoverageCounts(); expect(c.available + c.planned).toBe(c.total); expect(c.planned).toBeGreaterThanOrEqual(4);
     for (const r of WORK_MAP.filter((x) => x.id === 'w-lab')) expect(r.kind).toBe('enrichment');
   });
 });
@@ -276,13 +277,14 @@ describe('NCERT exercise inventory and solutions', () => {
     expect(WORK_EXERCISES[3].parts.map((p) => p.id)).toEqual(['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix']);
   });
   it('only the parts the lessons so far support are solved, and everything else is Upcoming with no solution', () => {
-    expect(solvedWorkParts().map((p) => `${p.number}${p.part}`)).toEqual(['1i', '1ii', '1iii', '1v', '2i', '2ii', '2iii', '8all', '10i', '11i', '11ii', '11iii', '13i', '13ii', '13iii', '13iv']);
+    const unsolved = WORK_EXERCISES.flatMap((e) => e.parts.filter((p) => p.status === 'upcoming').map((p) => `${e.number}${p.id}`));
+    expect(unsolved).toEqual(['2v', '6all', '7all', '9all']);
     for (const e of WORK_EXERCISES) for (const p of e.parts) {
       expect(p.status === 'solved').toBe(Boolean(p.solution));
       if (p.status === 'upcoming') { expect(p.needs, `Q${e.number}${p.id}`).toBeTruthy(); expect(p.solution).toBeUndefined(); }
     }
-    const c = workExerciseCounts(); expect(c.parts).toBe(43); expect(c.solvedParts).toBe(16);
-    expect(WORK_EXERCISES.filter(exerciseSolved).map((e) => e.number)).toEqual([8, 11, 13]);
+    const c = workExerciseCounts(); expect(c.parts).toBe(43); expect(c.solvedParts).toBe(39);
+    expect(WORK_EXERCISES.filter(exerciseSolved).map((e) => e.number)).toEqual([1, 3, 4, 5, 8, 10, 11, 12, 13, 14, 15]);
   });
   it('every solution is complete: principle, hint, reasoning with reasons, calculation, final answer, meaning and a real lab link or a reason', () => {
     for (const e of WORK_EXERCISES) for (const p of e.parts.filter((x) => x.solution)) {
@@ -314,6 +316,13 @@ describe('NCERT exercise inventory and solutions', () => {
     expect(K(1000, 35)).toBe(612500);
     const decel = 35 / 2, dist = 0.5 * 2 * 35; expect(1000 * decel * dist).toBe(612500);
     const r = computeKinetic({ massKg: 1000, netForce: -1000 * decel, u: 35, displacement: dist }); expect(r.valid).toBe(true); expect(r.wNet).toBe(-612500); expect(r.dK).toBeCloseTo(-612500, 3); expect(r.v).toBeCloseTo(0, 6);
+    // 5: potential energy gain (elevator and stairs), 10(ii): air resistance work, 12: Moon height, 14: speeds from the PE graph, 15: coconut
+    expect(50 * 10 * 72.5).toBe(36250);
+    expect(0.5 * 2 * 20 ** 2 - 2 * 10 * 19.4).toBeCloseTo(12, 9);
+    const v2 = 2 * 10 * 8; expect(v2 / (2 * (10 / 6))).toBeCloseTo(48, 9);
+    expect(Math.sqrt((2 * (30 - 20)) / 0.5)).toBeCloseTo(6.3246, 4); expect(30 - 30).toBe(0); expect(30 - 40).toBeLessThan(0);
+    expect(Math.sqrt(2 * 10 * 10)).toBeCloseTo(14.1421, 4); expect(150 / 3000).toBeCloseTo(0.05, 12); expect(150 / (3000 - 15)).toBeCloseTo(0.0503, 4);
+    const rock = computeEnergy({ massKg: 1.5, startHeight: 10, angleDeg: 90, mu: 0, g: 10, u0: 0, refHeight: 0 }); expect(energyAtDistance(rock, rock.sEnd).K).toBeCloseTo(150, 9);
     // 2(iii) K formula
     for (const [m, v] of [[0.2, 43], [3, 4], [10, 6]]) expect(computeKinetic({ massKg: m, netForce: 0, u: v, displacement: 1 }).K0).toBeCloseTo(0.5 * m * v * v, 9);
   });

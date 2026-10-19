@@ -223,4 +223,16 @@ export const PW_UNITS: EduUnit[] = [
     discover: ['What energy is and how work transfers it', 'The forms of energy and how they change from one to another', 'Why K = ½mv² and why doubling the speed quadruples K', 'How to use work and energy to find a speed or a stopping distance'],
     prerequisiteIds: ['pwp-force', 'pwp-eqmotion', 'pwp-algebra', 'pwp-graph', 'pwp-velocity'], lessonIds: ['pw-l4', 'pw-l5'],
   },
+  {
+    id: 'pw-unit-3', number: 3, title: 'Potential energy and conservation of energy',
+    centralIdea: 'Energy can be stored by position or shape: the gravitational potential energy of an object at a height h is mgh. While only gravity does work, the sum of the kinetic and potential energy (the mechanical energy) stays constant; with friction some becomes thermal energy and the total energy is still conserved.',
+    connection: 'This is Sections 7.4.2 and 7.4.3. It uses work and kinetic energy from Units 1 and 2 and the equations of motion from Chapter 4.',
+    vocabulary: [
+      { term: 'potential energy (U)', meaning: 'energy stored by the shape of an object or the relative positions of objects' },
+      { term: 'mechanical energy', meaning: 'the sum of the kinetic and the potential energy, K + U' },
+      { term: 'conservation of mechanical energy', meaning: 'K + U stays constant when no other external force (such as friction) does work' },
+    ],
+    discover: ['How work against gravity is stored as potential energy, U = mgh', 'Why only changes of potential energy matter (the reference level)', 'How kinetic and potential energy change into each other while the total stays the same', 'Where the mechanical energy goes when there is friction'],
+    prerequisiteIds: ['pwp-weight', 'pwp-eqmotion', 'pwp-algebra', 'pwp-units', 'pwp-force'], lessonIds: ['pw-l6', 'pw-l7'],
+  },
 ];

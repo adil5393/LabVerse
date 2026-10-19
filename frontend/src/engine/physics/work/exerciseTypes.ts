@@ -2,6 +2,7 @@
 
 import type { WorkSetup } from './workModel';
 import type { KineticSetup } from './kineticModel';
+import type { EnergySetup } from './energyLab';
 
 export interface SolutionStep { text: string; why: string }
 
@@ -10,6 +11,7 @@ export interface GraphLine { id: string; name: string; color: string; pts: [numb
 export type ExerciseIllustration =
   | { kind: 'work'; caption: string; setup: WorkSetup }
   | { kind: 'kinetic'; caption: string; setup: KineticSetup }
+  | { kind: 'energy'; caption: string; setup: EnergySetup; /** Fraction of the run at which the scene is drawn (0 to 1). */ fraction?: number }
   | {
     kind: 'graph'; caption: string; xName: string; xUnit: string; yName: string; yUnit: string; xr: [number, number]; yr: [number, number];
     lines: GraphLine[]; shade?: { x0: number; x1: number; y: number; color: string }; points?: { x: number; y: number; label: string }[];

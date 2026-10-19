@@ -4,6 +4,7 @@ import React from 'react';
 import type { ExerciseIllustration } from '../../../engine/physics/work/exerciseTypes';
 import { PHYS } from '../motion/physicsColors';
 import { EnergyPlot } from './EnergyPlot';
+import { EnergyView } from './EnergyView';
 import { KineticView } from './KineticView';
 import { WorkView } from './WorkView';
 
@@ -12,6 +13,7 @@ export const ExerciseIllustrationView: React.FC<{ ill: ExerciseIllustration; id:
     <figcaption className="text-xs text-slate-300"><strong style={{ color: PHYS.prediction }}>Illustration. </strong>{ill.caption}</figcaption>
     {ill.kind === 'work' && <WorkView initial={ill.setup} graph />}
     {ill.kind === 'kinetic' && <KineticView initial={ill.setup} />}
+    {ill.kind === 'energy' && <EnergyView initial={ill.setup} startFraction={ill.fraction ?? 0} />}
     {ill.kind === 'graph' && (
       <>
         <EnergyPlot id={`ex-${id}`} title={`${ill.yName} against ${ill.xName}`} xName={ill.xName} xUnit={ill.xUnit} yName={ill.yName} yUnit={ill.yUnit} xr={ill.xr} yr={ill.yr}

@@ -3,6 +3,7 @@
 import type { VisualRef } from '../../../education/types';
 import { computeWork, describeWork, type WorkSetup } from '../workModel';
 import { computeKinetic, describeKinetic, type KineticSetup } from '../kineticModel';
+import { computeEnergy, describeEnergy, type EnergySetup } from '../energyLab';
 
 export { ind, num as numQ, pick } from '../../../education/builders';
 
@@ -32,4 +33,11 @@ export const kineticVisual = (p: KineticVisualProps, intro: string): VisualRef =
 export const derivationVisual = (id: string, intro: string): VisualRef => ({
   kind: 'workDerivation', props: { id },
   alt: `${intro} An interactive, step-by-step derivation with a graph drawn from the same numbers: change the values, use Previous step and Next step (or the left and right arrow keys), and supply the missing reasoning where a step asks for it.`,
+});
+
+export interface EnergyVisualProps { setup: EnergySetup; editable?: boolean; /** Fraction of the run at which the scene is first drawn (0 to 1). */ fraction?: number }
+
+/** The Energy Laboratory scene, drawn from the model (not a picture). */
+export const energyVisual = (p: EnergyVisualProps, intro: string): VisualRef => ({
+  kind: 'energyLab', props: p as unknown as Record<string, unknown>, alt: `${intro} ${describeEnergy(computeEnergy(p.setup))}`,
 });

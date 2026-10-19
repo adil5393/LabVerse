@@ -123,49 +123,54 @@ export function searchCounterexamplesInRange(
 // Geometric Counterexample Models
 // ============================================================================
 
+import { classifyQuad } from './learn/geometry';
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const SQ = 5 / Math.SQRT2;
+
+/** Canonical figures, defined by coordinates. Diagonals, angles and names are COMPUTED from them. */
+const EQUAL_DIAGONAL_FIGURES: Record<'rectangle' | 'square' | 'isosceles_trapezium' | 'rhombus' | 'general', { name: string; labels: string[]; pts: { x: number; y: number }[] }> = {
+  rectangle: { name: 'Rectangle ABCD', labels: ['A', 'B', 'C', 'D'], pts: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }, { x: 0, y: 3 }] },
+  square: { name: 'Square ABCD', labels: ['A', 'B', 'C', 'D'], pts: [{ x: 0, y: 0 }, { x: SQ, y: 0 }, { x: SQ, y: SQ }, { x: 0, y: SQ }] },
+  isosceles_trapezium: { name: 'Isosceles Trapezium PQRS', labels: ['P', 'Q', 'R', 'S'], pts: [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 4, y: 5 }, { x: 2, y: 5 }] },
+  rhombus: { name: 'Rhombus ABCD', labels: ['A', 'B', 'C', 'D'], pts: [{ x: 4, y: 0 }, { x: 0, y: 3 }, { x: -4, y: 0 }, { x: 0, y: -3 }] },
+  general: { name: 'General Quadrilateral ABCD', labels: ['A', 'B', 'C', 'D'], pts: [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 5, y: 2 }, { x: 0, y: 4 }] },
+};
+
 /**
  * Investigates the converse: "If a quadrilateral has equal diagonals, then it is a rectangle."
  * Counterexample: Isosceles Trapezium (equal diagonals, but not a rectangle).
+ * Every number returned is computed from the figure's coordinates (EDU-1P): the
+ * previous version returned fixed values that no figure produced.
  */
 export function evaluateEqualDiagonalsConverse(
   quadType: 'rectangle' | 'isosceles_trapezium' | 'square' | 'rhombus' | 'general'
 ): QuadrilateralReasoningState {
-  if (quadType === 'rectangle' || quadType === 'square') {
-    return {
-      name: quadType === 'square' ? 'Square ABCD' : 'Rectangle ABCD',
-      type: quadType,
-      diagonalsEqual: true,
-      isRectangle: true,
-      diagonalLengthAC: 5.0,
-      diagonalLengthBD: 5.0,
-      isConverseCounterexample: false,
-      explanation: 'Both diagonals are equal, and the figure IS a rectangle (all 4 interior angles are 90°). This is a supporting example.',
-    };
+  const fig = EQUAL_DIAGONAL_FIGURES[quadType];
+  const [A, B, C, D] = fig.pts;
+  const f = classifyQuad(A, B, C, D);
+  const [l0, , l2] = fig.labels;
+  const ac = round2(f.diagonalAC), bd = round2(f.diagonalBD);
+  const l1 = fig.labels[1], l3 = fig.labels[3];
+  let explanation: string;
+  if (f.diagonalsEqual && f.isRectangle) {
+    explanation = `Both diagonals are equal (${l0}${l2} = ${l1}${l3} = ${ac}), and the figure IS a rectangle (all four angles are 90\u00B0). This is a supporting example.`;
+  } else if (f.counterexampleToConverse) {
+    explanation = `VALID COUNTEREXAMPLE: the diagonals ${l0}${l2} and ${l1}${l3} are equal in length (${l0}${l2} = ${l1}${l3} = ${ac}), but the angles are not all 90\u00B0 (it is an ${f.name}). Hence equal diagonals do NOT guarantee a rectangle.`;
+  } else {
+    explanation = `The diagonals are not equal (${l0}${l2} = ${ac}, ${l1}${l3} = ${bd}), so the hypothesis of the converse is not satisfied. This figure says nothing about the claim.`;
   }
-
-  if (quadType === 'isosceles_trapezium') {
-    return {
-      name: 'Isosceles Trapezium PQRS',
-      type: 'isosceles_trapezium',
-      diagonalsEqual: true,
-      isRectangle: false,
-      diagonalLengthAC: 6.4,
-      diagonalLengthBD: 6.4,
-      isConverseCounterexample: true,
-      explanation:
-        'VALID COUNTEREXAMPLE: Diagonals PR and QS are equal in length (PR = QS = 6.4), but the angles are not 90° (it is an isosceles trapezium with non-parallel sides equal). Hence, having equal diagonals does NOT guarantee a rectangle.',
-    };
-  }
-
   return {
-    name: 'General Quadrilateral ABCD',
-    type: 'general',
-    diagonalsEqual: false,
-    isRectangle: false,
-    diagonalLengthAC: 4.8,
-    diagonalLengthBD: 6.2,
-    isConverseCounterexample: false,
-    explanation: 'Diagonals are unequal; hypothesis is not satisfied.',
+    name: fig.name,
+    type: quadType === 'general' ? 'general' : quadType,
+    diagonalsEqual: f.diagonalsEqual,
+    isRectangle: f.isRectangle,
+    diagonalLengthAC: ac,
+    diagonalLengthBD: bd,
+    isConverseCounterexample: f.counterexampleToConverse,
+    explanation,
+    vertices: fig.pts,
+    vertexLabels: fig.labels,
   };
 }
 

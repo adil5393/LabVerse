@@ -42,7 +42,7 @@ export const PropositionsGuidedToolbar: React.FC<PropositionsGuidedToolbarProps>
       <div className="flex items-center gap-3">
         <Link
           to="/mathematics/propositions"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-slate-300 hover:text-white text-xs font-semibold transition-all group"
+          className="inline-flex items-center gap-1.5 min-h-[44px] px-2.5 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-slate-300 hover:text-white text-xs font-semibold transition-all group"
           title="Return to Propositions Roadmap"
         >
           <span className="material-symbols-outlined text-[17px] group-hover:-translate-x-0.5 transition-transform">
@@ -68,7 +68,7 @@ export const PropositionsGuidedToolbar: React.FC<PropositionsGuidedToolbarProps>
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+              className={`min-h-[44px] px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
                 activeTab === tab.id
                   ? 'bg-purple-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
@@ -89,7 +89,7 @@ export const PropositionsGuidedToolbar: React.FC<PropositionsGuidedToolbarProps>
 
         <button
           onClick={onTogglePanel}
-          className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
+          className={`min-h-[44px] px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
             isPanelOpen
               ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
               : 'bg-surface-card text-slate-300 border-surface-border hover:bg-surface-elevated hover:text-white'

@@ -7,11 +7,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GlobalHeader } from '../../components/GlobalHeader';
-import { lessonStatus, STATUS_LABEL, summarizeLesson, reviewRecommendations } from '../../engine/education/progress';
-import type { EduChapter, EduLesson, LessonRecord } from '../../engine/education/types';
+import { lessonStatus, objectiveCoverage, STATUS_LABEL, summarizeLesson, reviewRecommendations } from '../../engine/education/progress';
+import type { EduChapter, EduLesson, JudgeRegistry, LessonRecord } from '../../engine/education/types';
 import { useEducationStore } from '../../store/useEducationStore';
 import { ConceptExplainer, GuidedPractice, IndependentPractice, LearningReflection, WorkedExample } from './LessonParts';
 import { PrerequisiteCard, findLessonStep, findRefresher } from './Prerequisites';
+import { JudgeProvider } from './judges';
 import { VisualRegistryProvider, type VisualRegistry } from './visuals';
 
 type Stage = 'understand' | 'worked' | 'guided' | 'independent' | 'reflect';
@@ -34,7 +35,7 @@ function resumeStageFor(lesson: EduLesson | undefined, rec: LessonRecord | undef
   return 'reflect';
 }
 
-export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRegistry; lessonId: string; crumb: string }> = ({ chapter, registry, lessonId, crumb }) => {
+export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRegistry; judges?: JudgeRegistry; lessonId: string; crumb: string }> = ({ chapter, registry, judges = {}, lessonId, crumb }) => {
   const navigate = useNavigate();
   const lesson = chapter.lessons[lessonId];
   const rec = useEducationStore((s) => s.lessons[lessonId]);
@@ -78,6 +79,7 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
 
   return (
     <VisualRegistryProvider value={registry}>
+      <JudgeProvider value={judges}>
       <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid" data-lesson={lesson.id}>
         <GlobalHeader />
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-6 space-y-5">
@@ -183,6 +185,12 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
           {stage === 'reflect' && (
             <div className="space-y-4">
               <LearningReflection reflection={lesson.reflection} lessonId={lesson.id} onRefresher={openRefresher} />
+              {objectiveCoverage(lesson, rec).some((o) => !o.covered) && (
+                <div className="rounded-xl border border-surface-border bg-surface-card p-4 text-sm text-slate-200 space-y-1" data-testid="objective-gaps">
+                  <strong className="text-white">Mastery needs each goal shown on its own, first try, no help:</strong>
+                  <ul className="list-disc pl-5">{objectiveCoverage(lesson, rec).map((o) => <li key={o.id} data-covered={o.covered}>{o.covered ? '\u2713 ' : '\u25CB '}{o.label}</li>)}</ul>
+                </div>
+              )}
               {recs.length > 0 && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100 space-y-1" data-testid="review-recs">
                   <strong>Worth revisiting:</strong>
@@ -207,6 +215,7 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
           </footer>
         </main>
       </div>
+      </JudgeProvider>
     </VisualRegistryProvider>
   );
 };

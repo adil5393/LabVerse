@@ -50,7 +50,7 @@ export const GuidedLessonPanel: React.FC<GuidedLessonPanelProps> = ({ onClose })
   const stages = lesson.stages;
 
   return (
-    <aside className="w-80 lg:w-96 bg-surface-low border-l border-surface-border flex flex-col h-full overflow-hidden shrink-0 select-none z-10 font-sans">
+    <aside aria-label="Guided reasoning panel" className="w-full lg:w-96 max-h-[55vh] lg:max-h-none bg-surface-low border-t lg:border-t-0 lg:border-l border-surface-border flex flex-col lg:h-full overflow-hidden shrink-0 z-10 font-sans">
       {/* 1. Header with Close and Unit Info */}
       <div className="p-4 border-b border-surface-border bg-surface-card/60 space-y-1">
         <div className="flex items-center justify-between">
@@ -61,8 +61,9 @@ export const GuidedLessonPanel: React.FC<GuidedLessonPanelProps> = ({ onClose })
           {onClose && (
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-lg"
+              className="text-slate-400 hover:text-white min-w-[44px] min-h-[44px] rounded-lg"
               title="Close Panel"
+              aria-label="Close guided panel"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
@@ -81,7 +82,8 @@ export const GuidedLessonPanel: React.FC<GuidedLessonPanelProps> = ({ onClose })
             <button
               key={stg}
               onClick={() => setStage(stg)}
-              className={`px-2 py-1 rounded-lg shrink-0 flex items-center gap-1 font-bold text-[11px] transition-all ${
+              aria-current={isActive ? 'step' : undefined}
+              className={`min-h-[44px] px-3 py-1 rounded-lg shrink-0 flex items-center gap-1 font-bold text-[11px] transition-all ${
                 isActive
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                   : isDone
@@ -292,7 +294,7 @@ export const GuidedLessonPanel: React.FC<GuidedLessonPanelProps> = ({ onClose })
                 <span>Practice & Mastery</span>
               </span>
               <p className="text-slate-300 leading-relaxed">
-                Test your understanding with NCERT Ganita Manjari questions aligned with this lesson.
+                Test your understanding with practice questions on this lesson (original questions).
               </p>
             </div>
 
@@ -322,7 +324,7 @@ export const GuidedLessonPanel: React.FC<GuidedLessonPanelProps> = ({ onClose })
       <div className="p-4 border-t border-surface-border bg-surface-card/60">
         <button
           onClick={advanceToNextStage}
-          className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-mono text-xs flex items-center justify-center gap-2 transition-all shadow-md"
+          className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-mono text-xs flex items-center justify-center gap-2 transition-all shadow-md"
         >
           <span>
             {activeStage === 'practice' || activeStage === stages[stages.length - 1]

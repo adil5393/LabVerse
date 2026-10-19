@@ -9,7 +9,7 @@ const primaryBtn = 'min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 fon
 const ghostBtn = 'min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm hover:border-slate-400 disabled:opacity-40';
 
 const PHASE: Record<LearningPhase, { label: string; note: string; tone: string }> = {
-  observe: { label: 'Observe', note: 'Measuring shows the idea works for THIS figure. It suggests a rule but does not prove it for every circle.', tone: 'border-cyan-500/40 text-cyan-200' },
+  observe: { label: 'Observe', note: 'Trying it shows the idea works for THESE cases. It suggests a rule but does not prove it for every case.', tone: 'border-cyan-500/40 text-cyan-200' },
   conjecture: { label: 'Conjecture', note: 'A conjecture is a careful guess that still needs a proof.', tone: 'border-violet-500/40 text-violet-200' },
   reasoning: { label: 'Reasoning', note: 'Now we ask why it must be true.', tone: 'border-amber-500/40 text-amber-200' },
   proof: { label: 'Proof', note: 'A proof uses only facts we already know, one reason at a time, so it holds for every figure of this kind.', tone: 'border-emerald-500/40 text-emerald-200' },

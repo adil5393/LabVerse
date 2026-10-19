@@ -3,7 +3,12 @@
  * Class 9 NCERT Ganita Manjari
  *
  * Independent, decoupled module state with local progress persistence.
- * Storage Key: 'labverse_propositions_progress_v1'
+ * Storage Key: 'labverse_propositions_progress_v1' (the key is kept so no record is lost; the
+ * payload is versioned and migrated).
+ *
+ * EDU-1P: mastery is evidence-based. Navigation (Next, Complete Lesson, resume)
+ * records "completed" at most and never "mastered". Practice evidence is stored
+ * per question (first-try, unassisted) and survives refresh.
  */
 
 import { create } from 'zustand';
@@ -15,6 +20,10 @@ import type {
 import type { GuidedStageId } from '../engine/mathematics/guidedLearning/types';
 import { getExperimentById } from '../engine/mathematics/propositions/experimentRegistry';
 import { PROP_GUIDED_LESSONS } from '../engine/mathematics/propositions/curriculumPath';
+import {
+  PROP_PROGRESS_VERSION, applyAnswer, applyHelp, isLessonPracticeMastered, migrateLessons, parseEvidence,
+  type PracticeEvidence,
+} from '../engine/mathematics/propositions/progressRules';
 
 const STORAGE_KEY = 'labverse_propositions_progress_v1';
 
@@ -26,6 +35,11 @@ export interface LessonProgressItem {
   stagesCompleted: Record<GuidedStageId, boolean>;
   predictionSelectedOption?: number;
   predictionIsCorrect?: boolean;
+  /**
+   * An earlier version marked this lesson "mastered" without evidence. The record
+   * is kept, but the claim cannot be verified, so it is shown as Unverified.
+   */
+  legacyMasteryUnverified?: boolean;
 }
 
 export interface PropositionsState {
@@ -63,6 +77,8 @@ export interface PropositionsState {
   // Practice Engine State
   activePracticeQuestionId: string;
   practiceDifficultyFilter: PracticeDifficulty | 'all';
+  /** Persistent per-question evidence (the source of mastery). */
+  practiceEvidence: Record<string, PracticeEvidence>;
   practiceAnswers: Record<
     string,
     {
@@ -70,6 +86,8 @@ export interface PropositionsState {
       isCorrect: boolean;
       hintsRevealed: number;
       showSolution: boolean;
+      /** True once a real answer was submitted. A hint or a solution alone does not lock the question. */
+      attempted: boolean;
     }
   >;
 
@@ -108,6 +126,8 @@ export interface PropositionsState {
 
   getCompletionStats: () => {
     completedLessonsCount: number;
+    masteredLessonsCount: number;
+    unverifiedLessonsCount: number;
     totalLessonsCount: number;
     completionPercentage: number;
     nextRecommendedLessonId: string;
@@ -122,25 +142,31 @@ export interface PropositionsState {
   retryPracticeQuestion: (questionId: string) => void;
 }
 
-function loadPersistedProgress(): Record<string, LessonProgressItem> {
+const practiceIdsOf = (lessonId: string): string[] => PROP_GUIDED_LESSONS[lessonId]?.practiceQuestionIds ?? [];
+
+/** Read storage, migrate old versions, and never lose a record. */
+export function loadPersistedProgress(): { lessons: Record<string, LessonProgressItem>; practiceEvidence: Record<string, PracticeEvidence> } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
+    if (!raw) return { lessons: {}, practiceEvidence: {} };
     const parsed = JSON.parse(raw);
-    return parsed.lessons || {};
+    const evidence = parseEvidence(parsed?.practiceEvidence);
+    const lessons = parsed && typeof parsed.lessons === 'object' && parsed.lessons !== null && !Array.isArray(parsed.lessons) ? (parsed.lessons as Record<string, LessonProgressItem>) : {};
+    return { lessons: migrateLessons(lessons, evidence, practiceIdsOf), practiceEvidence: evidence };
   } catch {
-    return {};
+    return { lessons: {}, practiceEvidence: {} };
   }
 }
 
-function persistProgress(lessons: Record<string, LessonProgressItem>) {
+function persistProgress(lessons: Record<string, LessonProgressItem>, practiceEvidence: Record<string, PracticeEvidence>) {
   try {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 1,
+        version: PROP_PROGRESS_VERSION,
         updatedAt: Date.now(),
         lessons,
+        practiceEvidence,
       })
     );
   } catch {
@@ -148,8 +174,19 @@ function persistProgress(lessons: Record<string, LessonProgressItem>) {
   }
 }
 
+/** Recompute every lesson's practice mastery from evidence (never from navigation). */
+function withMastery(lessons: Record<string, LessonProgressItem>, evidence: Record<string, PracticeEvidence>): Record<string, LessonProgressItem> {
+  const out: Record<string, LessonProgressItem> = {};
+  for (const [id, rec] of Object.entries(lessons)) {
+    const earned = isLessonPracticeMastered(practiceIdsOf(id), evidence);
+    out[id] = { ...rec, mastered: earned, ...(earned ? { legacyMasteryUnverified: false } : {}) };
+  }
+  return out;
+}
+
 export const usePropositionsStore = create<PropositionsState>((set, get) => {
-  const persistedLessons = loadPersistedProgress();
+  const persisted = loadPersistedProgress();
+  const persistedLessons = persisted.lessons;
 
   return {
     currentExperimentId: 'exp-prop-classification',
@@ -179,6 +216,7 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
 
     activePracticeQuestionId: 'q-prop-1',
     practiceDifficultyFilter: 'all',
+    practiceEvidence: persisted.practiceEvidence,
     practiceAnswers: {},
 
     setExperiment: (id: string) => {
@@ -306,7 +344,7 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
         [lessonId]: currentProgress,
       };
       set({ lessons: updated });
-      persistProgress(updated);
+      persistProgress(updated, get().practiceEvidence);
     },
 
     setStage: (stage: GuidedStageId) => {
@@ -330,7 +368,7 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
 
       const updated = { ...lessons, [activeLessonId]: updatedLesson };
       set({ lessons: updated });
-      persistProgress(updated);
+      persistProgress(updated, get().practiceEvidence);
     },
 
     completeCurrentStage: () => {
@@ -348,7 +386,7 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
 
       const updated = { ...lessons, [activeLessonId]: updatedLesson };
       set({ lessons: updated });
-      persistProgress(updated);
+      persistProgress(updated, get().practiceEvidence);
     },
 
     advanceToNextStage: () => {
@@ -373,23 +411,29 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
       const current = lessons[lessonId];
       if (!current) return;
 
+      // Finishing the stages marks the lesson as worked through. It is NEVER mastery:
+      // mastery comes only from independent practice evidence.
       const updatedLesson: LessonProgressItem = {
         ...current,
         completed: true,
-        mastered: true,
       };
 
       const updated = { ...lessons, [lessonId]: updatedLesson };
       set({ lessons: updated });
-      persistProgress(updated);
+      persistProgress(updated, get().practiceEvidence);
     },
 
     resetProgress: () => {
-      localStorage.removeItem(STORAGE_KEY);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // storage unavailable
+      }
       set({
         lessons: {},
         activeStage: 'understand',
         practiceAnswers: {},
+        practiceEvidence: {},
       });
     },
 
@@ -398,6 +442,11 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
       const allLessonKeys = Object.keys(PROP_GUIDED_LESSONS);
       const totalLessonsCount = allLessonKeys.length;
       let completedLessonsCount = 0;
+      // Mastery is read from the evidence itself, so it is right even for a lesson whose
+      // practice was done directly in practice mode (no lesson record exists for it).
+      const earned = (k: string) => isLessonPracticeMastered(practiceIdsOf(k), get().practiceEvidence);
+      const masteredLessonsCount = allLessonKeys.filter(earned).length;
+      const unverifiedLessonsCount = allLessonKeys.filter((k) => lessons[k]?.legacyMasteryUnverified === true && !earned(k)).length;
 
       for (const k of allLessonKeys) {
         if (lessons[k]?.completed) {
@@ -420,6 +469,8 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
 
       return {
         completedLessonsCount,
+        masteredLessonsCount,
+        unverifiedLessonsCount,
         totalLessonsCount,
         completionPercentage,
         nextRecommendedLessonId,
@@ -436,7 +487,11 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
     },
 
     submitPracticeAnswer: (questionId, answer, isCorrect) => {
+      const evidence = { ...get().practiceEvidence, [questionId]: applyAnswer(get().practiceEvidence[questionId], isCorrect) };
+      const lessons = withMastery(get().lessons, evidence);
       set((state) => ({
+        practiceEvidence: evidence,
+        lessons,
         practiceAnswers: {
           ...state.practiceAnswers,
           [questionId]: {
@@ -444,51 +499,35 @@ export const usePropositionsStore = create<PropositionsState>((set, get) => {
             isCorrect,
             hintsRevealed: state.practiceAnswers[questionId]?.hintsRevealed || 0,
             showSolution: state.practiceAnswers[questionId]?.showSolution || isCorrect,
+            attempted: true,
           },
         },
       }));
+      persistProgress(lessons, evidence);
     },
 
     revealPracticeHint: (questionId: string) => {
+      const evidence = { ...get().practiceEvidence, [questionId]: applyHelp(get().practiceEvidence[questionId], 'hint') };
       set((state) => {
-        const prev = state.practiceAnswers[questionId] || {
-          userAnswer: '',
-          isCorrect: false,
-          hintsRevealed: 0,
-          showSolution: false,
-        };
-        return {
-          practiceAnswers: {
-            ...state.practiceAnswers,
-            [questionId]: {
-              ...prev,
-              hintsRevealed: prev.hintsRevealed + 1,
-            },
-          },
-        };
+        const prev = state.practiceAnswers[questionId] || { userAnswer: '', isCorrect: false, hintsRevealed: 0, showSolution: false, attempted: false };
+        return { practiceEvidence: evidence, practiceAnswers: { ...state.practiceAnswers, [questionId]: { ...prev, hintsRevealed: prev.hintsRevealed + 1 } } };
       });
+      persistProgress(get().lessons, evidence);
     },
 
     togglePracticeSolution: (questionId: string) => {
+      const showing = get().practiceAnswers[questionId]?.showSolution === true;
+      // Opening a solution counts as help; closing it again does not undo that.
+      const evidence = showing ? get().practiceEvidence : { ...get().practiceEvidence, [questionId]: applyHelp(get().practiceEvidence[questionId], 'solution') };
       set((state) => {
-        const prev = state.practiceAnswers[questionId] || {
-          userAnswer: '',
-          isCorrect: false,
-          hintsRevealed: 0,
-          showSolution: false,
-        };
-        return {
-          practiceAnswers: {
-            ...state.practiceAnswers,
-            [questionId]: {
-              ...prev,
-              showSolution: !prev.showSolution,
-            },
-          },
-        };
+        const prev = state.practiceAnswers[questionId] || { userAnswer: '', isCorrect: false, hintsRevealed: 0, showSolution: false, attempted: false };
+        return { practiceEvidence: evidence, practiceAnswers: { ...state.practiceAnswers, [questionId]: { ...prev, showSolution: !prev.showSolution } } };
       });
+      persistProgress(get().lessons, evidence);
     },
 
+    // Retrying clears what is on screen so the question can be answered again.
+    // The evidence stays: a wrong first attempt can never be rewritten into a first-try success.
     retryPracticeQuestion: (questionId: string) => {
       set((state) => {
         const next = { ...state.practiceAnswers };

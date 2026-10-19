@@ -18,6 +18,11 @@ import {
   PROP_GUIDED_LESSONS,
 } from '../../../engine/mathematics/propositions/curriculumPath';
 import { PROPOSITION_EXPERIMENTS } from '../../../engine/mathematics/propositions/experimentRegistry';
+import { PropositionsLearnSection } from './learn/PropositionsLearn';
+import { isLessonPracticeMastered } from '../../../engine/mathematics/propositions/progressRules';
+import { PROPOSITIONS_CHAPTER } from '../../../engine/mathematics/propositions/learn/content';
+import { lessonStatus, STATUS_LABEL } from '../../../engine/education/progress';
+import { useEducationStore } from '../../../store/useEducationStore';
 
 export const PropositionsLab: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +36,9 @@ export const PropositionsLab: React.FC = () => {
     selectLesson,
   } = usePropositionsStore();
 
+  const learnRecords = useEducationStore((st) => st.lessons);
+  const practiceEvidence = usePropositionsStore((st) => st.practiceEvidence);
+  const masteredByEvidence = (id: string) => isLessonPracticeMastered(PROP_GUIDED_LESSONS[id]?.practiceQuestionIds ?? [], practiceEvidence);
   const stats = getCompletionStats();
   const nextLesson =
     PROP_GUIDED_LESSONS[stats.nextRecommendedLessonId] ||
@@ -59,11 +67,11 @@ export const PropositionsLab: React.FC = () => {
         {/* Breadcrumb & Top Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <Link to="/" className="hover:text-purple-400 transition-colors">
+            <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-purple-400 transition-colors">
               Subject Explorer
             </Link>
             <span>/</span>
-            <Link to="/mathematics" className="hover:text-purple-400 transition-colors">
+            <Link to="/mathematics" className="inline-flex items-center min-h-[44px] hover:text-purple-400 transition-colors">
               Mathematics
             </Link>
             <span>/</span>
@@ -75,7 +83,7 @@ export const PropositionsLab: React.FC = () => {
             {!confirmReset ? (
               <button
                 onClick={() => setConfirmReset(true)}
-                className="text-xs font-mono text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border hover:border-red-500/30"
+                className="text-xs font-mono text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-lg border border-surface-border hover:border-red-500/30"
               >
                 <span className="material-symbols-outlined text-[15px]">restart_alt</span>
                 <span>Reset Chapter Progress</span>
@@ -128,10 +136,10 @@ export const PropositionsLab: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-purple-400">
-                  Guided Learning Path
+                  Guided Investigation
                 </span>
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">
-                  {stats.completionPercentage}% Done
+                  {stats.completionPercentage}% worked through
                 </span>
               </div>
 
@@ -153,9 +161,9 @@ export const PropositionsLab: React.FC = () => {
 
             <button
               onClick={handleStartContinue}
-              className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-900/30 transition-all"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-900/30 transition-all"
             >
-              <span>{stats.completedLessonsCount > 0 ? 'Continue Learning' : 'Start Lesson 1'}</span>
+              <span>{stats.completedLessonsCount > 0 ? 'Continue Investigating' : 'Start Investigating: Lesson 1'}</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           </div>
@@ -183,7 +191,7 @@ export const PropositionsLab: React.FC = () => {
 
             <Link
               to="/mathematics/propositions/workbench"
-              className="w-full py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center gap-2 border border-surface-border transition-all"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center gap-2 border border-surface-border transition-all"
             >
               <span>Open Free Laboratory</span>
               <span className="material-symbols-outlined text-[16px]">open_in_new</span>
@@ -203,7 +211,7 @@ export const PropositionsLab: React.FC = () => {
               </div>
 
               <h3 className="text-lg font-bold text-white leading-snug">
-                NCERT Practice Engine
+                Practice Bank
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Self-paced assessment across Basic, Standard, and Challenge difficulty tiers with
@@ -213,7 +221,7 @@ export const PropositionsLab: React.FC = () => {
 
             <Link
               to="/mathematics/propositions/workbench?mode=practice"
-              className="w-full py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center gap-2 border border-surface-border transition-all"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center gap-2 border border-surface-border transition-all"
             >
               <span>Start Practice Bank</span>
               <span className="material-symbols-outlined text-[16px]">fitness_center</span>
@@ -221,24 +229,27 @@ export const PropositionsLab: React.FC = () => {
           </div>
         </div>
 
+        {/* Learn: explanations, worked examples, guided and independent practice */}
+        <PropositionsLearnSection />
+
         {/* Tab Switcher: Guided Curriculum vs Canonical Experiments */}
         <div className="space-y-6">
           <div className="flex items-center gap-2 border-b border-surface-border pb-3">
             <button
               onClick={() => setActiveTab('guided')}
-              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 ${
+              className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'guided'
                   ? 'bg-purple-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">menu_book</span>
-              <span>Guided Curriculum Roadmap (12 Lessons)</span>
+              <span>Investigate in the workbench (12 lessons)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('experiments')}
-              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 ${
+              className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'experiments'
                   ? 'bg-purple-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
@@ -274,40 +285,43 @@ export const PropositionsLab: React.FC = () => {
                       const isCompleted = progress?.completed;
 
                       return (
-                        <div
+                        <button
                           key={lId}
+                          type="button"
                           onClick={() => handleOpenLesson(lId)}
-                          className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
-                            isCompleted
+                          data-investigate-lesson={lId}
+                          className={`text-left min-h-[44px] p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
+                            masteredByEvidence(lId)
                               ? 'bg-emerald-950/15 border-emerald-500/40 hover:border-emerald-500'
                               : 'bg-surface-card border-surface-border hover:border-purple-500/50 hover:bg-surface-elevated'
                           }`}
                         >
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-mono font-bold text-amber-400">
-                                Lesson {l.lessonNumber}
+                          <span className="block space-y-1.5">
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-mono font-bold text-amber-400">Lesson {l.lessonNumber}</span>
+                              <span className="flex flex-wrap items-center gap-1.5 justify-end">
+                                {PROPOSITIONS_CHAPTER.lessons[lId] && (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-surface-border text-slate-300" data-testid="learn-status-chip">
+                                    Learn: {STATUS_LABEL[lessonStatus(PROPOSITIONS_CHAPTER.lessons[lId], learnRecords[lId])]}
+                                  </span>
+                                )}
+                                {masteredByEvidence(lId) ? (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">Practice mastered</span>
+                                ) : progress?.legacyMasteryUnverified ? (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold" title="An earlier version marked this lesson mastered without any practice evidence. Answer the practice questions on your own to confirm it.">Earlier mastery: Unverified</span>
+                                ) : isCompleted ? (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold">Worked through</span>
+                                ) : null}
                               </span>
-                              {isCompleted && (
-                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold flex items-center gap-1">
-                                  <span className="material-symbols-outlined text-[12px]">check</span>
-                                  <span>Completed</span>
-                                </span>
-                              )}
-                            </div>
-                            <h4 className="text-sm font-bold text-white">{l.title}</h4>
-                            <p className="text-xs text-slate-400 leading-snug line-clamp-2">
-                              {l.subtitle}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-2 border-t border-surface-border/50 text-[11px] font-mono text-slate-500">
-                            <span>{l.stages.length} Stages</span>
-                            <span className="text-purple-400 font-bold group-hover:translate-x-0.5 transition-transform">
-                              Open Lesson →
                             </span>
-                          </div>
-                        </div>
+                            <span className="block text-sm font-bold text-white">{l.title}</span>
+                            <span className="block text-xs text-slate-400 leading-snug line-clamp-2">{l.subtitle}</span>
+                          </span>
+                          <span className="flex items-center justify-between pt-2 border-t border-surface-border/50 text-[11px] font-mono text-slate-500">
+                            <span>{l.stages.length} Stages</span>
+                            <span className="text-purple-400 font-bold">Investigate →</span>
+                          </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -320,12 +334,13 @@ export const PropositionsLab: React.FC = () => {
           {activeTab === 'experiments' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {PROPOSITION_EXPERIMENTS.map((exp) => (
-                <div
+                <button
                   key={exp.id}
+                  type="button"
                   onClick={() =>
                     navigate(`/mathematics/propositions/workbench?exp=${exp.id}`)
                   }
-                  className="p-5 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-500/40 hover:bg-surface-elevated transition-all cursor-pointer flex flex-col justify-between space-y-3"
+                  className="text-left p-5 rounded-2xl bg-surface-card border border-surface-border hover:border-amber-500/40 hover:bg-surface-elevated transition-all cursor-pointer flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-1.5">
                     <span className="text-[10px] font-mono text-amber-400 uppercase font-bold">
@@ -341,7 +356,7 @@ export const PropositionsLab: React.FC = () => {
                     <span>{exp.learningGoals.length} Goals</span>
                     <span className="text-amber-400 font-bold">Launch Studio →</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

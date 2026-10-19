@@ -10,6 +10,41 @@ import {
   evaluateEqualDiagonalsConverse,
 } from '../../../engine/mathematics/propositions/counterexampleEngine';
 
+import type { QuadrilateralReasoningState } from '../../../engine/mathematics/propositions/types';
+
+/** Draws the computed quadrilateral: its corners, both diagonals and their lengths come from the engine state. */
+const QuadFigure: React.FC<{ state: QuadrilateralReasoningState }> = ({ state }) => {
+  const xs = state.vertices.map((v) => v.x), ys = state.vertices.map((v) => v.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const k = Math.min(300 / Math.max(1e-9, maxX - minX), 120 / Math.max(1e-9, maxY - minY));
+  const P = (v: { x: number; y: number }) => ({ x: 200 + (v.x - (minX + maxX) / 2) * k, y: 100 - (v.y - (minY + maxY) / 2) * k });
+  const [A, B, C, D] = state.vertices.map(P);
+  const [l0, l1, l2, l3] = state.vertexLabels;
+  const eq = state.diagonalsEqual;
+  const colour = state.isConverseCounterexample ? '#f43f5e' : state.isRectangle ? '#10b981' : '#94a3b8';
+  const alt = `${state.name}. Diagonal ${l0}${l2} is ${state.diagonalLengthAC} long and diagonal ${l1}${l3} is ${state.diagonalLengthBD} long, so the diagonals are ${eq ? 'equal' : 'not equal'}. ${state.isRectangle ? 'All four angles are right angles: it is a rectangle.' : 'The angles are not all right angles: it is not a rectangle.'}`;
+  return (
+    <svg viewBox="0 0 400 200" className="w-full max-h-52" role="img" aria-label={alt}>
+      <title>{alt}</title>
+      <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`} fill={`${colour}22`} stroke={colour} strokeWidth="2.5" />
+      <line x1={A.x} y1={A.y} x2={C.x} y2={C.y} stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,4" />
+      <line x1={B.x} y1={B.y} x2={D.x} y2={D.y} stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,4" />
+      {[[A, l0], [B, l1], [C, l2], [D, l3]].map(([p, l]) => {
+        const q = p as { x: number; y: number };
+        return (
+          <g key={l as string}>
+            <circle cx={q.x} cy={q.y} r="4" fill="#38bdf8" />
+            <text x={q.x + (q.x < 200 ? -14 : 8)} y={q.y + (q.y < 100 ? -8 : 16)} fill="#cbd5e1" fontSize="13" fontFamily="monospace" fontWeight="bold">{l as string}</text>
+          </g>
+        );
+      })}
+      <text x="200" y="196" fill="#fbbf24" fontSize="12" textAnchor="middle" fontFamily="monospace" fontWeight="bold">
+        {l0}{l2} = {state.diagonalLengthAC}, {l1}{l3} = {state.diagonalLengthBD} ({eq ? 'EQUAL' : 'NOT EQUAL'})
+      </text>
+    </svg>
+  );
+};
+
 export const GeometryReasoningCanvas: React.FC = () => {
   const {
     triangleSides,
@@ -197,6 +232,7 @@ export const GeometryReasoningCanvas: React.FC = () => {
               </div>
               <input
                 type="range"
+                aria-label="Side a length"
                 min="1"
                 max="12"
                 value={triangleSides.a}
@@ -218,6 +254,7 @@ export const GeometryReasoningCanvas: React.FC = () => {
               </div>
               <input
                 type="range"
+                aria-label="Side b length"
                 min="1"
                 max="12"
                 value={triangleSides.b}
@@ -239,6 +276,7 @@ export const GeometryReasoningCanvas: React.FC = () => {
               </div>
               <input
                 type="range"
+                aria-label="Side c length, the longest side"
                 min="1"
                 max="16"
                 value={triangleSides.c}
@@ -319,17 +357,19 @@ export const GeometryReasoningCanvas: React.FC = () => {
           </div>
 
           {/* Quadrilateral Shape Selector */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a quadrilateral to test">
             {[
               { id: 'rectangle', label: 'Rectangle (Supporting Example)' },
               { id: 'isosceles_trapezium', label: 'Isosceles Trapezium (COUNTEREXAMPLE)' },
               { id: 'square', label: 'Square' },
+              { id: 'rhombus', label: 'Rhombus (diagonals unequal)' },
               { id: 'general', label: 'General Quadrilateral' },
             ].map((q) => (
               <button
                 key={q.id}
                 onClick={() => setSelectedQuadType(q.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all ${
+                aria-pressed={selectedQuadType === q.id}
+                className={`min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all ${
                   selectedQuadType === q.id
                     ? q.id === 'isosceles_trapezium'
                       ? 'bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-md'
@@ -342,66 +382,9 @@ export const GeometryReasoningCanvas: React.FC = () => {
             ))}
           </div>
 
-          {/* SVG Diagram Comparison */}
-          <div className="h-56 bg-surface-lowest rounded-xl border border-surface-border/70 flex items-center justify-center p-4">
-            <svg viewBox="0 0 400 200" className="w-full h-full max-h-52">
-              {selectedQuadType === 'isosceles_trapezium' ? (
-                // Isosceles Trapezium: top base shorter, bottom base longer, equal diagonals
-                <g>
-                  <polygon
-                    points="130,50 270,50 330,150 70,150"
-                    fill="rgba(244, 63, 94, 0.12)"
-                    stroke="#f43f5e"
-                    strokeWidth="2.5"
-                  />
-                  {/* Diagonal 1 */}
-                  <line x1="130" y1="50" x2="330" y2="150" stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,4" />
-                  {/* Diagonal 2 */}
-                  <line x1="270" y1="50" x2="70" y2="150" stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,4" />
-
-                  {/* Vertices */}
-                  <circle cx="130" cy="50" r="4" fill="#38bdf8" />
-                  <circle cx="270" cy="50" r="4" fill="#38bdf8" />
-                  <circle cx="330" cy="150" r="4" fill="#38bdf8" />
-                  <circle cx="70" cy="150" r="4" fill="#38bdf8" />
-
-                  <text x="120" y="42" fill="#94a3b8" fontSize="12" fontFamily="monospace">P</text>
-                  <text x="275" y="42" fill="#94a3b8" fontSize="12" fontFamily="monospace">Q</text>
-                  <text x="340" y="160" fill="#94a3b8" fontSize="12" fontFamily="monospace">R</text>
-                  <text x="55" y="160" fill="#94a3b8" fontSize="12" fontFamily="monospace">S</text>
-
-                  <text x="200" y="105" fill="#fbbf24" fontSize="12" textAnchor="middle" fontFamily="monospace" fontWeight="bold">
-                    PR = QS = 6.4 (EQUAL)
-                  </text>
-                </g>
-              ) : (
-                // Rectangle
-                <g>
-                  <polygon
-                    points="90,50 310,50 310,150 90,150"
-                    fill="rgba(16, 185, 129, 0.12)"
-                    stroke="#10b981"
-                    strokeWidth="2.5"
-                  />
-                  <line x1="90" y1="50" x2="310" y2="150" stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,4" />
-                  <line x1="310" y1="50" x2="90" y2="150" stroke="#fbbf24" strokeWidth="2" strokeDasharray="5,4" />
-
-                  <rect x="90" y="50" width="12" height="12" fill="none" stroke="#10b981" strokeWidth="1.5" />
-                  <rect x="298" y="50" width="12" height="12" fill="none" stroke="#10b981" strokeWidth="1.5" />
-                  <rect x="298" y="138" width="12" height="12" fill="none" stroke="#10b981" strokeWidth="1.5" />
-                  <rect x="90" y="138" width="12" height="12" fill="none" stroke="#10b981" strokeWidth="1.5" />
-
-                  <text x="80" y="45" fill="#94a3b8" fontSize="12" fontFamily="monospace">A</text>
-                  <text x="315" y="45" fill="#94a3b8" fontSize="12" fontFamily="monospace">B</text>
-                  <text x="315" y="165" fill="#94a3b8" fontSize="12" fontFamily="monospace">C</text>
-                  <text x="80" y="165" fill="#94a3b8" fontSize="12" fontFamily="monospace">D</text>
-
-                  <text x="200" y="105" fill="#fbbf24" fontSize="12" textAnchor="middle" fontFamily="monospace" fontWeight="bold">
-                    AC = BD = 5.0 (EQUAL)
-                  </text>
-                </g>
-              )}
-            </svg>
+          {/* Diagram: drawn from the SAME coordinates the diagnostics are computed from */}
+          <div className="bg-surface-lowest rounded-xl border border-surface-border/70 flex items-center justify-center p-4">
+            <QuadFigure state={quadReasoning} />
           </div>
 
           {/* Diagnostic Result Banner */}

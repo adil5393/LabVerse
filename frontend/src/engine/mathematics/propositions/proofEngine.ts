@@ -90,7 +90,7 @@ export const CANONICAL_PROOF_TEMPLATES: ProofTemplate[] = [
       { id: 'r2', text: 'Substitution / Addition', type: 'substitution' },
       { id: 'r3', text: 'Distributive Property', type: 'algebraic_simplification' },
       { id: 'r4', text: 'Given', type: 'given' },
-      { id: 'r5', text: 'Empirical Trial', type: 'axiom' },
+      { id: 'r5', text: 'Empirical Trial', type: 'empirical_trial' },
     ],
   },
 
@@ -279,6 +279,19 @@ export function validateProofAssembly(
       };
     }
 
+    // A step can be used only once: repeating a step is not progress.
+    if (establishedStepIds.has(statementId)) {
+      return {
+        isFullyValid: false,
+        completedStepsCount: i,
+        totalRequiredSteps: template.idealSteps.length,
+        hasCircularLogic: false,
+        unsupportedStepNumbers: [stepNumber],
+        feedbackMessage: `Step ${stepNumber} repeats a statement you already used. Each step of a proof says something new that follows from what came before.`,
+        nextHelpfulHint: 'Choose the next statement that follows from the steps already placed.',
+      };
+    }
+
     const idealStep = idealStepsMap.get(statementId);
     if (!idealStep) {
       unsupportedStepNumbers.push(stepNumber);
@@ -302,9 +315,9 @@ export function validateProofAssembly(
 
     // Check reason suitability
     if (candidateReason) {
-      const reasonMatches =
-        candidateReason.text.toLowerCase().trim() === idealStep.requiredReason.toLowerCase().trim() ||
-        idealStep.allowedReasonTypes.includes(candidateReason.type);
+      // The reason must be the actual justification for this step. A reason of the
+      // "right kind" is not enough (a test run is not a definition).
+      const reasonMatches = candidateReason.text.toLowerCase().trim() === idealStep.requiredReason.toLowerCase().trim();
 
       if (!reasonMatches) {
         return {
@@ -332,9 +345,12 @@ export function validateProofAssembly(
     establishedStepIds.add(statementId);
   }
 
-  const completedStepsCount = assembledSteps.length;
+  const completedStepsCount = establishedStepIds.size;
+  // Every required step, each once, with its own justification.
   const isFullyValid =
     completedStepsCount === template.idealSteps.length &&
+    assembledSteps.length === template.idealSteps.length &&
+    template.idealSteps.every((s) => establishedStepIds.has(s.id)) &&
     unsupportedStepNumbers.length === 0 &&
     !hasCircularLogic;
 

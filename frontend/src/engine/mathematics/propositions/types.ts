@@ -118,6 +118,9 @@ export interface QuadrilateralReasoningState {
   diagonalLengthBD: number;
   isConverseCounterexample: boolean;
   explanation: string;
+  /** The figure's corners (in order) and their names: the diagram draws exactly these. */
+  vertices: { x: number; y: number }[];
+  vertexLabels: string[];
 }
 
 // ============================================================================
@@ -131,7 +134,8 @@ export type ProofReasonType =
   | 'theorem'
   | 'algebraic_simplification'
   | 'substitution'
-  | 'modus_ponens';
+  | 'modus_ponens'
+  | 'empirical_trial';
 
 export interface ProofStepTemplate {
   id: string;

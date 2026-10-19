@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { evaluateAnswer } from '../../engine/education/evaluate';
 import type { AnswerInput, Evaluation, Question } from '../../engine/education/types';
+import { useJudges } from './judges';
 import { VisualHost } from './visuals';
 
 /** Feedback panel: says what is wrong and what to think about, never a bare "Incorrect". */
@@ -40,11 +41,13 @@ export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, 
   const [selected, setSelected] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [result, setResult] = useState<Evaluation | null>(null);
+  const judges = useJudges();
+  const [order, setOrder] = useState<string[]>(() => (question.kind === 'order' ? question.items.map((i) => i.id) : []));
   const done = result?.correct === true && lockOnCorrect;
   const inputId = `q-${question.id}`;
 
   const submit = (input: AnswerInput) => {
-    const ev = evaluateAnswer(question, input);
+    const ev = evaluateAnswer(question, input, judges);
     setResult(ev);
     onSubmit?.(ev, question, input);
   };
@@ -93,7 +96,38 @@ export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, 
         </div>
       )}
 
-      {question.kind === 'numeric' && (
+      {question.kind === 'order' && (
+        <div className="space-y-2">
+          <ol className="space-y-2" aria-label="Steps. Use the arrow buttons to move a step up or down.">
+            {order.map((id, i) => {
+              const item = question.items.find((x) => x.id === id)!;
+              const move = (d: number) => {
+                const j = i + d;
+                if (j < 0 || j >= order.length) return;
+                const next = [...order];
+                [next[i], next[j]] = [next[j], next[i]];
+                setOrder(next);
+                setResult(null);
+              };
+              return (
+                <li key={id} data-order-item={id} className="flex items-stretch gap-2 rounded-xl border border-surface-border bg-surface-card">
+                  <span className="font-mono text-amber-400 px-3 flex items-center text-sm" aria-hidden>{i + 1}</span>
+                  <span className="flex-1 py-3 text-sm text-slate-100">{item.text}</span>
+                  <span className="flex flex-col">
+                    <button type="button" disabled={done || disabled || i === 0} onClick={() => move(-1)} aria-label={`Move step ${i + 1} up`} className="min-w-[48px] min-h-[44px] flex-1 text-slate-200 hover:text-white disabled:opacity-30">{'\u25B2'}</button>
+                    <button type="button" disabled={done || disabled || i === order.length - 1} onClick={() => move(1)} aria-label={`Move step ${i + 1} down`} className="min-w-[48px] min-h-[44px] flex-1 text-slate-200 hover:text-white disabled:opacity-30">{'\u25BC'}</button>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <button type="button" disabled={done || disabled} onClick={() => submit({ kind: 'order', ids: order })} className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm hover:bg-amber-400 disabled:opacity-40">
+            {submitLabel === 'Check answer' ? 'Check the order' : submitLabel}
+          </button>
+        </div>
+      )}
+
+      {(question.kind === 'numeric' || question.kind === 'judged') && (
         <form
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => { e.preventDefault(); if (!done && !disabled) submit({ kind: 'numeric', text }); }}
@@ -108,7 +142,7 @@ export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, 
             onChange={(e) => { setText(e.target.value); setResult(null); }}
             className="w-32 min-h-[48px] px-3 rounded-xl bg-surface-lowest border border-surface-border text-white font-mono text-base focus:border-cyan-400 outline-none"
           />
-          {question.unit && <span className="text-sm text-slate-300">{question.unit}</span>}
+          {question.kind === 'numeric' && question.unit && <span className="text-sm text-slate-300">{question.unit}</span>}
           <button type="submit" disabled={done || disabled || text.trim() === ''} className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm hover:bg-amber-400 disabled:opacity-40">
             {submitLabel}
           </button>

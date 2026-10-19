@@ -83,9 +83,9 @@ export const PropositionsWorkbenchPage: React.FC = () => {
       )}
 
       {/* 2. Main Workbench Area & Responsive Side Panel */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-background">
+        <main className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden bg-background">
           {mode === 'practice' ? (
             <PracticePanel />
           ) : (

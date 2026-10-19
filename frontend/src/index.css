@@ -103,3 +103,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #3b445c;
 }
+
+
+/* EDU-1P: nothing in the learning pages needs motion. Honour the reduced-motion preference everywhere in them. */
+@media (prefers-reduced-motion: reduce) {
+  [data-lesson] *,
+  [data-chapter] *,
+  [data-testid$="-learn-section"] * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

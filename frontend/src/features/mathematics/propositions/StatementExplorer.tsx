@@ -129,7 +129,8 @@ export const StatementExplorer: React.FC = () => {
           {/* Swap Hypothesis and Conclusion (Form Converse) */}
           <button
             onClick={toggleConverseView}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all shadow-md ${
+            aria-pressed={isConverseView}
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all shadow-md ${
               isConverseView
                 ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/30'
                 : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-900/30'

@@ -39,7 +39,8 @@ export const PracticePanel: React.FC = () => {
     PROPOSITIONS_PRACTICE_BANK[0];
 
   const currentAttempt = practiceAnswers[activeQuestion.id];
-  const isAnswered = currentAttempt !== undefined;
+  // A hint or an opened solution is help, not an answer: the question stays answerable.
+  const isAnswered = currentAttempt?.attempted === true;
 
   const handleSelectOption = (idx: number) => {
     if (isAnswered) return;
@@ -70,7 +71,7 @@ export const PracticePanel: React.FC = () => {
   // Completion metrics
   const totalInFilter = filteredQuestions.length;
   const answeredInFilter = filteredQuestions.filter(
-    (q) => practiceAnswers[q.id] !== undefined
+    (q) => practiceAnswers[q.id]?.attempted === true
   ).length;
   const correctInFilter = filteredQuestions.filter(
     (q) => practiceAnswers[q.id]?.isCorrect
@@ -87,8 +88,9 @@ export const PracticePanel: React.FC = () => {
               <span>Chapter Practice Engine</span>
             </span>
             <h2 className="text-xl font-bold text-white mt-1">
-              Class 9 NCERT Ganita Manjari Assessment
+              Class 9 Propositions: Practice Bank (original questions)
             </h2>
+            <p className="text-xs text-slate-400 mt-1" data-testid="practice-mastery-note">Mastery counts only questions you answer correctly on the first try, without a hint or a revealed solution. Retrying never changes that record.</p>
           </div>
 
           {/* Difficulty Tiers Switcher */}
@@ -97,7 +99,7 @@ export const PracticePanel: React.FC = () => {
               <button
                 key={diff}
                 onClick={() => setPracticeDifficultyFilter(diff)}
-                className={`px-3 py-1.5 rounded-lg font-bold capitalize transition-all ${
+                className={`min-h-[44px] px-3 py-1.5 rounded-lg font-bold capitalize transition-all ${
                   practiceDifficultyFilter === diff
                     ? 'bg-purple-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -134,16 +136,19 @@ export const PracticePanel: React.FC = () => {
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {filteredQuestions.map((q, idx) => {
           const isSelected = q.id === activeQuestion.id;
-          const status = practiceAnswers[q.id];
+          const status = practiceAnswers[q.id]?.attempted ? practiceAnswers[q.id] : undefined;
           return (
             <button
               key={q.id}
+              type="button"
+              aria-label={`Question ${idx + 1}${status ? (status.isCorrect ? ', answered correctly' : ', answered incorrectly') : ', not answered'}`}
+              aria-current={isSelected ? 'true' : undefined}
               onClick={() => {
                 setSelectedOption(null);
                 setNumericalInput('');
                 selectPracticeQuestion(q.id);
               }}
-              className={`w-9 h-9 rounded-xl font-mono text-xs font-bold shrink-0 flex items-center justify-center transition-all ${
+              className={`w-11 h-11 rounded-xl font-mono text-xs font-bold shrink-0 flex items-center justify-center transition-all ${
                 isSelected
                   ? 'bg-purple-600 text-white shadow-lg border-2 border-purple-400'
                   : status?.isCorrect
@@ -206,6 +211,7 @@ export const PracticePanel: React.FC = () => {
                 <button
                   key={idx}
                   disabled={isAnswered}
+                  aria-pressed={selectedOption === idx}
                   onClick={() => handleSelectOption(idx)}
                   className={`w-full p-3.5 rounded-xl border text-left text-xs transition-all flex items-start gap-3 ${btnClass}`}
                 >
@@ -223,6 +229,7 @@ export const PracticePanel: React.FC = () => {
             <div className="flex items-center gap-3">
               <input
                 type="number"
+                aria-label="Numerical answer"
                 disabled={isAnswered}
                 value={isAnswered ? String(currentAttempt.userAnswer) : numericalInput}
                 onChange={(e) => setNumericalInput(e.target.value)}
@@ -255,14 +262,14 @@ export const PracticePanel: React.FC = () => {
                     ? selectedOption === null
                     : numericalInput.trim() === ''
                 }
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs disabled:opacity-40 transition-all shadow-md"
+                className="min-h-[44px] px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs disabled:opacity-40 transition-all shadow-md"
               >
                 Submit Answer
               </button>
             ) : (
               <button
                 onClick={handleRetry}
-                className="px-4 py-2 rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs border border-surface-border transition-colors flex items-center gap-1.5"
+                className="min-h-[44px] px-4 py-2 rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs border border-surface-border transition-colors flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[15px]">refresh</span>
                 <span>Retry</span>
@@ -274,7 +281,7 @@ export const PracticePanel: React.FC = () => {
             {activeQuestion.hints.length > 0 && (
               <button
                 onClick={() => revealPracticeHint(activeQuestion.id)}
-                className="text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                className="min-h-[44px] px-2 text-xs font-mono text-amber-400 hover:text-amber-300 flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-[15px]">tips_and_updates</span>
                 <span>
@@ -285,7 +292,7 @@ export const PracticePanel: React.FC = () => {
 
             <button
               onClick={() => togglePracticeSolution(activeQuestion.id)}
-              className="text-xs font-mono text-slate-400 hover:text-white underline ml-2"
+              className="min-h-[44px] px-2 text-xs font-mono text-slate-400 hover:text-white underline ml-2"
             >
               {currentAttempt?.showSolution ? 'Hide Solution' : 'Show Solution'}
             </button>
@@ -312,7 +319,7 @@ export const PracticePanel: React.FC = () => {
           <div className="p-4 rounded-xl bg-surface-lowest border border-surface-border space-y-3 text-xs font-mono">
             <div className="flex items-center justify-between">
               <span className="font-bold text-emerald-400">Step-by-Step Worked Solution:</span>
-              <span className="text-[10px] text-slate-500">NCERT Deductive Rationale</span>
+              <span className="text-[10px] text-slate-500">Worked reasoning</span>
             </div>
             <ul className="space-y-1.5">
               {activeQuestion.workedSolution.map((s, i) => (

@@ -88,9 +88,59 @@ export interface VisualQuestion {
   explanation: string;
 }
 
-export type Question = ChoiceQuestion | NumericQuestion | VisualQuestion;
+/**
+ * Arrange the steps of an argument. Any order is accepted in which every step
+ * comes after the steps it needs (`needs`), so a proof with two independent
+ * first steps may start with either.
+ */
+export interface OrderItem {
+  id: string;
+  text: string;
+  /** Ids that must appear EARLIER in a valid argument. */
+  needs: string[];
+  /** Why this step is valid once its needs are in place. */
+  because?: string;
+}
 
-export type AnswerInput = { kind: 'choice' | 'visual'; id: string } | { kind: 'numeric'; text: string };
+export interface OrderQuestion {
+  kind: 'order';
+  id: string;
+  prompt: string;
+  visual?: VisualRef;
+  /** Listed in a deliberately scrambled order. */
+  items: OrderItem[];
+  explanation: string;
+}
+
+/**
+ * The student supplies a whole number and a chapter-provided judge decides
+ * (for example, "is this a counterexample to the statement?"). The judge is
+ * looked up by id in a JudgeRegistry, so content stays plain data.
+ */
+export interface JudgedQuestion {
+  kind: 'judged';
+  id: string;
+  prompt: string;
+  visual?: VisualRef;
+  judgeId: string;
+  explanation: string;
+}
+
+export type Question = ChoiceQuestion | NumericQuestion | VisualQuestion | OrderQuestion | JudgedQuestion;
+
+export type AnswerInput =
+  | { kind: 'choice' | 'visual'; id: string }
+  | { kind: 'numeric'; text: string }
+  | { kind: 'order'; ids: string[] };
+
+export interface Verdict {
+  correct: boolean;
+  message: string;
+  refresherId?: string;
+  misconception?: string;
+}
+
+export type JudgeRegistry = Record<string, (value: number) => Verdict>;
 
 export interface Evaluation {
   correct: boolean;
@@ -186,6 +236,8 @@ export interface IndependentItem {
   question: Question;
   hints: string[];
   solution: string[];
+  /** Which lesson objective this item tests (see EduLesson.objectives). */
+  objective?: string;
 }
 
 export interface Reflection {
@@ -203,6 +255,11 @@ export interface Investigation {
   buttonLabel: string;
 }
 
+export interface LearningObjective {
+  id: string;
+  label: string;
+}
+
 export interface EduLesson {
   id: string;
   unitId: string;
@@ -216,6 +273,12 @@ export interface EduLesson {
   guided: GuidedItem;
   independent: IndependentItem[];
   reflection: Reflection;
+  /**
+   * Optional. When present, mastery also requires at least one item of EVERY
+   * objective answered independently (first try, no help), so several variations
+   * of one easy question cannot stand in for the whole lesson.
+   */
+  objectives?: LearningObjective[];
 }
 
 export interface EduUnit {

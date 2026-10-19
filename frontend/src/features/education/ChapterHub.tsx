@@ -7,10 +7,11 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../components/GlobalHeader';
 import { lessonStatus, STATUS_LABEL } from '../../engine/education/progress';
-import type { EduChapter, LearningStatus } from '../../engine/education/types';
+import type { EduChapter, JudgeRegistry, LearningStatus } from '../../engine/education/types';
 import { useEducationStore } from '../../store/useEducationStore';
 import { ChapterIntroduction, UnitIntroduction } from './Intro';
 import { ChapterPrerequisites, UnitPrerequisites } from './Prerequisites';
+import { JudgeProvider } from './judges';
 import { VisualRegistryProvider, type VisualRegistry } from './visuals';
 
 const DONE: LearningStatus[] = ['completed', 'mastered'];
@@ -23,7 +24,7 @@ const STATUS_STYLE: Record<LearningStatus, string> = {
   needs_review: 'border-amber-500/40 text-amber-300',
 };
 
-export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistry; crumb: string; subtitle: string; labLabel: string; labBlurb: string }> = ({ chapter, registry, crumb, subtitle, labLabel, labBlurb }) => {
+export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistry; judges?: JudgeRegistry; crumb: string; subtitle: string; labLabel: string; labBlurb: string }> = ({ chapter, registry, judges = {}, crumb, subtitle, labLabel, labBlurb }) => {
   const lessons = useEducationStore((s) => s.lessons);
   const reset = useEducationStore((s) => s.resetEducation);
   const [confirm, setConfirm] = useState(false);
@@ -37,6 +38,7 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
 
   return (
     <VisualRegistryProvider value={registry}>
+    <JudgeProvider value={judges}>
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid" data-chapter={chapter.id}>
       <GlobalHeader />
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 space-y-8">
@@ -121,6 +123,7 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
         </footer>
       </main>
     </div>
+    </JudgeProvider>
     </VisualRegistryProvider>
   );
 };

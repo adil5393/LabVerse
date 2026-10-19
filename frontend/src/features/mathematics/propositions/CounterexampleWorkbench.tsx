@@ -109,6 +109,7 @@ export const CounterexampleWorkbench: React.FC = () => {
             <div className="flex items-center gap-3">
               <input
                 type="number"
+                aria-label="Test value n"
                 value={testedNumber}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
@@ -149,6 +150,7 @@ export const CounterexampleWorkbench: React.FC = () => {
           </div>
           <input
             type="range"
+            aria-label="Test value n, from 1 to 50"
             min="1"
             max="50"
             value={Math.max(1, Math.min(50, testedNumber))}
@@ -296,6 +298,7 @@ export const CounterexampleWorkbench: React.FC = () => {
           <span className="text-slate-400">Search Range: from</span>
           <input
             type="number"
+            aria-label="Search range start"
             value={customRangeStart}
             onChange={(e) => setCustomRangeStart(parseInt(e.target.value, 10) || 1)}
             className="w-16 px-2 py-1 rounded bg-surface-lowest border border-surface-border text-white text-center"
@@ -303,6 +306,7 @@ export const CounterexampleWorkbench: React.FC = () => {
           <span className="text-slate-400">to</span>
           <input
             type="number"
+            aria-label="Search range end"
             value={customRangeEnd}
             onChange={(e) => setCustomRangeEnd(parseInt(e.target.value, 10) || 50)}
             className="w-16 px-2 py-1 rounded bg-surface-lowest border border-surface-border text-white text-center"

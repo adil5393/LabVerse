@@ -123,7 +123,7 @@ Result: P1 (a missing foundation). **Remediated in EDU-1** (pilot).
 
 | # | Priority | Module | Finding | Evidence | Status |
 |---|---|---|---|---|---|
-| 1 | P0 | Propositions | Next-only produces completed and mastered | Observed | Roadmap (EDU-2) |
+| 1 | P0 | Propositions | Next-only produces completed and mastered | Observed | **Fixed in EDU-1P** (see `EDU-1P-report.md`) |
 | 2 | P0 | Circles | Invented NCERT section and theorem numbers shown to students | Observed | **Fixed** |
 | 3 | P1 | Circles | Same question repeated gives mastery; count exceeds total | Observed | **Fixed** |
 | 4 | P1 | Quadrilaterals | Same repeated-question mastery | Observed | Roadmap |
@@ -186,7 +186,7 @@ Limits: the midpoint is taught as averaging because the book treats it through e
 
 ## EDU-2 roadmap (recommended)
 
-1. **Propositions:** replace `completeLesson` mastery with evidence; add prerequisites (P0).
+1. ~~**Propositions:** replace `completeLesson` mastery with evidence; add prerequisites (P0).~~ Done in EDU-1P.
 2. **Quadrilaterals and Understanding Data:** adopt the per-question evidence model (P1); reuse the shared components for prerequisites, worked examples and misconception feedback.
 3. **Understanding Data and Two Variables:** prerequisites and readiness checks (P2).
 4. **Electricity and Chemistry:** prediction, short practice, saved progress, text alternatives for the breadboard and the heating curve (P2).

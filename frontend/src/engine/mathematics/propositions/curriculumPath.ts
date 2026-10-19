@@ -301,7 +301,7 @@ export const PROP_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
     whyGuide: {
       explanationType: 'theorem_proof',
       explanation:
-        'When both a proposition and its converse are true, we write "P if and only if Q" (P ⇔ Q), meaning P and Q are logically equivalent. This is how mathematical definitions (like right triangles via Pythagoras) operate.',
+        'When both a proposition and its converse are true, we write "P if and only if Q" (P ⇔ Q), meaning P and Q are logically equivalent. Both directions must be checked separately: the textbook shows (Example 3) that an argument may prove only one of them.',
       deductiveTakeaway: 'Both directions must be proved separately before asserting equivalence.',
     },
     practiceQuestionIds: ['q-prop-10', 'q-prop-11', 'q-prop-12'],
@@ -506,7 +506,7 @@ export const PROP_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
         'Theorem: Right triangle ⇒ a² + b² = c².',
         'Converse: a² + b² = c² ⇒ Right triangle.',
         'Since both original and converse are true, this is a biconditional equivalence (P ⇔ Q).',
-        'Acute triangle: a² + b² > c²; Obtuse triangle: a² + b² < c².',
+        'Beyond the chapter (extension): when c is the longest side, a² + b² > c² means an acute triangle and a² + b² < c² an obtuse one.',
       ],
       keyTerms: [
         { term: 'Baudhāyana-Pythagoras Theorem', definition: 'In a right-angled triangle, the square on the hypotenuse equals the sum of squares on the other two sides.' },
@@ -538,7 +538,7 @@ export const PROP_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
     whyGuide: {
       explanationType: 'theorem_proof',
       explanation:
-        'Euclid proved the converse by constructing a second right triangle with legs a and b, which has hypotenuse √(a²+b²) = c. By SSS congruence, the original triangle is congruent to the constructed right triangle, so its angle must also be 90°.',
+        'The textbook proves the converse by constructing a second right triangle with legs a and b, whose hypotenuse is then c (by the theorem). By SSS congruence, the original triangle is congruent to the constructed right triangle, so its angle must also be 90°.',
       deductiveTakeaway: 'The Baudhāyana-Pythagoras relationship is an exact biconditional: true in both directions.',
     },
     practiceQuestionIds: ['q-prop-22', 'q-prop-23', 'q-prop-24'],

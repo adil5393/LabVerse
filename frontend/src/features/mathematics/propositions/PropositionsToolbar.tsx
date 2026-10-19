@@ -60,6 +60,7 @@ export const PropositionsToolbar: React.FC = () => {
 
         {/* Experiment Selector */}
         <select
+          aria-label="Choose an experiment"
           value={currentExperimentId}
           onChange={(e) => setExperiment(e.target.value)}
           className="bg-surface-card border border-surface-border text-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 outline-none hover:bg-surface-elevated cursor-pointer max-w-[220px] sm:max-w-xs truncate"

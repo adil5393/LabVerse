@@ -46,6 +46,7 @@ export const NumberExperiment: React.FC = () => {
             <span className="text-xs font-mono text-slate-400">Test Integer:</span>
             <input
               type="number"
+              aria-label="Integer to test"
               value={numberPropertyInput}
               onChange={(e) => {
                 const val = parseInt(e.target.value, 10);
@@ -184,6 +185,7 @@ export const NumberExperiment: React.FC = () => {
 
           <input
             type="range"
+            aria-label="Largest n tested for the polynomial, from 30 to 45"
             min="30"
             max="45"
             value={eulerN}

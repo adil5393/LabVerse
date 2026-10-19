@@ -50,6 +50,9 @@ const PropositionsLab = lazy(() =>
     default: m.PropositionsLab,
   }))
 );
+const PropositionsLearnPage = lazy(() =>
+  import('./features/mathematics/propositions/learn/PropositionsLearn').then((m) => ({ default: m.PropositionsLearnPage }))
+);
 const PropositionsWorkbenchPage = lazy(() =>
   import('./features/mathematics/propositions/PropositionsWorkbenchPage').then((m) => ({
     default: m.PropositionsWorkbenchPage,
@@ -134,6 +137,7 @@ export const App: React.FC = () => {
 
           {/* Route 11: Interactive Propositions Workbench */}
           <Route path="/mathematics/propositions/workbench" element={<PropositionsWorkbenchPage />} />
+          <Route path="/mathematics/propositions/learn/:lessonId" element={<PropositionsLearnPage />} />
 
           {/* Route 11b: Two Variables, One Line landing page and workbench */}
           <Route path="/mathematics/two-variables" element={<TwoVariablesLab />} />

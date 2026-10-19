@@ -67,6 +67,7 @@ export const ProofWorkbench: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-slate-400">Select Theorem:</span>
             <select
+              aria-label="Select theorem"
               value={selectedProofTemplateId}
               onChange={(e) => setSelectedProofTemplate(e.target.value)}
               className="px-3 py-1.5 rounded-xl bg-surface-lowest border border-surface-border text-white text-xs font-mono font-bold outline-none focus:border-purple-400"
@@ -122,6 +123,7 @@ export const ProofWorkbench: React.FC = () => {
               1. Mathematical Statement:
             </label>
             <select
+              aria-label="Mathematical statement for this step"
               value={selectedStatementId}
               onChange={(e) => setSelectedStatementId(e.target.value)}
               className="w-full p-2.5 rounded-xl bg-surface-lowest border border-surface-border text-slate-200 text-xs font-mono outline-none focus:border-purple-400"
@@ -141,6 +143,7 @@ export const ProofWorkbench: React.FC = () => {
               2. Justification Reason:
             </label>
             <select
+              aria-label="Justification reason for this step"
               value={selectedReasonId}
               onChange={(e) => setSelectedReasonId(e.target.value)}
               className="w-full p-2.5 rounded-xl bg-surface-lowest border border-surface-border text-slate-200 text-xs font-mono outline-none focus:border-purple-400"

@@ -17,7 +17,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'statements',
-    ncertReference: 'Ganita Manjari, Section: Statements & Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the definition of a proposition (original question)',
     statement: 'Which one of the following sentences is a valid mathematical proposition?',
     options: [
       'Solve the equation 2x + 5 = 15.',
@@ -44,7 +44,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'true_false',
     topicId: 'statements',
-    ncertReference: 'Ganita Manjari, Section: Statements & Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the definition of a proposition (original question)',
     statement: 'Is the sentence "15 is a prime number" a mathematical proposition?',
     options: ['True (Yes, it is a proposition)', 'False (No, it is not a proposition)'],
     correctAnswer: 0,
@@ -65,7 +65,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'true_false',
     topicId: 'statements',
-    ncertReference: 'Ganita Manjari, Section: Statements & Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the definition of a proposition (original question)',
     statement: 'Is "Algebra is the most difficult topic in Class 9" a mathematical proposition?',
     options: ['True (It is a proposition)', 'False (It is not a proposition)'],
     correctAnswer: 1,
@@ -85,7 +85,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'hypothesis_conclusion',
-    ncertReference: 'Ganita Manjari, Section: Hypothesis & Conclusion',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the "if X then Y" form (original question)',
     statement: 'In the proposition "If an integer is divisible by 8, then it is divisible by 4", what is the hypothesis?',
     options: [
       'The integer is divisible by 4',
@@ -110,7 +110,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'hypothesis_conclusion',
-    ncertReference: 'Ganita Manjari, Section: Hypothesis & Conclusion',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the "if X then Y" form (original question)',
     statement: 'In the proposition "If a triangle has three equal sides, then each of its angles measures 60°", what is the conclusion?',
     options: [
       'The triangle has three equal sides',
@@ -134,7 +134,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'hypothesis_conclusion',
-    ncertReference: 'Ganita Manjari, Section: Hypothesis & Conclusion',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the "if X then Y" form (original question)',
     statement: 'Which sentence correctly expresses the claim "All squares are rectangles" in standard "If P, then Q" form?',
     options: [
       'If a figure is a rectangle, then it is a square.',
@@ -160,7 +160,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'forming_converses',
-    ncertReference: 'Ganita Manjari, Section: Forming Converses',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Statements 1 and 2 and Example 1 (original question)',
     statement: 'What is the converse of: "If a number ends in 0, then it is divisible by 5"?',
     options: [
       'If a number is divisible by 5, then it ends in 0.',
@@ -185,7 +185,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'forming_converses',
-    ncertReference: 'Ganita Manjari, Section: Forming Converses',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Statements 1 and 2 and Example 1 (original question)',
     statement: 'Original statement: "If a polygon is a square, then it has 4 sides." What is its converse, and is the converse true or false?',
     options: [
       'Converse: "If a polygon has 4 sides, then it is a square." (True)',
@@ -210,7 +210,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'counterexamples',
-    ncertReference: 'Ganita Manjari, Section: Counterexamples',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 1 and the Fermat and Euler paragraph (original question)',
     statement: 'To disprove the conditional statement "If P(x), then Q(x)", what must a valid counterexample c satisfy?',
     options: [
       'P(c) is false and Q(c) is false',
@@ -234,7 +234,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'counterexamples',
-    ncertReference: 'Ganita Manjari, Section: Counterexamples',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 1 and the Fermat and Euler paragraph (original question)',
     statement: 'Consider the claim: "If an integer n is prime, then n is an odd number." What is the single integer that serves as a counterexample?',
     options: undefined,
     correctAnswer: 2,
@@ -256,7 +256,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'true_false',
     topicId: 'pythagoras_converse',
-    ncertReference: 'Ganita Manjari, Section: Baudhāyana-Pythagoras Converse',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 5 (original question)',
     statement: 'A triangle has side lengths 5 cm, 12 cm, and 13 cm. By the Converse of the Baudhāyana-Pythagoras theorem, is this a right-angled triangle?',
     options: ['True (Yes, it is a right triangle)', 'False (No, it is not a right triangle)'],
     correctAnswer: 0,
@@ -281,7 +281,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'truth_quadrants',
-    ncertReference: 'Ganita Manjari, Section: Truth Values of Statements and Converses',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Examples 2 to 4 and the chapter summary (original question)',
     statement: 'For positive integers, consider the proposition: "If n is divisible by 6, then n is divisible by 3." Which truth quadrant does this statement belong to?',
     options: [
       'Both original and converse are true.',
@@ -307,7 +307,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'counterexamples',
-    ncertReference: 'Ganita Manjari, Section: Finding Counterexamples',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 1 and the Fermat and Euler paragraph (original question)',
     statement: 'Find the smallest positive integer that serves as a counterexample to the converse: "If a positive integer n is divisible by 3, then n is divisible by 6."',
     options: undefined,
     correctAnswer: 3,
@@ -329,7 +329,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'number_properties',
-    ncertReference: 'Ganita Manjari, Section: Number Properties',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Examples 2 and 3 and Exercise Set 9.1, questions 5 to 16 (original question)',
     statement: 'A student claims: "If an integer is divisible by 4 and divisible by 6, then it must be divisible by 24." Which number is a valid counterexample disproving this claim?',
     options: ['n = 12', 'n = 24', 'n = 48', 'n = 18'],
     correctAnswer: 0,
@@ -350,7 +350,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'geometry_converses',
-    ncertReference: 'Ganita Manjari, Section: Geometric Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 4 and Exercise Set 9.1, question 17 (original question)',
     statement: 'Which geometric figure serves as a counterexample disproving the converse: "If a quadrilateral has equal diagonals, then it is a rectangle"?',
     options: [
       'Square',
@@ -376,7 +376,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'number_properties',
-    ncertReference: 'Ganita Manjari, Section: Number Properties',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Examples 2 and 3 and Exercise Set 9.1, questions 5 to 16 (original question)',
     statement: 'Consider: "If the product of two integers ab is even, then both a and b must be even." Which pair (a, b) is a counterexample?',
     options: [
       'a = 2, b = 4',
@@ -402,7 +402,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'empirical_vs_proof',
-    ncertReference: 'Ganita Manjari, Section: Limits of Empirical Verification',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the Fermat and Euler paragraph (original question; Euler\u2019s n\u00B2 + n + 41 is an extension)',
     statement: 'Euler’s polynomial f(n) = n² + n + 41 produces prime numbers for all integers from n = 0 up to n = 39. What is the value of n at which this formula first produces a composite number?',
     options: undefined,
     correctAnswer: 40,
@@ -424,7 +424,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'geometry_converses',
-    ncertReference: 'Ganita Manjari, Section: Geometric Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 4 and Exercise Set 9.1, question 17 (original question)',
     statement: 'Theorem: "In a triangle, if two sides are equal, the angles opposite to them are equal." What can be said about its converse?',
     options: [
       'The converse is: "If two angles are equal, the sides opposite are equal", and it is TRUE.',
@@ -449,7 +449,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'pythagoras_converse',
-    ncertReference: 'Ganita Manjari, Section: Baudhāyana-Pythagoras Converse',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 5 (original question)',
     statement: 'A triangle has side lengths a = 7, b = 24, c = 25. Which statement is correct?',
     options: [
       'It is an acute triangle because 7 + 24 > 25.',
@@ -475,7 +475,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'proof_steps',
-    ncertReference: 'Ganita Manjari, Section: Constructing Arguments',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the arguments in Examples 3 and 5 (original question; the step-assembly activity is an extension)',
     statement: 'In proving "The sum of two even numbers a and b is even", what allows us to write a + b = 2(m + k)?',
     options: [
       'The Baudhāyana-Pythagoras Theorem',
@@ -500,7 +500,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'proof_steps',
-    ncertReference: 'Ganita Manjari, Section: Constructing Arguments',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the arguments in Examples 3 and 5 (original question; the step-assembly activity is an extension)',
     statement: 'A student writes: "We know triangle ABC is equilateral. Proof: Triangle ABC has three equal angles. Why? Because it is equilateral." What fallacy is committed here?',
     options: [
       'Affirming the consequent',
@@ -524,7 +524,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'truth_quadrants',
-    ncertReference: 'Ganita Manjari, Section: Truth Values of Statements and Converses',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Examples 2 to 4 and the chapter summary (original question)',
     statement: 'Consider: "If an integer n ends in 5, then n is a multiple of 10." What are the truth values of this statement and its converse?',
     options: [
       'Both original and converse are true.',
@@ -554,7 +554,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'number_properties',
-    ncertReference: 'Ganita Manjari, Section: Number Properties',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Examples 2 and 3 and Exercise Set 9.1, questions 5 to 16 (original question)',
     statement: 'Consider the proposition: "If an integer x is divisible by 9, then x² is divisible by 9." Is its CONVERSE true or false, and why?',
     options: [
       'True, because the square root of a multiple of 9 is always a multiple of 9.',
@@ -581,7 +581,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'number_properties',
-    ncertReference: 'Ganita Manjari, Section: Number Properties',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Examples 2 and 3 and Exercise Set 9.1, questions 5 to 16 (original question)',
     statement: 'Proposition: "The sum of any three consecutive integers is always divisible by 3." Is this claim true, and what is its deductive justification?',
     options: [
       'False, because 2 + 3 + 4 = 9, which is not divisible by 3.',
@@ -607,7 +607,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'geometry_converses',
-    ncertReference: 'Ganita Manjari, Section: Geometric Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 4 and Exercise Set 9.1, question 17 (original question)',
     statement: 'Consider: "If a quadrilateral is convex, its two diagonals intersect in its interior." What is the converse, and is it true for simple quadrilaterals?',
     options: [
       'Converse: "If the diagonals of a simple quadrilateral intersect in its interior, then it is convex." (True)',
@@ -633,7 +633,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'empirical_vs_proof',
-    ncertReference: 'Ganita Manjari, Section: Limits of Empirical Verification',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the Fermat and Euler paragraph (original question; Euler\u2019s n\u00B2 + n + 41 is an extension)',
     statement: 'Pierre de Fermat conjectured that for every non-negative integer n, the formula F_n = 2^(2^n) + 1 produces only prime numbers (F₀=3, F₁=5, F₂=17, F₃=257, F₄=65537). Who discovered the first counterexample, and for which n does it fail?',
     options: [
       'It never fails; all Fermat numbers are prime.',
@@ -659,7 +659,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'pythagoras_converse',
-    ncertReference: 'Ganita Manjari, Section: Baudhāyana-Pythagoras Converse',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 5 (original question)',
     statement: 'Can a triangle have side lengths 3 cm, 4 cm, and 7 cm? What is the mathematical reason?',
     options: [
       'Yes, and it is a right triangle because 3² + 4² = 25 < 49.',
@@ -685,7 +685,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'proof_steps',
-    ncertReference: 'Ganita Manjari, Section: Constructing Arguments',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the arguments in Examples 3 and 5 (original question; the step-assembly activity is an extension)',
     statement: 'In the algebraic proof that the square of an odd integer n is odd, we set n = 2k + 1. What is the correct expansion and factoring showing it is odd?',
     options: [
       'n² = 4k² + 1 = 2(2k²) + 1',
@@ -711,7 +711,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'geometry_converses',
-    ncertReference: 'Ganita Manjari, Section: Geometric Propositions',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 4 and Exercise Set 9.1, question 17 (original question)',
     statement: 'Midpoint Theorem: "The line segment joining the midpoints of two sides of a triangle is parallel to the third side." What is its converse?',
     options: [
       'The line drawn through the midpoint of one side of a triangle, parallel to another side, bisects the third side.',
@@ -736,7 +736,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'proof_steps',
-    ncertReference: 'Ganita Manjari, Section: Constructing Arguments',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, the arguments in Examples 3 and 5 (original question; the step-assembly activity is an extension)',
     statement: 'Premise 1: "If it rains, the grass is wet." Premise 2: "The grass is wet." Conclusion: "Therefore, it rained." Why is this logical deduction INVALID?',
     options: [
       'Because grass cannot get wet.',
@@ -760,7 +760,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'truth_quadrants',
-    ncertReference: 'Ganita Manjari, Section: Mathematical Reasoning',
+    ncertReference: 'Extension beyond NCERT Ganita Manjari Grade 9, Part II, Chapter 9 (original question)',
     statement: 'For a positive integer n, is divisibility by 2 a NECESSARY condition, a SUFFICIENT condition, or BOTH for n to be divisible by 6?',
     options: [
       'It is sufficient, but not necessary.',
@@ -786,7 +786,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'pythagoras_converse',
-    ncertReference: 'Ganita Manjari, Section: Baudhāyana-Pythagoras Converse',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, Example 5 (original question)',
     statement: 'A triangle has side lengths 4 cm, 5 cm, and 7 cm. Based on comparing a² + b² with c² (where c = 7), what type of triangle is this?',
     options: [
       'Right-angled triangle, because 4 + 5 > 7.',
@@ -813,7 +813,7 @@ export const PROPOSITIONS_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'true_false',
     topicId: 'empirical_vs_proof',
-    ncertReference: 'Ganita Manjari, Section: Chapter Summary',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part II, Chapter 9, chapter summary (original question)',
     statement: 'Statement: "If a mathematical conjecture has been tested and found true for the first 10^12 (one trillion) natural numbers using a supercomputer, it can be formally accepted as a proven theorem in mathematics." Is this statement true or false?',
     options: [
       'True (One trillion verified cases is beyond any reasonable doubt)',

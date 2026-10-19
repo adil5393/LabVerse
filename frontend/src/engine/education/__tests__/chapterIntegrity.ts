@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { evaluateAnswer } from '../evaluate';
-import type { EduChapter, ExplainerStep, Question, VisualRef } from '../types';
+import type { EduChapter, ExplainerStep, JudgeRegistry, Question, VisualRef } from '../types';
 
 export function allQuestions(chapter: EduChapter): { where: string; q: Question; lessonId?: string }[] {
   const out: { where: string; q: Question; lessonId?: string }[] = [];
@@ -44,7 +44,7 @@ export function refresherTargets(chapter: EduChapter): Set<string> {
   return ids;
 }
 
-export function describeChapterIntegrity(name: string, chapter: EduChapter, knownVisualKinds: string[]) {
+export function describeChapterIntegrity(name: string, chapter: EduChapter, knownVisualKinds: string[], judges: JudgeRegistry = {}) {
   describe(`${name}: content integrity`, () => {
     const targets = refresherTargets(chapter);
     const questions = allQuestions(chapter);
@@ -136,6 +136,15 @@ export function describeChapterIntegrity(name: string, chapter: EduChapter, know
           }
         }
         if (q.kind === 'visual') expect(q.defaultFeedback.message.length, where).toBeGreaterThan(10);
+        if (q.kind === 'order') {
+          const ids = q.items.map((i) => i.id);
+          expect(q.items.length, `${where} needs at least 3 steps`).toBeGreaterThanOrEqual(3);
+          expect(new Set(ids).size, `${where} duplicate step ids`).toBe(ids.length);
+          for (const it of q.items) for (const n of it.needs) expect(ids, `${where} ${it.id} needs unknown ${n}`).toContain(n);
+          // the authored (scrambled) order must NOT already be a valid answer
+          expect(evaluateAnswer(q, { kind: 'order', ids }).correct, `${where} is already in a valid order`).toBe(false);
+        }
+        if (q.kind === 'judged') expect(Object.keys(judges), `${where} judge ${q.judgeId}`).toContain(q.judgeId);
       }
     });
 
@@ -144,7 +153,7 @@ export function describeChapterIntegrity(name: string, chapter: EduChapter, know
       const check = (id: string | undefined, where: string) => { if (id && !targets.has(id)) missing.push(`${where}->${id}`); };
       for (const { where, q } of questions) {
         if (q.kind === 'numeric') { check(q.defaultFeedback.refresherId, where); q.rules?.forEach((r) => check(r.entry.refresherId, where)); }
-        else { Object.values(q.feedback).forEach((f) => check(f.refresherId, where)); if (q.kind === 'visual') check(q.defaultFeedback.refresherId, where); }
+        else if (q.kind === 'choice' || q.kind === 'visual') { Object.values(q.feedback).forEach((f) => check(f.refresherId, where)); if (q.kind === 'visual') check(q.defaultFeedback.refresherId, where); }
       }
       for (const l of Object.values(chapter.lessons)) l.reflection.stillConfusing.forEach((c) => check(c.refresherId, `${l.id}/reflection`));
       expect(missing).toEqual([]);
@@ -158,7 +167,7 @@ export function describeChapterIntegrity(name: string, chapter: EduChapter, know
         } else if (q.kind === 'numeric') {
           expect(evaluateAnswer(q, { kind: 'numeric', text: String(q.answer) }).correct, where).toBe(true);
           for (const r of q.rules ?? []) for (const v of r.values) { const ev = evaluateAnswer(q, { kind: 'numeric', text: String(v) }); expect(ev.correct, `${where} ${v}`).toBe(false); expect(ev.message).toBe(r.entry.message); }
-        } else {
+        } else if (q.kind === 'visual') {
           expect(evaluateAnswer(q, { kind: 'visual', id: q.correctId }).correct, where).toBe(true);
           for (const [id, f] of Object.entries(q.feedback)) expect(evaluateAnswer(q, { kind: 'visual', id }).message).toBe(f.message);
         }

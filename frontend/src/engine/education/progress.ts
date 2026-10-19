@@ -60,6 +60,15 @@ export function summarizeLesson(lesson: EduLesson, rec: LessonRecord | undefined
   };
 }
 
+/** For lessons that declare objectives: which objectives have an independent first-try success. */
+export function objectiveCoverage(lesson: EduLesson, rec: LessonRecord | undefined): { id: string; label: string; covered: boolean }[] {
+  return (lesson.objectives ?? []).map((o) => ({
+    id: o.id,
+    label: o.label,
+    covered: lesson.independent.some((i) => i.objective === o.id && rec?.independent[i.id]?.firstAttemptUnassisted === true),
+  }));
+}
+
 export function lessonStatus(lesson: EduLesson, rec: LessonRecord | undefined): LearningStatus {
   if (!rec) return 'not_started';
   const s = summarizeLesson(lesson, rec);
@@ -72,7 +81,8 @@ export function lessonStatus(lesson: EduLesson, rec: LessonRecord | undefined): 
     s.guidedDone === s.guidedTotal &&
     s.independentResolved === s.independentTotal;
 
-  const mastered = !rec.teacherDemo && completed && s.independentTotal > 0 && s.independentUnassisted / s.independentTotal >= MASTERY_SHARE;
+  const coverageOk = objectiveCoverage(lesson, rec).every((o) => o.covered);
+  const mastered = !rec.teacherDemo && completed && coverageOk && s.independentTotal > 0 && s.independentUnassisted / s.independentTotal >= MASTERY_SHARE;
   if (mastered) return 'mastered';
   if (rec.teacherDemo) return 'demonstrated';
   if (completed) {

@@ -14,6 +14,7 @@
 import { netFromArrows } from './forceDiagram';
 import { DEFAULT_SETUP, sampleAtTime, type Setup } from './forceModel';
 import { toArrows, type ForceArrowSpec } from './learn/questions';
+import { SOLVED_2C } from './exercisesSecondLaw';
 import type { GraphKind, Profile } from '../motion/profile';
 
 export interface SolutionStep { text: string; why: string }
@@ -21,7 +22,8 @@ export interface FinalAnswer { label: string; value: string; part?: string; nume
 
 export type Illustration =
   | { kind: 'arrows'; caption: string; object: string; forces: ForceArrowSpec[]; showNet: boolean }
-  | { kind: 'cart'; caption: string; setup: Setup; t: number }
+  | { kind: 'cart'; caption: string; setup: Setup; t: number; graphs?: boolean }
+  | { kind: 'massSweep'; caption: string; force: number; masses: number[] }
   | { kind: 'graph'; caption: string; profile: Profile; graphs: GraphKind[] };
 
 export interface LabLink { href: string; label: string }
@@ -65,7 +67,7 @@ const V = (method: string) => ({ status: 'verified' as const, method });
 const up = (number: number, summary: string, topic: string, sections: string[], milestone: string, parts?: ExercisePart[]): ForceExercise => ({ number, summary, topic, sections, status: 'upcoming', lessonIds: [], milestone, parts });
 const c = (o: Partial<Setup>): Setup => ({ ...DEFAULT_SETUP, forceA: 0, forceB: 0, dirB: 'left', ...o });
 
-export const FORCE_EXERCISES: ForceExercise[] = [
+const BASE_EXERCISES: ForceExercise[] = [
   {
     number: 1, sections: ['6.2', '6.3'], topic: 'Friction and balanced forces', status: 'solved', lessonIds: ['pf-l2', 'pf-l3'],
     summary: 'A table is pulled across the floor with a horizontal force F and moves at a constant velocity. How large is the friction the floor exerts on the table?',
@@ -209,6 +211,9 @@ export const FORCE_EXERCISES: ForceExercise[] = [
   up(15, 'A tractor with force F gives harrow m1 acceleration a1 and trolley m2 acceleration a2. Find the acceleration when the harrow is placed on the trolley.', "Newton's second law (expression)", ['6.5'], 'PHY-2C'),
   up(16, 'A bar magnet and a compass needle exert equal and opposite magnetic forces on each other, yet only the needle moves. Explain.', "Newton's third law and second law", ['6.6'], 'PHY-2D'),
 ];
+
+/** The sixteen questions: those supported by the first and second laws are solved, the third-law questions stay upcoming. */
+export const FORCE_EXERCISES: ForceExercise[] = BASE_EXERCISES.map((e) => SOLVED_2C[e.number] ?? e);
 
 export const solvedForceExerciseNumbers = (): number[] => FORCE_EXERCISES.filter((e) => e.status === 'solved').map((e) => e.number);
 

@@ -10,6 +10,8 @@ import { GlobalHeader } from '../../../components/GlobalHeader';
 import { FORCE_EXPERIMENTS, forceExperimentById, routeOutcome, type ForceExperiment, type ForceRoute } from '../../../engine/physics/forces/experiments';
 import { BRAKING_ROUTES, brakingOutcome, FIRST_LAW_EXPERIMENTS, firstLawExperimentById, type BrakingRoute, type FirstLawExperiment } from '../../../engine/physics/forces/firstLaw';
 import { DEFAULT_BRAKING, type BrakingSetup } from '../../../engine/physics/forces/vehicle';
+import { SECOND_LAW_EXPERIMENTS, secondLawExperimentById, type SecondLawExperiment } from '../../../engine/physics/forces/secondLawExperiments';
+import { SecondLawDerivationView } from './SecondLawDerivation';
 import { BrakingDemoView } from './BrakingDemo';
 import { DEFAULT_SETUP } from '../../../engine/physics/forces/forceModel';
 import { ForceCartView } from './ForceCart';
@@ -83,7 +85,7 @@ const BrakingPanel: React.FC<{ route: BrakingRoute; onRun: (s: BrakingSetup) => 
 
 export const ForcesLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
-  const byId = (id: string | null | undefined): ForceExperiment | FirstLawExperiment | undefined => forceExperimentById(id) ?? firstLawExperimentById(id);
+  const byId = (id: string | null | undefined): ForceExperiment | FirstLawExperiment | SecondLawExperiment | undefined => forceExperimentById(id) ?? firstLawExperimentById(id) ?? secondLawExperimentById(id);
   const exp = byId(params.get('experiment'));
   const [load, setLoad] = useState<{ setup: typeof DEFAULT_SETUP; key: number }>({ setup: exp && exp.routes[0] ? exp.routes[0].setup : DEFAULT_SETUP, key: 0 });
   const [braking, setBraking] = useState<{ setup: BrakingSetup; key: number }>({ setup: DEFAULT_BRAKING, key: 0 });
@@ -103,13 +105,15 @@ export const ForcesLab: React.FC = () => {
           <p className="text-sm text-slate-300 max-w-3xl">Push and pull a cart. The force arrows, the net force, the acceleration, the velocity and the position all come from one model. This is free exploration: change anything, there is nothing to unlock.</p>
         </header>
 
-        <section aria-label={exp?.id === 'J' ? 'The braking demonstration' : 'The cart'}>{exp?.id === 'J' ? <BrakingDemoView key={`J-${braking.key}`} initial={braking.setup} editable /> : <ForceCartView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable />}</section>
+        <section aria-label={exp?.id === 'J' ? 'The braking demonstration' : 'The cart'}>{exp?.id === 'J' ? <BrakingDemoView key={`J-${braking.key}`} initial={braking.setup} editable /> : <ForceCartView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable graphs />}</section>
+
+        <p className="text-sm text-slate-200" data-testid="sl-derivation-links">Why is F = ma? <Link className="underline hover:text-sky-300" to="/physics/forces/derivations?d=A">Derive it from the cart experiments</Link> · <Link className="underline hover:text-sky-300" to="/physics/forces/derivations?d=B">Derive it from momentum</Link></p>
 
         <section aria-label="Guided investigations" className="space-y-3">
           <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
           <div role="group" aria-label="Choose an investigation" className="flex flex-wrap gap-2">
             <button type="button" aria-pressed={!exp} onClick={() => select(null)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${!exp ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={!exp ? { borderColor: PHYS.position } : undefined}>{!exp ? '✓ ' : ''}Free exploration</button>
-            {[...FORCE_EXPERIMENTS, ...FIRST_LAW_EXPERIMENTS].map((x) => (
+            {[...FORCE_EXPERIMENTS, ...FIRST_LAW_EXPERIMENTS, ...SECOND_LAW_EXPERIMENTS].map((x) => (
               <button key={x.id} type="button" aria-pressed={exp?.id === x.id} data-experiment={x.id} onClick={() => select(x.id)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${exp?.id === x.id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={exp?.id === x.id ? { borderColor: PHYS.prediction } : undefined}>{exp?.id === x.id ? '✓ ' : ''}{x.id}. {x.title}</button>
             ))}
           </div>
@@ -127,6 +131,29 @@ export const ForcesLab: React.FC = () => {
             </div>
           ) : <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>}
         </section>
+      </main>
+    </div>
+  );
+};
+
+export const ForcesDerivation: React.FC = () => {
+  const [params] = useSearchParams();
+  return (
+    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="forces-derivations">
+      <GlobalHeader />
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+        <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
+          <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
+          <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
+          <Link to="/physics/forces" className="inline-flex items-center min-h-[44px] hover:text-sky-400">How Forces Affect Motion</Link><span>/</span>
+          <span className="text-sky-300 font-bold">Derive F = ma</span>
+        </nav>
+        <header className="space-y-2">
+          <h1 className="text-3xl font-black text-white">Derive Newton&apos;s second law</h1>
+          <p className="text-sm text-slate-300 max-w-3xl">Follow the textbook&apos;s argument from the cart experiments (Eqs. 6.1 and 6.2), or derive F = ma from momentum. Some steps ask you to supply the missing reasoning first. Free exploration: reading a derivation never counts as mastery.</p>
+        </header>
+        <SecondLawDerivationView key={params.get('d') ?? 'A'} id={params.get('d') ?? 'A'} />
+        <p className="text-sm text-slate-300">Try the numbers in the <Link className="underline hover:text-sky-300" to="/physics/forces/lab?experiment=K">Force Laboratory</Link>, or see the derivations in <Link className="underline hover:text-sky-300" to="/physics/forces/learn/pf-l6">Lesson 6</Link> and <Link className="underline hover:text-sky-300" to="/physics/forces/learn/pf-l7">Lesson 7</Link>.</p>
       </main>
     </div>
   );

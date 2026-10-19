@@ -136,5 +136,5 @@ describe('NCERT question 6 (first law and graphs)', () => {
     const ill = q.solution!.illustrations!.map((x) => (x.kind === 'graph' ? x.profile.segments[0].a : NaN));
     expect(ill).toEqual([0, 0, 1, 0]);
   });
-  it('later-law questions remain upcoming', () => { for (const n of [5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) expect(FORCE_EXERCISES[n - 1].status).toBe('upcoming'); });
+  it('later-law questions remain upcoming', () => { for (const n of [7, 9, 16]) expect(FORCE_EXERCISES[n - 1].status).toBe('upcoming'); });
 });

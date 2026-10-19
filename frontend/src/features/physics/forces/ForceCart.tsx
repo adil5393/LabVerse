@@ -12,6 +12,7 @@ import {
   DEFAULT_SETUP, DT, explain, LIMITS, sampleAtTime, simulate, SURFACES, surfaceById, validateSetup, type Dir, type Setup,
 } from '../../../engine/physics/forces/forceModel';
 import { ForceFigure } from './ForceFigure';
+import { ForceGraphs } from './ForceGraphs';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
 import type { ArrowsVisualProps, CartVisualProps } from '../../../engine/physics/forces/learn/questions';
@@ -97,9 +98,9 @@ const VStrip: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tM
   );
 };
 
-export interface ForceCartProps { initial?: Setup; editable?: boolean; showNet?: boolean; startTime?: number; alt?: string; resetToken?: number }
+export interface ForceCartProps { initial?: Setup; editable?: boolean; showNet?: boolean; startTime?: number; alt?: string; resetToken?: number; graphs?: boolean }
 
-export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETUP, editable = true, showNet = true, startTime = 0, alt, resetToken }) => {
+export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETUP, editable = true, showNet = true, startTime = 0, alt, resetToken, graphs = false }) => {
   const [setup, setSetup] = useState<Setup>(initial);
   const [prevInit, setPrevInit] = useState(initial);
   const [prevTok, setPrevTok] = useState(resetToken);
@@ -215,7 +216,7 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
         <Stat id="push" label="Pushes A + B" value={`${sg(p.forceA + p.forceB)} N`} color={PHYS.force} symbol={'⇒'} />
       </dl>
 
-      <VStrip setup={setup} tMax={tMax} t={tt} />
+      {graphs ? <ForceGraphs setup={setup} tMax={tMax} t={tt} /> : <VStrip setup={setup} tMax={tMax} t={tt} />}
 
       <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3" data-testid="force-live">{live}</div>
 
@@ -233,7 +234,7 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
 
 export const ForceCartVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const p = props as unknown as CartVisualProps;
-  return <ForceCartView initial={p.setup} editable={Boolean(p.editable)} showNet={p.showNet ?? true} startTime={p.t ?? 0} alt={alt} />;
+  return <ForceCartView initial={p.setup} editable={Boolean(p.editable)} showNet={p.showNet ?? true} startTime={p.t ?? 0} alt={alt} graphs={Boolean((p as { graphs?: boolean }).graphs)} />;
 };
 
 /** Generic force arrows on one named object (not tied to the cart model); the student can switch the net force on and off. */

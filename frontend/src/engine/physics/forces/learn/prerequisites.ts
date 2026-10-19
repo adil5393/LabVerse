@@ -132,7 +132,34 @@ export const PFP_XT: Prerequisite = {
   ],
 };
 
-export const PF_PREREQUISITES: Prerequisite[] = [PFP_MOTION, PFP_DIRECTION, PFP_MASS, PFP_ARROWS, PFP_XT];
+export const PFP_PROP: Prerequisite = {
+  id: 'pfp-prop',
+  title: 'Proportional and inversely proportional',
+  why: 'Newton\'s second law says the acceleration is proportional to the force and inversely proportional to the mass. You need to know the difference between the two.',
+  connection: 'Grade 7 and 8: ratio and proportion',
+  refresher: [
+    {
+      id: 'pfp-pr-step', title: 'Doubling one quantity: the other doubles, or halves',
+      paragraphs: [
+        'Two quantities are proportional if doubling one doubles the other (and tripling triples it). Their graph is a straight line through the origin. y = 3x is an example: x = 1, 2, 3 gives y = 3, 6, 9.',
+        'Two quantities are inversely proportional if doubling one halves the other. Their graph is a curve, not a straight line. y = 12 ÷ x is an example: x = 1, 2, 4 gives y = 12, 6, 3.',
+      ],
+      misconception: { wrong: 'Inversely proportional means a straight line sloping down.', right: 'Inverse proportion gives a curve. Doubling x halves y, but the points do not lie on a straight line.' },
+    },
+  ],
+  checks: [
+    pick('pfp-pr-c1', 'y is proportional to x, and y = 6 when x = 2. What is y when x = 4?', [
+      ['12', null],
+      ['3', 'Proportional means doubling x doubles y. Halving would be for an inverse relationship.', 'inverse_confused'],
+    ], 'Double x, double y.', undefined, 'pfp-pr-step'),
+    pick('pfp-pr-c2', 'y is inversely proportional to x, and y = 12 when x = 2. What is y when x = 4?', [
+      ['6', null],
+      ['24', 'Inversely proportional means doubling x halves y: 12 ÷ 2 = 6.', 'proportional_confused'],
+    ], 'Double x, half y.', undefined, 'pfp-pr-step'),
+  ],
+};
+
+export const PF_PREREQUISITES: Prerequisite[] = [PFP_MOTION, PFP_DIRECTION, PFP_MASS, PFP_ARROWS, PFP_XT, PFP_PROP];
 
 export const PF_UNITS: EduUnit[] = [
   {
@@ -158,5 +185,13 @@ export const PF_UNITS: EduUnit[] = [
     vocabulary: [{ term: 'Newton\'s first law', meaning: 'zero net force: no change of velocity' }, { term: 'inertia', meaning: 'the resistance of an object to a change of its velocity' }],
     discover: ['What the first law says about rest and motion', 'Why everyday objects stop, and why no force is needed to keep moving', 'How mass measures inertia, and why passengers lurch when a vehicle brakes'],
     prerequisiteIds: ['pfp-motion', 'pfp-xt', 'pfp-mass'], lessonIds: ['pf-l4', 'pf-l5'],
+  },
+  {
+    id: 'pf-unit-4', number: 4, title: 'Newton\'s second law and momentum',
+    centralIdea: 'The acceleration of an object is proportional to the net force and inversely proportional to its mass: F = ma. In terms of momentum, the net force is the rate of change of momentum.',
+    connection: 'This is Section 6.5. It uses the first law, the equations of motion and the graphs of Chapter 4.',
+    vocabulary: [{ term: 'Newton\'s second law', meaning: 'F = ma, with the acceleration in the direction of the net force' }, { term: 'momentum', meaning: 'p = mv, in the direction of the velocity' }, { term: 'newton', meaning: '1 N = 1 kg m/s²' }],
+    discover: ['How force and mass decide the acceleration', 'How F = ma is derived, and what 1 N means', 'How momentum, its change and the time of contact are related to force'],
+    prerequisiteIds: ['pfp-prop', 'pfp-motion', 'pfp-mass'], lessonIds: ['pf-l6', 'pf-l7'],
   },
 ];

@@ -118,7 +118,7 @@ export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAK
         {tick.map((m) => <g key={m}><line x1={X(m)} y1={106} x2={X(m)} y2={116} stroke="#94a3b8" /><text x={X(m)} y={130} textAnchor="middle" fontSize={10} fill="#94a3b8">{m}</text></g>)}
         <text x={W - 24} y={146} textAnchor="end" fontSize={10} fill="#94a3b8">position on the road (m)</text>
         <rect x={carX - carW} y={62} width={carW} height={44} rx={8} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
-        <rect x={seat - 10} y={76} width={6} height={26} fill="#475569" />
+        <rect x={seat - 10} y={70} width={6} height={20} fill="#475569" />
         <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={10} fill={PHYS.position}>vehicle {r2(s.vehicleV)} m/s</text>
         <circle cx={pX} cy={72} r={9} fill={PHYS.velocity} stroke="#0f172a" strokeWidth={2} />
         <text x={pX} y={50} textAnchor="middle" fontSize={11} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>

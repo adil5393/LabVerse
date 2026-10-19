@@ -129,6 +129,9 @@ const ForcesLearnPage = lazy(() =>
 const ForcesExercises = lazy(() =>
   import('./features/physics/forces/ForcesPages').then((m) => ({ default: m.ForcesExercises }))
 );
+const ForcesDerivation = lazy(() =>
+  import('./features/physics/forces/ForcesLab').then((m) => ({ default: m.ForcesDerivation }))
+);
 const ForcesLab = lazy(() =>
   import('./features/physics/forces/ForcesLab').then((m) => ({ default: m.ForcesLab }))
 );
@@ -165,6 +168,7 @@ export const App: React.FC = () => {
           <Route path="/physics" element={<PhysicsHub />} />
           <Route path="/physics/forces" element={<ForcesHub />} />
           <Route path="/physics/forces/lab" element={<ForcesLab />} />
+          <Route path="/physics/forces/derivations" element={<ForcesDerivation />} />
           <Route path="/physics/forces/exercises" element={<ForcesExercises />} />
           <Route path="/physics/forces/learn/:lessonId" element={<ForcesLearnPage />} />
           <Route path="/physics/motion" element={<MotionHub />} />

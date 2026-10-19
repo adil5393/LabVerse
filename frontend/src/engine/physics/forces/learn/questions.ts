@@ -38,6 +38,8 @@ export interface CartVisualProps {
   /** Controls to change the forces, mass, surface and starting velocity. */
   editable?: boolean;
   showNet?: boolean;
+  /** Show the synchronised relationship graphs instead of the velocity strip. */
+  graphs?: boolean;
 }
 
 /** The Force Laboratory cart, drawn from the model (not a picture). */
@@ -54,3 +56,8 @@ export const brakingVisual = (p: BrakingVisualProps, intro: string): VisualRef =
   const s = brakingAt(p.setup, t);
   return { kind: 'brakingDemo', props: p as unknown as Record<string, unknown>, alt: `${intro} A simplified teaching model: the vehicle at ${p.setup.speed} m/s brakes at ${p.setup.decel} m/s² from 1 s and the passenger ${p.setup.restrained ? 'wears a belt' : 'has no belt'}. After ${Math.round(t * 100) / 100} s the vehicle moves at ${Math.round(s.vehicleV * 100) / 100} m/s and the passenger at ${Math.round(s.passengerV * 100) / 100} m/s relative to the road.` };
 };
+
+/** The interactive derivation of Newton's second law (A: from the cart experiments, B: from momentum). */
+export const derivationVisual = (id: 'A' | 'B', intro: string): VisualRef => ({
+  kind: 'secondLawDerivation', props: { id }, alt: `${intro} An interactive, step-by-step derivation with graphs drawn from the cart model: use Previous step and Next step, or the left and right arrow keys. Some steps ask you to supply the missing reasoning before the mathematics appears.`,
+});

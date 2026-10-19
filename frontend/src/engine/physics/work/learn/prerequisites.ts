@@ -133,13 +133,14 @@ export const PWP_GRAPH: Prerequisite = {
       id: 'pwp-gr-step', title: 'A horizontal line is a constant value; area is height times width',
       paragraphs: [
         'On a graph the horizontal axis shows one quantity (here displacement) and the vertical axis shows another (here force). A horizontal line means the vertical quantity stays constant as the horizontal one changes.',
-        'The area of a rectangle is its height multiplied by its width. For a force of 10 N from 0 m to 1 m the rectangle is 10 tall and 1 wide, so its area is 10 N × 1 m = 10 J.',
+        'The area of a rectangle is its height multiplied by its width. For a force of 10 N from 0 m to 1 m the rectangle is 10 tall and 1 wide, so its area is 10 N × 1 m = 10 J. The area of a triangle is half its base times its height, and a trapezoid can be split into rectangles and triangles.',
       ],
       misconception: { wrong: 'The area under a graph is just a picture and has no meaning.', right: 'The area is the product of the two axis quantities, so on a force-displacement graph it has the units of work.' },
     },
   ],
   checks: [
     numQ('pwp-gr-c1', 'A horizontal line at 6 on the vertical axis runs from 0 to 4 on the horizontal axis. What is the area of the rectangle between the line and the horizontal axis?', 24, 'Height × width = 6 × 4 = 24.', { refresherId: 'pwp-gr-step', rules: [[[10], 'You added 6 and 4. The area of a rectangle is height × width.', 'added']] }),
+    numQ('pwp-gr-c3', 'A line rises straight from 0 at x = 0 to 10 at x = 2. What is the area of the triangle under the line, in the units of the graph?', 10, 'Area of a triangle = ½ × base × height = ½ × 2 × 10 = 10.', { refresherId: 'pwp-gr-step', rules: [[[20], 'You used base × height (a rectangle). A triangle is half of that.', 'triangle_as_rectangle']] }),
     pick('pwp-gr-c2', 'On a graph of force (vertical) against displacement (horizontal), the line is horizontal. What does that mean?', [
       ['The force is constant', null],
       ['The object is not moving', 'The horizontal axis is the displacement, which changes along the line. A horizontal line means the force does not change.', 'axis_confused'],
@@ -147,7 +148,55 @@ export const PWP_GRAPH: Prerequisite = {
   ],
 };
 
-export const PW_PREREQUISITES: Prerequisite[] = [PWP_FORCE, PWP_DISPLACEMENT, PWP_VELOCITY, PWP_WEIGHT, PWP_UNITS, PWP_GRAPH];
+export const PWP_EQMOTION: Prerequisite = {
+  id: 'pwp-eqmotion',
+  title: 'Equations of motion',
+  why: 'The derivation of kinetic energy uses the equation of motion v² = u² + 2as and the facts that velocity can be negative and that acceleration is the change of velocity per second.',
+  connection: 'Chapter 4: lesson 9 (/physics/motion/learn/pm-l9)',
+  refresher: [
+    {
+      id: 'pwp-eq-step', title: 'v = u + at and v² = u² + 2as',
+      paragraphs: [
+        'For a constant acceleration a along a line, an object starting with velocity u has velocity v = u + at after a time t, and v² = u² + 2as after a displacement s. The second equation links the velocities to the displacement without needing the time.',
+        'The signs matter: right is positive, so u, v, a and s can be negative. A negative a with a positive u slows the object down.',
+      ],
+      misconception: { wrong: 'v² = u² + 2as gives the sign of the velocity.', right: 'It gives v², so it gives the speed; the direction of v has to be found from the motion (for example from v = u + at).' },
+    },
+  ],
+  checks: [
+    numQ('pwp-eq-c1', 'An object starts from rest (u = 0) and has a constant acceleration of 2 m/s². What is its speed after a displacement of 9 m, in m/s?', 6, 'v² = 0 + 2 × 2 × 9 = 36, so v = 6 m/s.', { unit: 'm/s', refresherId: 'pwp-eq-step', rules: [[[36], 'You found v² = 36. The speed is the square root of it.', 'forgot_root'], [[18], 'You stopped at 2as without finishing: v² = 2as = 36, so v = 6.', 'formula_misused']] }),
+    pick('pwp-eq-c2', 'A cart moving at +5 m/s has a constant acceleration of −2 m/s². What happens to its speed?', [
+      ['It decreases', null],
+      ['It increases, because the acceleration is large', 'The acceleration is opposite to the velocity, so it reduces the speed.', 'sign_ignored'],
+    ], 'Opposite signs: slowing down.', undefined, 'pwp-eq-step'),
+  ],
+};
+
+export const PWP_ALGEBRA: Prerequisite = {
+  id: 'pwp-algebra',
+  title: 'Squares and rearranging a formula',
+  why: 'Kinetic energy contains the SQUARE of the speed, and the lessons rearrange formulas such as W = F × s and P = W ÷ t to find a missing quantity.',
+  connection: 'Earlier grades: squares and simple algebra',
+  refresher: [
+    {
+      id: 'pwp-al-step', title: 'Square first, and do the same to both sides',
+      paragraphs: [
+        'To square a number multiply it by itself: 3² = 9. If a quantity doubles, its square becomes four times as large: (2v)² = 4v². A negative number squared is positive: (−3)² = 9.',
+        'To find a quantity from a formula, do the same thing to both sides. From W = F × s, divide both sides by s to get F = W ÷ s. In ½ m v², square the speed first, then multiply by ½ and the mass.',
+      ],
+      misconception: { wrong: '½ m v² means ½ × m × v, or the square of (½ m v).', right: 'Only v is squared: ½ × m × (v × v). Square the speed first.' },
+    },
+  ],
+  checks: [
+    numQ('pwp-al-c1', 'Calculate ½ × 2 × 4². Give the number.', 16, '4² = 16, then ½ × 2 × 16 = 16.', { refresherId: 'pwp-al-step', rules: [[[4], 'You did not square the 4. Square it first: 4² = 16.', 'not_squared'], [[64], 'You squared (2 × 4) or forgot the ½. Square only the 4, then multiply by ½ and 2.', 'order_of_operations']] }),
+    pick('pwp-al-c2', 'A quantity doubles. By what factor does its square change?', [
+      ['4', null],
+      ['2', 'Squaring is not doubling: (2x)² = 4x².', 'square_is_double'],
+    ], 'Double the quantity, four times its square.', undefined, 'pwp-al-step'),
+  ],
+};
+
+export const PW_PREREQUISITES: Prerequisite[] = [PWP_FORCE, PWP_DISPLACEMENT, PWP_VELOCITY, PWP_WEIGHT, PWP_UNITS, PWP_GRAPH, PWP_EQMOTION, PWP_ALGEBRA];
 
 export const PW_UNITS: EduUnit[] = [
   {
@@ -161,5 +210,17 @@ export const PW_UNITS: EduUnit[] = [
     ],
     discover: ['How work in physics differs from the everyday word', 'How to calculate the work of a constant force and what a joule is', 'Why a force on an object that does not move, or at right angles to its motion, does no work', 'Why work can be negative, and why friction usually does negative work'],
     prerequisiteIds: ['pwp-force', 'pwp-displacement', 'pwp-weight', 'pwp-units', 'pwp-graph'], lessonIds: ['pw-l1', 'pw-l2', 'pw-l3'],
+  },
+  {
+    id: 'pw-unit-2', number: 2, title: 'Energy and the work-energy theorem',
+    centralIdea: 'Energy is the capacity to do work. Work done on an object appears as a change in its energy (the work-energy theorem), and the energy of motion is the kinetic energy K = ½mv², which depends on the mass and on the square of the speed.',
+    connection: 'This is Sections 7.2, 7.3 and 7.4.1. It uses work from Unit 1 and the equations of motion from Chapter 4.',
+    vocabulary: [
+      { term: 'energy', meaning: 'the capacity to do work (unit: joule)' },
+      { term: 'work-energy theorem', meaning: 'work done on an object = change in its energy' },
+      { term: 'kinetic energy', meaning: 'the energy of motion, K = ½mv²' },
+    ],
+    discover: ['What energy is and how work transfers it', 'The forms of energy and how they change from one to another', 'Why K = ½mv² and why doubling the speed quadruples K', 'How to use work and energy to find a speed or a stopping distance'],
+    prerequisiteIds: ['pwp-force', 'pwp-eqmotion', 'pwp-algebra', 'pwp-graph', 'pwp-velocity'], lessonIds: ['pw-l4', 'pw-l5'],
   },
 ];

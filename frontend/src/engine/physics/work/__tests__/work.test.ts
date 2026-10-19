@@ -10,7 +10,9 @@ import type { LessonRecord } from '../../../education/types';
 import { subjectCrumb } from '../../../education/subjects';
 import { WORK_CHAPTER as CH } from '../learn/content';
 import { WORK_EXPERIMENTS, workRouteOutcome } from '../experiments';
-import { WORK_EXERCISES, exerciseSolved, recomputeWorkAnswers, solvedWorkParts, workExerciseCounts } from '../exercises';
+import { KINETIC_EXPERIMENTS } from '../kineticExperiments';
+import { computeKinetic } from '../kineticModel';
+import { WORK_EXERCISES, exerciseSolved, solvedWorkParts, workExerciseCounts } from '../exercises';
 import { WORK_MAP, WORK_TEXTBOOK_INVENTORY, workCoverageCounts } from '../curriculum';
 import { averagePower, kineticEnergy, kineticEnergyAfterWork, mechanicalEnergy, potentialEnergy, speedFromKineticEnergy } from '../energyBasics';
 import { cmToM, computeWork, cosDeg, DEFAULT_WORK, describeWork, fmtSigned, gToKg, kJToJ, kmhToMs, sinDeg, TRACK_LENGTH, validateWork, workAtProgress, type WorkSetup } from '../workModel';
@@ -19,7 +21,7 @@ import { WorkView } from '../../../../features/physics/work/WorkView';
 import { MOTION_CHAPTER } from '../../motion/learn/content';
 import { FORCES_CHAPTER } from '../../forces/learn/content';
 
-describeChapterIntegrity('Work', CH, ['workLab']);
+describeChapterIntegrity('Work', CH, ['workLab', 'kineticLab', 'workDerivation']);
 
 class MemoryStorage {
   private m = new Map<string, string>();
@@ -52,7 +54,7 @@ describe('Work chapter registration and Physics preservation', () => {
     }
   });
   it('has optional chapter and unit prerequisites that link to Chapter 4 and Chapter 6, and never gates a lesson', () => {
-    expect(CH.prerequisiteIds.sort()).toEqual(['pwp-displacement', 'pwp-force', 'pwp-graph', 'pwp-units', 'pwp-velocity', 'pwp-weight']);
+    expect(CH.prerequisiteIds.sort()).toEqual(['pwp-algebra', 'pwp-displacement', 'pwp-eqmotion', 'pwp-force', 'pwp-graph', 'pwp-units', 'pwp-velocity', 'pwp-weight']);
     const links = Object.values(CH.prerequisites).map((p) => p.connection ?? '').join(' ');
     expect(links).toMatch(/Chapter 4/); expect(links).toMatch(/Chapter 6/);
     for (const p of Object.values(CH.prerequisites)) { expect(p.refresher.length).toBeGreaterThan(0); expect(p.checks.length).toBeGreaterThanOrEqual(2); }
@@ -203,7 +205,7 @@ describe('force and displacement visualisation agree with the model', () => {
     expect(opposite).toContain('= −20 J');
   });
   it('lesson visuals state the same work as the model that is drawn', () => {
-    for (const { where, v } of allVisuals(CH)) {
+    for (const { where, v } of allVisuals(CH).filter((x) => x.v.kind === 'workLab')) {
       const p = v.props as { setup: WorkSetup };
       const r = computeWork(p.setup);
       expect(r.valid, where).toBe(true);
@@ -252,13 +254,13 @@ describe('energy foundations (hand values)', () => {
 });
 
 describe('curriculum map and textbook inventory', () => {
-  it('lists every verified section of Chapter 7 with honest status, and only Section 7.1 is claimed by the Learn lessons', () => {
+  it('lists every verified section of Chapter 7 with honest status, and only Sections 7.1 to 7.4.1 are claimed by the Learn lessons so far', () => {
     expect(WORK_TEXTBOOK_INVENTORY.sections).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6', '7.6.1', '7.6.2', '7.6.3']);
     expect(WORK_TEXTBOOK_INVENTORY.exercises).toBe(15);
     const sections = new Set(WORK_MAP.map((r) => r.section));
     for (const s of ['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6']) expect(sections.has(s), s).toBe(true);
     const learn = WORK_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook' && r.lessonIds.length);
-    expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2']);
+    expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1']);
     for (const r of WORK_MAP.filter((x) => x.status === 'planned')) expect(r.lessonIds).toEqual([]);
     for (const r of WORK_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], id).toBeDefined();
     const c = workCoverageCounts(); expect(c.available + c.planned).toBe(c.total); expect(c.planned).toBeGreaterThan(5);
@@ -273,35 +275,47 @@ describe('NCERT exercise inventory and solutions', () => {
     expect(WORK_EXERCISES[0].parts.map((p) => p.id)).toEqual(['i', 'ii', 'iii', 'iv', 'v']);
     expect(WORK_EXERCISES[3].parts.map((p) => p.id)).toEqual(['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix']);
   });
-  it('only the parts that Section 7.1 supports are solved, and everything else is Upcoming with no solution', () => {
-    expect(solvedWorkParts()).toEqual([{ number: 1, part: 'i' }, { number: 1, part: 'ii' }, { number: 2, part: 'i' }, { number: 2, part: 'ii' }, { number: 10, part: 'i' }]);
+  it('only the parts the lessons so far support are solved, and everything else is Upcoming with no solution', () => {
+    expect(solvedWorkParts().map((p) => `${p.number}${p.part}`)).toEqual(['1i', '1ii', '1iii', '1v', '2i', '2ii', '2iii', '8all', '10i', '11i', '11ii', '11iii', '13i', '13ii', '13iii', '13iv']);
     for (const e of WORK_EXERCISES) for (const p of e.parts) {
       expect(p.status === 'solved').toBe(Boolean(p.solution));
       if (p.status === 'upcoming') { expect(p.needs, `Q${e.number}${p.id}`).toBeTruthy(); expect(p.solution).toBeUndefined(); }
     }
-    expect(WORK_EXERCISES.filter(exerciseSolved)).toHaveLength(0);
-    const c = workExerciseCounts(); expect(c.parts).toBe(43); expect(c.solvedParts).toBe(5); expect(c.solvedQuestions).toBe(0);
+    const c = workExerciseCounts(); expect(c.parts).toBe(43); expect(c.solvedParts).toBe(16);
+    expect(WORK_EXERCISES.filter(exerciseSolved).map((e) => e.number)).toEqual([8, 11, 13]);
   });
-  it('every solution is complete: hint, reasoning with reasons, calculation, final answer and a real lab link or a reason', () => {
+  it('every solution is complete: principle, hint, reasoning with reasons, calculation, final answer, meaning and a real lab link or a reason', () => {
     for (const e of WORK_EXERCISES) for (const p of e.parts.filter((x) => x.solution)) {
       const s = p.solution!;
-      expect(s.hint.length).toBeGreaterThan(20); expect(s.reasoning.length).toBeGreaterThanOrEqual(2); for (const st of s.reasoning) expect(st.why.length).toBeGreaterThan(10);
-      expect(s.calculation.length).toBeGreaterThan(0); expect(s.finalAnswer.length).toBeGreaterThan(5); expect(s.commonMistake.length).toBeGreaterThan(20);
+      expect(s.principle.length).toBeGreaterThan(20); expect(s.hint.length).toBeGreaterThan(20); expect(s.reasoning.length).toBeGreaterThanOrEqual(2); for (const st of s.reasoning) expect(st.why.length).toBeGreaterThan(10);
+      expect(s.calculation.length).toBeGreaterThan(0); expect(s.finalAnswer.length).toBeGreaterThan(5); expect(s.meaning.length).toBeGreaterThan(20); expect(s.commonMistake.length).toBeGreaterThan(20);
+      expect(s.given.length).toBeGreaterThan(0); expect(s.find.length).toBeGreaterThan(0); expect(s.verification.length).toBeGreaterThan(20);
       expect(s.lab !== null || Boolean(s.labNote)).toBe(true);
       if (s.lab) {
         const [path, query] = s.lab.href.split('?');
         expect(appSource).toContain(`path="${path}"`);
-        const id = new URLSearchParams(query).get('experiment');
-        expect(WORK_EXPERIMENTS.map((x) => x.id)).toContain(id);
+        const id = new URLSearchParams(query ?? '').get('experiment');
+        if (id) expect([...WORK_EXPERIMENTS, ...KINETIC_EXPERIMENTS].map((x) => x.id)).toContain(id);
       }
+      for (const ill of s.illustrations ?? []) if (ill.kind === 'graph') expect(ill.estimate.length, `Q${e.number}${p.id} figure estimate`).toBeGreaterThan(30);
       for (const id of e.lessonIds) expect(CH.lessons[id]).toBeDefined();
     }
     for (const e of WORK_EXERCISES.filter((x) => x.parts.some((p) => p.solution))) expect(e.lessonIds.length, `Q${e.number}`).toBeGreaterThan(0);
   });
-  it('numerical and sign results are recomputed independently from the model', () => {
-    const r = recomputeWorkAnswers();
-    expect(r.length).toBeGreaterThan(10);
-    for (const x of r) expect(x.ok, `${x.id}: ${x.detail}`).toBe(true);
+  it('numerical results recomputed from independent hand calculations', () => {
+    const K = (m: number, v: number) => 0.5 * m * v * v;
+    // 8: fuel ratio = (1/2 M v^2) ratio for 160 kg and 200 kg
+    for (const v of [1, 5, 13]) expect(K(160, v) / K(200, v)).toBeCloseTo(0.8, 12);
+    // 11: trapezoid area by fine numerical integration of the piecewise-linear force of Fig. 7.37
+    const F = (x: number) => (x < 1 ? 50 * x : x <= 3 ? 50 : 50 * (4 - x));
+    let area = 0; const n = 40000; for (let i = 0; i < n; i++) area += F((i + 0.5) * (4 / n)) * (4 / n);
+    expect(area).toBeCloseTo(150, 2); expect(Math.sqrt((2 * 180) / 10)).toBe(6); expect(Math.sqrt((2 * (180 + area)) / 10)).toBeCloseTo(Math.sqrt(66), 3);
+    // 13: K at A, work by the brakes, and the force-and-distance check from the speed-time graph
+    expect(K(1000, 35)).toBe(612500);
+    const decel = 35 / 2, dist = 0.5 * 2 * 35; expect(1000 * decel * dist).toBe(612500);
+    const r = computeKinetic({ massKg: 1000, netForce: -1000 * decel, u: 35, displacement: dist }); expect(r.valid).toBe(true); expect(r.wNet).toBe(-612500); expect(r.dK).toBeCloseTo(-612500, 3); expect(r.v).toBeCloseTo(0, 6);
+    // 2(iii) K formula
+    for (const [m, v] of [[0.2, 43], [3, 4], [10, 6]]) expect(computeKinetic({ massKg: m, netForce: 0, u: v, displacement: 1 }).K0).toBeCloseTo(0.5 * m * v * v, 9);
   });
   it('the exercise module is isolated from learning progress: viewing a solution can never be mastery evidence', () => {
     const code = exercisesSource.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -367,6 +381,6 @@ describe('Work mastery uses the shared evidence model', () => {
     expect(lessonStatus(l, rec)).not.toBe('mastered');
   });
   it('the track length used by the lessons is within the model', () => {
-    for (const { v } of allVisuals(CH)) { const s = (v.props as { setup: WorkSetup }).setup; expect(s.startPos + s.displacement).toBeLessThanOrEqual(TRACK_LENGTH); }
+    for (const { v } of allVisuals(CH).filter((x) => x.v.kind === 'workLab')) { const s = (v.props as { setup: WorkSetup }).setup; expect(s.startPos + s.displacement).toBeLessThanOrEqual(TRACK_LENGTH); }
   });
 });

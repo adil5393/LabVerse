@@ -36,3 +36,12 @@ export const QUANTITY: Record<PhysQuantity, { label: string; symbol: string; col
   instant: { label: 'Velocity now', symbol: '➤', color: PHYS.velocity, hint: 'instantaneous, signed' },
   displacement: { label: 'Displacement', symbol: '→', color: PHYS.displacement, hint: 'final − initial, with direction' },
 };
+
+/** Energy quantities (Chapter 7). Each is always paired with a name in keys and text; never colour alone. */
+export const ENERGY = {
+  kinetic: PHYS.speed,
+  potential: PHYS.vertical,
+  thermal: PHYS.friction,
+  total: PHYS.netForce,
+  work: PHYS.force,
+} as const;

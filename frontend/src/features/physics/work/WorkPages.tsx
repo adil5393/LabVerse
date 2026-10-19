@@ -17,6 +17,7 @@ import { LearnLessonPage } from '../../education/LearnLessonPage';
 import { ChapterPrerequisites, UnitPrerequisites } from '../../education/Prerequisites';
 import { VisualRegistryProvider } from '../../education/visuals';
 import { PHYS } from '../motion/physicsColors';
+import { ExerciseIllustrationView } from './ExerciseIllustration';
 import { WORK_VISUALS } from './visuals';
 
 const CRUMB = 'Work, Energy, and Simple Machines';
@@ -42,8 +43,8 @@ const WorkLearnSection: React.FC = () => {
       <section id="learn" aria-label="Learn" className="space-y-6" data-testid="work-learn-section">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-black text-white">Learn: Understanding work</h2>
-            <p className="text-sm text-slate-300 max-w-3xl">When does a force really do work in physics? How is it calculated, and why can it be positive, negative or zero? Short explanations, a scene you can change, worked examples and problems of your own. You can skip any prerequisite refresher and still start any lesson.</p>
+            <h2 className="text-2xl font-black text-white">Learn: Work and energy</h2>
+            <p className="text-sm text-slate-300 max-w-3xl">When does a force really do work in physics, and how does work change energy? How is work calculated, and why is the kinetic energy one half the mass times the speed squared? Short explanations, a scene you can change, worked examples and problems of your own. You can skip any prerequisite refresher and still start any lesson.</p>
           </div>
           <Link data-testid="work-start-learning" to={ch.routes.learn(next.id)} className="min-h-[48px] px-5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm inline-flex items-center">{started ? `Continue Learn: Lesson ${next.number}` : 'Start Learn: Lesson 1'}</Link>
         </div>
@@ -73,7 +74,7 @@ const WorkLearnSection: React.FC = () => {
         ))}
         <div className="rounded-2xl border border-dashed border-surface-border p-4 space-y-1" data-testid="work-upcoming-units">
           <h3 className="text-sm font-black text-slate-300">Upcoming units</h3>
-          <p className="text-xs text-slate-400">The work-energy theorem, forms of energy, kinetic and potential energy, conservation of mechanical energy, power, and simple machines (the pulley, the inclined plane and the lever) are upcoming. They are not available yet.</p>
+          <p className="text-xs text-slate-400">Potential energy, conservation of mechanical energy, power, and simple machines (the pulley, the inclined plane and the lever) are upcoming. They are not available yet.</p>
         </div>
       </section>
     </VisualRegistryProvider>
@@ -102,12 +103,12 @@ export const WorkHub: React.FC = () => {
         <header className="space-y-2">
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">{WORK_TEXTBOOK.book} ({WORK_TEXTBOOK.edition}) · Chapter {WORK_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{WORK_TEXTBOOK.title}</h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Start with work: when a force really does work in physics, how to calculate it in joules, and why it can be positive, negative or zero. Energy, power and simple machines come in the later parts of this chapter and are upcoming.</p>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Work and energy: when a force really does work in physics, how to calculate it in joules, how work changes energy, and what kinetic energy is. Potential energy, conservation, power and simple machines come in the later parts of this chapter and are upcoming.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="work-destinations">
           <div className={`${card} border-sky-500/40`} style={{ borderTop: '4px solid #38BDF8' }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} unit so far (3 lessons on work), with prerequisites, worked examples and practice. More units are upcoming.</p></div>
+            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} units and {Object.keys(WORK_CHAPTER.lessons).length} lessons so far, with prerequisites, worked examples and practice. More units are upcoming.</p></div>
             <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #818CF8' }}>
@@ -121,6 +122,15 @@ export const WorkHub: React.FC = () => {
           <div className={`${card} border-dashed border-surface-border opacity-80`} aria-disabled="true" data-destination="practice">
             <div><h2 className="text-lg font-black text-slate-300">Chapter Practice</h2><p className="text-xs text-slate-400">Upcoming. Chapter-wide practice will arrive once the later units are built. Each lesson already has its own independent practice.</p></div>
             <span className="min-h-[44px] inline-flex items-center justify-center rounded-xl border border-surface-border text-slate-400 font-bold text-sm">Upcoming</span>
+          </div>
+        </section>
+
+        <section aria-label="Laboratories" className="space-y-3" data-testid="work-labs">
+          <h2 className="text-xl font-black text-white">Laboratories</h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {[{ to: '/physics/work/lab', d: 'work-lab', t: 'Work Laboratory', x: 'Force, direction and displacement: the signed work of each force.' }, { to: '/physics/work/kinetic', d: 'kinetic-lab', t: 'Work-Energy Laboratory', x: 'A cart under a net force: the area under the force graph is the change in kinetic energy.' }, { to: '/physics/work/derivations', d: 'derivations', t: 'Derivations', x: 'Step-by-step derivations with your own numbers and missing-step questions.' }].map((l) => (
+              <Link key={l.d} to={l.to} data-destination={l.d} className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-4 space-y-1 min-h-[96px]"><div className="font-bold text-white">{l.t}</div><p className="text-xs text-slate-300">{l.x}</p></Link>
+            ))}
           </div>
         </section>
 
@@ -175,6 +185,7 @@ const Solution: React.FC<{ qn: number; part: WorkExercisePart }> = ({ qn, part }
       {stage === 1 && <button type="button" className={btn} onClick={() => setStage(2)}>Show the reasoning and the calculation</button>}
       {stage >= 2 && (
         <div className="space-y-2" data-testid="steps">
+          <p className="text-sm text-slate-100" data-testid="principle"><strong>Principle: </strong>{sol.principle}</p>
           <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">Reasoning</h4>
           <ol className="space-y-2">{sol.reasoning.map((s, i) => <li key={i} className="rounded-xl bg-surface-lowest px-3 py-2 text-sm text-slate-200"><span className="font-mono mr-2" style={{ color: PHYS.distance }}>{i + 1}.</span>{s.text}<div className="text-xs text-slate-400 mt-1"><em>Why: </em>{s.why}</div></li>)}</ol>
           <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">Calculation</h4>
@@ -185,8 +196,10 @@ const Solution: React.FC<{ qn: number; part: WorkExercisePart }> = ({ qn, part }
       {stage >= 3 && (
         <div className="space-y-3" data-testid="answers">
           <p data-part={part.id} className="text-sm rounded-xl border px-3 py-2" style={{ color: '#d1fae5', borderColor: `${PHYS.correct}66`, background: `${PHYS.correct}0D` }}><strong>{'✓ '}Final answer: </strong>{sol.finalAnswer}</p>
+          <p className="text-sm text-slate-200" data-testid="meaning"><strong>What it means: </strong>{sol.meaning}</p>
           <p className="text-xs text-slate-300" data-testid="common-mistakes"><strong style={{ color: PHYS.error }}>Common mistake: </strong>{sol.commonMistake}</p>
           <p className="text-[11px] text-slate-400">Verification: {sol.verification}</p>
+          {sol.illustrations && <div className="space-y-3" data-testid="illustrations">{sol.illustrations.map((ill, i) => <ExerciseIllustrationView key={i} ill={ill} id={`${qn}-${part.id}-${i + 1}`} />)}</div>}
           <div className="flex flex-wrap gap-2" data-testid="exercise-labs">{sol.lab && <Link to={sol.lab.href} className="min-h-[44px] inline-flex items-center px-4 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Explore in the lab: {sol.lab.label}</Link>}</div>
           {sol.labNote && <p className="text-[11px] text-slate-400" data-testid="lab-note">Why no matching laboratory: {sol.labNote}</p>}
         </div>

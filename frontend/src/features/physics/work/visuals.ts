@@ -1,5 +1,7 @@
 import type { VisualRegistry } from '../../education/visuals';
+import { DerivationVisual } from './DerivationView';
+import { KineticVisual } from './KineticView';
 import { WorkVisual } from './WorkView';
 
 /** Visuals the Chapter 7 lessons can use (registered by VisualRef.kind). */
-export const WORK_VISUALS: VisualRegistry = { workLab: WorkVisual };
+export const WORK_VISUALS: VisualRegistry = { workLab: WorkVisual, kineticLab: KineticVisual, workDerivation: DerivationVisual };

@@ -51,6 +51,8 @@ export interface UDLessonProgress {
   interactionsRecorded: number;
   observations: RecordedObservation[];
   countedKeys: string[];
+  /** Mastery recorded before evidence tracking could not be verified. Kept as history, never trusted. */
+  legacyMasteryUnverified?: boolean;
   /** Chart views the student has opened during the experiment (absent in progress saved before M6.1). */
   viewsSeen?: string[];
 }
@@ -62,7 +64,17 @@ export interface UDPracticeAttempt {
   attempts: number;
   hintsRevealed: number;
   showSolution: boolean;
+  /** A hint or the solution was used BEFORE the first answer. Absent in progress saved before EDU-1M6. */
+  assisted?: boolean;
 }
+
+/**
+ * Independent evidence: correct on the very first answer with no help before it.
+ * Older saved attempts have no `assisted` flag; if they used a hint or the solution we
+ * cannot tell whether it came before the answer, so they are not trusted as independent.
+ */
+export const isIndependent = (a: UDPracticeAttempt | undefined): boolean =>
+  Boolean(a && a.attempts > 0 && a.firstAttemptCorrect && a.assisted !== true && !(a.assisted === undefined && (a.hintsRevealed > 0 || a.showSolution)));
 
 interface Snapshot {
   rows: WeightedRow[];
@@ -190,11 +202,13 @@ function loadPersisted(): Persisted {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { lessons: {}, practiceAnswers: {} };
     const p = JSON.parse(raw);
-    return {
-      lessons: p && typeof p.lessons === 'object' && p.lessons ? p.lessons : {},
-      practiceAnswers: p && typeof p.practiceAnswers === 'object' && p.practiceAnswers ? p.practiceAnswers : {},
-      lastLessonId: typeof p?.lastLessonId === 'string' ? p.lastLessonId : undefined,
-    };
+    const lessons: Record<string, UDLessonProgress> = p && typeof p.lessons === 'object' && p.lessons && !Array.isArray(p.lessons) ? p.lessons : {};
+    const practiceAnswers: Record<string, UDPracticeAttempt> = p && typeof p.practiceAnswers === 'object' && p.practiceAnswers && !Array.isArray(p.practiceAnswers) ? p.practiceAnswers : {};
+    // Keep every record; withdraw trust from mastery the evidence no longer supports.
+    for (const [id, l] of Object.entries(lessons)) {
+      if (l && typeof l === 'object' && l.mastered && !masteryEarned(l, practiceAnswers)) lessons[id] = { ...l, mastered: false, legacyMasteryUnverified: true };
+    }
+    return { lessons, practiceAnswers, lastLessonId: typeof p?.lastLessonId === 'string' ? p.lastLessonId : undefined };
   } catch {
     return { lessons: {}, practiceAnswers: {} };
   }
@@ -231,7 +245,7 @@ function masteryEarned(p: UDLessonProgress, answers: Record<string, UDPracticeAt
   const ids = lesson.practiceQuestionIds;
   if (ids.length === 0) return true;
   if (ids.some((id) => !hasAnswered(answers[id]))) return false;
-  return ids.filter((id) => answers[id].firstAttemptCorrect).length / ids.length >= MASTERY_THRESHOLD;
+  return ids.filter((id) => isIndependent(answers[id])).length / ids.length >= MASTERY_THRESHOLD;
 }
 
 const VIEW_NAME: Record<string, string> = { clustered: 'clustered-column', percent: '100% stacked', pie: 'pie', absolute: 'stacked', both: 'side-by-side' };
@@ -711,6 +725,7 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
       if (!cur) return;
       const updated: UDLessonProgress = { ...cur, completed: true };
       updated.mastered = masteryEarned(updated, practiceAnswers);
+      if (updated.mastered) updated.legacyMasteryUnverified = false;
       commit({ ...lessons, [id]: updated });
     },
 
@@ -739,26 +754,36 @@ export const useUnderstandingDataStore = create<UnderstandingDataState>((set, ge
     setPracticeDifficultyFilter: (d) => set({ practiceDifficultyFilter: d }),
     submitPracticeAnswer: (id, text, correct) => {
       const prev = get().practiceAnswers[id];
+      const first = !prev || prev.attempts === 0;
+      const helped = Boolean(prev && (prev.assisted || prev.hintsRevealed > 0 || prev.showSolution));
       commit(get().lessons, {
         ...get().practiceAnswers,
         [id]: {
           userAnswerText: text,
           isCorrect: correct,
-          firstAttemptCorrect: prev && prev.attempts > 0 ? prev.firstAttemptCorrect : correct,
+          // Only the FIRST answer decides independence, and help before it rules it out for good.
+          firstAttemptCorrect: first ? correct && !helped : prev!.firstAttemptCorrect,
           attempts: (prev?.attempts ?? 0) + 1,
           hintsRevealed: prev?.hintsRevealed ?? 0,
           showSolution: prev?.showSolution ?? false,
+          assisted: first ? helped : Boolean(prev?.assisted),
         },
       });
     },
     revealPracticeHint: (id) => {
       const prev = get().practiceAnswers[id];
-      const next: UDPracticeAttempt = prev ? { ...prev, hintsRevealed: prev.hintsRevealed + 1 } : { userAnswerText: '', isCorrect: false, firstAttemptCorrect: false, attempts: 0, hintsRevealed: 1, showSolution: false };
+      const before = !prev || prev.attempts === 0;
+      const next: UDPracticeAttempt = prev
+        ? { ...prev, hintsRevealed: prev.hintsRevealed + 1, assisted: prev.assisted || before }
+        : { userAnswerText: '', isCorrect: false, firstAttemptCorrect: false, attempts: 0, hintsRevealed: 1, showSolution: false, assisted: true };
       commit(get().lessons, { ...get().practiceAnswers, [id]: next });
     },
     togglePracticeSolution: (id) => {
       const prev = get().practiceAnswers[id];
-      const next: UDPracticeAttempt = prev ? { ...prev, showSolution: !prev.showSolution } : { userAnswerText: '', isCorrect: false, firstAttemptCorrect: false, attempts: 0, hintsRevealed: 0, showSolution: true };
+      const before = !prev || prev.attempts === 0;
+      const next: UDPracticeAttempt = prev
+        ? { ...prev, showSolution: !prev.showSolution, assisted: prev.assisted || before }
+        : { userAnswerText: '', isCorrect: false, firstAttemptCorrect: false, attempts: 0, hintsRevealed: 0, showSolution: true, assisted: true };
       commit(get().lessons, { ...get().practiceAnswers, [id]: next });
     },
     retryPracticeQuestion: (id) => {

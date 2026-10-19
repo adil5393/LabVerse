@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useUnderstandingDataStore, hasAnswered } from '../../../store/useUnderstandingDataStore';
+import { useUnderstandingDataStore, hasAnswered, isIndependent } from '../../../store/useUnderstandingDataStore';
 import { UNDERSTANDING_DATA_PRACTICE_BANK as BANK, getPracticeQuestionById } from '../../../engine/mathematics/understandingData/practiceBank';
 import { QuestionCard } from './QuestionCard';
 
@@ -17,7 +17,7 @@ export const PracticePanel: React.FC = () => {
   const list = filter === 'all' ? BANK : BANK.filter((x) => x.difficulty === filter);
   const shown = list.find((x) => x.id === activeId) ?? (getPracticeQuestionById(activeId) && list.includes(getPracticeQuestionById(activeId)!) ? getPracticeQuestionById(activeId)! : list[0]);
   const answered = list.filter((x) => hasAnswered(answers[x.id])).length;
-  const firstTry = list.filter((x) => hasAnswered(answers[x.id]) && answers[x.id].firstAttemptCorrect).length;
+  const firstTry = list.filter((x) => isIndependent(answers[x.id])).length;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">

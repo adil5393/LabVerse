@@ -11,6 +11,10 @@ import { UD_GUIDED_UNITS, UD_GUIDED_LESSONS } from '../../../engine/mathematics/
 import { UD_EXPERIMENTS } from '../../../engine/mathematics/understandingData/experimentRegistry';
 import { UD_COVERAGE, EVIDENCE_LABEL } from '../../../engine/mathematics/understandingData/curriculumRegistry';
 import { PRACTICE_COUNTS } from '../../../engine/mathematics/understandingData/practiceBank';
+import { lessonStatus as learnStatus, STATUS_LABEL as LEARN_STATUS } from '../../../engine/education/progress';
+import { UNDERSTANDING_DATA_CHAPTER } from '../../../engine/mathematics/understandingData/learn/content';
+import { useEducationStore } from '../../../store/useEducationStore';
+import { LEARN_FOR_GUIDED, UnderstandingDataLearnSection } from './learn/UnderstandingDataLearn';
 
 const STATUS_BADGE = { not_started: '', attempted: 'In progress', completed: 'Completed', demonstrated: 'Demonstrated', mastered: 'Mastered' } as const;
 const EVIDENCE_CLASS = { verified_textbook: 'text-emerald-300', secondary_reference: 'text-amber-300', labverse_extension: 'text-sky-300' } as const;
@@ -21,6 +25,7 @@ export const UnderstandingDataLab: React.FC = () => {
   const [tab, setTab] = useState<'guided' | 'experiments' | 'coverage'>('guided');
   const [confirmReset, setConfirmReset] = useState(false);
   const lessons = useUnderstandingDataStore((s) => s.lessons);
+  const learnRecords = useEducationStore((st) => st.lessons);
   const stats = useUnderstandingDataStore((s) => s.getCompletionStats)();
   const resetProgress = useUnderstandingDataStore((s) => s.resetProgress);
 
@@ -42,7 +47,7 @@ export const UnderstandingDataLab: React.FC = () => {
             <button type="button" onClick={() => setConfirmReset(true)} className="min-h-11 text-xs font-mono text-slate-500 hover:text-red-400 flex items-center gap-1.5 px-3 rounded-lg border border-surface-border"><span className="material-symbols-outlined text-[15px]">restart_alt</span>Reset chapter progress</button>
           ) : (
             <div className="flex items-center gap-2 bg-red-950/40 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs">
-              <span className="text-red-300">Reset all progress?</span>
+              <span className="text-red-300">Reset the guided-lesson progress? Your Learn progress is kept.</span>
               <button type="button" onClick={() => { resetProgress(); setConfirmReset(false); }} className="min-h-11 px-3 rounded bg-red-500 text-slate-950 font-bold font-mono">Yes, reset</button>
               <button type="button" onClick={() => setConfirmReset(false)} className="min-h-11 px-3 rounded bg-surface-elevated text-slate-300 font-mono">Cancel</button>
             </div>
@@ -89,6 +94,8 @@ export const UnderstandingDataLab: React.FC = () => {
           </div>
         </section>
 
+        <UnderstandingDataLearnSection />
+
         <section className="space-y-6">
           <div className="flex items-center gap-2 border-b border-surface-border pb-3 overflow-x-auto" role="tablist">
             {([['guided', 'Lesson roadmap (13 + 3 optional)'], ['experiments', 'Laboratory presets'], ['coverage', 'Chapter coverage']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-11 px-4 rounded-xl text-xs font-mono font-bold whitespace-nowrap ${tab === id ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>{label}</button>)}
@@ -104,13 +111,21 @@ export const UnderstandingDataLab: React.FC = () => {
                       const l = UD_GUIDED_LESSONS[id];
                       const st = lessonStatus(lessons[id]);
                       return (
-                        <button key={id} type="button" onClick={() => open(id)} className={`text-left p-4 rounded-2xl border min-h-24 flex flex-col justify-between gap-2 ${st === 'mastered' || st === 'completed' ? 'bg-emerald-950/15 border-emerald-500/40' : st === 'attempted' ? 'bg-amber-950/10 border-amber-500/30' : 'bg-surface-card border-surface-border hover:border-purple-500/50'}`}>
+                        <div key={id} className="flex flex-col gap-1">
+                        <button type="button" onClick={() => open(id)} className={`text-left p-4 rounded-2xl border min-h-24 flex flex-col justify-between gap-2 ${st === 'mastered' || st === 'completed' ? 'bg-emerald-950/15 border-emerald-500/40' : st === 'attempted' ? 'bg-amber-950/10 border-amber-500/30' : 'bg-surface-card border-surface-border hover:border-purple-500/50'}`}>
                           <div>
                             <div className="flex items-center justify-between"><span className="text-xs font-mono font-bold text-amber-400">Lesson {l.lessonNumber}</span>{STATUS_BADGE[st] && <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">{STATUS_BADGE[st]}</span>}</div>
                             <h4 className="text-sm font-bold text-white">{l.title}</h4>
                             <p className="text-xs text-slate-400">{l.subtitle}</p>{l.isOptionalExtension && <span className="text-[11px] font-mono text-slate-500">Optional extension</span>}
                           </div>
                         </button>
+                        {lessons[id]?.legacyMasteryUnverified && <span className="text-[11px] font-mono text-amber-300 px-1">Earlier mastery: Unverified. Practise again to confirm.</span>}
+                        {LEARN_FOR_GUIDED[id] && (
+                          <Link to={UNDERSTANDING_DATA_CHAPTER.routes.learn(LEARN_FOR_GUIDED[id])} data-card-learn={id} className="min-h-[44px] inline-flex items-center px-3 rounded-lg text-xs font-bold text-slate-200 bg-surface-elevated hover:bg-cyan-500 hover:text-slate-950">
+                            Learn this idea: {LEARN_STATUS[learnStatus(UNDERSTANDING_DATA_CHAPTER.lessons[LEARN_FOR_GUIDED[id]], learnRecords[LEARN_FOR_GUIDED[id]])]}
+                          </Link>
+                        )}
+                        </div>
                       );
                     })}
                   </div>

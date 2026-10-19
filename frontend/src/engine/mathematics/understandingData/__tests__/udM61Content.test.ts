@@ -184,7 +184,7 @@ describe('M6.1 store behaviour', () => {
         'ud-l1': { lessonId: 'ud-l1', completed: true, mastered: true, teacherBypassed: false, activeStage: 'practice', stagesCompleted: { understand: true, predict: true, experiment: true, observe: true, explain: true, practice: true }, predictionMade: true, predictionText: '65', predictionVerdict: 'naive', interactionsRecorded: 3, observations: [], countedKeys: [] },
         'ud-l7': { lessonId: 'ud-l7', completed: false, mastered: false, teacherBypassed: false, activeStage: 'experiment', stagesCompleted: { understand: true, predict: true, experiment: false, observe: false, explain: false, practice: false }, predictionMade: true, interactionsRecorded: 2, observations: [], countedKeys: [] },
       },
-      practiceAnswers: { 'q-ud-1': { userAnswerText: '62', isCorrect: true, firstAttemptCorrect: true, attempts: 1, hintsRevealed: 0, showSolution: false } },
+      practiceAnswers: Object.fromEntries(UD_GUIDED_LESSONS['ud-l1'].practiceQuestionIds.map((id) => [id, { userAnswerText: '62', isCorrect: true, firstAttemptCorrect: true, attempts: 1, hintsRevealed: 0, showSolution: false }])), // real old mastery always had every answer
       lastLessonId: 'ud-l7',
     };
     localStorage.setItem(KEY, JSON.stringify(old));

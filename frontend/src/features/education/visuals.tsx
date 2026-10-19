@@ -30,7 +30,7 @@ export const VisualHost: React.FC<{ visual: VisualRef; onAnswer?: (id: string) =
     return <p className="text-xs text-slate-400 border border-dashed border-surface-border rounded-lg p-3">{visual.alt}</p>;
   }
   return (
-    <figure className="m-0">
+    <figure className="m-0 min-w-0">
       <Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} />
       <figcaption className="mt-2 text-xs text-slate-400 leading-relaxed">{visual.alt}</figcaption>
     </figure>

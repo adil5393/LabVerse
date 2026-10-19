@@ -79,6 +79,9 @@ const UnderstandingDataLab = lazy(() =>
     default: m.UnderstandingDataLab,
   }))
 );
+const UnderstandingDataLearnPage = lazy(() =>
+  import('./features/mathematics/understandingData/learn/UnderstandingDataLearn').then((m) => ({ default: m.UnderstandingDataLearnPage }))
+);
 const UnderstandingDataWorkbenchPage = lazy(() =>
   import('./features/mathematics/understandingData/UnderstandingDataWorkbenchPage').then((m) => ({
     default: m.UnderstandingDataWorkbenchPage,
@@ -154,6 +157,7 @@ export const App: React.FC = () => {
           {/* Route 11c: Understanding Data landing page and workbench */}
           <Route path="/mathematics/understanding-data" element={<UnderstandingDataLab />} />
           <Route path="/mathematics/understanding-data/workbench" element={<UnderstandingDataWorkbenchPage />} />
+          <Route path="/mathematics/understanding-data/learn/:lessonId" element={<UnderstandingDataLearnPage />} />
 
           {/* Route 12: Chemistry Laboratory Landing Page */}
           <Route path="/chemistry" element={<ChemistryLab />} />

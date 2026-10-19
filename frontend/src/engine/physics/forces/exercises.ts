@@ -15,6 +15,8 @@ import { netFromArrows } from './forceDiagram';
 import { DEFAULT_SETUP, sampleAtTime, type Setup } from './forceModel';
 import { toArrows, type ForceArrowSpec } from './learn/questions';
 import { SOLVED_2C } from './exercisesSecondLaw';
+import { SOLVED_2D } from './exercisesThirdLaw';
+import type { TwoBodySetup } from './twoBody';
 import type { GraphKind, Profile } from '../motion/profile';
 
 export interface SolutionStep { text: string; why: string }
@@ -24,6 +26,7 @@ export type Illustration =
   | { kind: 'arrows'; caption: string; object: string; forces: ForceArrowSpec[]; showNet: boolean }
   | { kind: 'cart'; caption: string; setup: Setup; t: number; graphs?: boolean }
   | { kind: 'massSweep'; caption: string; force: number; masses: number[] }
+  | { kind: 'twoBody'; caption: string; setup: TwoBodySetup; t: number }
   | { kind: 'graph'; caption: string; profile: Profile; graphs: GraphKind[] };
 
 export interface LabLink { href: string; label: string }
@@ -213,7 +216,7 @@ const BASE_EXERCISES: ForceExercise[] = [
 ];
 
 /** The sixteen questions: those supported by the first and second laws are solved, the third-law questions stay upcoming. */
-export const FORCE_EXERCISES: ForceExercise[] = BASE_EXERCISES.map((e) => SOLVED_2C[e.number] ?? e);
+export const FORCE_EXERCISES: ForceExercise[] = BASE_EXERCISES.map((e) => SOLVED_2C[e.number] ?? SOLVED_2D[e.number] ?? e);
 
 export const solvedForceExerciseNumbers = (): number[] => FORCE_EXERCISES.filter((e) => e.status === 'solved').map((e) => e.number);
 

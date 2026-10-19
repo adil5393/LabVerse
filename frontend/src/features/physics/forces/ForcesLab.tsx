@@ -107,6 +107,7 @@ export const ForcesLab: React.FC = () => {
 
         <section aria-label={exp?.id === 'J' ? 'The braking demonstration' : 'The cart'}>{exp?.id === 'J' ? <BrakingDemoView key={`J-${braking.key}`} initial={braking.setup} editable /> : <ForceCartView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable graphs />}</section>
 
+        <p className="text-sm text-slate-200" data-testid="interactions-link">Two objects interacting? Open the <Link className="underline hover:text-sky-300" to="/physics/forces/interactions">Interactions Laboratory</Link> (two carts, force pairs).</p>
         <p className="text-sm text-slate-200" data-testid="sl-derivation-links">Why is F = ma? <Link className="underline hover:text-sky-300" to="/physics/forces/derivations?d=A">Derive it from the cart experiments</Link> · <Link className="underline hover:text-sky-300" to="/physics/forces/derivations?d=B">Derive it from momentum</Link></p>
 
         <section aria-label="Guided investigations" className="space-y-3">

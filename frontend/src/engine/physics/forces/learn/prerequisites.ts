@@ -159,7 +159,31 @@ export const PFP_PROP: Prerequisite = {
   ],
 };
 
-export const PF_PREREQUISITES: Prerequisite[] = [PFP_MOTION, PFP_DIRECTION, PFP_MASS, PFP_ARROWS, PFP_XT, PFP_PROP];
+export const PFP_FMA: Prerequisite = {
+  id: 'pfp-fma',
+  title: 'Using F = ma for one object',
+  why: 'The third law tells you the forces on two objects; Newton\'s second law then gives each object its own acceleration. You need to use F = ma for one object at a time.',
+  connection: 'Chapter 6, lesson 6: Newton\'s second law (/physics/forces/learn/pf-l6)',
+  refresher: [
+    {
+      id: 'pfp-fm-step', title: 'Find the net force on ONE object, then divide by its own mass',
+      paragraphs: [
+        'For one object, add the forces that act ON that object (with signs) to get the net force, then a = F ÷ m using the mass of that object. For a 2 kg cart with a 6 N net force, a = 6 ÷ 2 = 3 m/s².',
+        'Always use the mass and the forces of the same object. A force exerted by that object on something else is not part of its net force.',
+      ],
+      misconception: { wrong: 'To find the acceleration of a cart, add all the forces in the picture, including the ones the cart exerts.', right: 'Add only the forces acting ON the cart. Forces the cart exerts on other objects belong to those objects.' },
+    },
+  ],
+  checks: [
+    numQ('pfp-fm-c1', 'A net force of 12 N acts on a 3 kg cart. What is its acceleration, in m/s²?', 4, '12 ÷ 3 = 4 m/s².', { unit: 'm/s²', refresherId: 'pfp-fm-step', rules: [[[36], 'You multiplied. a = F ÷ m.', 'multiplied']] }),
+    pick('pfp-fm-c2', 'A cart pushes a wall with 5 N. Is that 5 N part of the net force on the cart?', [
+      ['No: it acts on the wall, not on the cart', null],
+      ['Yes: it is a force in the picture', 'Only forces acting ON the cart are added to find its net force; the cart\'s push acts on the wall.', 'forces_on_other_object'],
+    ], 'Only forces on the cart count.', undefined, 'pfp-fm-step'),
+  ],
+};
+
+export const PF_PREREQUISITES: Prerequisite[] = [PFP_MOTION, PFP_DIRECTION, PFP_MASS, PFP_ARROWS, PFP_XT, PFP_PROP, PFP_FMA];
 
 export const PF_UNITS: EduUnit[] = [
   {
@@ -193,5 +217,21 @@ export const PF_UNITS: EduUnit[] = [
     vocabulary: [{ term: 'Newton\'s second law', meaning: 'F = ma, with the acceleration in the direction of the net force' }, { term: 'momentum', meaning: 'p = mv, in the direction of the velocity' }, { term: 'newton', meaning: '1 N = 1 kg m/s²' }],
     discover: ['How force and mass decide the acceleration', 'How F = ma is derived, and what 1 N means', 'How momentum, its change and the time of contact are related to force'],
     prerequisiteIds: ['pfp-prop', 'pfp-motion', 'pfp-mass'], lessonIds: ['pf-l6', 'pf-l7'],
+  },
+  {
+    id: 'pf-unit-5', number: 5, title: 'Newton\'s third law',
+    centralIdea: 'Forces come in pairs: when one object exerts a force on another, the second exerts an equal and opposite force on the first, at the same time. The two forces act on different objects, so they never cancel on one object.',
+    connection: 'This is Section 6.6. It uses net force and F = ma from the earlier units.',
+    vocabulary: [{ term: 'Newton\'s third law', meaning: 'forces between two objects are equal in size, opposite in direction and simultaneous' }, { term: 'action–reaction pair', meaning: 'the two forces two objects exert on each other' }],
+    discover: ['How to find the partner of a force', 'Why a pair does not cancel, and why accelerations can differ', 'How walking, rowing and rockets work'],
+    prerequisiteIds: ['pfp-fma', 'pfp-arrows'], lessonIds: ['pf-l8', 'pf-l9'],
+  },
+  {
+    id: 'pf-unit-6', number: 6, title: 'Forces on a system of objects',
+    centralIdea: 'Connected objects can be treated as one system: forces between them are internal and cancel, and only external forces decide the motion of the system.',
+    connection: 'This is Section 6.7. It combines the second and third laws.',
+    vocabulary: [{ term: 'internal force', meaning: 'a force between objects of the system' }, { term: 'external force', meaning: 'a force from outside the system' }, { term: 'tension', meaning: 'the force a string exerts on the objects it joins' }],
+    discover: ['What a system is', 'How to find the acceleration of the whole system', 'How to find the tension'],
+    prerequisiteIds: ['pfp-fma', 'pfp-mass'], lessonIds: ['pf-l10'],
   },
 ];

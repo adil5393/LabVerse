@@ -4,6 +4,8 @@ import type { VisualRef } from '../../../education/types';
 import { describeDiagram, netArrow, type Arrow } from '../forceDiagram';
 import { explain, sampleAtTime, type Setup } from '../forceModel';
 import { brakingAt, endTime, type BrakingSetup } from '../vehicle';
+import { explainTwoBody, twoBodyAt, type TwoBodySetup } from '../twoBody';
+import { PAIR_SCENARIOS } from '../pairs';
 import { diagramOf } from '../forceDiagram';
 
 export { ind, num as numQ, pick } from '../../../education/builders';
@@ -61,3 +63,19 @@ export const brakingVisual = (p: BrakingVisualProps, intro: string): VisualRef =
 export const derivationVisual = (id: 'A' | 'B', intro: string): VisualRef => ({
   kind: 'secondLawDerivation', props: { id }, alt: `${intro} An interactive, step-by-step derivation with graphs drawn from the cart model: use Previous step and Next step, or the left and right arrow keys. Some steps ask you to supply the missing reasoning before the mathematics appears.`,
 });
+
+export interface TwoBodyVisualProps { setup: TwoBodySetup; editable?: boolean }
+
+/** The two-body interaction laboratory; the text alternative comes from the same closed-form model that is drawn. */
+export const twoBodyVisual = (p: TwoBodyVisualProps, intro: string): VisualRef => ({
+  kind: 'twoBody', props: p as unknown as Record<string, unknown>,
+  alt: `${intro} Two carts on a frictionless track, A on the left and B on the right (${p.setup.mode === 'tow' ? 'joined by a string' : 'pushing each other apart'}). ${explainTwoBody(p.setup, twoBodyAt(p.setup, Math.min(1, p.setup.durationS / 2)))}`,
+});
+
+export interface PairVisualProps { scenario?: string; mode?: 'identify' | 'compare' }
+
+/** A force-pair figure: free-body diagrams of each object with who exerts each force; the student picks the pair. */
+export const pairVisual = (p: PairVisualProps, intro: string): VisualRef => {
+  const sc = PAIR_SCENARIOS.find((s) => s.id === (p.scenario ?? 'book')) ?? PAIR_SCENARIOS[0];
+  return { kind: 'pairIdentify', props: p as unknown as Record<string, unknown>, alt: `${intro} ${p.mode === 'compare' ? 'Two panels: balanced forces on one object, and an action–reaction pair on two objects.' : sc.setup} Forces: ${sc.forces.map((f) => `${f.label} (exerted by the ${f.by} on the ${f.on}, ${f.magnitude} N ${f.direction})`).join('; ')}.` };
+};

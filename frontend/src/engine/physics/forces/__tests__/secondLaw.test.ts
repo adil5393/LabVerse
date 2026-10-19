@@ -158,5 +158,5 @@ describe('NCERT exercises 5, 8 and 10 to 15 (verified against independent hand c
     for (const n of [12, 13]) { expect(ex(n).solution!.labs ?? []).toEqual([]); expect(ex(n).solution!.labNote).toMatch(/limits|allows/); }
     for (const n of [5, 8, 10, 11, 14, 15]) expect(ex(n).solution!.labs!.length).toBeGreaterThan(0);
   });
-  it('the third-law questions 7, 9 and 16 stay upcoming', () => { for (const n of [7, 9, 16]) { expect(ex(n).status).toBe('upcoming'); expect(ex(n).solution).toBeUndefined(); } });
+  it('the third-law questions 7, 9 and 16 are solved by PHY-2D', () => { for (const n of [7, 9, 16]) expect(ex(n).status).toBe('solved'); });
 });

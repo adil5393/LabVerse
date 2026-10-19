@@ -16,7 +16,7 @@ import { sampleAtTime, DEFAULT_SETUP } from '../forceModel';
 import { describeDiagram, netArrow } from '../forceDiagram';
 import { toArrows } from '../learn/questions';
 
-describeChapterIntegrity('Forces', CH, ['forceCart', 'forceArrows', 'brakingDemo', 'motionGraphs', 'secondLawDerivation']);
+describeChapterIntegrity('Forces', CH, ['forceCart', 'forceArrows', 'brakingDemo', 'motionGraphs', 'secondLawDerivation', 'twoBody', 'pairIdentify']);
 
 class MemoryStorage {
   private m = new Map<string, string>();
@@ -68,12 +68,12 @@ describe('curriculum map and textbook inventory', () => {
     for (const s of FORCES_TEXTBOOK_INVENTORY.sections) expect(sections, s).toContain(s);
     expect(FORCES_TEXTBOOK_INVENTORY.exercises).toBe(16); expect(FORCE_EXERCISES).toHaveLength(16);
     for (const r of FORCES_MAP) { if (r.status === 'planned') { expect(r.lessonIds).toEqual([]); if (r.section !== 'The Journey Beyond') expect(r.milestone, r.id).toBeDefined(); } for (const id of r.lessonIds) expect(CH.lessons[id], `${r.id} -> ${id}`).toBeDefined(); if (r.kind === 'enrichment') expect(r.section).toBe('enrichment'); }
-    const c = forcesCoverageCounts(); expect(c.planned).toBeGreaterThanOrEqual(3); expect(c.available + c.planned).toBe(c.total);
+    const c = forcesCoverageCounts(); expect(c.planned).toBeGreaterThanOrEqual(1); expect(c.available + c.planned).toBe(c.total);
   });
   it('only Sections 6.1 to 6.3 are claimed by the Learn lessons', () => {
     const text = JSON.stringify(CH);
     for (const m of text.matchAll(/Section[s]? (6\.\d+(?:\.\d+)?)/g)) expect(['6.1', '6.2', '6.3', '6.4', '6.5', '6.6', '6.7'], m[1]).toContain(m[1]);
-    expect(CH.ncertNote).toMatch(/upcoming/);
+    expect(CH.ncertNote).toMatch(/NCERT Exercises/);
     for (const l of Object.values(CH.lessons)) for (const s of l.steps) if (s.phase === 'observe') expect(s.paragraphs.join(' '), `${l.id}/${s.id}`).not.toMatch(/\bproves?\b|\bproved\b/i);
   });
   it('does not teach that friction always opposes the overall motion', () => {
@@ -111,8 +111,8 @@ describe('NCERT exercise inventory and solutions', () => {
     expect(FORCE_EXERCISES[1].parts!.map((p) => p.id)).toEqual(['i', 'ii', 'iii']);
     expect(FORCE_EXERCISES[5].parts).toHaveLength(4);
   });
-  it('questions 1 to 6, 8 and 10 to 15 are solved; only the third-law questions are upcoming with a milestone and no solution', () => {
-    expect(solvedForceExerciseNumbers()).toEqual([1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15]);
+  it('all sixteen questions are solved, each with the lessons that teach it', () => {
+    expect(solvedForceExerciseNumbers()).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
     for (const e of FORCE_EXERCISES) { expect(e.status === 'solved').toBe(Boolean(e.solution)); if (e.status === 'upcoming') { expect(e.milestone).toBeDefined(); expect(e.lessonIds).toEqual([]); } }
     for (const c of forceExerciseCoverage()) expect(c.missing, `Q${c.number}`).toEqual([]);
   });

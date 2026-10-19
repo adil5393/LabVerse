@@ -120,6 +120,18 @@ const MotionPractice = lazy(() =>
 const DerivationLab = lazy(() =>
   import('./features/physics/motion/MotionLabs').then((m) => ({ default: m.DerivationPage }))
 );
+const ForcesHub = lazy(() =>
+  import('./features/physics/forces/ForcesPages').then((m) => ({ default: m.ForcesHub }))
+);
+const ForcesLearnPage = lazy(() =>
+  import('./features/physics/forces/ForcesPages').then((m) => ({ default: m.ForcesLearnPage }))
+);
+const ForcesExercises = lazy(() =>
+  import('./features/physics/forces/ForcesPages').then((m) => ({ default: m.ForcesExercises }))
+);
+const ForcesLab = lazy(() =>
+  import('./features/physics/forces/ForcesLab').then((m) => ({ default: m.ForcesLab }))
+);
 const MotionLearnPage = lazy(() =>
   import('./features/physics/motion/MotionLearn').then((m) => ({ default: m.MotionLearnPage }))
 );
@@ -151,6 +163,10 @@ export const App: React.FC = () => {
 
           {/* Physics hub and Class 9 Chapter 4: Describing Motion (PHY-1A). Electricity routes above are untouched. */}
           <Route path="/physics" element={<PhysicsHub />} />
+          <Route path="/physics/forces" element={<ForcesHub />} />
+          <Route path="/physics/forces/lab" element={<ForcesLab />} />
+          <Route path="/physics/forces/exercises" element={<ForcesExercises />} />
+          <Route path="/physics/forces/learn/:lessonId" element={<ForcesLearnPage />} />
           <Route path="/physics/motion" element={<MotionHub />} />
           <Route path="/physics/motion/lab" element={<MotionLab />} />
           <Route path="/physics/motion/graphs" element={<MotionGraphStudio />} />

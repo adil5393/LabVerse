@@ -96,6 +96,21 @@ const StatesOfMatterWorkbench = lazy(() =>
   }))
 );
 
+const PhysicsHub = lazy(() =>
+  import('./features/physics/motion/MotionHub').then((m) => ({ default: m.PhysicsHub }))
+);
+const MotionHub = lazy(() =>
+  import('./features/physics/motion/MotionHub').then((m) => ({ default: m.MotionHub }))
+);
+const MotionLab = lazy(() =>
+  import('./features/physics/motion/MotionLab').then((m) => ({ default: m.MotionLab }))
+);
+const MotionLearnPage = lazy(() =>
+  import('./features/physics/motion/MotionLearn').then((m) => ({ default: m.MotionLearnPage }))
+);
+const MotionExercises = lazy(() =>
+  import('./features/physics/motion/MotionExercises').then((m) => ({ default: m.MotionExercises }))
+);
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-screen bg-[#0a0f1d] text-white flex flex-col items-center justify-center p-6 space-y-4">
     <div className="w-10 h-10 border-4 border-amber-500/20 border-t-amber-400 rounded-full animate-spin" />
@@ -118,6 +133,13 @@ export const App: React.FC = () => {
 
           {/* Route 3: Interactive Physics Workbench */}
           <Route path="/physics/electricity/workbench" element={<WorkbenchPage />} />
+
+          {/* Physics hub and Class 9 Chapter 4: Describing Motion (PHY-1A). Electricity routes above are untouched. */}
+          <Route path="/physics" element={<PhysicsHub />} />
+          <Route path="/physics/motion" element={<MotionHub />} />
+          <Route path="/physics/motion/lab" element={<MotionLab />} />
+          <Route path="/physics/motion/exercises" element={<MotionExercises />} />
+          <Route path="/physics/motion/learn/:lessonId" element={<MotionLearnPage />} />
 
           {/* Route 4: Mathematics Laboratory Landing Page */}
           <Route path="/mathematics" element={<MathematicsLab />} />

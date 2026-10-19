@@ -21,7 +21,7 @@ export const ElectricityLab: React.FC = () => {
               <span>All Subjects</span>
             </Link>
             <span className="text-slate-500">/</span>
-            <span className="text-slate-400">Physics</span>
+            <Link to="/physics" className="text-slate-400 hover:text-primary transition-colors">Physics</Link>
             <span className="text-slate-500">/</span>
             <span className="text-white font-semibold">Electricity & DC Circuits</span>
           </nav>

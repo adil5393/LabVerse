@@ -198,6 +198,15 @@ export const SubjectExplorer: React.FC = () => {
                       <span>{subject.buttonText}</span>
                       <span className="material-symbols-outlined text-base">arrow_forward</span>
                     </Link>
+                    {subject.id === 'physics' && (
+                      <Link
+                        to="/physics"
+                        data-testid="physics-chapters-link"
+                        className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-sky-500/40 text-sky-300 hover:bg-sky-500/10 font-semibold text-sm"
+                      >
+                        <span>All physics chapters</span>
+                      </Link>
+                    )}
                   </div>
                 </article>
               );

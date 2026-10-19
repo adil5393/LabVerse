@@ -35,6 +35,7 @@ export const motionVisual = (p: MotionVisualProps, intro: string): VisualRef => 
   kind: 'motionTrack', props: p as unknown as Record<string, unknown>, alt: describePath(intro, pathOf(p)),
 });
 
+import { circleStateAt, describeCircle, type Spin } from '../circular';
 import { describeProfile, scenarioById, type GraphKind, type Profile } from '../profile';
 
 export interface GraphVisualProps {
@@ -44,6 +45,10 @@ export interface GraphVisualProps {
   editable?: boolean;
   graphs?: GraphKind[];
   predict?: boolean;
+  /** Show the equation panel (substitutions and checks) under the graphs. */
+  equations?: boolean;
+  /** Offer the Equation Laboratory presets. */
+  equationPresets?: boolean;
 }
 
 /** A Graph Studio figure; its text alternative is generated from the same profile that draws the graphs. */
@@ -51,4 +56,12 @@ export const graphVisual = (p: GraphVisualProps, intro: string): VisualRef => {
   const profile = p.profile ?? scenarioById(p.scenario)?.profile;
   if (!profile) throw new Error(`Unknown graph scenario ${p.scenario}`);
   return { kind: 'motionGraphs', props: p as unknown as Record<string, unknown>, alt: describeProfile(profile, intro) };
+};
+
+export interface CircleVisualProps { radiusM: number; periodS: number; spin?: Spin; editable?: boolean; startTime?: number }
+
+/** A uniform-circular-motion figure; its text alternative is generated from the same model that draws it. */
+export const circleVisual = (p: CircleVisualProps, intro: string): VisualRef => {
+  const setup = { radiusM: p.radiusM, periodS: p.periodS, spin: p.spin ?? 'counterclockwise' } as const;
+  return { kind: 'circularMotion', props: p as unknown as Record<string, unknown>, alt: `${intro} ${describeCircle(setup, circleStateAt(setup, p.startTime ?? 0))}` };
 };

@@ -32,7 +32,7 @@ export const PhysicsHub: React.FC = () => (
         <Link to="/physics/motion" data-chapter-card="motion" className="block rounded-2xl border border-sky-500/40 bg-surface-card hover:border-sky-400 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Class 9 · Chapter 4</span>
           <h2 className="text-xl font-black text-white">Describing Motion Around Us</h2>
-          <p className="text-sm text-slate-300">Position, distance, displacement, speed and velocity, with a motion laboratory. Acceleration and graphs, with a Graph Studio. Equations of motion and circular motion are planned.</p>
+          <p className="text-sm text-slate-300">Position, distance, displacement, speed and velocity, with a motion laboratory. Acceleration, graphs, equations of motion and circular motion, with four laboratories.</p>
         </Link>
         <Link to="/physics/electricity" data-chapter-card="electricity" className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Laboratory</span>
@@ -56,12 +56,12 @@ export const MotionHub: React.FC = () => {
         <header className="space-y-2">
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">{MOTION_TEXTBOOK.book} ({MOTION_TEXTBOOK.edition}) · Chapter {MOTION_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{MOTION_TEXTBOOK.title}</h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn how to describe the motion of an object in a straight line. Start with position and reference points, then distance, displacement, speed, velocity, acceleration and graphs.</p>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn how to describe the motion of an object in a straight line. Start with position and reference points, then distance, displacement, speed, velocity, acceleration, graphs, the equations of motion and circular motion.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="motion-destinations">
           <div className={`${card} border-sky-500/40`} style={{ borderTop: "4px solid #38BDF8" }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">8 lessons in 3 units, with prerequisites, worked examples and practice.</p></div>
+            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">10 lessons in 5 units, with prerequisites, worked examples and practice.</p></div>
             <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #F59E0B" }}>
@@ -71,6 +71,14 @@ export const MotionHub: React.FC = () => {
           <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #F472B6" }}>
             <div><h2 className="text-lg font-black text-white">Motion Graph Studio</h2><p className="text-xs text-slate-300">Position–time, velocity–time and acceleration–time graphs drawn from one motion, with a time cursor and live numbers.</p></div>
             <Link to="/physics/motion/graphs" data-destination="graphs" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the Graph Studio</Link>
+          </div>
+          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #FB923C" }}>
+            <div><h2 className="text-lg font-black text-white">Equation Laboratory</h2><p className="text-xs text-slate-300">v = u + at, s = ut + ½at² and v² = u² + 2as with your own numbers, signs and graphs.</p></div>
+            <Link to="/physics/motion/equations" data-destination="equations" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the Equation Laboratory</Link>
+          </div>
+          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #2DD4BF" }}>
+            <div><h2 className="text-lg font-black text-white">Circular Motion</h2><p className="text-xs text-slate-300">Constant speed on a circle: distance along the arc, the straight-line displacement and the turning velocity.</p></div>
+            <Link to="/physics/motion/circular" data-destination="circular" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the circular motion lab</Link>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #A78BFA" }}>
             <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">{solved} of {MOTION_EXERCISES.length} questions solved step by step; the rest are upcoming.</p></div>

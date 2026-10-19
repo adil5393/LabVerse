@@ -21,6 +21,7 @@ import {
 import { pathOf, type MotionVisualProps, type Readout } from '../../../engine/physics/motion/learn/questions';
 import { fmtRate, fmtSignedRate, intervalStats, velocityAt } from '../../../engine/physics/motion/speed';
 import { useReducedMotion } from './useReducedMotion';
+import { CircularMotionVisual } from './CircularMotion';
 import { MotionGraphsVisual } from './MotionGraphs';
 import { PHYS, QUANTITY, type PhysQuantity } from './physicsColors';
 
@@ -279,4 +280,4 @@ const MotionTrack: React.FC<VisualProps> = ({ props, alt }) => {
   return <MotionTrackView range={p.range} start={p.start} moves={p.moves} durations={p.durations} editable={Boolean(p.editable)} show={p.show ?? ['position', 'distance', 'displacement']} stepM={p.stepM ?? 5} playback={p.playback ?? (p.moves.length > 1 || Boolean(p.editable))} alt={alt} />;
 };
 
-export const MOTION_VISUALS: VisualRegistry = { motionTrack: MotionTrack, motionGraphs: MotionGraphsVisual };
+export const MOTION_VISUALS: VisualRegistry = { motionTrack: MotionTrack, motionGraphs: MotionGraphsVisual, circularMotion: CircularMotionVisual };

@@ -73,7 +73,7 @@ export const MotionLearnSection: React.FC = () => {
             </ol>
           </div>
         ))}
-        <p className="text-xs text-slate-400">Later units (equations of motion and circular motion) are planned and not available yet.</p>
+        <p className="text-xs text-slate-400">Every unit of Chapter 4 is available. The prerequisite refreshers are optional and never block a lesson.</p>
       </section>
     </VisualRegistryProvider>
   );

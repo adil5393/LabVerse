@@ -8,7 +8,7 @@ import { summary } from '../../kinematics';
 import { MOTION_EXERCISES, recomputeModel, solvedExerciseNumbers } from '../../exercises';
 import { MOTION_MAP, motionCoverageCounts } from '../../curriculum';
 
-describeChapterIntegrity('Motion', CH, ['motionTrack', 'motionGraphs']);
+describeChapterIntegrity('Motion', CH, ['motionTrack', 'motionGraphs', 'circularMotion']);
 
 // Independent oracle: plain arithmetic.
 const dist = (start: number, targets: number[]) => { let d = 0, p = start; for (const t of targets) { d += Math.abs(t - p); p = t; } return d; };
@@ -19,8 +19,8 @@ describe('Motion Learn: scope and honesty', () => {
     expect(CH.prerequisiteIds.length).toBeGreaterThanOrEqual(3);
     expect(CH.units[0].prerequisiteIds.length).toBeGreaterThanOrEqual(3);
   });
-  it('states honestly what is not yet covered and cites no exercise or section numbers the chapter lacks', () => {
-    expect(CH.ncertNote).toMatch(/not yet covered/);
+  it('states honestly what is covered and cites no exercise or section numbers the chapter lacks', () => {
+    expect(CH.ncertNote).toMatch(/Sections 4\.1\.1 to 4\.4\.1/); expect(CH.ncertNote).toMatch(/NCERT Exercises/);
     const text = JSON.stringify(CH);
     for (const m of text.matchAll(/Section[s]? (4\.\d+(?:\.\d+)?)/g)) expect(['4.1.1', '4.1.2', '4.1.3', '4.1.4', '4.2.1', '4.2.2', '4.2.3', '4.3', '4.4.1'], m[1]).toContain(m[1]);
     expect(text).not.toMatch(/Exercise \d|Question \d+ of the textbook/);
@@ -131,7 +131,7 @@ describe('Motion exercises and curriculum map', () => {
     const sections = new Set(['4.1.1', '4.1.2', '4.1.3', '4.1.4', '4.2.1 to 4.2.3', '4.3', '4.4.1', 'Revise, Reflect, Refine', 'enrichment']);
     for (const r of MOTION_MAP) { expect(sections.has(r.section), r.id).toBe(true); if (r.status === 'planned') expect(r.lessonIds).toEqual([]); if (r.kind === 'enrichment') expect(r.section).toBe('enrichment'); }
     const c = motionCoverageCounts();
-    expect(c.planned).toBe(2); expect(c.available + c.planned).toBe(c.total);
+    expect(c.planned).toBe(0); expect(c.available + c.planned).toBe(c.total);
     for (const r of MOTION_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], `${r.id} -> ${id}`).toBeDefined();
   });
 });

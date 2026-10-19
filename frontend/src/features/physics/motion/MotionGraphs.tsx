@@ -7,10 +7,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { VisualProps } from '../../education/visuals';
 import { tickClock } from '../../../engine/physics/motion/kinematics';
+import { EQUATION_PRESETS } from '../../../engine/physics/motion/equations';
 import {
   areaVT, averageAcceleration, classify, describeProfile, fmt, fmtSign, LIMITS, scenarioById, SCENARIOS, series, stateAt, totalTime, turningTimes, validateProfile,
   type GraphKind, type MotionState, type Profile,
 } from '../../../engine/physics/motion/profile';
+import { EquationPanel } from './EquationPanel';
 import { PHYS } from './physicsColors';
 import { useReducedMotion } from './useReducedMotion';
 
@@ -153,9 +155,10 @@ const NumField: React.FC<{ label: string; unit: string; value: number; step: num
   );
 };
 
-export interface GraphStudioProps { scenarioId?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; withPrediction?: boolean; alt?: string }
+export interface PresetLike { id: string; title: string; profile: Profile }
+export interface GraphStudioProps { scenarioId?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; withPrediction?: boolean; alt?: string; presets?: PresetLike[]; equations?: boolean }
 
-export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt }) => {
+export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt, presets, equations = false }) => {
   const sc = scenarioById(scenarioId);
   const base = given ?? sc?.profile ?? SCENARIOS[1].profile;
   const [profile, setProfile] = useState<Profile>(base);
@@ -172,6 +175,8 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
   const area = areaVT(profile, 0, tClamped);
   const aAvg = averageAcceleration(profile, 0, tClamped);
   const seg = profile.segments[0];
+  const single = profile.segments.length === 1;
+  const list: PresetLike[] | null = presets ?? (sc ? SCENARIOS : null);
 
   const stateRef = useRef({ t, T, rate });
   useEffect(() => { stateRef.current = { t, T, rate }; });
@@ -228,15 +233,15 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
       {editable && (
         <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-controls">
           <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set the motion (each graph is drawn from these four numbers)</h3>
-          {sc && <div role="group" aria-label="Choose a scenario" className="flex flex-wrap gap-2">
-            {SCENARIOS.map((x) => <button key={x.id} type="button" data-scenario={x.id} aria-pressed={x.profile === profile} onClick={() => { setProfile(x.profile); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold" style={{ borderColor: profile === x.profile ? PHYS.velocity : '#334155', color: '#e2e8f0' }}>{profile === x.profile ? '✓ ' : ''}{x.title}</button>)}
+          {list && <div role="group" aria-label="Choose a scenario" className="flex flex-wrap gap-2">
+            {list.map((x) => <button key={x.id} type="button" data-scenario={x.id} aria-pressed={x.profile === profile} onClick={() => { setProfile(x.profile); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold" style={{ borderColor: profile === x.profile ? PHYS.velocity : '#334155', color: '#e2e8f0' }}>{profile === x.profile ? '✓ ' : ''}{x.title}</button>)}
           </div>}
-          <div className="flex flex-wrap gap-3">
+          {single ? <div className="flex flex-wrap gap-3">
             <NumField id="x0" label="Start position" unit="m" value={profile.x0} step={5} onChange={(v) => edit({ x0: v })} />
             <NumField id="v0" label="Start velocity" unit="m/s" value={profile.v0} step={1} onChange={(v) => edit({ v0: v })} />
             <NumField id="a" label="Acceleration" unit="m/s²" value={seg.a} step={0.5} onChange={(v) => edit({ a: v })} />
             <NumField id="d" label="Duration" unit="s" value={seg.durationS} step={1} onChange={(v) => edit({ d: v })} />
-          </div>
+          </div> : <p className="text-xs text-slate-300">This motion has two stages with different accelerations, so it is set by choosing the scenario. Pick another scenario to edit the four numbers.</p>}
           <p className="text-[11px] text-slate-400">Allowed: start velocity within ±{LIMITS.maxV} m/s, acceleration within ±{LIMITS.maxA} m/s², duration up to {LIMITS.maxT} s. Only a constant acceleration is offered, because then the graphs follow exactly from v = u + at and x = x₀ + ut + ½at².</p>
           {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="graph-error"><span aria-hidden>✗ </span>{err}</p>}
         </div>
@@ -262,6 +267,8 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
         </label>
         <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays. The values at a given simulated time never change.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
       </div>
+
+      {equations && <EquationPanel profile={profile} t={tClamped} />}
 
       <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="graph-readout">
         <Stat id="t" label="Simulated time" value={`${fmt(s.t)} s`} color={PHYS.time} symbol="⏱" />
@@ -292,9 +299,9 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
   );
 };
 
-export interface GraphVisualProps { scenario?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; predict?: boolean }
+export interface GraphVisualProps { scenario?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; predict?: boolean; equations?: boolean; equationPresets?: boolean }
 
 export const MotionGraphsVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const p = props as unknown as GraphVisualProps;
-  return <GraphStudioView scenarioId={p.scenario} profile={p.profile} editable={Boolean(p.editable)} graphs={p.graphs} withPrediction={Boolean(p.predict)} alt={alt} />;
+  return <GraphStudioView scenarioId={p.scenario} profile={p.profile} editable={Boolean(p.editable)} graphs={p.graphs} withPrediction={Boolean(p.predict)} alt={alt} equations={Boolean(p.equations)} presets={p.equationPresets ? EQUATION_PRESETS : undefined} />;
 };

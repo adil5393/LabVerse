@@ -100,7 +100,49 @@ export const PMP_RATE: Prerequisite = {
   ],
 };
 
-export const PM_PREREQUISITES: Prerequisite[] = [PMP_UNITS, PMP_SIGNED, PMP_LINE, PMP_RATE];
+export const PMP_FORMULA: Prerequisite = {
+  id: 'pmp-formula',
+  title: 'Using a formula: substitute, square, rearrange',
+  why: 'The equations of motion are formulas. You substitute numbers with their signs, square a number, and sometimes rearrange the formula to find another quantity.',
+  connection: 'Grade 7 and 8: algebraic expressions and linear equations',
+  refresher: [
+    {
+      id: 'pmp-fm-step', title: 'Substitute carefully, keep the signs',
+      paragraphs: [
+        'To use a formula, replace each letter by its number and then calculate in order: squares first, then multiplication, then addition. For y = 3 + 2x with x = 4: y = 3 + 2 × 4 = 11.',
+        'Put a negative number in brackets: with a = −2 and t = 3, a × t = (−2) × 3 = −6, and ½ × a × t² = ½ × (−2) × 9 = −9. To undo a formula, do the opposite operations in reverse: from 2as = 64 and s = 16 we get a = 64 ÷ (2 × 16) = 2.',
+      ],
+      misconception: { wrong: 'With a = −2, a × t² means −2 × 3² = (−6)² = 36.', right: 'Square the 3 first: t² = 9, then multiply: (−2) × 9 = −18. Squaring comes before multiplying.' },
+    },
+  ],
+  checks: [
+    numQ('pmp-fm-c1', 'Find y = 5 + 3x for x = 4.', 17, '5 + 3 × 4 = 5 + 12 = 17.', { refresherId: 'pmp-fm-step', rules: [[[32], '32 comes from (5 + 3) × 4. Multiply before adding.', 'order_of_operations']] }),
+    numQ('pmp-fm-c2', 'Find ½ × a × t² for a = −2 and t = 3.', -9, '½ × (−2) × 9 = −9.', { refresherId: 'pmp-fm-step', rules: [[[9], 'The acceleration is negative, so the result is negative.', 'sign_dropped'], [[-3], '−3 uses 3 instead of 3² = 9.', 'forgot_square']] }),
+  ],
+};
+
+export const PMP_CIRCLE: Prerequisite = {
+  id: 'pmp-circle',
+  title: 'Circle: radius, diameter and circumference',
+  why: 'Motion on a circle needs the length of the circle (the circumference) and the straight distance across it (the diameter).',
+  connection: 'Grade 6 to 8: circles and the value of π',
+  refresher: [
+    {
+      id: 'pmp-ci-step', title: 'Diameter, circumference and π',
+      paragraphs: [
+        'The radius r is the distance from the centre to the circle. The diameter is twice the radius, d = 2r. The circumference, the length once round the circle, is 2πr, where π is about 3.14.',
+        'For r = 10 m: diameter = 20 m and circumference = 2 × 3.14 × 10 = 62.8 m. Half the circumference is 31.4 m, but the straight line across the circle is the diameter, 20 m.',
+      ],
+      misconception: { wrong: 'Half way round a circle is the same distance as straight across.', right: 'The curved path (half the circumference) is longer than the straight line across (the diameter).' },
+    },
+  ],
+  checks: [
+    numQ('pmp-ci-c1', 'What is the circumference of a circle of radius 5 m (use π = 3.14), in metres?', 31.4, '2 × 3.14 × 5 = 31.4 m.', { unit: 'm', tolerance: 0.1, refresherId: 'pmp-ci-step', rules: [[[15.7], '15.7 m is only πr. The circumference is 2πr.', 'forgot_two'], [[78.5], '78.5 is the area πr², not the circumference.', 'area_for_circumference']] }),
+    numQ('pmp-ci-c2', 'What is the diameter of a circle of radius 7 m, in metres?', 14, 'd = 2r = 14 m.', { unit: 'm', refresherId: 'pmp-ci-step', rules: [[[3.5], '3.5 is half the radius. The diameter is twice the radius.', 'halved_not_doubled']] }),
+  ],
+};
+
+export const PM_PREREQUISITES: Prerequisite[] = [PMP_UNITS, PMP_SIGNED, PMP_LINE, PMP_RATE, PMP_FORMULA, PMP_CIRCLE];
 
 export const PM_UNITS: EduUnit[] = [
   {
@@ -126,5 +168,21 @@ export const PM_UNITS: EduUnit[] = [
     vocabulary: [{ term: 'acceleration', meaning: 'change in velocity ÷ time taken (m/s²)' }, { term: 'slope', meaning: 'rise ÷ run on a graph' }, { term: 'uniform acceleration', meaning: 'equal changes of velocity in equal intervals of time' }],
     discover: ['How to calculate average acceleration and read its sign', 'What the slope of each graph means', 'Why the area under a velocity–time graph is the displacement'],
     prerequisiteIds: ['pmp-signed', 'pmp-rate', 'pmp-units'], lessonIds: ['pm-l6', 'pm-l7', 'pm-l8'],
+  },
+  {
+    id: 'pm-unit-4', number: 4, title: 'Equations of motion',
+    centralIdea: 'For a constant acceleration in a straight line, three equations connect the initial velocity, final velocity, acceleration, time and displacement. They come from the slope and the area of the velocity–time graph.',
+    connection: 'This is Section 4.3. It uses acceleration and the velocity–time graph from Unit 3.',
+    vocabulary: [{ term: 'initial velocity u', meaning: 'the velocity at the start' }, { term: 'final velocity v', meaning: 'the velocity at the end' }, { term: 'constant acceleration', meaning: 'the same acceleration throughout the motion' }],
+    discover: ['How the three equations are derived', 'How to choose the right equation', 'When the equations must not be used'],
+    prerequisiteIds: ['pmp-signed', 'pmp-formula', 'pmp-rate'], lessonIds: ['pm-l9'],
+  },
+  {
+    id: 'pm-unit-5', number: 5, title: 'Uniform circular motion',
+    centralIdea: 'An object can move at a constant speed and still have a changing velocity, because velocity includes direction. Going round a circle, the velocity keeps turning.',
+    connection: 'This is Section 4.4.1. It applies speed, velocity, distance and displacement to motion that is not on a straight line.',
+    vocabulary: [{ term: 'uniform circular motion', meaning: 'motion round a circle at a constant speed' }, { term: 'period', meaning: 'the time for one complete turn' }],
+    discover: ['Why the speed is constant but the velocity is not', 'The distance along the arc and the displacement along the chord', 'Why the average velocity after a full turn is zero'],
+    prerequisiteIds: ['pmp-units', 'pmp-circle'], lessonIds: ['pm-l10'],
   },
 ];

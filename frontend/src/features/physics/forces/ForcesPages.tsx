@@ -17,12 +17,14 @@ import { LearnLessonPage } from '../../education/LearnLessonPage';
 import { ChapterPrerequisites, UnitPrerequisites } from '../../education/Prerequisites';
 import { VisualRegistryProvider, type VisualRegistry } from '../../education/visuals';
 import { ForceArrowsVisual, ForceCartView, ForceCartVisual } from './ForceCart';
+import { BrakingDemoVisual } from './BrakingDemo';
+import { MotionGraphsVisual, GraphStudioView } from '../motion/MotionGraphs';
 import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { netArrow } from '../../../engine/physics/forces/forceDiagram';
 import { toArrows } from '../../../engine/physics/forces/learn/questions';
 
-export const FORCE_VISUALS: VisualRegistry = { forceCart: ForceCartVisual, forceArrows: ForceArrowsVisual };
+export const FORCE_VISUALS: VisualRegistry = { forceCart: ForceCartVisual, forceArrows: ForceArrowsVisual, brakingDemo: BrakingDemoVisual, motionGraphs: MotionGraphsVisual };
 
 const CRUMB = 'How Forces Affect Motion';
 
@@ -48,7 +50,7 @@ const ForcesLearnSection: React.FC = () => {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-black text-white">Learn: Forces and friction</h2>
-            <p className="text-sm text-slate-300 max-w-3xl">What is a force, how do forces add up, why do balanced forces not change velocity, and what does friction do? Short explanations, a cart you can push, worked examples and problems of your own. You can skip any prerequisite refresher and still start any lesson.</p>
+            <p className="text-sm text-slate-300 max-w-3xl">What is a force, how do forces add up, why do balanced forces not change velocity, what does friction do, and what is inertia? Short explanations, a cart you can push, worked examples and problems of your own. You can skip any prerequisite refresher and still start any lesson.</p>
           </div>
           <Link data-testid="forces-start-learning" to={ch.routes.learn(next.id)} className="min-h-[48px] px-5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm inline-flex items-center">{started ? `Continue Learn: Lesson ${next.number}` : 'Start Learn: Lesson 1'}</Link>
         </div>
@@ -78,7 +80,7 @@ const ForcesLearnSection: React.FC = () => {
         ))}
         <div className="rounded-2xl border border-dashed border-surface-border p-4 space-y-1" data-testid="forces-upcoming-units">
           <h3 className="text-sm font-black text-slate-300">Upcoming units</h3>
-          <p className="text-xs text-slate-400">Newton&apos;s first law (Section 6.4), Newton&apos;s second law (6.5), Newton&apos;s third law (6.6) and forces on a system of objects (6.7) are upcoming. They are not available yet.</p>
+          <p className="text-xs text-slate-400">Newton&apos;s second law (Section 6.5), Newton&apos;s third law (6.6) and forces on a system of objects (6.7) are upcoming. They are not available yet.</p>
         </div>
       </section>
     </VisualRegistryProvider>
@@ -107,16 +109,16 @@ export const ForcesHub: React.FC = () => {
         <header className="space-y-2">
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">{FORCES_TEXTBOOK.book} ({FORCES_TEXTBOOK.edition}) · Chapter {FORCES_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{FORCES_TEXTBOOK.title}</h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn what a force is, how forces add up, why balanced forces do not change velocity, and what friction does. Newton&apos;s three laws are upcoming.</p>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn what a force is, how forces add up, why balanced forces do not change velocity, what friction does, and Newton&apos;s first law with inertia. The second and third laws are upcoming.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="forces-destinations">
           <div className={`${card} border-sky-500/40`} style={{ borderTop: '4px solid #38BDF8' }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">3 lessons in 2 units, with prerequisites, worked examples and practice.</p></div>
+            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">5 lessons in 3 units, with prerequisites, worked examples and practice.</p></div>
             <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #818CF8' }}>
-            <div><h2 className="text-lg font-black text-white">Free Laboratory</h2><p className="text-xs text-slate-300">Push a cart, change the mass and the surface, and see the force arrows. Five optional investigations. No gates.</p></div>
+            <div><h2 className="text-lg font-black text-white">Free Laboratory</h2><p className="text-xs text-slate-300">Push a cart, change the mass and the surface, and see the force arrows. Ten optional investigations (A to J). No gates.</p></div>
             <Link to="/physics/forces/lab" data-destination="lab" className={btn}>Open the laboratory</Link>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #A78BFA' }}>
@@ -170,6 +172,7 @@ const IllustrationView: React.FC<{ ill: Illustration; id: string }> = ({ ill, id
       <figcaption className="text-xs text-slate-300"><strong style={{ color: PHYS.prediction }}>Interactive illustration. </strong>{ill.caption}</figcaption>
       {ill.kind === 'arrows' && <ForceFigure object={ill.object} arrows={arrows} net={netArrow(arrows)} showIndividual showNet={ill.showNet} alt={ill.caption} />}
       {ill.kind === 'cart' && <ForceCartView initial={ill.setup} editable={false} startTime={ill.t} alt={ill.caption} />}
+      {ill.kind === 'graph' && <GraphStudioView profile={ill.profile} graphs={ill.graphs} alt={ill.caption} />}
     </figure>
   );
 };

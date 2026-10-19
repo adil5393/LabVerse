@@ -14,13 +14,15 @@
 import { netFromArrows } from './forceDiagram';
 import { DEFAULT_SETUP, sampleAtTime, type Setup } from './forceModel';
 import { toArrows, type ForceArrowSpec } from './learn/questions';
+import type { GraphKind, Profile } from '../motion/profile';
 
 export interface SolutionStep { text: string; why: string }
 export interface FinalAnswer { label: string; value: string; part?: string; numeric?: number }
 
 export type Illustration =
   | { kind: 'arrows'; caption: string; object: string; forces: ForceArrowSpec[]; showNet: boolean }
-  | { kind: 'cart'; caption: string; setup: Setup; t: number };
+  | { kind: 'cart'; caption: string; setup: Setup; t: number }
+  | { kind: 'graph'; caption: string; profile: Profile; graphs: GraphKind[] };
 
 export interface LabLink { href: string; label: string }
 
@@ -166,7 +168,36 @@ export const FORCE_EXERCISES: ForceExercise[] = [
     },
   },
   up(5, 'When a net force acts on an object, which description of the resulting acceleration is correct (four options about its direction and how it depends on force or mass)?', "Newton's second law (statement)", ['6.5'], 'PHY-2C'),
-  up(6, 'Position-time graphs of four objects A, B, C and D are given. On which of them does a net force act?', 'Graphs and net force', ['6.4', '6.5'], 'PHY-2B', [{ id: 'i', label: '(i) object A' }, { id: 'ii', label: '(ii) object B' }, { id: 'iii', label: '(iii) object C' }, { id: 'iv', label: '(iv) object D' }]),
+  {
+    number: 6, sections: ['6.4'], topic: 'Position-time graphs and net force', status: 'solved', lessonIds: ['pf-l4'],
+    parts: [{ id: 'i', label: '(i) object A' }, { id: 'ii', label: '(ii) object B' }, { id: 'iii', label: '(iii) object C' }, { id: 'iv', label: '(iv) object D' }],
+    summary: 'Position-time graphs of four objects moving along a straight line are given: A is a rising straight line, B a horizontal line, C a curve that bends upward, D a falling straight line. On which of them does a net force act?',
+    solution: {
+      kind: 'multiple-choice',
+      given: ['Fig. 6.37: A is a straight line sloping up; B is a horizontal line; C is a curve that gets steeper; D is a straight line sloping down.'],
+      find: ['(i) to (iv) For each of the objects A, B, C and D, whether a net force acts.'],
+      principle: 'By the first law, with zero net force an object is at rest or moves with a constant velocity. A net force is present only if the velocity changes, that is, if the slope of the position-time graph changes.',
+      hint: 'The slope of a position-time graph is the velocity. For each graph ask: is the slope constant?',
+      steps: [
+        { text: 'A: a straight sloping line has a constant slope, so a constant velocity. No net force acts on A.', why: 'Constant velocity means zero acceleration, so the net force is zero.' },
+        { text: 'B: a horizontal line has zero slope: B is at rest. No net force acts on B.', why: 'An object at rest with no change of velocity has zero net force.' },
+        { text: 'C: the curve gets steeper, so the slope (the velocity) keeps increasing. C accelerates, so a net force acts on C.', why: 'A changing velocity needs an unbalanced force.' },
+        { text: 'D: a straight line sloping down has a constant (negative) slope: a constant velocity in the negative direction. No net force acts on D.', why: 'A constant velocity, in either direction, means zero net force.' },
+      ],
+      answers: [{ label: '(i) Object A', value: 'No net force (constant velocity)', part: 'i' }, { label: '(ii) Object B', value: 'No net force (at rest)', part: 'ii' }, { label: '(iii) Object C', value: 'A net force acts (the velocity increases)', part: 'iii' }, { label: '(iv) Object D', value: 'No net force (constant velocity in the negative direction)', part: 'iv' }],
+      explanation: 'Only the curved graph shows a changing velocity, so only object C has a net force. The graphs of A and D show a constant velocity, one positive and one negative, and the graph of B shows rest.',
+      commonMistakes: [{ mistake: 'Saying a net force acts on A because it is moving.', fix: 'A constant velocity needs no net force.' }, { mistake: 'Saying a net force acts on D because the graph slopes downwards.', fix: 'The slope is constant: the object moves steadily in the negative direction.' }, { mistake: 'Saying no net force acts on B because it is not moving.', fix: 'That is correct for B: at rest with no change. Check C, not B, for the changing velocity.' }],
+      illustrations: [
+        { kind: 'graph', caption: 'A (illustrative values with the same shape): a straight sloping line, constant velocity.', profile: { x0: 0, v0: 2, segments: [{ durationS: 10, a: 0 }] }, graphs: ['xt', 'vt'] },
+        { kind: 'graph', caption: 'B: a horizontal line, at rest.', profile: { x0: 5, v0: 0, segments: [{ durationS: 10, a: 0 }] }, graphs: ['xt', 'vt'] },
+        { kind: 'graph', caption: 'C: a curve that gets steeper, so the velocity increases: a net force acts.', profile: { x0: 0, v0: 0, segments: [{ durationS: 10, a: 1 }] }, graphs: ['xt', 'vt'] },
+        { kind: 'graph', caption: 'D: a straight line sloping down, constant negative velocity.', profile: { x0: 20, v0: -2, segments: [{ durationS: 10, a: 0 }] }, graphs: ['xt', 'vt'] },
+      ],
+      labs: [{ href: '/physics/forces/lab?experiment=G', label: 'Experiment G: zero net force with different starting velocities' }],
+      labNote: 'The textbook graphs have no scale; the illustrations use stated values with the same shapes. Their velocity-time graphs show the constant velocity (A, D), zero velocity (B) and changing velocity (C).',
+      verification: V('The slope behaviour of each illustrative profile was recomputed (automated test): constant for A, B and D, changing for C.'),
+    },
+  },
   up(7, 'A sailor jumps from a small boat towards the shore. Does the boat move, and in which direction and why?', "Newton's third law", ['6.6'], 'PHY-2D'),
   up(8, 'Explain why a landing mat or sand bed is placed for a high-jump athlete.', "Newton's second law (time of contact)", ['6.5'], 'PHY-2C'),
   up(9, 'A loaded hand cart collides with an identical empty one. Which statement about the forces during the collision is correct?', "Newton's third law", ['6.6'], 'PHY-2D'),

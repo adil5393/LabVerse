@@ -43,6 +43,8 @@ export interface Setup {
   startVelocity: number;
   /** Starting position in metres. */
   startPosition: number;
+  /** Optional: the pushes A and B act only for this long (a force pulse, in seconds, a multiple of the step); absent = always. */
+  pulseS?: number;
 }
 
 export const LIMITS = { minMass: 0.5, maxMass: 50, maxForce: 100, maxVelocity: 20 } as const;
@@ -55,11 +57,15 @@ export function validateSetup(s: Setup): string | null {
   if (s.forceA > LIMITS.maxForce || s.forceB > LIMITS.maxForce) return `A force can be at most ${LIMITS.maxForce} N in this laboratory.`;
   if (Math.abs(s.startVelocity) > LIMITS.maxVelocity) return `Starting velocity must be between −${LIMITS.maxVelocity} and ${LIMITS.maxVelocity} m/s.`;
   if (!SURFACES.some((x) => x.id === s.surfaceId)) return 'Unknown surface.';
+  if (s.pulseS !== undefined && (!Number.isFinite(s.pulseS) || s.pulseS < 0 || s.pulseS > MAX_TIME)) return `The force pulse must last between 0 and ${MAX_TIME} s.`;
   return null;
 }
 
 export const signed = (magnitude: number, dir: Dir): number => (dir === 'right' ? magnitude : -magnitude);
 /** The sum of the two pushes (signed, right positive): the driving force before friction. */
+/** The setup as it acts at simulated time t: after a force pulse ends the pushes are zero (friction and mass are unchanged). */
+export const effectiveAt = (s: Setup, t: number): Setup => (s.pulseS !== undefined && t >= s.pulseS - 1e-9 ? { ...s, forceA: 0, forceB: 0 } : s);
+
 export const driveForce = (s: Setup): number => signed(s.forceA, s.dirA) + signed(s.forceB, s.dirB);
 
 export type FrictionKind = 'none' | 'static' | 'kinetic';
@@ -120,7 +126,8 @@ function advance(s: Setup, x: number, v: number, dt: number): { x: number; v: nu
   return { x: px, v: Math.abs(pv) < EPS ? 0 : pv };
 }
 
-export function sampleOf(s: Setup, t: number, x: number, v: number): Sample {
+export function sampleOf(s0: Setup, t: number, x: number, v: number): Sample {
+  const s = effectiveAt(s0, t);
   const f = forcesAt(s, v);
   return {
     t, x, v, a: f.a, forceA: signed(s.forceA, s.dirA), forceB: signed(s.forceB, s.dirB),
@@ -141,7 +148,7 @@ export function simulate(s: Setup, tMax = 20): Sample[] {
   let x = s.startPosition, v = s.startVelocity;
   for (let i = 0; i <= n; i++) {
     out.push(sampleOf(s, Math.round(i * DT * 1000) / 1000, x, v));
-    const nx = advance(s, x, v, DT); x = nx.x; v = nx.v;
+    const nx = advance(effectiveAt(s, Math.round(i * DT * 1000) / 1000), x, v, DT); x = nx.x; v = nx.v;
   }
   if (cache.size > 200) cache.clear();
   cache.set(k, out);

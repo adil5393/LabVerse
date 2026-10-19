@@ -105,7 +105,34 @@ export const PFP_ARROWS: Prerequisite = {
   ],
 };
 
-export const PF_PREREQUISITES: Prerequisite[] = [PFP_MOTION, PFP_DIRECTION, PFP_MASS, PFP_ARROWS];
+export const PFP_XT: Prerequisite = {
+  id: 'pfp-xt',
+  title: 'Reading position–time graphs',
+  why: 'The first law is often shown with graphs: a straight line means a constant velocity, and a curve means the velocity is changing.',
+  connection: 'Chapter 4: lesson 7 (position–time graphs), /physics/motion/learn/pm-l7',
+  refresher: [
+    {
+      id: 'pfp-xt-step', title: 'The slope of a position–time graph is the velocity',
+      paragraphs: [
+        'On a position–time graph, time is on the horizontal axis and position on the vertical axis. A horizontal line means the position does not change: the object is at rest. A straight sloping line means a constant velocity. A curve means the slope, and so the velocity, is changing.',
+        'A steeper line means a greater speed; a line sloping downwards means motion in the negative direction.',
+      ],
+      misconception: { wrong: 'A higher point on the graph means a faster object.', right: 'The height is the position. The speed is shown by the slope.' },
+    },
+  ],
+  checks: [
+    pick('pfp-xt-c1', 'A position–time graph is a straight sloping line. What does it show?', [
+      ['A constant velocity', null],
+      ['The object is at rest', 'At rest the position does not change, so the line would be horizontal.', 'line_means_rest'],
+    ], 'Constant slope: constant velocity.', undefined, 'pfp-xt-step'),
+    pick('pfp-xt-c2', 'A position–time graph curves upward and gets steeper. What is happening to the velocity?', [
+      ['It is increasing', null],
+      ['It is constant', 'A constant velocity would be a straight line.', 'curve_means_constant'],
+    ], 'A steepening curve: increasing velocity.', undefined, 'pfp-xt-step'),
+  ],
+};
+
+export const PF_PREREQUISITES: Prerequisite[] = [PFP_MOTION, PFP_DIRECTION, PFP_MASS, PFP_ARROWS, PFP_XT];
 
 export const PF_UNITS: EduUnit[] = [
   {
@@ -123,5 +150,13 @@ export const PF_UNITS: EduUnit[] = [
     vocabulary: [{ term: 'friction', meaning: 'the contact force between surfaces that resists sliding' }, { term: 'static friction', meaning: 'friction on an object that is not sliding; it matches the push up to a limit' }, { term: 'kinetic friction', meaning: 'friction on a sliding object' }],
     discover: ['What decides the direction of friction', 'Why objects slow down and stop', 'Why a gentle push may not move an object'],
     prerequisiteIds: ['pfp-motion', 'pfp-direction'], lessonIds: ['pf-l3'],
+  },
+  {
+    id: 'pf-unit-3', number: 3, title: 'Newton\'s first law and inertia',
+    centralIdea: 'With zero net force an object at rest stays at rest and a moving object keeps a constant velocity. Inertia, the resistance to a change of velocity, is measured by mass and is not a force.',
+    connection: 'This is Section 6.4. It builds on balanced forces and friction and prepares the second law.',
+    vocabulary: [{ term: 'Newton\'s first law', meaning: 'zero net force: no change of velocity' }, { term: 'inertia', meaning: 'the resistance of an object to a change of its velocity' }],
+    discover: ['What the first law says about rest and motion', 'Why everyday objects stop, and why no force is needed to keep moving', 'How mass measures inertia, and why passengers lurch when a vehicle brakes'],
+    prerequisiteIds: ['pfp-motion', 'pfp-xt', 'pfp-mass'], lessonIds: ['pf-l4', 'pf-l5'],
   },
 ];

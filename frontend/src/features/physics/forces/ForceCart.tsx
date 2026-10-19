@@ -9,7 +9,7 @@ import type { VisualProps } from '../../education/visuals';
 import { tickClock } from '../../../engine/physics/motion/kinematics';
 import { diagramOf } from '../../../engine/physics/forces/forceDiagram';
 import {
-  DEFAULT_SETUP, explain, LIMITS, sampleAtTime, simulate, SURFACES, surfaceById, validateSetup, type Dir, type Setup,
+  DEFAULT_SETUP, DT, explain, LIMITS, sampleAtTime, simulate, SURFACES, surfaceById, validateSetup, type Dir, type Setup,
 } from '../../../engine/physics/forces/forceModel';
 import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
@@ -169,6 +169,9 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
             <span className="text-xs font-bold" style={{ color: PHYS.force }}>Push B</span>
             <Field id="forceB" label="Force B" unit="N" value={setup.forceB} step={1} onChange={(v) => change({ forceB: v })} />
             <DirToggle label="B" value={setup.dirB} onChange={(dir) => change({ dirB: dir })} />
+          </div>
+          <div className="flex flex-wrap gap-3 items-center">
+            <Field id="pulse" label="Pushes last for (0 = always)" unit="s" value={setup.pulseS ?? 0} step={1} onChange={(v) => change({ pulseS: v <= 0 ? undefined : Math.round(v / DT) * DT })} />
           </div>
           <p className="text-[11px] text-slate-400">Assumptions: a cart on a horizontal track (weight = normal force, g = 10 m/s²), right is positive, no air resistance. Friction uses the simple dry-friction model: {surfaceById(setup.surfaceId).note} Mass {LIMITS.minMass} to {LIMITS.maxMass} kg, forces up to {LIMITS.maxForce} N.</p>
           {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="force-error"><span aria-hidden>{'✗ '}</span>{err}</p>}

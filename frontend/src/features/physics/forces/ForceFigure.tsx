@@ -81,7 +81,7 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
         })}
         {showNet && (net
           ? <g data-arrow="net" data-direction={net.direction} data-magnitude={net.magnitude}>{hArrow(net, netY, 6)}<text x={CX} y={netY - 22} textAnchor="middle" fontSize={11} fill={PHYS.netForce}>net force on the {object}</text></g>
-          : <text x={CX} y={netY} textAnchor="middle" fontSize={12} fontWeight={700} fill={PHYS.correct} data-arrow="net-zero">{'✓'} net force = 0 N (balanced)</text>)}
+          : <text x={CX} y={H - 10} textAnchor="middle" fontSize={12} fontWeight={700} fill={PHYS.correct} data-arrow="net-zero">{'✓'} net force = 0 N (balanced)</text>)}
       </svg>
       {listing && (
         <figcaption className="text-xs text-slate-200 space-y-1" data-testid="force-listing">

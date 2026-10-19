@@ -119,6 +119,20 @@ export interface StudentLessonProgress {
   practiceCorrectCount: number;
   practiceTotalQuestions: number;
   teacherBypassed?: boolean;
+  /**
+   * Per-question practice evidence (EDU-1). `firstAttemptCorrect` means correct
+   * on the first try with no hint, no revealed solution and no teacher mode.
+   */
+  practiceAnswered?: Record<string, PracticeEvidence>;
+  /** True for records saved before evidence tracking whose "mastered" flag could not be verified. */
+  legacyMasteryUnverified?: boolean;
+}
+
+export interface PracticeEvidence {
+  attempts: number;
+  correct: boolean;
+  firstAttemptCorrect: boolean;
+  assisted: boolean;
 }
 
 export interface ChapterProgressState {

@@ -12,11 +12,23 @@ const WorkbenchPage = lazy(() =>
 const MathematicsLab = lazy(() =>
   import('./features/mathematics/MathematicsLab').then((m) => ({ default: m.MathematicsLab }))
 );
+const CoordinateGeometryLab = lazy(() =>
+  import('./features/mathematics/coordinateGeometry/CoordinateGeometryPages').then((m) => ({ default: m.CoordinateGeometryLab }))
+);
+const CoordinateGeometryLearnPage = lazy(() =>
+  import('./features/mathematics/coordinateGeometry/CoordinateGeometryPages').then((m) => ({ default: m.CoordinateGeometryLearnPage }))
+);
+const CoordinateGeometryPracticePage = lazy(() =>
+  import('./features/mathematics/coordinateGeometry/CoordinateGeometryPages').then((m) => ({ default: m.CoordinateGeometryPracticePage }))
+);
 const MathWorkbenchPage = lazy(() =>
   import('./features/mathematics/MathWorkbenchPage').then((m) => ({ default: m.MathWorkbenchPage }))
 );
 const CirclesLab = lazy(() =>
   import('./features/mathematics/circles/CirclesLab').then((m) => ({ default: m.CirclesLab }))
+);
+const CirclesLearnPage = lazy(() =>
+  import('./features/mathematics/circles/learn/CirclesLearn').then((m) => ({ default: m.CirclesLearnPage }))
 );
 const CircleWorkbenchPage = lazy(() =>
   import('./features/mathematics/circles/CircleWorkbenchPage').then((m) => ({
@@ -100,16 +112,16 @@ export const App: React.FC = () => {
 
           {/* Route 5: Interactive Mathematics Workbench (Coordinate Geometry) */}
           <Route path="/mathematics/workbench" element={<MathWorkbenchPage />} />
-          <Route
-            path="/mathematics/coordinate-geometry"
-            element={<Navigate to="/mathematics/workbench?module=coordinate-geometry&experiment=distance" replace />}
-          />
+          <Route path="/mathematics/coordinate-geometry" element={<CoordinateGeometryLab />} />
+          <Route path="/mathematics/coordinate-geometry/learn/:lessonId" element={<CoordinateGeometryLearnPage />} />
+          <Route path="/mathematics/coordinate-geometry/practice" element={<CoordinateGeometryPracticePage />} />
 
           {/* Route 6: Circles Module Landing Page */}
           <Route path="/mathematics/circles" element={<CirclesLab />} />
 
           {/* Route 7: Interactive Circles Workbench */}
           <Route path="/mathematics/circles/workbench" element={<CircleWorkbenchPage />} />
+          <Route path="/mathematics/circles/learn/:lessonId" element={<CirclesLearnPage />} />
 
           {/* Route 8: Quadrilaterals Module Landing Page */}
           <Route path="/mathematics/quadrilaterals" element={<QuadrilateralsLab />} />

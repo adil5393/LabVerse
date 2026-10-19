@@ -26,10 +26,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // 1. Foundations & Symmetries
   {
     id: 'ncert_circle_def',
-    sectionNumber: 'Section 1',
-    sectionTitle: 'Introduction & Anatomy of a Circle',
+    sectionNumber: '5.1',
+    sectionTitle: 'Definitions',
     topicTitle: 'Definition & Anatomy of a Circle',
-    ncertReference: 'NCERT Class 9 Circles — Section 1.1: Basic Terms',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.1 Definitions',
     statement:
       'A circle is the collection of all points in a plane which are at a fixed distance (radius) from a fixed point (center). Diameter is the longest chord passing through the center.',
     category: 'foundations',
@@ -44,10 +44,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_circle_symmetry',
-    sectionNumber: 'Section 1',
+    sectionNumber: '5.2',
     sectionTitle: 'Symmetries of a Circle',
     topicTitle: 'Rotational & Reflectional Symmetries',
-    ncertReference: 'NCERT Class 9 Circles — Section 1.2: Symmetries & Invariants',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.2 Symmetries of a Circle',
     statement:
       'A circle possesses infinitely many axes of reflection symmetry (any diameter) and is invariant under rotation by any angle around its center. Chord lengths and radial distances are strictly preserved under all symmetry transformations.',
     category: 'foundations',
@@ -62,10 +62,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_circles_through_points',
-    sectionNumber: 'Section 2',
-    sectionTitle: 'Number of Circles Through Given Points',
+    sectionNumber: '5.3',
+    sectionTitle: 'How Many Circles?',
     topicTitle: 'Circles Through 1, 2, and 3 Points (Circumcircle)',
-    ncertReference: 'NCERT Class 9 Circles — Section 2: Circles Through Points',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.3 How Many Circles? (Theorem 1)',
     statement:
       'There is one and only one circle passing through three given non-collinear points. For two points, the locus of all possible centers is their perpendicular bisector. No finite circle passes through three collinear points.',
     category: 'foundations',
@@ -84,10 +84,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // 2. Chords & Their Properties
   {
     id: 'ncert_perp_bisects_chord',
-    sectionNumber: 'Section 3',
-    sectionTitle: 'Chords and Perpendiculars',
+    sectionNumber: '5.5',
+    sectionTitle: 'Midpoints and Perpendicular Bisectors of Chords',
     topicTitle: 'Perpendicular from Center to Chord & Converse',
-    ncertReference: 'NCERT Class 9 Theorem 9.1 & 9.2 (Old 10.3 & 10.4)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.5 (Theorems 4 and 5)',
     statement:
       'The perpendicular from the center of a circle to a chord bisects the chord (OM ⊥ AB ⇒ AM = MB).',
     converseStatement:
@@ -104,10 +104,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_equal_chords_central_angles',
-    sectionNumber: 'Section 3',
-    sectionTitle: 'Equal Chords and Central Angles',
+    sectionNumber: '5.4',
+    sectionTitle: 'Chords and the Angles They Subtend',
     topicTitle: 'Equal Chords Subtend Equal Angles at the Center & Converse',
-    ncertReference: 'NCERT Class 9 Theorem 9.3 & 9.4 (Old 10.1 & 10.2)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.4 (Theorems 2 and 3)',
     statement:
       'Equal chords of a circle (or of congruent circles) subtend equal angles at the center (AB = CD ⇒ ∠AOB = ∠COD).',
     converseStatement:
@@ -124,10 +124,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_chord_distance_comparison',
-    sectionNumber: 'Section 3',
-    sectionTitle: 'Distance of Chords from the Center',
+    sectionNumber: '5.6',
+    sectionTitle: 'Distance of Chords from the Centre',
     topicTitle: 'Equal Chords Equidistant & "Longer Chord is Nearer to Center"',
-    ncertReference: 'NCERT Class 9 Theorem 9.5, 9.6 & Invariant Comparison',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.6 (Theorems 6, 7 and 8)',
     statement:
       'Equal chords of a circle are equidistant from the center. Of two unequal chords in a circle, the longer chord is nearer to the center (AB > CD ⇔ d(O, AB) < d(O, CD)).',
     converseStatement:
@@ -146,10 +146,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // 3. Angles Subtended by Arcs
   {
     id: 'ncert_central_double_inscribed',
-    sectionNumber: 'Section 4',
+    sectionNumber: '5.7',
     sectionTitle: 'Angles Subtended by an Arc',
     topicTitle: 'Central Angle is Double the Inscribed Angle',
-    ncertReference: 'NCERT Class 9 Theorem 9.7 (Old 10.8)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.7 (Theorem 9)',
     statement:
       'The angle subtended by an arc at the center is double the angle subtended by it at any point on the remaining part of the circle (∠AOB = 2 × ∠APB).',
     category: 'angles_theorems',
@@ -164,10 +164,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_angles_same_segment',
-    sectionNumber: 'Section 4',
-    sectionTitle: 'Angles in the Same Segment',
+    sectionNumber: '5.7',
+    sectionTitle: 'Angles Subtended by an Arc',
     topicTitle: 'Angles in the Same Segment are Equal',
-    ncertReference: 'NCERT Class 9 Theorem 9.8 (Old 10.9)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.7 (a consequence of Theorem 9: angles in the same arc segment are equal)',
     statement:
       'Angles in the same segment of a circle are equal (∠APB = ∠AQB for any two points P, Q on the same arc).',
     category: 'angles_theorems',
@@ -182,10 +182,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_angle_semicircle',
-    sectionNumber: 'Section 4',
-    sectionTitle: 'Angle in a Semicircle',
+    sectionNumber: '5.7',
+    sectionTitle: 'Angles Subtended by an Arc',
     topicTitle: 'Angle in a Semicircle is 90°',
-    ncertReference: 'NCERT Class 9 Corollary to Theorem 9.8',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.7 and an end-of-chapter exercise (angle in a semicircle is 90 degrees)',
     statement:
       'The angle subtended by a diameter at any point on the semicircle is a right angle (90°).',
     category: 'angles_theorems',
@@ -199,10 +199,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_same_segment_converse',
-    sectionNumber: 'Section 4',
-    sectionTitle: 'Converse of Same Segment Theorem',
+    sectionNumber: '5.8',
+    sectionTitle: 'Concyclicity of Points',
     topicTitle: 'Concyclicity from Equal Angles on Common Segment',
-    ncertReference: 'NCERT Class 9 Theorem 9.9 (Old 10.10)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.8 (Theorem 10)',
     statement:
       'If a line segment joining two points subtends equal angles at two other points lying on the same side of the line containing the segment, the four points lie on a circle (they are concyclic).',
     category: 'angles_theorems',
@@ -219,10 +219,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // 4. Cyclic Quadrilaterals
   {
     id: 'ncert_cyclic_quad_supplementary',
-    sectionNumber: 'Section 5',
-    sectionTitle: 'Cyclic Quadrilaterals',
+    sectionNumber: '5.8',
+    sectionTitle: 'Concyclicity of Points',
     topicTitle: 'Opposite Angles of a Cyclic Quadrilateral are Supplementary',
-    ncertReference: 'NCERT Class 9 Theorem 9.10 (Old 10.11)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.8 (Theorem 11)',
     statement:
       'The sum of either pair of opposite angles of a cyclic quadrilateral is 180° (∠A + ∠C = 180° and ∠B + ∠D = 180°).',
     category: 'angles_theorems',
@@ -237,10 +237,10 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_cyclic_quad_converse',
-    sectionNumber: 'Section 5',
-    sectionTitle: 'Converse of Cyclic Quadrilateral Theorem',
+    sectionNumber: '5.8',
+    sectionTitle: 'Concyclicity of Points',
     topicTitle: 'Concyclicity Condition: Supplementary Opposite Angles',
-    ncertReference: 'NCERT Class 9 Theorem 9.11 (Old 10.12)',
+    ncertReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.8 (Theorem 12)',
     statement:
       'If the sum of a pair of opposite angles of a quadrilateral is 180°, the quadrilateral is cyclic.',
     category: 'angles_theorems',
@@ -260,7 +260,7 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
     sectionNumber: 'Extension',
     sectionTitle: 'Tangents to a Circle (Bridging Class 9 & 10)',
     topicTitle: 'Tangent Perpendicular to Radius at Contact Point',
-    ncertReference: 'Supporting Curriculum Extension: Tangent-Radius Geometry',
+    ncertReference: 'Not part of this NCERT chapter. Optional extension that bridges to later classes',
     statement:
       'The tangent at any point of a circle is perpendicular to the radius through the point of contact (OP ⊥ Tangent Line).',
     category: 'extension',
@@ -278,7 +278,7 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
     sectionNumber: 'Synthesis',
     sectionTitle: 'Deductive Euclidean Proof Laboratory',
     topicTitle: 'Comprehensive Theorem Synthesis & Guided Proofs',
-    ncertReference: 'NCERT Class 9 Circles — Complete Axiomatic Synthesis',
+    ncertReference: 'Synthesis of Theorems 1 to 12 of NCERT Ganita Manjari Grade 9, Part I, Chapter 5',
     statement:
       'Euclidean geometric deduction combines given conditions, auxiliary constructions, triangle congruence criteria (RHS, SSS, SAS), and angle invariants to prove circle properties universally.',
     category: 'practice_revision',
@@ -296,7 +296,7 @@ export const NCERT_CIRCLES_CURRICULUM_REGISTRY: CurriculumTopic[] = [
     sectionNumber: 'Practice & Revision',
     sectionTitle: 'Chapter Practice & Revision Challenge',
     topicTitle: 'NCERT Chapter Examination & Numerical Mastery',
-    ncertReference: 'NCERT Class 9 Ganita Manjari — Exercises & Practice Questions',
+    ncertReference: 'Practice on the topics of NCERT Ganita Manjari Grade 9, Part I, Chapter 5 (questions are original)',
     statement:
       'Solve rigorous numerical, geometric, and reasoning problems covering all theorems, converses, chord distances, arc subtended angles, and cyclic quadrilaterals.',
     category: 'practice_revision',

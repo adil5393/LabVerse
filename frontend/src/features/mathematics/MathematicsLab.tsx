@@ -34,8 +34,8 @@ const MATH_MODULES: MathModule[] = [
     icon: 'square_foot',
     status: 'active',
     experimentsCount: 1,
-    route: '/mathematics/workbench?module=coordinate-geometry&experiment=distance',
-    badge: 'Active Laboratory',
+    route: '/mathematics/coordinate-geometry',
+    badge: 'Learn + Laboratory',
   },
   {
     id: 'circles',
@@ -167,11 +167,11 @@ export const MathematicsLab: React.FC = () => {
 
           <div className="flex items-center gap-3 self-start md:self-auto">
             <Link
-              to="/mathematics/workbench?module=coordinate-geometry&experiment=distance"
+              to="/mathematics/coordinate-geometry"
               className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/20 transition-all inline-flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-              <span>Launch Coordinate Geometry</span>
+              <span>Open Coordinate Geometry</span>
             </Link>
           </div>
         </section>

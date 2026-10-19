@@ -19,6 +19,10 @@ import {
   CIRCLES_GUIDED_LESSONS,
 } from '../../../engine/mathematics/circles/curriculumPath';
 import { CIRCLE_EXPERIMENTS } from '../../../engine/mathematics/circles/circleExperiments';
+import { CIRCLES_CHAPTER } from '../../../engine/mathematics/circles/learn/content';
+import { lessonStatus, STATUS_LABEL } from '../../../engine/education/progress';
+import { useEducationStore } from '../../../store/useEducationStore';
+import { CirclesLearnSection } from './learn/CirclesLearn';
 
 export const CirclesLab: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +38,7 @@ export const CirclesLab: React.FC = () => {
     selectLesson,
   } = useGuidedLearningStore();
 
+  const learnRecords = useEducationStore((st) => st.lessons);
   const stats = getCompletionStats();
   const nextLesson = CIRCLES_GUIDED_LESSONS[stats.nextRecommendedLessonId] || CIRCLES_GUIDED_LESSONS['circles-l1'];
 
@@ -132,7 +137,7 @@ export const CirclesLab: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">auto_stories</span>
-                  <span>Guided Learning Path</span>
+                  <span>Guided Investigation</span>
                 </span>
                 <span className="text-xs font-mono text-amber-400 font-bold">
                   {stats.completedCount} / {stats.totalCount} Lessons ({stats.percentage}%)
@@ -177,7 +182,7 @@ export const CirclesLab: React.FC = () => {
                   {stats.completedCount > 0 ? 'play_arrow' : 'rocket_launch'}
                 </span>
                 <span>
-                  {stats.completedCount > 0 ? `Continue Lesson ${nextLesson.lessonNumber}` : 'Start Learning: Lesson 1'}
+                  {stats.completedCount > 0 ? `Continue Investigating: Lesson ${nextLesson.lessonNumber}` : 'Start Investigating: Lesson 1'}
                 </span>
               </button>
             </div>
@@ -248,6 +253,9 @@ export const CirclesLab: React.FC = () => {
           </div>
         </div>
 
+        {/* Learn the ideas: explanations, worked examples, guided and independent practice */}
+        <CirclesLearnSection />
+
         {/* ========================================================= */}
         {/* VIEW TOGGLE: GUIDED ROADMAP vs EXPERIMENTS CATALOG */}
         {/* ========================================================= */}
@@ -262,7 +270,7 @@ export const CirclesLab: React.FC = () => {
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">route</span>
-              <span>Guided Chapter Curriculum (Recommended)</span>
+              <span>Investigate in the laboratory</span>
             </button>
             <button
               onClick={() => setActiveTab('experiments')}
@@ -338,12 +346,12 @@ export const CirclesLab: React.FC = () => {
                               ) : mastered ? (
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                                   <span className="material-symbols-outlined text-[13px]">stars</span>
-                                  <span>Mastered</span>
+                                  <span>Practice mastered</span>
                                 </span>
                               ) : completed ? (
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
                                   <span className="material-symbols-outlined text-[13px]">check_circle</span>
-                                  <span>Completed</span>
+                                  <span>Investigated</span>
                                 </span>
                               ) : isNext ? (
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
@@ -373,7 +381,9 @@ export const CirclesLab: React.FC = () => {
                           {/* Footer & Action */}
                           <div className="pt-4 mt-4 border-t border-surface-border/60 flex items-center justify-between">
                             <span className="text-[10px] font-mono text-slate-500">
-                              {progress?.practiceAttempted ? (
+                              {progress?.legacyMasteryUnverified ? (
+                                <span>Earlier practice result is unverified. Practise again to confirm.</span>
+                              ) : progress?.practiceAttempted ? (
                                 <span>
                                   Practice: {progress.practiceCorrectCount}/{progress.practiceTotalQuestions}
                                 </span>
@@ -382,6 +392,16 @@ export const CirclesLab: React.FC = () => {
                               )}
                             </span>
 
+                            {CIRCLES_CHAPTER.lessons[lesson.id] && (
+                              <Link
+                                to={CIRCLES_CHAPTER.routes.learn(lesson.id)}
+                                data-card-learn={lesson.id}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-elevated hover:bg-cyan-500 hover:text-slate-950 text-slate-200 transition-all"
+                                title={`Learn: ${STATUS_LABEL[lessonStatus(CIRCLES_CHAPTER.lessons[lesson.id], learnRecords[lesson.id])]}`}
+                              >
+                                Learn
+                              </Link>
+                            )}
                             <button
                               onClick={() => handleOpenLesson(lesson.id)}
                               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
@@ -390,7 +410,7 @@ export const CirclesLab: React.FC = () => {
                                   : 'bg-surface-elevated hover:bg-amber-500 hover:text-slate-950 text-slate-200'
                               }`}
                             >
-                              <span>{completed ? 'Review' : 'Start'}</span>
+                              <span>{completed ? 'Investigate again' : 'Investigate'}</span>
                               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </button>
                           </div>

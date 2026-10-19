@@ -25,7 +25,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Explore the fundamental anatomy of a circle: how center and radius determine points on the plane, how diameters are the longest chords, and how circumference scales with radius.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Circles — Section 1: Basic Terms & Definitions',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.1 Definitions',
     initialScene: {
       circles: [
         {
@@ -131,7 +131,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate why a circle possesses infinitely many reflection symmetries across any diameter and remains invariant under rotation by any angle around its center.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Circles — Section 1.2: Symmetries & Invariants',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.2 Symmetries of a Circle',
     initialScene: {
       circles: [
         {
@@ -242,7 +242,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate the number of circles passing through given points: infinitely many through 1 point, locus of centers on perpendicular bisector for 2 points, and a unique circumcircle through 3 non-collinear points.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Circles — Section 2: Circles Through Points',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.3 How Many Circles? (Theorem 1)',
     initialScene: {
       circles: [
         {
@@ -348,7 +348,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate the foundational theorem: The perpendicular from the center of a circle to a chord bisects the chord, and conversely, the line joining the center to the midpoint is perpendicular.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.1 & 9.2: Perpendicular from Center to a Chord',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.5 (Theorems 4 and 5): perpendicular from the centre to a chord',
     initialScene: {
       circles: [
         {
@@ -436,7 +436,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Discover that equal chords subtend equal angles at the center (AB = CD ⇒ ∠AOB = ∠COD), and conversely, equal central angles correspond to chords of equal length.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.3 & 9.4: Equal Chords & Central Angles',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.4 (Theorems 2 and 3): equal chords and central angles',
     initialScene: {
       circles: [
         {
@@ -520,7 +520,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate the fundamental distance law: Equal chords are equidistant from the center, and between two unequal chords, the longer chord is strictly nearer to the center (AB > CD ⇔ d₁ < d₂).',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.5 & 9.6: Distance of Chords from Center',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.6 (Theorems 6 to 8): distance of chords from the centre',
     initialScene: {
       circles: [
         {
@@ -605,7 +605,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Discover why the angle subtended by an arc at the center is double the angle subtended by it at the circumference (∠AOB = 2 × ∠APB), and why an angle inscribed in a semicircle is strictly 90°.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.7: Angle Subtended by an Arc of a Circle',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.7 (Theorem 9): angle subtended by an arc',
     initialScene: {
       circles: [
         {
@@ -685,7 +685,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate why all inscribed angles that share the same base chord and reside in the same segment of a circle are congruent (∠APB = ∠AQB).',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.8: Angles in the Same Segment',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.7: angles in the same arc segment (a consequence of Theorem 9)',
     initialScene: {
       circles: [
         {
@@ -731,8 +731,8 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
         },
         proofSteps: [
           { statement: 'Let arc AB subtend central angle ∠AOB at center O.', reason: 'Construction.' },
-          { statement: 'By the Central Angle Theorem, ∠AOB = 2 · ∠APB.', reason: 'Theorem 9.7.' },
-          { statement: 'Similarly, ∠AOB = 2 · ∠AQB.', reason: 'Theorem 9.7.' },
+          { statement: 'By the Central Angle Theorem, ∠AOB = 2 · ∠APB.', reason: 'Theorem 9: the angle at the centre is twice the angle on the circle.' },
+          { statement: 'Similarly, ∠AOB = 2 · ∠AQB.', reason: 'Theorem 9: the angle at the centre is twice the angle on the circle.' },
           { statement: 'Therefore: 2 · ∠APB = 2 · ∠AQB => ∠APB = ∠AQB.', reason: 'Algebraic division by 2.' },
         ],
         mathematicalConclusion:
@@ -768,7 +768,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate the properties of quadrilaterals whose four vertices all lie on a single circle. Discover why opposite angles must strictly sum to 180° (∠A + ∠C = 180° and ∠B + ∠D = 180°).',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.10: Cyclic Quadrilaterals',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.8 (Theorem 11): cyclic quadrilaterals',
     initialScene: {
       circles: [
         {
@@ -860,7 +860,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Investigate the converse theorems: If the sum of opposite angles of a quadrilateral is 180°, it is cyclic. Also explore when two equal angles subtended by a common segment imply concyclicity.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Theorem 9.9 & 9.11: Concyclicity & Converse Properties',
+    ncertTopicReference: 'NCERT Ganita Manjari Grade 9, Part I, Chapter 5, Section 5.8 (Theorems 10 and 12): concyclicity and converses',
     initialScene: {
       circles: [
         {
@@ -903,13 +903,13 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
           options: ['Yes, it is cyclic because 95° + 85° = 180°', 'No, only squares can be cyclic', 'Only if all sides are equal'],
           correctIndex: 0,
           explanation:
-            'By Theorem 9.11 (Converse of Cyclic Quad), if any pair of opposite angles sums to 180°, the quadrilateral is guaranteed to be cyclic.',
+            'By Theorem 12 (the converse of the cyclic quadrilateral theorem), if any pair of opposite angles sums to 180°, the quadrilateral is guaranteed to be cyclic.',
         },
         proofSteps: [
           { statement: 'Let ABCD be a quadrilateral with ∠B + ∠D = 180°.', reason: 'Given hypothesis.' },
-          { statement: 'Draw the unique circumcircle through non-collinear vertices A, B, C.', reason: 'Theorem 9.3 (Three Points).' },
+          { statement: 'Draw the unique circumcircle through non-collinear vertices A, B, C.', reason: 'Theorem 1: a unique circle passes through three non-collinear points.' },
           { statement: 'Suppose D does not lie on this circle. Then the circle intersects line AD (or CD) at another point D′.', reason: 'Proof by contradiction.' },
-          { statement: 'Then ABCD′ is a cyclic quadrilateral, so ∠B + ∠D′ = 180°.', reason: 'Theorem 9.10.' },
+          { statement: 'Then ABCD′ is a cyclic quadrilateral, so ∠B + ∠D′ = 180°.', reason: 'Theorem 11: opposite angles of a cyclic quadrilateral add to 180°.' },
           { statement: 'Since ∠B + ∠D = 180° and ∠B + ∠D′ = 180°, we have ∠D = ∠D′.', reason: 'Transitive equality.' },
           { statement: 'In ΔDD′C, exterior angle cannot equal interior opposite angle unless D coincides with D′.', reason: 'Exterior Angle Inequality.' },
           { statement: 'Therefore, point D must lie strictly on the circle.', reason: 'Contradiction resolved.' },
@@ -930,7 +930,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
           'Opposite pair 1: ∠A + ∠C = 88° + 92° = 180°.',
           'Opposite pair 2: ∠B + ∠D = 76° + 104° = 180°.',
           'Both pairs of opposite angles sum to 180°.',
-          'Therefore, by Theorem 9.11, ABCD is a cyclic quadrilateral.',
+          'Therefore, by Theorem 12, ABCD is a cyclic quadrilateral.',
         ],
         theoremApplied: 'Converse of Cyclic Quadrilateral Theorem.',
       },
@@ -950,7 +950,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Explore the line that touches a circle at exactly one point (tangent). Investigate why the tangent at any point on a circle is strictly perpendicular to the radius through the point of contact.',
     curriculumClassification: 'optional_extension',
-    ncertTopicReference: 'Supporting Curriculum Extension: Introduction to Tangents (Bridging Class 9 & 10)',
+    ncertTopicReference: 'Not part of this NCERT chapter. Optional extension that bridges to later classes',
     initialScene: {
       circles: [
         {
@@ -1043,7 +1043,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Step-by-step interactive proofs combining prediction, dynamic manipulation, mathematical reasoning, and practice for all Class 9 circle theorems.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Circles — Complete Theorem Synthesis',
+    ncertTopicReference: 'Synthesis of Theorems 1 to 12 of NCERT Ganita Manjari Grade 9, Part I, Chapter 5',
     initialScene: {
       circles: [
         {
@@ -1122,7 +1122,7 @@ export const CIRCLE_EXPERIMENTS: CircleExperimentDefinition[] = [
     description:
       'Grand Class 9 Circles synthesis: Solve rigorous numerical, chord distance, central angle, same-segment, and cyclic quadrilateral exam questions with tolerance-checked validation.',
     curriculumClassification: 'direct_chapter',
-    ncertTopicReference: 'NCERT Class 9 Circles — Chapter Review & Examination Mastery',
+    ncertTopicReference: 'Review of NCERT Ganita Manjari Grade 9, Part I, Chapter 5 (questions are original)',
     initialScene: {
       circles: [
         {

@@ -322,7 +322,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
       'In right triangle ΔOMA, OA = r = 5 cm and OM = d = 3 cm.',
       'By Pythagoras theorem: OA² = OM² + AM² => 5² = 3² + AM² => 25 = 9 + AM².',
       'AM² = 16 => AM = 4 cm.',
-      'By Theorem 9.1, the perpendicular from the center bisects the chord: AB = 2 × AM = 2 × 4 = 8 cm.',
+      'By Theorem 5, the perpendicular from the center bisects the chord: AB = 2 × AM = 2 × 4 = 8 cm.',
     ],
     theoremApplied: 'Perpendicular from Center to Chord Theorem + Pythagoras Theorem',
     marks: 3,
@@ -363,7 +363,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     tolerance: 0.1,
     unit: 'degrees',
     hintSteps: [
-      'Recall NCERT Theorem 9.3 regarding equal chords of a circle.',
+      'Recall NCERT Theorems 2 and 3 about equal chords and the angles they subtend at the centre.',
       'Equal chords subtend equal angles at the center.',
     ],
     stepByStepSolution: [
@@ -452,7 +452,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     tolerance: 0.1,
     unit: 'degrees',
     hintSteps: [
-      'Apply NCERT Theorem 9.7 (Angle Subtended by an Arc).',
+      'Apply NCERT Theorem 9 (Angle Subtended by an Arc).',
       'The central angle is twice the inscribed angle: ∠AOB = 2 × ∠APB.',
     ],
     stepByStepSolution: [
@@ -534,12 +534,12 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     tolerance: 0.1,
     unit: 'degrees',
     hintSteps: [
-      'By Theorem 9.8, angles in the same segment of a circle are equal.',
+      'Because both angles are half of the same angle at the centre (Theorem 9), angles in the same segment of a circle are equal.',
       'Equate the two expressions: 3x + 10 = 5x - 20.',
       'Solve for x, then substitute back to find the angle measure.',
     ],
     stepByStepSolution: [
-      'By Theorem 9.8, angles in the same segment of a circle are equal: ∠APB = ∠AQB.',
+      'Because both angles are half of the same angle at the centre (Theorem 9), angles in the same segment are equal: ∠APB = ∠AQB.',
       '3x + 10 = 5x - 20 => 10 + 20 = 5x - 3x => 2x = 30 => x = 15.',
       'Substitute x = 15 into ∠APB: 3(15) + 10 = 45 + 10 = 55°.',
       'Verification: ∠AQB = 5(15) - 20 = 75 - 20 = 55°.',
@@ -588,7 +588,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
       '∠B + ∠D = 180° and ∠A + ∠C = 180°.',
     ],
     stepByStepSolution: [
-      'By Theorem 9.10, opposite angles of a cyclic quadrilateral are supplementary.',
+      'By Theorem 11, opposite angles of a cyclic quadrilateral are supplementary.',
       '∠B + ∠D = 180° => 105° + ∠D = 180° => ∠D = 180° - 105° = 75°.',
       '∠A + ∠C = 180° => 80° + ∠C = 180° => ∠C = 180° - 80° = 100°.',
       'Therefore, ∠D = 75° and ∠C = 100°.',
@@ -643,7 +643,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     stepByStepSolution: [
       'Sum of first pair of opposite angles: ∠A + ∠C = 88° + 92° = 180°.',
       'Sum of second pair of opposite angles: ∠B + ∠D = 76° + 104° = 180°.',
-      'By Theorem 9.11 (Converse of Cyclic Quadrilateral Theorem), since opposite angles are supplementary, ABCD is a cyclic quadrilateral.',
+      'By Theorem 12 (the converse of the cyclic quadrilateral theorem), since opposite angles are supplementary, ABCD is a cyclic quadrilateral.',
     ],
     theoremApplied: 'Converse of Cyclic Quadrilateral Theorem (NCERT Thm 9.11)',
     marks: 2,

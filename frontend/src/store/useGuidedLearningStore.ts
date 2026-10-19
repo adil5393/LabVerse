@@ -10,8 +10,10 @@
  */
 
 import { create } from 'zustand';
+import { MASTERY_SHARE } from '../engine/education/types';
 import type {
   GuidedStageId,
+  PracticeEvidence,
   StudentLessonProgress,
   ChapterProgressState,
   ChapterCompletionStats,
@@ -23,6 +25,26 @@ import {
 } from '../engine/mathematics/circles/curriculumPath';
 
 const STORAGE_KEY = 'labverse_circles_progress_v1';
+
+/**
+ * Records saved before per-question evidence existed could mark a lesson
+ * "mastered" by answering ONE question correctly several times. Such a flag
+ * cannot be verified, so it is kept visible as "legacy" but no longer counts
+ * as mastery. Everything else is preserved untouched.
+ */
+export function migrateLessonProgress(p: StudentLessonProgress): StudentLessonProgress {
+  if (p.practiceMastered && !p.practiceAnswered) {
+    return { ...p, practiceMastered: false, legacyMasteryUnverified: true };
+  }
+  return p;
+}
+
+/** Mastery: enough practice questions answered correctly on the first try with no help. */
+export function isPracticeMastered(answered: Record<string, PracticeEvidence> | undefined, total: number): boolean {
+  if (!answered || total <= 0) return false;
+  const unassisted = Object.values(answered).filter((a) => a.firstAttemptCorrect).length;
+  return unassisted / total >= MASTERY_SHARE;
+}
 
 function getStorage(): Storage | null {
   try {
@@ -69,11 +91,12 @@ function loadInitialProgress(): ChapterProgressState {
       if (serialized) {
         const parsed = JSON.parse(serialized);
         if (parsed && parsed.chapterId === 'circles-class-9') {
+          const rawLessons: Record<string, StudentLessonProgress> = parsed.lessons && typeof parsed.lessons === 'object' ? parsed.lessons : {};
           return {
             chapterId: 'circles-class-9',
             lastVisitedLessonId: parsed.lastVisitedLessonId || 'circles-l1',
             completedLessonIds: Array.isArray(parsed.completedLessonIds) ? parsed.completedLessonIds : [],
-            lessons: parsed.lessons || {},
+            lessons: Object.fromEntries(Object.entries(rawLessons).map(([k, v]) => [k, migrateLessonProgress(v)])),
           };
         }
       }
@@ -128,7 +151,8 @@ interface GuidedLearningState {
     lessonId: string,
     questionId: string,
     isCorrect: boolean,
-    totalQuestions: number
+    totalQuestions: number,
+    opts?: { assisted?: boolean }
   ) => void;
   completeLesson: (lessonId: string, isTeacherBypass?: boolean) => void;
   teacherBypassCurrentStage: (lessonId: string) => void;
@@ -322,24 +346,38 @@ export const useGuidedLearningStore = create<GuidedLearningState>((set, get) => 
 
   recordPracticeResult: (
     lessonId: string,
-    _questionId: string,
+    questionId: string,
     isCorrect: boolean,
-    totalQuestions: number
+    totalQuestions: number,
+    opts: { assisted?: boolean } = {}
   ) => {
     set((state) => {
       const existing = state.lessons[lessonId] || getDefaultLessonProgress(lessonId);
-      const newCorrect = (existing.practiceCorrectCount || 0) + (isCorrect ? 1 : 0);
+      const answered: Record<string, PracticeEvidence> = { ...(existing.practiceAnswered || {}) };
+      const prev = answered[questionId];
+      const assistedNow = Boolean(opts.assisted) || state.teacherMode;
+      const first = !prev || prev.attempts === 0;
+      answered[questionId] = {
+        attempts: (prev?.attempts || 0) + 1,
+        correct: Boolean(prev?.correct) || isCorrect,
+        // The first answer decides independence; later retries never rewrite it.
+        firstAttemptCorrect: first ? isCorrect && !assistedNow : prev.firstAttemptCorrect,
+        assisted: Boolean(prev?.assisted) || assistedNow,
+      };
       const total = Math.max(existing.practiceTotalQuestions || 0, totalQuestions);
-      const mastered = newCorrect >= total && total > 0;
+      // Distinct questions answered correctly: repeating one question cannot raise this.
+      const correctDistinct = Object.values(answered).filter((a) => a.correct).length;
 
       const updatedLessons = {
         ...state.lessons,
         [lessonId]: {
           ...existing,
           practiceAttempted: true,
-          practiceCorrectCount: newCorrect,
+          practiceAnswered: answered,
+          practiceCorrectCount: Math.min(correctDistinct, total),
           practiceTotalQuestions: total,
-          practiceMastered: mastered,
+          practiceMastered: isPracticeMastered(answered, total),
+          legacyMasteryUnverified: false,
         },
       };
 

@@ -11,6 +11,10 @@ import { TV_GUIDED_UNITS, TV_GUIDED_LESSONS } from '../../../engine/mathematics/
 import { TV_EXPERIMENTS } from '../../../engine/mathematics/twoVariables/experimentRegistry';
 import { TV_COVERAGE_MATRIX } from '../../../engine/mathematics/twoVariables/curriculumRegistry';
 import { PRACTICE_COUNTS } from '../../../engine/mathematics/twoVariables/practiceBank';
+import { lessonStatus, STATUS_LABEL } from '../../../engine/education/progress';
+import { TWO_VARIABLES_CHAPTER } from '../../../engine/mathematics/twoVariables/learn/content';
+import { useEducationStore } from '../../../store/useEducationStore';
+import { LEARN_FOR_GUIDED, TwoVariablesLearnSection } from './learn/TwoVariablesLearn';
 
 const SOURCE_LABEL = {
   textbook_heading: 'Confirmed from textbook heading',
@@ -26,6 +30,7 @@ export const TwoVariablesLab: React.FC = () => {
   const getCompletionStats = useTwoVariablesStore((s) => s.getCompletionStats);
   const resetProgress = useTwoVariablesStore((s) => s.resetProgress);
 
+  const learnRecords = useEducationStore((st) => st.lessons);
   const stats = getCompletionStats();
   const next = TV_GUIDED_LESSONS[stats.nextRecommendedLessonId] ?? TV_GUIDED_LESSONS['tv-l1'];
   const open = (id: string) => navigate(`/mathematics/two-variables/workbench?lesson=${id}`);
@@ -41,14 +46,14 @@ export const TwoVariablesLab: React.FC = () => {
             <span className="text-purple-400 font-bold">Two Variables, One Line</span>
           </nav>
           {!confirmReset ? (
-            <button type="button" onClick={() => setConfirmReset(true)} className="min-h-10 text-xs font-mono text-slate-500 hover:text-red-400 flex items-center gap-1.5 px-3 rounded-lg border border-surface-border">
-              <span className="material-symbols-outlined text-[15px]">restart_alt</span>Reset chapter progress
+            <button type="button" onClick={() => setConfirmReset(true)} className="min-h-[44px] text-xs font-mono text-slate-500 hover:text-red-400 flex items-center gap-1.5 px-3 rounded-lg border border-surface-border">
+              <span className="material-symbols-outlined text-[15px]">restart_alt</span>Reset guided-lesson progress
             </button>
           ) : (
             <div className="flex items-center gap-2 bg-red-950/40 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs">
-              <span className="text-red-300">Reset all progress?</span>
-              <button type="button" onClick={() => { resetProgress(); setConfirmReset(false); }} className="min-h-9 px-3 rounded bg-red-500 text-slate-950 font-bold font-mono">Yes, reset</button>
-              <button type="button" onClick={() => setConfirmReset(false)} className="min-h-9 px-3 rounded bg-surface-elevated text-slate-300 font-mono">Cancel</button>
+              <span className="text-red-300">Reset the guided-lesson progress? Your Learn progress is kept.</span>
+              <button type="button" onClick={() => { resetProgress(); setConfirmReset(false); }} className="min-h-[44px] px-3 rounded bg-red-500 text-slate-950 font-bold font-mono">Yes, reset</button>
+              <button type="button" onClick={() => setConfirmReset(false)} className="min-h-[44px] px-3 rounded bg-surface-elevated text-slate-300 font-mono">Cancel</button>
             </div>
           )}
         </div>
@@ -111,6 +116,8 @@ export const TwoVariablesLab: React.FC = () => {
           </div>
         </section>
 
+        <TwoVariablesLearnSection />
+
         <section className="space-y-6">
           <div className="flex items-center gap-2 border-b border-surface-border pb-3 overflow-x-auto" role="tablist">
             {([['guided', 'Lesson roadmap (14)'], ['experiments', 'Laboratory presets'], ['coverage', 'Chapter coverage']] as const).map(([id, label]) => (
@@ -132,7 +139,8 @@ export const TwoVariablesLab: React.FC = () => {
                       const l = TV_GUIDED_LESSONS[id];
                       const p = lessons[id];
                       return (
-                        <button key={id} type="button" onClick={() => open(id)} className={`text-left p-4 rounded-2xl border min-h-24 flex flex-col justify-between gap-2 ${p?.completed ? 'bg-emerald-950/15 border-emerald-500/40' : 'bg-surface-card border-surface-border hover:border-purple-500/50'}`}>
+                        <div key={id} className="flex flex-col gap-1">
+                        <button type="button" onClick={() => open(id)} className={`text-left p-4 rounded-2xl border min-h-24 flex flex-col justify-between gap-2 ${p?.completed ? 'bg-emerald-950/15 border-emerald-500/40' : 'bg-surface-card border-surface-border hover:border-purple-500/50'}`}>
                           <div>
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-mono font-bold text-amber-400">Lesson {l.lessonNumber}</span>
@@ -142,6 +150,12 @@ export const TwoVariablesLab: React.FC = () => {
                             <p className="text-xs text-slate-400">{l.subtitle}</p>
                           </div>
                         </button>
+                        {LEARN_FOR_GUIDED[id] && (
+                          <Link to={TWO_VARIABLES_CHAPTER.routes.learn(LEARN_FOR_GUIDED[id])} data-card-learn={id} className="min-h-[44px] inline-flex items-center px-3 rounded-lg text-xs font-bold text-slate-200 bg-surface-elevated hover:bg-cyan-500 hover:text-slate-950">
+                            Learn this idea: {STATUS_LABEL[lessonStatus(TWO_VARIABLES_CHAPTER.lessons[LEARN_FOR_GUIDED[id]], learnRecords[LEARN_FOR_GUIDED[id]])]}
+                          </Link>
+                        )}
+                        </div>
                       );
                     })}
                   </div>

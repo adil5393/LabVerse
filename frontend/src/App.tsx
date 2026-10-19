@@ -66,6 +66,9 @@ const TwoVariablesLab = lazy(() =>
     default: m.TwoVariablesLab,
   }))
 );
+const TwoVariablesLearnPage = lazy(() =>
+  import('./features/mathematics/twoVariables/learn/TwoVariablesLearn').then((m) => ({ default: m.TwoVariablesLearnPage }))
+);
 const TwoVariablesWorkbenchPage = lazy(() =>
   import('./features/mathematics/twoVariables/TwoVariablesWorkbenchPage').then((m) => ({
     default: m.TwoVariablesWorkbenchPage,
@@ -146,6 +149,7 @@ export const App: React.FC = () => {
           {/* Route 11b: Two Variables, One Line landing page and workbench */}
           <Route path="/mathematics/two-variables" element={<TwoVariablesLab />} />
           <Route path="/mathematics/two-variables/workbench" element={<TwoVariablesWorkbenchPage />} />
+          <Route path="/mathematics/two-variables/learn/:lessonId" element={<TwoVariablesLearnPage />} />
 
           {/* Route 11c: Understanding Data landing page and workbench */}
           <Route path="/mathematics/understanding-data" element={<UnderstandingDataLab />} />

@@ -60,15 +60,15 @@ export const MotionHub: React.FC = () => {
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="motion-destinations">
-          <div className={`${card} border-sky-500/40`}>
+          <div className={`${card} border-sky-500/40`} style={{ borderTop: "4px solid #38BDF8" }}>
             <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">3 lessons in Unit 1, with prerequisites, worked examples and practice.</p></div>
             <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
           </div>
-          <div className={`${card} border-surface-border`}>
+          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #F59E0B" }}>
             <div><h2 className="text-lg font-black text-white">Free Laboratory</h2><p className="text-xs text-slate-300">Move an object on a track and see distance and displacement. No gates.</p></div>
             <Link to="/physics/motion/lab" data-destination="lab" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the laboratory</Link>
           </div>
-          <div className={`${card} border-surface-border`}>
+          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #A78BFA" }}>
             <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">{solved} of {MOTION_EXERCISES.length} questions solved step by step; the rest are upcoming.</p></div>
             <Link to="/physics/motion/exercises" data-destination="exercises" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the exercises</Link>
           </div>
@@ -80,8 +80,11 @@ export const MotionHub: React.FC = () => {
 
         <MotionLearnSection />
 
-        <section aria-label="Chapter map" className="space-y-3" data-testid="motion-map">
-          <h2 className="text-2xl font-black text-white">Chapter map</h2>
+        <details aria-label="Chapter map" className="group rounded-2xl border border-surface-border bg-surface-card/50 p-4 space-y-3" data-testid="motion-map">
+          <summary className="cursor-pointer min-h-[44px] flex flex-wrap items-center justify-between gap-2 list-none">
+            <span className="text-xl font-black text-white">Chapter map <span className="text-xs font-mono font-normal text-slate-400">(optional reference: what is built and what is planned)</span></span>
+            <span className="text-xs font-mono text-slate-300">{counts.available} available · {counts.planned} planned <span aria-hidden>{"\u25BE"}</span></span>
+          </summary>
           <p className="text-xs text-slate-400">Checked against the textbook PDF. {counts.available} of {counts.total} items are available; {counts.planned} are planned. Rows marked enrichment are LabVerse additions that are not in the book.</p>
           <div className="overflow-x-auto rounded-xl border border-surface-border" role="region" aria-label="Chapter map table" tabIndex={0}>
             <table className="w-full text-xs">
@@ -93,13 +96,13 @@ export const MotionHub: React.FC = () => {
                     <td className="p-2 font-mono text-slate-300 whitespace-nowrap">{r.section}</td>
                     <td className="p-2 text-slate-200">{r.topic}{r.note ? <span className="text-slate-400"> {r.note}</span> : null}</td>
                     <td className="p-2 text-slate-300">{r.kind === 'textbook' ? 'Textbook' : 'LabVerse enrichment'}</td>
-                    <td className="p-2 font-mono" data-status={r.status}>{r.status === 'planned' ? 'Planned' : r.status === 'laboratory' ? 'Laboratory' : 'Learn'}</td>
+                    <td className="p-2 font-mono font-bold" data-status={r.status} style={{ color: r.status === 'planned' ? '#94A3B8' : r.status === 'laboratory' ? '#38BDF8' : '#34D399' }}>{r.status === 'planned' ? '\u25CB Planned' : r.status === 'laboratory' ? '\u25C6 Laboratory' : '\u2713 Learn'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </section>
+        </details>
       </main>
     </div>
   );

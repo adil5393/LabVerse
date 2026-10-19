@@ -19,9 +19,10 @@ import {
   totalDurationMs, turnCount, undoMove, type MotionPath,
 } from '../../../engine/physics/motion/kinematics';
 import { pathOf, type MotionVisualProps, type Readout } from '../../../engine/physics/motion/learn/questions';
+import { PHYS, QUANTITY, type PhysQuantity } from './physicsColors';
 
 const W = 600, H = 230, PAD = 28, TRACK_Y = 110;
-const C = { track: '#64748b', origin: '#fbbf24', right: '#34d399', left: '#f59e0b', obj: '#a78bfa', text: '#e2e8f0', disp: '#38bdf8' };
+const C = { track: PHYS.axis, origin: PHYS.origin, route: PHYS.distance, obj: PHYS.position, text: '#e2e8f0', disp: PHYS.displacement, time: PHYS.time };
 
 const niceStep = (spanM: number): number => { for (const s of [1, 2, 5, 10, 20, 25, 50, 100]) if (spanM / s <= 8) return s; return 200; };
 
@@ -50,6 +51,17 @@ const useReducedMotion = (): boolean => {
     return () => m.removeEventListener?.('change', f);
   }, []);
   return r;
+};
+
+const Card: React.FC<{ q: PhysQuantity; value: string; id: string }> = ({ q, value, id }) => {
+  const m = QUANTITY[q];
+  return (
+    <div className="rounded-lg border border-surface-border bg-surface-card px-3 py-2 min-w-0" style={{ borderLeft: `4px solid ${m.color}` }}>
+      <dt className="text-[11px] flex items-center gap-1.5 text-slate-300"><span aria-hidden style={{ color: m.color }}>{m.symbol}</span>{m.label}</dt>
+      <dd data-readout={id} className="font-mono text-lg font-bold leading-tight" style={{ color: m.color }}>{value}</dd>
+      <div className="text-[10px] text-slate-400">{m.hint}</div>
+    </div>
+  );
 };
 
 export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, editable, show, stepM, playback, alt, onPath }) => {
@@ -158,14 +170,14 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
         <text x={W - PAD} y={TRACK_Y + 62} textAnchor="end" fill="#94a3b8" fontSize={11} pointerEvents="none">position (m); right is positive</text>
 
         {/* start marker */}
-        <g pointerEvents="none"><path d={`M ${X(path.startCm)} ${TRACK_Y + 5} l -5 -9 h 10 z`} fill={C.disp} /><text x={X(path.startCm)} y={TRACK_Y + 76} textAnchor="middle" fill={C.disp} fontSize={11}>start {fmtM(path.startCm)}</text></g>
+        <g pointerEvents="none"><path d={`M ${X(path.startCm)} ${TRACK_Y + 5} l -5 -9 h 10 z`} fill={C.obj} /><text x={X(path.startCm)} y={TRACK_Y + 76} textAnchor="middle" fill={C.obj} fontSize={11}>▲ start {fmtM(path.startCm)}</text></g>
 
         {/* history: one row per leg, arrow head shows the direction (not colour alone) */}
         {shownLegs.map(({ l, i, frac }) => {
           const y = TRACK_Y - 38 - (i % 5) * 14;
           const x1 = X(l.fromCm), x2 = X(l.fromCm + (l.toCm - l.fromCm) * frac);
           const dir = l.toCm > l.fromCm ? 1 : l.toCm < l.fromCm ? -1 : 0;
-          const col = dir > 0 ? C.right : dir < 0 ? C.left : C.track;
+          const col = dir === 0 ? C.track : C.route;
           return (
             <g key={i} pointerEvents="none">
               <line x1={x1} y1={y} x2={x2} y2={y} stroke={col} strokeWidth={3} strokeDasharray={dir < 0 ? '6 3' : undefined} />
@@ -184,22 +196,26 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
           </g>
         )}
 
+        <g pointerEvents="none" fontSize={10}>
+          <text x={W - PAD} y={14} textAnchor="end" fill={C.route}>{'─▶'} route travelled (distance), dashed = leftward</text>
+          <text x={W - PAD} y={28} textAnchor="end" fill={C.disp}>{'━▶'} displacement (start to now)</text>
+        </g>
         {/* the object */}
         <g className="group outline-none" {...(editable ? { role: 'button', tabIndex: 0, 'aria-label': `The object at ${fmtM(s.positionCm)}. Left and right arrow keys move it ${step} m, one second of simulated time per move.`, style: { cursor: 'grab' }, onKeyDown: keys, onPointerDown: (e: React.PointerEvent) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); } } : {})}>
           {editable && <circle cx={X(s.positionCm)} cy={TRACK_Y} r={48} fill="transparent" />}
           {editable && <circle cx={X(s.positionCm)} cy={TRACK_Y} r={17} fill="none" strokeWidth={3} className="stroke-transparent group-focus:stroke-white" pointerEvents="none" />}
           <circle cx={X(s.positionCm)} cy={TRACK_Y} r={11} fill={C.obj} stroke="#0f172a" strokeWidth={2} pointerEvents="none" />
-          <text x={X(s.positionCm)} y={TRACK_Y - 18} textAnchor="middle" fill={C.text} fontSize={12} fontWeight={800} pointerEvents="none">{fmtSigned(s.positionCm)}</text>
+          <text x={X(s.positionCm)} y={TRACK_Y - 18} textAnchor="middle" fill={C.obj} fontSize={12} fontWeight={800} pointerEvents="none">{fmtSigned(s.positionCm)}</text>
         </g>
       </svg>
 
       <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3" data-testid="motion-live">{live}</div>
 
-      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono" data-testid="motion-readout">
-        <div className="rounded-lg border border-surface-border bg-surface-card p-2"><dt className="text-slate-400">Simulated time</dt><dd data-readout="time" className="text-white">{(s.tMs / 1000).toFixed(1)} s</dd></div>
-        {show.includes('position') && <div className="rounded-lg border border-surface-border bg-surface-card p-2"><dt className="text-slate-400">Position</dt><dd data-readout="position" className="text-white">{fmtSigned(s.positionCm)}</dd></div>}
-        {show.includes('distance') && <div className="rounded-lg border border-surface-border bg-surface-card p-2"><dt className="text-slate-400">Distance travelled</dt><dd data-readout="distance" className="text-white">{fmtLength(s.distanceCm)}</dd></div>}
-        {show.includes('displacement') && <div className="rounded-lg border border-surface-border bg-surface-card p-2"><dt className="text-slate-400">Displacement</dt><dd data-readout="displacement" className="text-white">{fmtSigned(s.displacementCm)}</dd></div>}
+      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="motion-readout">
+        <Card q="time" value={`${(s.tMs / 1000).toFixed(1)} s`} id="time" />
+        {show.includes('position') && <Card q="position" value={fmtSigned(s.positionCm)} id="position" />}
+        {show.includes('distance') && <Card q="distance" value={fmtLength(s.distanceCm)} id="distance" />}
+        {show.includes('displacement') && <Card q="displacement" value={fmtSigned(s.displacementCm)} id="displacement" />}
       </dl>
 
       {path.legs.length > 0 && (
@@ -209,33 +225,34 @@ export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, edit
       )}
 
       {editable && (
-        <div className="space-y-2" data-testid="motion-controls">
-          <div role="group" aria-label="Move the object" className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => moveBy(-step)} aria-label={`Move ${step} m to the left (1 s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border border-surface-border bg-surface-card text-slate-100 font-bold text-sm">{'◀'} Left {step} m</button>
+        <div className="space-y-3 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="motion-controls">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Controls</h3>
+          <div role="group" aria-label="Move the object" className="flex flex-wrap items-center gap-2"><span className="text-[11px] font-mono text-slate-400 w-full">1 · Move (each move takes 1 s of simulated time)</span>
+            <button type="button" onClick={() => moveBy(-step)} aria-label={`Move ${step} m to the left (1 s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border font-bold text-sm text-slate-950" style={{ background: PHYS.position, borderColor: PHYS.position }}>{'◀'} Left {step} m</button>
             <button type="button" onClick={wait} aria-label="Stay where you are for 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-100 text-sm">Wait 1 s</button>
-            <button type="button" onClick={() => moveBy(step)} aria-label={`Move ${step} m to the right (1 s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border border-surface-border bg-surface-card text-slate-100 font-bold text-sm">Right {step} m {'▶'}</button>
+            <button type="button" onClick={() => moveBy(step)} aria-label={`Move ${step} m to the right (1 s of simulated time)`} className="min-h-[44px] px-4 rounded-lg border font-bold text-sm text-slate-950" style={{ background: PHYS.position, borderColor: PHYS.position }}>Right {step} m {'▶'}</button>
             <label className="flex items-center gap-2 text-xs text-slate-300">Step size
               <select value={step} onChange={(e) => setStep(Number(e.target.value))} aria-label="Step size of the move buttons, in metres" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
                 {[1, 2, 5, 10, 20].map((v) => <option key={v} value={v}>{v} m</option>)}
               </select>
             </label>
           </div>
-          <form onSubmit={onType} className="flex flex-wrap items-center gap-2">
+          <form onSubmit={onType} className="flex flex-wrap items-center gap-2"><span className="text-[11px] font-mono text-slate-400 w-full">2 · Go to an exact position, or undo and reset</span>
             <label className="flex items-center gap-2 text-xs text-slate-300">Go to position
               <input value={typed} onChange={(e) => setTyped(e.target.value)} inputMode="decimal" aria-label="Position to move to, in metres" placeholder="e.g. 40 or -15" className="w-28 min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white font-mono" />
             </label>
-            <button type="submit" className="min-h-[44px] px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm">Move there</button>
+            <button type="submit" className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.position }}>Move there</button>
             <button type="button" onClick={() => { const p2 = undoMove(path); setPath(p2); setT(totalDurationMs(p2)); setPlaying(false); setMsg(''); }} disabled={path.legs.length === 0} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm disabled:opacity-40">Undo last move</button>
-            <button type="button" onClick={() => { const p2 = resetPath(path); setPath(p2); setT(0); setPlaying(false); setMsg(''); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm" data-testid="motion-reset">Reset</button>
+            <button type="button" onClick={() => { const p2 = resetPath(path); setPath(p2); setT(0); setPlaying(false); setMsg(''); }} className="min-h-[44px] px-3 rounded-lg border text-sm" style={{ borderColor: PHYS.error, color: PHYS.error }} data-testid="motion-reset">Reset</button>
           </form>
           <p className="text-[11px] text-slate-400">Each move takes 1 s of <strong>simulated</strong> time. Positions are exact in this model; a real experiment would use a measuring tape and a stopwatch and would have measurement error.</p>
         </div>
       )}
-      {msg && <p role="alert" className="text-xs text-amber-300" data-testid="motion-message">{msg}</p>}
+      {msg && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="motion-message"><span aria-hidden>{"✗ "}</span>{msg}</p>}
 
       {playback && path.legs.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Replay of the recorded path" data-testid="motion-playback">
-          <button type="button" onClick={() => { if (atEnd) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg bg-surface-elevated border border-surface-border text-white font-bold text-sm">{playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}</button>
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" role="group" aria-label="Replay of the recorded path" data-testid="motion-playback"><span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{"⏱"} 3 · Simulated time: replay the recorded path</span>
+          <button type="button" onClick={() => { if (atEnd) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}</button>
           <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tMs / 1000) * 1000 - 1000)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step {'−'}1 s</button>
           <button type="button" onClick={() => { setPlaying(false); setT(Math.min(total, Math.floor(tMs / 1000) * 1000 + 1000)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
           <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed

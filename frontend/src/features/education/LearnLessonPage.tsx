@@ -4,6 +4,7 @@
  * prerequisites are suggested, never required.
  */
 
+import { subjectCrumb } from '../../engine/education/subjects';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GlobalHeader } from '../../components/GlobalHeader';
@@ -84,7 +85,7 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
         <GlobalHeader />
         <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-6 space-y-5">
           <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400">
-            <Link to="/mathematics" className="hover:text-amber-400">Mathematics</Link><span>/</span>
+            <Link to={subjectCrumb(chapter).href} className="hover:text-amber-400">{subjectCrumb(chapter).label}</Link><span>/</span>
             <Link to={chapter.routes.landing} className="hover:text-amber-400">{crumb}</Link><span>/</span>
             <span className="text-amber-400 font-bold">Lesson {lesson.number}</span>
           </nav>

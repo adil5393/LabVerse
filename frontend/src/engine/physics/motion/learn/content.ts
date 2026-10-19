@@ -17,6 +17,7 @@ export const MOTION_CHAPTER: EduChapter = {
   id: 'motion',
   title: 'Describing Motion Around Us',
   classGrade: 9,
+  subject: 'physics',
   ncertNote: 'Aligned to NCERT Class 9 Science, Exploration (2026-27), Chapter 4, Sections 4.1.1 to 4.4.1. The end-of-chapter exercises are not part of these lessons; they are on the NCERT Exercises page. Explanations, figures and questions are original; none are copied from the textbook.',
   purpose: 'Everything around us moves. To study motion scientists first describe it in its simplest form, motion along a straight line. This opening unit shows how to say where an object is, how far it travelled, and how its position changed.',
   learn: ['Position and the reference point', 'Distance travelled as path length', 'Displacement as the net change in position', 'Why distance and displacement are different'],

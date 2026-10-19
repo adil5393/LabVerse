@@ -300,6 +300,8 @@ export interface EduChapter {
   classGrade: number;
   /** Honest statement of what was verified against the textbook. */
   ncertNote: string;
+  /** Subject shown first in the lesson breadcrumb (see subjects.ts). Defaults to mathematics. */
+  subject?: 'mathematics' | 'physics' | 'chemistry';
   purpose: string;
   learn: string[];
   realWorld: string[];

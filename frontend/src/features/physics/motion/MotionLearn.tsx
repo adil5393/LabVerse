@@ -10,7 +10,7 @@ import { ChapterPrerequisites, UnitPrerequisites } from '../../education/Prerequ
 import { VisualRegistryProvider } from '../../education/visuals';
 import { MOTION_VISUALS } from './MotionTrack';
 
-const CRUMB = 'Class 9 Physics: Describing Motion';
+const CRUMB = 'Describing Motion Around Us';
 
 export const MotionLearnPage: React.FC = () => {
   const { lessonId = '' } = useParams();

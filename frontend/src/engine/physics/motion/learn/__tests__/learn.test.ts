@@ -8,7 +8,7 @@ import { summary } from '../../kinematics';
 import { MOTION_EXERCISES, recomputeModel, solvedExerciseNumbers } from '../../exercises';
 import { MOTION_MAP, motionCoverageCounts } from '../../curriculum';
 
-describeChapterIntegrity('Motion', CH, ['motionTrack', 'motionGraphs', 'circularMotion']);
+describeChapterIntegrity('Motion', CH, ['motionTrack', 'motionGraphs', 'circularMotion', 'derivation']);
 
 // Independent oracle: plain arithmetic.
 const dist = (start: number, targets: number[]) => { let d = 0, p = start; for (const t of targets) { d += Math.abs(t - p); p = t; } return d; };

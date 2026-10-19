@@ -6,7 +6,7 @@
  */
 
 import type { EduLesson } from '../../../education/types';
-import { circleVisual, graphVisual, ind, numQ, pick } from './questions';
+import { circleVisual, derivationVisual, graphVisual, ind, numQ, pick } from './questions';
 
 const EQ = '/physics/motion/equations';
 const CIRC = '/physics/motion/circular';
@@ -46,6 +46,16 @@ export const L9: EduLesson = {
       ], 'v = 5 + 3 × 4 = 17 m/s.', undefined, 'm29-vuat'),
     },
     {
+      id: 'm29b-derive-a', title: 'Derive v = u + at yourself', phase: 'reasoning',
+      paragraphs: ['Now follow the derivation step by step in the figure below. It starts from the definition of acceleration, Eq. (4.3c) of the chapter, and reaches Eq. 4.4a. One step asks you to choose the missing reasoning before it appears.', 'Checking numbers for one case illustrates a step; the algebra is what proves it for every case.'],
+      visual: derivationVisual('A', 'Derive v = u + at yourself.'),
+      notice: 'Which step needs the reasoning you supplied? Why does it keep the equation true?',
+      check: pick('chk-m29b', 'In the derivation, a = (v − u) ÷ t becomes at = v − u. Which operation did that?', [
+        ['Multiplying both sides by t', null],
+        ['Subtracting t from both sides', 'Subtracting t does not remove the division by t. Multiplying both sides by t does.', 'subtract_for_division'],
+      ], 'The same operation on both sides keeps the equality true.', undefined, 'm29b-derive-a'),
+    },
+    {
       id: 'm30-suat', title: 'From the area under the graph', phase: 'reasoning',
       paragraphs: [
         'The displacement is the area under the velocity–time graph. For a constant acceleration the graph is a straight line from u to v, so the area is a trapezoid: s = ½ (u + v) t.',
@@ -60,6 +70,16 @@ export const L9: EduLesson = {
       ], 's = 4 × 5 + ½ × 2 × 25 = 20 + 25 = 45 m.', undefined, 'm30-suat'),
     },
     {
+      id: 'm30b-derive-b', title: 'Derive s = ut + ½at² yourself', phase: 'reasoning',
+      paragraphs: ['Follow the area derivation of Eq. 4.4b. The area under the velocity–time graph is split into a rectangle and a triangle, and each is highlighted as you reach its step.', 'The figure can show negative velocity, negative acceleration and zero acceleration: choose a case to see the rectangle and triangle become signed areas.'],
+      visual: derivationVisual('B', 'Derive s = ut + ½at² yourself.'),
+      notice: 'Choose the case "Moving left" and see which areas are negative.',
+      check: pick('chk-m30b', 'For a case with u = −4 m/s, what does the rectangle of the derivation represent?', [
+        ['A negative area, u × t = −4 × t, below the time axis (leftward displacement)', null],
+        ['A positive area, because areas are always positive', 'Here the areas are signed: a rectangle below the axis stands for displacement to the left, so it is negative.', 'area_always_positive'],
+      ], 'Signed area: below the axis counts as negative displacement.', undefined, 'm30b-derive-b'),
+    },
+    {
       id: 'm31-v2', title: 'Without the time', phase: 'reasoning',
       paragraphs: [
         'Sometimes the time is not given or not wanted. From v = u + at we get t = (v − u) ÷ a. Substitute into s = ½ (u + v) t: s = ½ (u + v)(v − u) ÷ a = (v² − u²) ÷ 2a.',
@@ -72,6 +92,16 @@ export const L9: EduLesson = {
         ['0 = 20 + (−4) × s, so s = 5 m', 'That mixes up the equations: v = u + at has the time t, not the distance s. Use v² = u² + 2as for the distance.', 'wrong_equation'],
         ['s = 20 × (−4) = −80 m', 'Distance is not velocity × acceleration. Use v² = u² + 2as.', 'multiplied_u_a'],
       ], '0 = 400 − 8s gives s = 50 m.', undefined, 'm31-v2'),
+    },
+    {
+      id: 'm31b-derive-c', title: 'Derive v² = u² + 2as yourself', phase: 'reasoning',
+      paragraphs: ['Follow the elimination of the time between Eq. 4.4a and Eq. 4.4b, as the chapter does, down to Eq. 4.4c. The division by a is not allowed when a = 0, so that case is checked separately.'],
+      visual: derivationVisual('C', 'Derive v² = u² + 2as yourself.'),
+      notice: 'Which step divides by a? What happens to it when a = 0?',
+      check: pick('chk-m31b', 'Why must the case a = 0 be treated separately in this derivation?', [
+        ['Because the derivation divides by a, and division by zero is not allowed', null],
+        ['Because the equation is false when a = 0', 'The equation is true when a = 0 (v² = u²). Only the derivation steps that divide by a fail.', 'equation_fails_at_zero'],
+      ], 'We check a = 0 directly: v = u, so v² = u² + 2as.', undefined, 'm31b-derive-c'),
     },
     {
       id: 'm32-assume', title: 'Signs, and when the equations may be used', phase: 'reasoning',
@@ -151,11 +181,26 @@ export const L9: EduLesson = {
       ['s = 0 from the equation, but the distance travelled is 50 m', null],
       ['s = 50 m, the distance', 'The equation gives the displacement, which is zero here.', 'distance_for_displacement'],
     ], 's is the net change in position.', undefined, 'm33-turn'), ['What does s mean?'], ['s = 0, distance 50 m.']),
+    ind('i13', 'Derivations', 'vuat', 'Reason in the derivation.', pick('pm-l9-i13', 'In deriving v = u + at, which statement explains why we may multiply both sides of a = (v − u) ÷ t by t?', [
+      ['Doing the same operation to both sides keeps the equation true, and × t cancels ÷ t', null],
+      ['Because t is always positive', 'The reason is not the sign of t: any non-zero number may multiply both sides of an equation.', 'wrong_reason'],
+      ['Because we want the answer to contain t', 'The aim is to isolate v. Multiplying by t keeps the equation true and removes the division.', 'wrong_reason'],
+    ], 'Equal operations on both sides preserve equality.', undefined, 'm29b-derive-a'), ['What keeps an equation true?'], ['The same operation on both sides.']),
+    ind('i14', 'Derivations', 'suat', 'Triangle height.', pick('pm-l9-i14', 'On the velocity–time graph the area is split into a rectangle of height u and a triangle on top of it. What is the triangle\'s height and area, in terms of u, v and t?', [
+      ['Height v − u, area ½ × t × (v − u)', null],
+      ['Height v, area ½ × t × v', 'The triangle sits on top of the rectangle, so only the part of the height above u belongs to it.', 'whole_height_for_triangle'],
+      ['Height u, area ½ × t × u', 'u is the height of the rectangle. The triangle goes from u up to v.', 'rectangle_height_for_triangle'],
+    ], 'Triangle: base t, height v − u.', undefined, 'm30b-derive-b'), ['Where does the triangle start and end?'], ['v − u.']),
+    ind('i15', 'Derivations', 'v2', 'Dividing by a.', pick('pm-l9-i15', 'The derivation of v² = u² + 2as uses t = (v − u) ÷ a. For which motion is that step not allowed, and what is done instead?', [
+      ['When a = 0: check directly that v = u, so v² = u² + 2as still holds', null],
+      ['When u = 0: the equation cannot be used', 'u = 0 causes no problem. The division is by a.', 'wrong_case'],
+      ['When v = 0: the derivation fails', 'v = 0 is fine (a braking car). Only a = 0 makes the division impossible.', 'wrong_case'],
+    ], 'Division by zero is not allowed, so a = 0 is checked on its own.', undefined, 'm31b-derive-c'), ['What cannot be divided by?'], ['a = 0.']),
   ],
   reflection: {
     discover: 'For a constant acceleration in a straight line: v = u + at, s = ut + ½at² and v² = u² + 2as. They follow from the slope and the area of the velocity–time graph. s is the displacement; keep the signs; never use them across a change of acceleration.',
     evidence: 'You used each equation, chose between them from what was given and wanted, and met the limits: changing acceleration and turning back.',
-    stillConfusing: [{ text: 'Where does v = u + at come from?', refresherId: 'm29-vuat' }, { text: 'Where does s = ut + ½at² come from?', refresherId: 'm30-suat' }, { text: 'When do I use v² = u² + 2as?', refresherId: 'm31-v2' }, { text: 'When can I not use them?', refresherId: 'm32-assume' }],
+    stillConfusing: [{ text: 'Where does v = u + at come from?', refresherId: 'm29-vuat' }, { text: 'Where does s = ut + ½at² come from?', refresherId: 'm30-suat' }, { text: 'When do I use v² = u² + 2as?', refresherId: 'm31-v2' }, { text: 'When can I not use them?', refresherId: 'm32-assume' }, { text: 'Walk through a derivation again', refresherId: 'm29b-derive-a' }],
   },
 };
 

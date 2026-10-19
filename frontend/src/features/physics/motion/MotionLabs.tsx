@@ -9,6 +9,7 @@ import { GlobalHeader } from '../../../components/GlobalHeader';
 import { EQUATION_PRESETS } from '../../../engine/physics/motion/equations';
 import { validateProfile, type Profile } from '../../../engine/physics/motion/profile';
 import { CircularMotionView } from './CircularMotion';
+import { DerivationView } from './DerivationView';
 import { GraphStudioView } from './MotionGraphs';
 
 const Shell: React.FC<{ last: string; title: string; intro: string; testid: string; children: React.ReactNode }> = ({ last, title, intro, testid, children }) => (
@@ -38,6 +39,7 @@ export const EquationLab: React.FC = () => {
   const preset = typed && validateProfile(typed) === null ? { ...named, id: `typed-${params.toString()}`, profile: typed } : named;
   return (
     <Shell testid="motion-equations" last="Equation Laboratory" title="Equation Laboratory" intro="Set the start position, initial velocity, acceleration and elapsed time. The three equations of motion, the numbers and both graphs come from one motion with constant acceleration. Free exploration: nothing to unlock.">
+      <p className="text-sm text-slate-200" data-testid="derivation-links">Want to know why the equations work? <Link className="underline hover:text-sky-300" to="/physics/motion/derivations?d=A">Derive v = u + at</Link> · <Link className="underline hover:text-sky-300" to="/physics/motion/derivations?d=B">Derive s = ut + ½at²</Link> · <Link className="underline hover:text-sky-300" to="/physics/motion/derivations?d=C">Derive v² = u² + 2as</Link></p>
       <GraphStudioView key={preset.id} profile={preset.profile} editable equations graphs={['xt', 'vt']} presets={EQUATION_PRESETS} />
       <p className="text-xs text-slate-400">These are <em>model</em> values for an idealised straight-line motion with a constant acceleration. The textbook equations (Eqs. 4.4a to 4.4c in the chapter) are only valid for that case.</p>
     </Shell>
@@ -50,3 +52,13 @@ export const CircularLab: React.FC = () => (
     <p className="text-xs text-slate-400">This is a <em>model</em> with an exactly constant speed. Section 4.4.1 of the chapter treats motion in a circle qualitatively; the acceleration towards the centre is shown only as an idea, without a formula.</p>
   </Shell>
 );
+
+export const DerivationPage: React.FC = () => {
+  const [params] = useSearchParams();
+  return (
+    <Shell testid="motion-derivations" last="Understand the Derivation" title="Understand the Derivation" intro="Follow how the three equations of motion (Eqs. 4.4a, 4.4b and 4.4c of the chapter) are built from the definition of acceleration and the velocity–time graph. Some steps ask you to supply the missing reasoning first. Free exploration: nothing to unlock, and reading a derivation never counts as mastery.">
+      <DerivationView key={params.get('d') ?? 'A'} id={params.get('d') ?? 'A'} />
+      <p className="text-sm text-slate-300">Try the numbers yourself in the <Link className="underline hover:text-sky-300" to="/physics/motion/equations">Equation Laboratory</Link>, or see the derivations in <Link className="underline hover:text-sky-300" to="/physics/motion/learn/pm-l9">Lesson 9</Link>.</p>
+    </Shell>
+  );
+};

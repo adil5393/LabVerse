@@ -65,3 +65,8 @@ export const circleVisual = (p: CircleVisualProps, intro: string): VisualRef => 
   const setup = { radiusM: p.radiusM, periodS: p.periodS, spin: p.spin ?? 'counterclockwise' } as const;
   return { kind: 'circularMotion', props: p as unknown as Record<string, unknown>, alt: `${intro} ${describeCircle(setup, circleStateAt(setup, p.startTime ?? 0))}` };
 };
+
+/** The interactive derivation of one equation of motion (A: 4.4a, B: 4.4b, C: 4.4c). */
+export const derivationVisual = (id: 'A' | 'B' | 'C', intro: string): VisualRef => ({
+  kind: 'derivation', props: { id }, alt: `${intro} An interactive, step-by-step derivation with a velocity–time figure: use Previous step and Next step, or the left and right arrow keys. Some steps ask you to supply the missing reasoning before the mathematics appears.`,
+});

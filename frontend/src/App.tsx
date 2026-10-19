@@ -138,6 +138,18 @@ const ForcesInteractions = lazy(() =>
 const ForcesLab = lazy(() =>
   import('./features/physics/forces/ForcesLab').then((m) => ({ default: m.ForcesLab }))
 );
+const WorkHub = lazy(() =>
+  import('./features/physics/work/WorkPages').then((m) => ({ default: m.WorkHub }))
+);
+const WorkLearnPage = lazy(() =>
+  import('./features/physics/work/WorkPages').then((m) => ({ default: m.WorkLearnPage }))
+);
+const WorkExercises = lazy(() =>
+  import('./features/physics/work/WorkPages').then((m) => ({ default: m.WorkExercises }))
+);
+const WorkLab = lazy(() =>
+  import('./features/physics/work/WorkLab').then((m) => ({ default: m.WorkLab }))
+);
 const MotionLearnPage = lazy(() =>
   import('./features/physics/motion/MotionLearn').then((m) => ({ default: m.MotionLearnPage }))
 );
@@ -175,6 +187,10 @@ export const App: React.FC = () => {
           <Route path="/physics/forces/interactions" element={<ForcesInteractions />} />
           <Route path="/physics/forces/exercises" element={<ForcesExercises />} />
           <Route path="/physics/forces/learn/:lessonId" element={<ForcesLearnPage />} />
+          <Route path="/physics/work" element={<WorkHub />} />
+          <Route path="/physics/work/lab" element={<WorkLab />} />
+          <Route path="/physics/work/exercises" element={<WorkExercises />} />
+          <Route path="/physics/work/learn/:lessonId" element={<WorkLearnPage />} />
           <Route path="/physics/motion" element={<MotionHub />} />
           <Route path="/physics/motion/lab" element={<MotionLab />} />
           <Route path="/physics/motion/graphs" element={<MotionGraphStudio />} />

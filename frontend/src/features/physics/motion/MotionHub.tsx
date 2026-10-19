@@ -39,6 +39,11 @@ export const PhysicsHub: React.FC = () => (
           <h2 className="text-xl font-black text-white">How Forces Affect Motion</h2>
           <p className="text-sm text-slate-300">What a force is, balanced and unbalanced forces, friction, Newton&apos;s first law and inertia, with a Force Laboratory. Newton&apos;s second law and momentum are included; the third law is upcoming.</p>
         </Link>
+        <Link to="/physics/work" data-chapter-card="work" className="block rounded-2xl border border-amber-400/40 bg-surface-card hover:border-amber-300 p-5 space-y-2 min-h-[120px]">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-amber-300 font-bold">Class 9 · Chapter 7</span>
+          <h2 className="text-xl font-black text-white">Work, Energy, and Simple Machines</h2>
+          <p className="text-sm text-slate-300">Start with work: force times displacement, the joule, and positive, negative and zero work, with a Work Laboratory. Energy, power and simple machines are upcoming.</p>
+        </Link>
         <Link to="/physics/electricity" data-chapter-card="electricity" className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Laboratory</span>
           <h2 className="text-xl font-black text-white">Electricity and DC circuits</h2>

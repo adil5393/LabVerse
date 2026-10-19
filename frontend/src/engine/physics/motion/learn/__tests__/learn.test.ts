@@ -8,7 +8,7 @@ import { summary } from '../../kinematics';
 import { MOTION_EXERCISES, recomputeModel, solvedExerciseNumbers } from '../../exercises';
 import { MOTION_MAP, motionCoverageCounts } from '../../curriculum';
 
-describeChapterIntegrity('Motion', CH, ['motionTrack']);
+describeChapterIntegrity('Motion', CH, ['motionTrack', 'motionGraphs']);
 
 // Independent oracle: plain arithmetic.
 const dist = (start: number, targets: number[]) => { let d = 0, p = start; for (const t of targets) { d += Math.abs(t - p); p = t; } return d; };
@@ -131,7 +131,7 @@ describe('Motion exercises and curriculum map', () => {
     const sections = new Set(['4.1.1', '4.1.2', '4.1.3', '4.1.4', '4.2.1 to 4.2.3', '4.3', '4.4.1', 'Revise, Reflect, Refine', 'enrichment']);
     for (const r of MOTION_MAP) { expect(sections.has(r.section), r.id).toBe(true); if (r.status === 'planned') expect(r.lessonIds).toEqual([]); if (r.kind === 'enrichment') expect(r.section).toBe('enrichment'); }
     const c = motionCoverageCounts();
-    expect(c.planned).toBe(4); expect(c.available + c.planned).toBe(c.total);
+    expect(c.planned).toBe(2); expect(c.available + c.planned).toBe(c.total);
     for (const r of MOTION_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], `${r.id} -> ${id}`).toBeDefined();
   });
 });

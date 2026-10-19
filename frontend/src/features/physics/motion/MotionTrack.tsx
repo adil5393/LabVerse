@@ -20,6 +20,8 @@ import {
 } from '../../../engine/physics/motion/kinematics';
 import { pathOf, type MotionVisualProps, type Readout } from '../../../engine/physics/motion/learn/questions';
 import { fmtRate, fmtSignedRate, intervalStats, velocityAt } from '../../../engine/physics/motion/speed';
+import { useReducedMotion } from './useReducedMotion';
+import { MotionGraphsVisual } from './MotionGraphs';
 import { PHYS, QUANTITY, type PhysQuantity } from './physicsColors';
 
 const W = 600, H = 230, PAD = 28, TRACK_Y = 110;
@@ -42,18 +44,6 @@ interface ViewProps {
   /** Called with the current path whenever it changes (the lab uses this to compare predictions with the model). */
   onPath?: (p: MotionPath) => void;
 }
-
-const useReducedMotion = (): boolean => {
-  const [r, setR] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const m = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const f = () => setR(m.matches);
-    m.addEventListener?.('change', f);
-    return () => m.removeEventListener?.('change', f);
-  }, []);
-  return r;
-};
 
 const Card: React.FC<{ q: PhysQuantity; value: string; id: string }> = ({ q, value, id }) => {
   const m = QUANTITY[q];
@@ -289,4 +279,4 @@ const MotionTrack: React.FC<VisualProps> = ({ props, alt }) => {
   return <MotionTrackView range={p.range} start={p.start} moves={p.moves} durations={p.durations} editable={Boolean(p.editable)} show={p.show ?? ['position', 'distance', 'displacement']} stepM={p.stepM ?? 5} playback={p.playback ?? (p.moves.length > 1 || Boolean(p.editable))} alt={alt} />;
 };
 
-export const MOTION_VISUALS: VisualRegistry = { motionTrack: MotionTrack };
+export const MOTION_VISUALS: VisualRegistry = { motionTrack: MotionTrack, motionGraphs: MotionGraphsVisual };

@@ -7,15 +7,16 @@
 import type { EduChapter } from '../../../education/types';
 import { L1, L2, L3 } from './lessons';
 import { L4, L5 } from './lessonsSpeed';
+import { L6, L7, L8 } from './lessonsGraphs';
 import { PM_PREREQUISITES, PM_UNITS } from './prerequisites';
 
-const LESSON_LIST = [L1, L2, L3, L4, L5];
+const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8];
 
 export const MOTION_CHAPTER: EduChapter = {
   id: 'motion',
   title: 'Describing Motion Around Us',
   classGrade: 9,
-  ncertNote: 'Aligned to NCERT Class 9 Science, Exploration (2026-27), Chapter 4, Sections 4.1.1 to 4.1.3. Acceleration, graphs, the kinematic equations and uniform circular motion (4.1.4 to 4.4.1) are not yet covered here. Explanations, figures and questions are original; none are copied from the textbook.',
+  ncertNote: 'Aligned to NCERT Class 9 Science, Exploration (2026-27), Chapter 4, Sections 4.1.1 to 4.1.4 and 4.2. The kinematic equations and uniform circular motion (4.3 and 4.4.1) are not yet covered here. Explanations, figures and questions are original; none are copied from the textbook.',
   purpose: 'Everything around us moves. To study motion scientists first describe it in its simplest form, motion along a straight line. This opening unit shows how to say where an object is, how far it travelled, and how its position changed.',
   learn: ['Position and the reference point', 'Distance travelled as path length', 'Displacement as the net change in position', 'Why distance and displacement are different'],
   realWorld: ['Athletes on a straight track', 'A car on a highway', 'A lift moving between floors', 'A delivery trip that ends where it started'],

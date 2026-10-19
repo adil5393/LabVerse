@@ -119,4 +119,12 @@ export const PM_UNITS: EduUnit[] = [
     discover: ['How to calculate average speed and average velocity', 'Why the two can differ for the same trip', 'Why replay speed on screen is not the speed of the object'],
     prerequisiteIds: ['pmp-units', 'pmp-signed', 'pmp-rate'], lessonIds: ['pm-l4', 'pm-l5'],
   },
+  {
+    id: 'pm-unit-3', number: 3, title: 'Acceleration and graphs',
+    centralIdea: 'Acceleration is the rate of change of velocity. Graphs show motion at a glance: on a position–time graph the slope is the velocity, and on a velocity–time graph the slope is the acceleration and the area is the displacement.',
+    connection: 'This is Sections 4.1.4 and 4.2. It builds on speed and velocity, and prepares the equations of motion.',
+    vocabulary: [{ term: 'acceleration', meaning: 'change in velocity ÷ time taken (m/s²)' }, { term: 'slope', meaning: 'rise ÷ run on a graph' }, { term: 'uniform acceleration', meaning: 'equal changes of velocity in equal intervals of time' }],
+    discover: ['How to calculate average acceleration and read its sign', 'What the slope of each graph means', 'Why the area under a velocity–time graph is the displacement'],
+    prerequisiteIds: ['pmp-signed', 'pmp-rate', 'pmp-units'], lessonIds: ['pm-l6', 'pm-l7', 'pm-l8'],
+  },
 ];

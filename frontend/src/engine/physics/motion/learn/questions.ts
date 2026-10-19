@@ -34,3 +34,21 @@ export function pathOf(p: Pick<MotionVisualProps, 'range' | 'start' | 'moves' | 
 export const motionVisual = (p: MotionVisualProps, intro: string): VisualRef => ({
   kind: 'motionTrack', props: p as unknown as Record<string, unknown>, alt: describePath(intro, pathOf(p)),
 });
+
+import { describeProfile, scenarioById, type GraphKind, type Profile } from '../profile';
+
+export interface GraphVisualProps {
+  /** A named scenario of the Graph Studio (see profile.ts). */
+  scenario?: string;
+  profile?: Profile;
+  editable?: boolean;
+  graphs?: GraphKind[];
+  predict?: boolean;
+}
+
+/** A Graph Studio figure; its text alternative is generated from the same profile that draws the graphs. */
+export const graphVisual = (p: GraphVisualProps, intro: string): VisualRef => {
+  const profile = p.profile ?? scenarioById(p.scenario)?.profile;
+  if (!profile) throw new Error(`Unknown graph scenario ${p.scenario}`);
+  return { kind: 'motionGraphs', props: p as unknown as Record<string, unknown>, alt: describeProfile(profile, intro) };
+};

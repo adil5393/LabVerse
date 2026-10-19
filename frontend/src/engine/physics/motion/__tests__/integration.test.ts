@@ -3,6 +3,8 @@ import appSource from '../../../../App.tsx?raw';
 import explorerSource from '../../../../features/explorer/SubjectExplorer.tsx?raw';
 import electricitySource from '../../../../features/electricity/ElectricityLab.tsx?raw';
 import trackSource from '../../../../features/physics/motion/MotionTrack.tsx?raw';
+import graphsSource from '../../../../features/physics/motion/MotionGraphs.tsx?raw';
+import reducedSource from '../../../../features/physics/motion/useReducedMotion.ts?raw';
 import { getSubjectById, LABVERSE_SUBJECTS } from '../../../../types/subjectRegistry';
 import { MOTION_CHAPTER as CH } from '../learn/content';
 import { MOTION_EXPERIMENTS, comparePrediction, routeValues } from '../experiments';
@@ -38,8 +40,12 @@ describe('Physics route integration: Motion is added, Electricity is preserved',
     expect(CH.routes.landing).toBe('/physics/motion'); expect(CH.routes.learn('pm-l1')).toBe('/physics/motion/learn/pm-l1'); expect(CH.routes.lab).toBe('/physics/motion/lab');
   });
   it('the figure respects reduced motion and does not use frame counts as physics', () => {
-    expect(trackSource).toContain('prefers-reduced-motion');
+    expect(reducedSource).toContain('prefers-reduced-motion');
+    expect(trackSource).toContain('useReducedMotion');
+    expect(graphsSource).toContain('useReducedMotion');
     expect(trackSource).toMatch(/tickClock/);
+    expect(graphsSource).toMatch(/tickClock/);
+    expect(graphsSource).not.toMatch(/frameCount|frames\s*\+\+/);
     expect(trackSource).not.toMatch(/frameCount|frames\s*\+\+|requestAnimationFrame\([^)]*\)\s*;\s*\n\s*position/);
   });
 });

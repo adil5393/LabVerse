@@ -104,9 +104,9 @@ describe('Motion exercises and curriculum map', () => {
     expect(MOTION_EXERCISES.find((e) => e.number === 7)!.parts).toHaveLength(4);
     expect(MOTION_EXERCISES.find((e) => e.number === 16)!.parts).toHaveLength(4);
   });
-  it('only questions supported by the first unit are solved (1, 2 and 11); the rest are upcoming and carry no solution', () => {
-    expect(solvedExerciseNumbers()).toEqual([1, 2, 11]);
-    for (const e of MOTION_EXERCISES) { expect(e.status === 'solved').toBe(Boolean(e.solution)); if (e.status === 'upcoming') expect(e.lessonIds).toEqual([]); }
+  it('all sixteen questions are solved, each linked to the lessons that teach what it needs', () => {
+    expect(solvedExerciseNumbers()).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
+    for (const e of MOTION_EXERCISES) { expect(e.status).toBe('solved'); expect(e.lessonIds.length, `Q${e.number}`).toBeGreaterThan(0); for (const id of e.lessonIds) expect(CH.lessons[id], `Q${e.number} -> ${id}`).toBeDefined(); }
   });
   it('every solved solution is complete: hint, steps with reasons, answers, units and verification', () => {
     for (const e of MOTION_EXERCISES.filter((x) => x.solution)) {
@@ -125,7 +125,9 @@ describe('Motion exercises and curriculum map', () => {
     const src = await import('../../exercises?raw').then((m) => (m as unknown as { default: string }).default);
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '');
     expect(code).not.toMatch(/useEducationStore|localStorage|from '[^']*(education|store)[^']*'/);
-    expect([...code.matchAll(/^import .* from '([^']+)'/gm)].map((m) => m[1])).toEqual(['./kinematics']);
+    const imports = [...code.matchAll(/^import .* from '([^']+)'/gm)].map((m) => m[1]);
+    expect(imports.length).toBeGreaterThan(0);
+    for (const i of imports) expect(['./kinematics', './circular', './equations', './profile', './speed'], i).toContain(i);
   });
   it('the curriculum map is honest: PDF sections only, planned topics are marked planned and have no lessons', () => {
     const sections = new Set(['4.1.1', '4.1.2', '4.1.3', '4.1.4', '4.2.1 to 4.2.3', '4.3', '4.4.1', 'Revise, Reflect, Refine', 'enrichment']);

@@ -1,7 +1,6 @@
 /**
  * Physics hub (/physics) and the Motion chapter hub (/physics/motion).
- * The hub lists chapters; Electricity keeps its own routes, untouched. The Motion hub has four
- * destinations: Learn, Free Laboratory, NCERT Exercises and Chapter Practice (upcoming, not a link).
+ * The hub lists chapters; Electricity keeps its own routes, untouched. The Motion hub lists its destinations: Learn, the laboratories, NCERT Exercises and Chapter Practice.
  */
 
 import React from 'react';
@@ -9,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { MOTION_MAP, MOTION_TEXTBOOK, motionCoverageCounts } from '../../../engine/physics/motion/curriculum';
 import { solvedExerciseNumbers, MOTION_EXERCISES } from '../../../engine/physics/motion/exercises';
+import { PRACTICE_ITEMS } from '../../../engine/physics/motion/practice';
 import { MotionLearnSection } from './MotionLearn';
 
 const Crumb: React.FC<{ last: string; middle?: { to: string; label: string } }> = ({ last, middle }) => (
@@ -81,12 +81,12 @@ export const MotionHub: React.FC = () => {
             <Link to="/physics/motion/circular" data-destination="circular" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the circular motion lab</Link>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #A78BFA" }}>
-            <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">{solved} of {MOTION_EXERCISES.length} questions solved step by step; the rest are upcoming.</p></div>
+            <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">All {solved} of {MOTION_EXERCISES.length} questions, with every part, solved step by step.</p></div>
             <Link to="/physics/motion/exercises" data-destination="exercises" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the exercises</Link>
           </div>
-          <div className={`${card} border-dashed border-surface-border opacity-80`} aria-disabled="true" data-destination="practice">
-            <div><h2 className="text-lg font-black text-slate-300">Chapter Practice</h2><p className="text-xs text-slate-400">Upcoming. Independent assessment for the whole chapter will arrive after more of the chapter is built.</p></div>
-            <span className="min-h-[44px] inline-flex items-center justify-center rounded-xl border border-surface-border text-slate-400 font-bold text-sm">Upcoming</span>
+          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #34D399" }}>
+            <div><h2 className="text-lg font-black text-white">Chapter Practice</h2><p className="text-xs text-slate-300">{PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order; no prerequisites, no login.</p></div>
+            <Link to="/physics/motion/practice" data-destination="practice" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open Chapter Practice</Link>
           </div>
         </section>
 

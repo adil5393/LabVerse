@@ -114,6 +114,9 @@ const EquationLab = lazy(() =>
 const CircularLab = lazy(() =>
   import('./features/physics/motion/MotionLabs').then((m) => ({ default: m.CircularLab }))
 );
+const MotionPractice = lazy(() =>
+  import('./features/physics/motion/MotionPractice').then((m) => ({ default: m.MotionPractice }))
+);
 const MotionLearnPage = lazy(() =>
   import('./features/physics/motion/MotionLearn').then((m) => ({ default: m.MotionLearnPage }))
 );
@@ -150,6 +153,7 @@ export const App: React.FC = () => {
           <Route path="/physics/motion/graphs" element={<MotionGraphStudio />} />
           <Route path="/physics/motion/equations" element={<EquationLab />} />
           <Route path="/physics/motion/circular" element={<CircularLab />} />
+          <Route path="/physics/motion/practice" element={<MotionPractice />} />
           <Route path="/physics/motion/exercises" element={<MotionExercises />} />
           <Route path="/physics/motion/learn/:lessonId" element={<MotionLearnPage />} />
 

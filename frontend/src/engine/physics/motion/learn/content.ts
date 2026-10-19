@@ -31,5 +31,6 @@ export const MOTION_CHAPTER: EduChapter = {
     learn: (id) => `/physics/motion/learn/${id}`,
     prerequisites: (id) => `/physics/motion#${id}`,
     lab: '/physics/motion/lab',
+    practice: '/physics/motion/practice',
   },
 };

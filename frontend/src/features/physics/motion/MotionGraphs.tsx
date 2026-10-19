@@ -37,7 +37,9 @@ const SPECS: Record<GraphKind, GraphSpec> = {
   at: { kind: 'at', title: 'Acceleration–time graph', yName: 'acceleration a', yUnit: 'm/s²', color: PHYS.acceleration, y: (s) => s.a, slopeName: '', slopeUnit: '', heightMeans: 'acceleration' },
 };
 
-const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t: number) => void }> = ({ spec, profile, t, onSeek }) => {
+export interface ShadeRegion { t0: number; t1: number; label: string; color: 'displacement' | 'distance' | 'velocity' | 'acceleration' }
+
+const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t: number) => void; shade?: ShadeRegion[] }> = ({ spec, profile, t, onSeek, shade }) => {
   const T = totalTime(profile);
   const pts = useMemo(() => series(profile, 160), [profile]);
   const ys = pts.map(spec.y);
@@ -77,6 +79,16 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
     area.push(<path key="pos" d={mk(1)} fill={PHYS.displacement} opacity={0.4} />);
     area.push(<path key="neg" d={mk(-1)} fill={`url(#hatch-${spec.kind})`} stroke={PHYS.displacement} strokeWidth={0.5} />);
   }
+  const bands: React.ReactNode[] = [];
+  if (spec.kind === 'vt' && shade) {
+    shade.forEach((s, i) => {
+      const a = stateAt(profile, s.t0), b = stateAt(profile, s.t1);
+      const inner = pts.filter((p) => p.t > s.t0 && p.t < s.t1);
+      const poly = [a, ...inner, b];
+      const d = `M${X(a.t).toFixed(1)},${Y(0).toFixed(1)} ` + poly.map((p) => `L${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ') + ` L${X(b.t).toFixed(1)},${Y(0).toFixed(1)} Z`;
+      bands.push(<path key={`band${i}`} d={d} fill={PHYS[s.color]} opacity={0.35} stroke={PHYS[s.color]} strokeWidth={1} />);
+    });
+  }
   const slope = spec.kind === 'xt' ? cur.v : spec.kind === 'vt' ? cur.a : 0;
   const dx = Math.min(1.2, T / 6);
   const tangent = spec.kind !== 'at' ? (
@@ -98,6 +110,7 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
         {yT.map((v) => <g key={`y${v}`}><line x1={ML} y1={Y(v)} x2={GW - MR} y2={Y(v)} stroke={v === 0 ? '#94a3b8' : '#334155'} strokeWidth={v === 0 ? 1.2 : 0.6} /><text x={ML - 6} y={Y(v) + 3} textAnchor="end" fontSize={10} fill="#94a3b8">{v}</text></g>)}
         <text x={(ML + GW - MR) / 2} y={GH - 4} textAnchor="middle" fontSize={11} fill={PHYS.time}>time t (s)</text>
         <text transform={`translate(12 ${(MT + GH - MB) / 2}) rotate(-90)`} textAnchor="middle" fontSize={11} fill={spec.color}>{spec.yName} ({spec.yUnit})</text>
+        {bands}
         {area}
         <path d={line} fill="none" stroke={spec.color} strokeWidth={2.5} />
         {tangent}
@@ -106,6 +119,11 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
         <circle cx={X(t)} cy={Y(spec.y(cur))} r={5.5} fill={spec.color} stroke="#0f172a" strokeWidth={2} />
         <text x={Math.min(GW - 70, X(t) + 8)} y={Math.max(MT + 10, Y(spec.y(cur)) - 8)} fontSize={11} fontWeight={700} fill={spec.color}>({fmt(t)} s, {fmtSign(spec.y(cur))})</text>
       </svg>
+      {shade && spec.kind === 'vt' && (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11px]" aria-label="Shaded areas" data-testid="shade-legend">
+          {shade.map((s) => <li key={s.label} style={{ color: PHYS[s.color] }}>{'\u25A0'} {s.label} (from {fmt(s.t0)} s to {fmt(s.t1)} s)</li>)}
+        </ul>
+      )}
     </figure>
   );
 };
@@ -156,9 +174,9 @@ const NumField: React.FC<{ label: string; unit: string; value: number; step: num
 };
 
 export interface PresetLike { id: string; title: string; profile: Profile }
-export interface GraphStudioProps { scenarioId?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; withPrediction?: boolean; alt?: string; presets?: PresetLike[]; equations?: boolean }
+export interface GraphStudioProps { scenarioId?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; withPrediction?: boolean; alt?: string; presets?: PresetLike[]; equations?: boolean; shade?: ShadeRegion[] }
 
-export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt, presets, equations = false }) => {
+export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt, presets, equations = false, shade }) => {
   const sc = scenarioById(scenarioId);
   const base = given ?? sc?.profile ?? SCENARIOS[1].profile;
   const [profile, setProfile] = useState<Profile>(base);
@@ -250,7 +268,7 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
       <TrackStrip profile={profile} t={tClamped} />
 
       <div className="grid gap-3 md:grid-cols-2">
-        {graphs.map((k) => <Graph key={k} spec={SPECS[k]} profile={profile} t={tClamped} onSeek={(v) => { setPlaying(false); setT(v); }} />)}
+        {graphs.map((k) => <Graph key={k} spec={SPECS[k]} profile={profile} t={tClamped} shade={shade} onSeek={(v) => { setPlaying(false); setT(v); }} />)}
       </div>
 
       <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-time">

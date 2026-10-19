@@ -7,6 +7,7 @@ import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { EQUATION_PRESETS } from '../../../engine/physics/motion/equations';
+import { validateProfile, type Profile } from '../../../engine/physics/motion/profile';
 import { CircularMotionView } from './CircularMotion';
 import { GraphStudioView } from './MotionGraphs';
 
@@ -31,7 +32,10 @@ const Shell: React.FC<{ last: string; title: string; intro: string; testid: stri
 
 export const EquationLab: React.FC = () => {
   const [params] = useSearchParams();
-  const preset = EQUATION_PRESETS.find((p) => p.id === params.get('preset')) ?? EQUATION_PRESETS[0];
+  const named = EQUATION_PRESETS.find((p) => p.id === params.get('preset')) ?? EQUATION_PRESETS[0];
+  const num = (k: string) => (params.get(k) === null || params.get(k) === '' ? NaN : Number(params.get(k)));
+  const typed: Profile | null = [num('u'), num('a'), num('d')].every(Number.isFinite) ? { x0: Number.isFinite(num('x0')) ? num('x0') : 0, v0: num('u'), segments: [{ durationS: num('d'), a: num('a') }] } : null;
+  const preset = typed && validateProfile(typed) === null ? { ...named, id: `typed-${params.toString()}`, profile: typed } : named;
   return (
     <Shell testid="motion-equations" last="Equation Laboratory" title="Equation Laboratory" intro="Set the start position, initial velocity, acceleration and elapsed time. The three equations of motion, the numbers and both graphs come from one motion with constant acceleration. Free exploration: nothing to unlock.">
       <GraphStudioView key={preset.id} profile={preset.profile} editable equations graphs={['xt', 'vt']} presets={EQUATION_PRESETS} />

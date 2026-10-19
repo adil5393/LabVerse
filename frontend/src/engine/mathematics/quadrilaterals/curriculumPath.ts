@@ -165,9 +165,9 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
         'A parallelogram is a quadrilateral in which both pairs of opposite sides are parallel. A diagonal splits it into two congruent triangles by ASA criterion.',
       detailedPoints: [
         'Definition: AB || CD and BC || DA.',
-        'Theorem 12.1: A diagonal (e.g. AC) divides it into two congruent triangles (ΔABC ≅ ΔCDA).',
-        'Theorem 12.2: Opposite sides are equal (AB = CD and BC = DA) by CPCTC.',
-        'Theorem 12.3: Opposite angles are equal (∠A = ∠C and ∠B = ∠D) by CPCTC.',
+        'Used in the proof of Theorem 1: a diagonal (e.g. AC) divides it into two congruent triangles (ΔABC ≅ ΔCDA).',
+        'Theorem 1(a): Opposite sides are equal (AB = CD and BC = DA) by CPCTC.',
+        'Theorem 1(b): Opposite angles are equal (∠A = ∠C and ∠B = ∠D) by CPCTC.',
         'Consecutive adjacent angles are supplementary (∠A + ∠B = 180°) due to co-interior angles.',
       ],
       keyTerms: [
@@ -230,7 +230,7 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
       summary:
         'When both diagonals of a parallelogram are drawn, they cross at point O. Point O is the exact midpoint of both diagonal AC and diagonal BD.',
       detailedPoints: [
-        'Theorem 12.4: The diagonals of a parallelogram bisect each other.',
+        'Theorem 1(c): The diagonals of a parallelogram bisect each other.',
         'This means OA = OC (O bisects AC) and OB = OD (O bisects BD).',
         'Proof relies on establishing congruence of opposite triangle pairs: ΔAOB ≅ ΔCOD by ASA criterion.',
         'In general parallelograms, diagonals are NOT equal in length (unless it is a rectangle) and NOT perpendicular (unless it is a rhombus).',
@@ -294,10 +294,10 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
       summary:
         'A converse theorem answers: "If certain side or angle conditions are met, can we conclude the shape is a parallelogram?"',
       detailedPoints: [
-        'Theorem 12.5: If each pair of opposite sides of a quadrilateral is equal, then it is a parallelogram.',
-        'Theorem 12.6: If each pair of opposite angles of a quadrilateral is equal, then it is a parallelogram.',
-        'Theorem 12.7: If the diagonals of a quadrilateral bisect each other, then it is a parallelogram.',
-        'Theorem 12.8: A quadrilateral is a parallelogram if ONE pair of opposite sides is BOTH equal and parallel.',
+        'Theorem 2: If each pair of opposite sides of a quadrilateral is equal, then it is a parallelogram.',
+        'Theorem 3: If each pair of opposite angles of a quadrilateral is equal, then it is a parallelogram.',
+        'Theorem 4: If the diagonals of a quadrilateral bisect each other, then it is a parallelogram.',
+        'Theorem 5: A quadrilateral is a parallelogram if ONE pair of opposite sides is BOTH equal and parallel.',
         'Warning: If only one pair of opposite sides is equal (without being parallel), the shape might be an isosceles trapezium, NOT a parallelogram!',
       ],
       keyTerms: [
@@ -423,15 +423,15 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
     unitTitle: 'Unit 3: The Midpoint Theorem',
     lessonNumber: 6,
     title: 'The Midpoint Theorem',
-    subtitle: 'Parallelism & the Half-Length Invariant (Theorem 12.9)',
+    subtitle: 'Parallelism & the Half-Length Invariant (Theorem 6)',
     learningObjective:
-      'Prove Theorem 12.9: The segment joining the midpoints of two sides of a triangle is parallel to the third side and half of it.',
+      'Prove Theorem 6: The segment joining the midpoints of two sides of a triangle is parallel to the third side and half of it.',
     experimentId: 'midpoint-theorem',
     stages: ['understand', 'predict', 'experiment', 'observe', 'explain', 'practice'],
     allowedTools: ['select', 'point', 'segment', 'midpoint', 'distance_measure'],
     concept: {
       summary:
-        'Theorem 12.9 is one of the most powerful theorems in Euclidean geometry: In ΔABC, if D and E are midpoints of AB and AC, then DE || BC and DE = 1/2 BC.',
+        'Theorem 6 is one of the most powerful theorems in Euclidean geometry: In ΔABC, if D and E are midpoints of AB and AC, then DE || BC and DE = 1/2 BC.',
       detailedPoints: [
         'Theorem statement: The line segment joining the midpoints of two sides of a triangle is parallel to the third side and is half as long as that third side.',
         'Proof strategy: Extend DE to F such that DE = EF, and join CF.',
@@ -501,15 +501,15 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
     title: 'Converse of the Midpoint Theorem',
     subtitle: 'Ray Through Midpoint Parallel to Base Bisects Third Side',
     learningObjective:
-      'Prove and apply Theorem 12.10: The line drawn through the midpoint of one side of a triangle parallel to another side bisects the third side.',
+      'Prove and apply Theorem 7: The line drawn through the midpoint of one side of a triangle parallel to another side bisects the third side.',
     experimentId: 'converse-midpoint-theorem',
     stages: ['understand', 'predict', 'experiment', 'observe', 'explain', 'practice'],
     allowedTools: ['select', 'point', 'segment', 'parallel_constraint', 'distance_measure'],
     concept: {
       summary:
-        'Theorem 12.10 is the logical converse of the Midpoint Theorem: Instead of starting with two midpoints, we start with ONE midpoint D and draw a line parallel to BC.',
+        'Theorem 7 is the logical converse of the Midpoint Theorem: Instead of starting with two midpoints, we start with ONE midpoint D and draw a line parallel to BC.',
       detailedPoints: [
-        'Theorem 12.10 statement: The line drawn through the midpoint of one side of a triangle parallel to another side bisects the third side.',
+        'Theorem 7 statement: The line drawn through the midpoint of one side of a triangle parallel to another side bisects the third side.',
         'Given: D is the midpoint of AB (AD = DB) and line l through D is parallel to BC, intersecting AC at E.',
         'Conclusion: E is the midpoint of AC (AE = EC).',
         'Proof method: Draw CM || BA meeting DE extended at F. Show DBCF is a parallelogram and ΔADE ≅ ΔCFE.',
@@ -625,7 +625,7 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
     title: 'The Centroid Theorem',
     subtitle: 'The Invariant 2:1 Ratio on Every Median',
     learningObjective:
-      'Prove and verify Theorem 12.11: The centroid of a triangle divides each median in the ratio 2:1 from the vertex.',
+      'Prove and verify Theorem 8: The centroid of a triangle divides each median in the ratio 2:1 from the vertex.',
     experimentId: 'centroid-theorem',
     stages: ['understand', 'predict', 'experiment', 'observe', 'explain', 'practice'],
     allowedTools: ['select', 'point', 'segment', 'midpoint', 'distance_measure'],
@@ -633,7 +633,7 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
       summary:
         'On every median, centroid G is positioned twice as far from the vertex as it is from the opposite side midpoint: AG : GD = 2 : 1, BG : GE = 2 : 1, CG : GF = 2 : 1.',
       detailedPoints: [
-        'Theorem 12.11: The centroid of a triangle divides each median in the ratio 2:1.',
+        'Theorem 8: The centroid of a triangle divides each median in the ratio 2:1.',
         'AG = 2/3 AD and GD = 1/3 AD.',
         'Proof uses the Midpoint Theorem: Join midpoints D and E. DE || AB and DE = 1/2 AB.',
         'Triangles ΔGDE and ΔGAB are similar (AA criterion) because alternate interior angles are equal.',
@@ -694,7 +694,7 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
       detailedPoints: [
         'Varignon’s Theorem: The quadrilateral formed by joining the midpoints of the sides of any simple quadrilateral in order is a parallelogram.',
         'Proof relies on applying the Midpoint Theorem to diagonal AC: In ΔABC, PQ || AC and PQ = 1/2 AC. In ΔADC, RS || AC and RS = 1/2 AC.',
-        'Therefore, PQ || RS and PQ = RS. A quadrilateral with one pair of opposite sides equal and parallel is a parallelogram (Theorem 12.8)!',
+        'Therefore, PQ || RS and PQ = RS. A quadrilateral with one pair of opposite sides equal and parallel is a parallelogram (Theorem 5)!',
         'Area invariant: Area(PQRS) = 1/2 Area(ABCD).',
         'Special cases: Rectangle yields Rhombus, Rhombus yields Rectangle, Square yields Square.',
       ],
@@ -726,7 +726,7 @@ export const QUAD_GUIDED_LESSONS: Record<string, GuidedLessonDefinition> = {
     whyGuide: {
       explanationType: 'theorem_proof',
       explanation:
-        'Draw diagonal AC. In ΔABC, P and Q are midpoints of AB and BC. By the Midpoint Theorem, PQ || AC and PQ = 1/2 AC. In ΔADC, S and R are midpoints of AD and CD. By the Midpoint Theorem, SR || AC and SR = 1/2 AC. Therefore, PQ || SR and PQ = SR. By Theorem 12.8, PQRS is a parallelogram.',
+        'Draw diagonal AC. In ΔABC, P and Q are midpoints of AB and BC. By the Midpoint Theorem, PQ || AC and PQ = 1/2 AC. In ΔADC, S and R are midpoints of AD and CD. By the Midpoint Theorem, SR || AC and SR = 1/2 AC. Therefore, PQ || SR and PQ = SR. By Theorem 5, PQRS is a parallelogram.',
       deductiveTakeaway:
         'The Midpoint Theorem connects diagonals of the outer quadrilateral to sides of the inner parallelogram.',
     },

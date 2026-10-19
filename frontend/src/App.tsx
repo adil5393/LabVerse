@@ -40,6 +40,9 @@ const QuadrilateralsLab = lazy(() =>
     default: m.QuadrilateralsLab,
   }))
 );
+const QuadrilateralsLearnPage = lazy(() =>
+  import('./features/mathematics/quadrilaterals/learn/QuadrilateralsLearn').then((m) => ({ default: m.QuadrilateralsLearnPage }))
+);
 const QuadrilateralWorkbenchPage = lazy(() =>
   import('./features/mathematics/quadrilaterals/QuadrilateralWorkbenchPage').then((m) => ({
     default: m.QuadrilateralWorkbenchPage,
@@ -131,6 +134,7 @@ export const App: React.FC = () => {
 
           {/* Route 9: Interactive Quadrilaterals Workbench */}
           <Route path="/mathematics/quadrilaterals/workbench" element={<QuadrilateralWorkbenchPage />} />
+          <Route path="/mathematics/quadrilaterals/learn/:lessonId" element={<QuadrilateralsLearnPage />} />
 
           {/* Route 10: Propositions & Converses Module Landing Page */}
           <Route path="/mathematics/propositions" element={<PropositionsLab />} />

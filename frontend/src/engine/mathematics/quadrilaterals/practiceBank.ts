@@ -19,7 +19,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'angle_sum',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Angle Sum Property',
+    ncertReference: 'Chapter 12, Section 12.2 (the angle sum is used in the proof of Theorem 3); original question',
     statement:
       'Three interior angles of a quadrilateral ABCD are 75°, 90°, and 110°. Find the measure of the fourth interior angle ∠D in degrees.',
     diagramGivens: {
@@ -53,7 +53,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'angle_sum',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Exercise 12.1, Q1',
+    ncertReference: 'Chapter 12, Section 12.1 (compare Exercise Set 12.1, Q1); original question',
     statement:
       'The angles of a quadrilateral are in the ratio 3 : 5 : 9 : 13. Find the measure of the largest angle in degrees.',
     diagramGivens: {
@@ -88,7 +88,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'multiple_choice',
     topicId: 'anatomy',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Section 12.1',
+    ncertReference: 'Chapter 12, Section 12.1; original question',
     statement:
       'A quadrilateral ABCD has interior angles ∠A = 40°, ∠B = 50°, ∠C = 60°, and ∠D = 210°. Which of the following statements is mathematically true?',
     options: [
@@ -119,7 +119,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'parallelogram_properties',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.3',
+    ncertReference: 'Chapter 12, Section 12.2, Theorem 1(b); original question',
     statement:
       'In parallelogram ABCD, angle ∠A = (3x - 10)° and opposite angle ∠C = (x + 30)°. Find the value of x in degrees.',
     diagramGivens: {
@@ -140,7 +140,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
       'Solve the linear equation: 3x - 10 = x + 30.',
     ],
     workedSolution: [
-      'Theorem 12.3: In a parallelogram, opposite angles are equal (∠A = ∠C).',
+      'Theorem 1(b): In a parallelogram, opposite angles are equal (∠A = ∠C).',
       '3x - 10 = x + 30',
       '2x = 40 => x = 20',
       'Each opposite angle is 3(20) - 10 = 50°.',
@@ -152,7 +152,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'parallelogram_properties',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.1',
+    ncertReference: 'Chapter 12, Section 12.2, Theorem 1 (proof by a diagonal); original question',
     statement:
       'Two adjacent angles of a parallelogram ABCD are in the ratio 4 : 5. Find the measure of the smaller angle in degrees.',
     diagramGivens: {
@@ -186,7 +186,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'parallelogram_diagonals',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.4',
+    ncertReference: 'Chapter 12, Section 12.2, Theorem 1(c); original question',
     statement:
       'The diagonals of parallelogram ABCD intersect at point O. If OA = 2x + 1 cm and OC = 11 cm, find the value of x in cm.',
     diagramGivens: {
@@ -207,7 +207,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     acceptableTolerance: 0.1,
     unit: 'cm',
     hints: [
-      'Theorem 12.4: The diagonals of a parallelogram bisect each other.',
+      'Theorem 1(c): The diagonals of a parallelogram bisect each other.',
       'Intersection point O is the midpoint of diagonal AC, so OA = OC.',
       'Solve 2x + 1 = 11.',
     ],
@@ -225,7 +225,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'proof_step',
     topicId: 'parallelogram_converses',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.7',
+    ncertReference: 'Chapter 12, Section 12.2, Theorem 4; original question',
     statement:
       'Complete the deductive proof showing that if the diagonals of quadrilateral ABCD bisect each other at O, then ABCD is a parallelogram.',
     diagramGivens: {
@@ -284,7 +284,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
       'By the SAS congruence criterion, ΔAOB ≅ ΔCOD.',
       'By CPCTC, AB = CD and ∠OAB = ∠OCD.',
       'Equal alternate interior angles prove AB || CD.',
-      'A quadrilateral with one pair of opposite sides equal and parallel is a parallelogram (Theorem 12.8).',
+      'A quadrilateral with one pair of opposite sides equal and parallel is a parallelogram (Theorem 5).',
     ],
   },
 
@@ -297,7 +297,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'midpoint_theorem',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.9',
+    ncertReference: 'Chapter 12, Section 12.3.1, Theorem 6; original question',
     statement:
       'In triangle ABC, D and E are the midpoints of sides AB and AC respectively. If base BC = 14.6 cm, find the length of segment DE in cm.',
     diagramGivens: {
@@ -320,7 +320,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     acceptableTolerance: 0.1,
     unit: 'cm',
     hints: [
-      'Theorem 12.9 (The Midpoint Theorem): The segment joining the midpoints of two sides of a triangle is parallel to the third side and half of it.',
+      'Theorem 6 (The Midpoint Theorem): The segment joining the midpoints of two sides of a triangle is parallel to the third side and half of it.',
       'DE = 1/2 × BC.',
       'Compute: 14.6 / 2.',
     ],
@@ -335,7 +335,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'midpoint_theorem',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Midpoint Theorem Applications',
+    ncertReference: 'Chapter 12, Section 12.3.1 (compare Exercise Set 12.3, Q1); original question',
     statement:
       'The sides of triangle ABC are AB = 8 cm, BC = 10 cm, and CA = 12 cm. Points D, E, F are the midpoints of AB, BC, CA respectively. Find the perimeter of the medial triangle DEF in cm.',
     diagramGivens: {
@@ -377,18 +377,18 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'midpoint_theorem',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.10',
+    ncertReference: 'Chapter 12, Section 12.3.1, Theorem 7; original question',
     statement:
       'In ΔABC, D is the midpoint of AB. A line drawn through D parallel to BC intersects AC at point E. If AC = 18 cm, what is the length of AE?',
     options: ['9 cm', '6 cm', '12 cm', '4.5 cm'],
     correctAnswer: '9 cm',
     hints: [
-      'Apply Theorem 12.10 (Converse of Midpoint Theorem).',
+      'Apply Theorem 7 (Converse of Midpoint Theorem).',
       'The line through the midpoint of one side parallel to another side bisects the third side.',
       'Point E must be the midpoint of AC, so AE = AC / 2.',
     ],
     workedSolution: [
-      'Theorem 12.10 (Converse of Midpoint Theorem): The line drawn through the midpoint of one side of a triangle parallel to another side bisects the third side.',
+      'Theorem 7 (Converse of Midpoint Theorem): The line drawn through the midpoint of one side of a triangle parallel to another side bisects the third side.',
       'Here, D is the midpoint of AB and DE || BC.',
       'Therefore, E is the midpoint of AC.',
       'AE = AC / 2 = 18 / 2 = 9 cm.',
@@ -404,7 +404,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'medians_centroid',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.11',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 8; original question',
     statement:
       'In triangle ABC, G is the centroid and AD is the median to side BC. If the median AD has total length 18 cm, find the length of the segment AG from vertex to centroid in cm.',
     diagramGivens: {
@@ -429,7 +429,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
       'Compute: (2/3) × 18.',
     ],
     workedSolution: [
-      'Theorem 12.11: The centroid of a triangle divides each median in the ratio 2:1 (AG : GD = 2 : 1).',
+      'Theorem 8: The centroid of a triangle divides each median in the ratio 2:1 (AG : GD = 2 : 1).',
       'Total median AD = AG + GD = 2k + 1k = 3k.',
       '3k = 18 cm => k = 6 cm.',
       'AG = 2k = 2 × 6 = 12 cm.',
@@ -442,7 +442,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'medians_centroid',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.11',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 8; original question',
     statement:
       'In ΔPQR with centroid G, the segment from vertex P to centroid G is measured as PG = 9.4 cm. Find the length of the remaining median segment GD to the midpoint D in cm.',
     correctAnswer: 4.7,
@@ -469,7 +469,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'varignon',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Varignon Theorem',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 9; original question',
     statement:
       'A convex quadrilateral ABCD has an area of 56 cm². Points P, Q, R, S are the midpoints of sides AB, BC, CD, DA respectively. Find the area of the Varignon parallelogram PQRS in cm².',
     diagramGivens: {
@@ -506,7 +506,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'varignon',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Varignon Properties',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 9 and its proof; original question',
     statement:
       'Quadrilateral ABCD has diagonals AC = 16 cm and BD = 12 cm. Points P, Q, R, S are the midpoints of sides AB, BC, CD, DA. Find the perimeter of the Varignon parallelogram PQRS in cm.',
     correctAnswer: 28,
@@ -531,7 +531,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'varignon',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Example 2',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 9 applied; original question',
     statement:
       'If ABCD is a rectangle, what special type of quadrilateral is formed by joining the midpoints of its four sides?',
     options: [
@@ -565,7 +565,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'basic',
     questionType: 'numerical',
     topicId: 'tiling',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Tiling the Plane',
+    ncertReference: 'Chapter 12, Section 12.4; original question',
     statement:
       'When copies of a simple quadrilateral tile the Euclidean plane by 180° edge-rotations, how many individual tile vertices meet at every internal shared junction?',
     correctAnswer: 4,
@@ -587,7 +587,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'multiple_choice',
     topicId: 'tiling',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Practical Geometry & Tiling',
+    ncertReference: 'Chapter 12, Section 12.4; original question',
     statement:
       'Can a concave simple quadrilateral (an arrow/dart shape with one reflex angle > 180°) tile the Euclidean plane without gaps or overlaps?',
     options: [
@@ -618,7 +618,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'numerical',
     topicId: 'special_quadrilaterals',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Exercise 12.1',
+    ncertReference: 'Chapter 12, Exercise Sets 12.1 to 12.4 (original questions)',
     statement:
       'The diagonals of a rhombus ABCD are AC = 16 cm and BD = 12 cm. Find the length of each side of the rhombus in cm.',
     correctAnswer: 10,
@@ -645,7 +645,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'standard',
     questionType: 'numerical',
     topicId: 'midpoint_theorem',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Exercise 12.2',
+    ncertReference: 'Chapter 12, chapter revision; original question',
     statement:
       'In trapezium ABCD, AB is parallel to CD with AB = 15 cm and CD = 9 cm. E and F are the midpoints of the non-parallel sides AD and BC respectively. Find the length of midsegment EF in cm.',
     correctAnswer: 12,
@@ -671,7 +671,7 @@ export const CHAPTER_PRACTICE_BANK: PracticeQuestion[] = [
     difficulty: 'challenge',
     questionType: 'multiple_choice',
     topicId: 'varignon',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Section 12.7',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 9; original question',
     statement:
       'If ABCD is a square, the quadrilateral formed by joining the midpoints of its four sides is:',
     options: [

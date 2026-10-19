@@ -12,6 +12,7 @@
 import { create } from 'zustand';
 import type {
   GuidedStageId,
+  PracticeEvidence,
   StudentLessonProgress,
   ChapterProgressState,
   ChapterCompletionStats,
@@ -21,6 +22,7 @@ import {
   ORDERED_QUAD_LESSON_IDS,
   getNextRecommendedLesson,
 } from '../engine/mathematics/quadrilaterals/curriculumPath';
+import { isPracticeMastered, migrateLessonProgress } from '../engine/mathematics/guidedLearning/mastery';
 
 const STORAGE_KEY = 'labverse_quadrilaterals_progress_v1';
 
@@ -75,7 +77,13 @@ function loadInitialProgress(): ChapterProgressState {
             completedLessonIds: Array.isArray(parsed.completedLessonIds)
               ? parsed.completedLessonIds
               : [],
-            lessons: parsed.lessons || {},
+            // Mastery recorded before per-question evidence existed cannot be verified: keep the
+            // record, mark it Unverified, and let the student earn it.
+            lessons: Object.fromEntries(
+              Object.entries((parsed.lessons || {}) as Record<string, StudentLessonProgress>)
+                .filter(([, v]) => v && typeof v === 'object')
+                .map(([k, v]) => [k, migrateLessonProgress(v)])
+            ),
           };
         }
       }
@@ -130,7 +138,8 @@ interface QuadGuidedLearningState {
     lessonId: string,
     questionId: string,
     isCorrect: boolean,
-    totalQuestions: number
+    totalQuestions: number,
+    opts?: { assisted?: boolean }
   ) => void;
   completeLesson: (lessonId: string, isTeacherBypass?: boolean) => void;
   teacherBypassCurrentStage: (lessonId: string) => void;
@@ -335,29 +344,39 @@ export const useQuadGuidedLearningStore = create<QuadGuidedLearningState>(
 
     recordPracticeResult: (
       lessonId: string,
-      _questionId: string,
+      questionId: string,
       isCorrect: boolean,
-      totalQuestions: number
+      totalQuestions: number,
+      opts: { assisted?: boolean } = {}
     ) => {
       set((state) => {
         const existing =
           state.lessons[lessonId] || getDefaultLessonProgress(lessonId);
-        const newCorrect =
-          (existing.practiceCorrectCount || 0) + (isCorrect ? 1 : 0);
-        const total = Math.max(
-          existing.practiceTotalQuestions || 0,
-          totalQuestions
-        );
-        const mastered = newCorrect >= total && total > 0;
+        const answered: Record<string, PracticeEvidence> = { ...(existing.practiceAnswered || {}) };
+        const prev = answered[questionId];
+        const assistedNow = Boolean(opts.assisted) || state.teacherMode;
+        const first = !prev || prev.attempts === 0;
+        answered[questionId] = {
+          attempts: (prev?.attempts || 0) + 1,
+          correct: Boolean(prev?.correct) || isCorrect,
+          // The first answer decides independence; later retries never rewrite it.
+          firstAttemptCorrect: first ? isCorrect && !assistedNow : prev.firstAttemptCorrect,
+          assisted: Boolean(prev?.assisted) || assistedNow,
+        };
+        const total = Math.max(existing.practiceTotalQuestions || 0, totalQuestions);
+        // Distinct questions answered correctly: repeating one question cannot raise this.
+        const correctDistinct = Object.values(answered).filter((a) => a.correct).length;
 
         const updatedLessons = {
           ...state.lessons,
           [lessonId]: {
             ...existing,
             practiceAttempted: true,
-            practiceCorrectCount: newCorrect,
+            practiceAnswered: answered,
+            practiceCorrectCount: Math.min(correctDistinct, total),
             practiceTotalQuestions: total,
-            practiceMastered: mastered,
+            practiceMastered: isPracticeMastered(answered, total),
+            legacyMasteryUnverified: false,
           },
         };
 

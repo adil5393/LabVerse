@@ -63,8 +63,9 @@ export const QuadrilateralGuidedInspector: React.FC = () => {
   const [activeQuestionIdx, setActiveQuestionIdx] = useState<number>(0);
   const [practiceInput, setPracticeInput] = useState<string>('');
   const [selectedMcq, setSelectedMcq] = useState<number | null>(null);
-  const [hintsRevealed, setHintsRevealed] = useState<number>(0);
-  const [showSolution, setShowSolution] = useState<boolean>(false);
+  // Hints and solutions are tracked PER QUESTION, so help on one question is
+  // neither shown on the next nor counted against it.
+  const [assistByQ, setAssistByQ] = useState<Record<string, { hints: number; solution: boolean }>>({});
   const [practiceFeedback, setPracticeFeedback] = useState<{
     isCorrect: boolean;
     message: string;
@@ -79,6 +80,18 @@ export const QuadrilateralGuidedInspector: React.FC = () => {
     .filter((q): q is PracticeQuestion => Boolean(q));
 
   const currentQ = practiceQuestions[activeQuestionIdx] || practiceQuestions[0];
+  const hintsRevealed = currentQ ? assistByQ[currentQ.id]?.hints ?? 0 : 0;
+  const showSolution = currentQ ? assistByQ[currentQ.id]?.solution ?? false : false;
+  const setHintsRevealed = (fn: (prev: number) => number) => {
+    if (!currentQ) return;
+    setAssistByQ((m) => ({ ...m, [currentQ.id]: { hints: fn(m[currentQ.id]?.hints ?? 0), solution: m[currentQ.id]?.solution ?? false } }));
+  };
+  const setShowSolution = (v: boolean) => {
+    if (!currentQ) return;
+    setAssistByQ((m) => ({ ...m, [currentQ.id]: { hints: m[currentQ.id]?.hints ?? 0, solution: v } }));
+  };
+  // Asking to see the solution at any point counts as help for this question.
+  const solutionEverShown = currentQ ? Boolean(assistByQ[currentQ.id]?.solution) : false;
   const isLessonFinished = completedLessonIds.includes(lesson.id);
 
   // Geometric computations for observation stage
@@ -186,7 +199,7 @@ export const QuadrilateralGuidedInspector: React.FC = () => {
         : 'Not quite. Check the hint or try recalculating.',
     });
 
-    recordPracticeResult(lesson.id, currentQ.id, isCorrect, practiceQuestions.length);
+    recordPracticeResult(lesson.id, currentQ.id, isCorrect, practiceQuestions.length, { assisted: hintsRevealed > 0 || showSolution || solutionEverShown });
 
     if (isCorrect && activeQuestionIdx === practiceQuestions.length - 1) {
       completeLesson(lesson.id);

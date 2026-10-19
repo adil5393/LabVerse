@@ -859,18 +859,13 @@ export function generateQuadrilateralTiling(
   const cRot = b;
   const dRot = rotate180(d, mBC);
 
-  // The two lattice vectors that tile the plane:
-  // V1 = vector from A to aRot + offset, or vector connecting identical vertices in adjacent cells
-  // Notice: In the fundamental 2-tile block, translation vectors are:
-  // U = (C - B) + (D - A) = B_rot - A + ...
-  const latticeVector1: WorldPoint = {
-    x: (b.x - a.x) + (c.x - d.x),
-    y: (b.y - a.y) + (c.y - d.y),
-  };
-  const latticeVector2: WorldPoint = {
-    x: (d.x - a.x) + (c.x - b.x),
-    y: (d.y - a.y) + (c.y - b.y),
-  };
+  // The pair Q + R(Q) (R = half-turn about the midpoint of BC) is a hexagon whose
+  // opposite sides are equal and parallel, so it tiles by translation. The two
+  // translations that carry it onto its neighbours are the diagonal vectors:
+  // A->C and D->B. A cell then has area |AC x DB| = 2 * area(ABCD), which is
+  // exactly the area of its two tiles, so there are no gaps and no overlaps.
+  const latticeVector1: WorldPoint = { x: c.x - a.x, y: c.y - a.y };
+  const latticeVector2: WorldPoint = { x: b.x - d.x, y: b.y - d.y };
 
   const tiles: TilingTile[] = [];
   const startR = -Math.floor(rows / 2);

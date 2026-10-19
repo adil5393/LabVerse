@@ -39,7 +39,7 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
     sectionNumber: 'Section 12.1',
     sectionTitle: 'Introduction & Anatomy of a Quadrilateral',
     topicTitle: 'Definition, Vertices, Sides, Diagonals & Convexity',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Section 12.1: Quadrilaterals',
+    ncertReference: 'Chapter 12, Section 12.1',
     statement:
       'A plane figure bounded by four non-collinear line segments is a quadrilateral. It possesses four vertices, four sides, four interior angles, and two diagonals connecting opposite vertices.',
     category: 'understanding',
@@ -59,7 +59,7 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
     sectionNumber: 'Section 12.2',
     sectionTitle: 'Angle Sum Property of a Quadrilateral',
     topicTitle: 'Sum of the Angles of a Quadrilateral is 360°',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.0 (Angle Sum)',
+    ncertReference: 'Chapter 12, Section 12.2 (the angle sum is used in the proof of Theorem 3)',
     statement:
       'The sum of the four interior angles of a simple quadrilateral is 360° (∠A + ∠B + ∠C + ∠D = 360°).',
     category: 'understanding',
@@ -79,10 +79,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // --------------------------------------------------------------------------
   {
     id: 'ncert_parallelogram_properties',
-    sectionNumber: 'Section 12.3',
+    sectionNumber: 'Section 12.2',
     sectionTitle: 'Properties of a Parallelogram',
     topicTitle: 'Opposite Sides, Opposite Angles & Supplementary Consecutive Angles',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorems 12.1, 12.2, 12.3',
+    ncertReference: 'Chapter 12, Section 12.2, Theorem 1 (a) and (b)',
     statement:
       'In a parallelogram: (1) A diagonal divides it into two congruent triangles (ΔABC ≅ ΔCDA); (2) Opposite sides are equal (AB = CD, BC = DA); (3) Opposite angles are equal (∠A = ∠C, ∠B = ∠D); (4) Adjacent consecutive angles are supplementary (∠A + ∠B = 180°).',
     category: 'parallelograms',
@@ -98,10 +98,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_parallelogram_diagonals',
-    sectionNumber: 'Section 12.3',
+    sectionNumber: 'Section 12.2',
     sectionTitle: 'Diagonals of a Parallelogram',
     topicTitle: 'Mutual Bisection of Diagonals',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.4',
+    ncertReference: 'Chapter 12, Section 12.2, Theorem 1(c); original question',
     statement:
       'The diagonals of a parallelogram bisect each other (OA = OC, OB = OD where O is the diagonal intersection point).',
     category: 'parallelograms',
@@ -117,10 +117,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_parallelogram_converses',
-    sectionNumber: 'Section 12.4',
+    sectionNumber: 'Section 12.2',
     sectionTitle: 'Conditions for a Quadrilateral to be a Parallelogram',
     topicTitle: 'Converse Theorems & Sufficient Conditions',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorems 12.5, 12.6, 12.7, 12.8',
+    ncertReference: 'Chapter 12, Section 12.2, Theorems 2, 3, 4 and 5',
     statement:
       'A quadrilateral is a parallelogram if any ONE of the following holds: (1) Both pairs of opposite sides are equal; (2) Both pairs of opposite angles are equal; (3) The diagonals bisect each other; (4) One pair of opposite sides is equal AND parallel.',
     converseStatement:
@@ -142,10 +142,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // --------------------------------------------------------------------------
   {
     id: 'ncert_triangle_midpoints_intro',
-    sectionNumber: 'Section 12.5',
+    sectionNumber: 'Section 12.3.1',
     sectionTitle: 'Triangle Midpoints & Medial Triangle',
     topicTitle: 'Constructing and Inspecting Side Midpoints',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Activity 12.1',
+    ncertReference: 'Chapter 12, Section 12.3.1 (the opening exploration)',
     statement:
       'Every triangle has three distinct side midpoints. Joining these midpoints partitions the triangle into four smaller congruent triangles.',
     category: 'midpoint_theorem',
@@ -161,10 +161,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_midpoint_theorem',
-    sectionNumber: 'Section 12.5',
+    sectionNumber: 'Section 12.3.1',
     sectionTitle: 'The Midpoint Theorem',
     topicTitle: 'Midpoint Segment Parallelism and Half-Length Law',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.9 (Classic 8.9)',
+    ncertReference: 'Chapter 12, Section 12.3.1, Theorem 6 (Midpoint Theorem)',
     statement:
       'The line segment joining the midpoints of two sides of a triangle is parallel to the third side and is equal to half of it (in ΔABC, if D and E are midpoints of AB and AC, then DE || BC and DE = 1/2 BC).',
     category: 'midpoint_theorem',
@@ -181,10 +181,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_converse_midpoint_theorem',
-    sectionNumber: 'Section 12.5',
+    sectionNumber: 'Section 12.3.1',
     sectionTitle: 'Converse of the Midpoint Theorem',
     topicTitle: 'Ray Through Midpoint Parallel to Base Bisects Third Side',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.10 (Classic 8.10)',
+    ncertReference: 'Chapter 12, Section 12.3.1, Theorem 7 (converse of the Midpoint Theorem)',
     statement:
       'The line drawn through the midpoint of one side of a triangle, parallel to another side, bisects the third side.',
     converseStatement:
@@ -206,10 +206,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // --------------------------------------------------------------------------
   {
     id: 'ncert_triangle_medians',
-    sectionNumber: 'Section 12.6',
+    sectionNumber: 'Section 12.3.2',
     sectionTitle: 'Medians of a Triangle',
     topicTitle: 'Concurrency of the Three Medians',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Section 12.6: Medians & Concurrency',
+    ncertReference: 'Chapter 12, Section 12.3.2',
     statement:
       'A median of a triangle is a line segment joining a vertex to the midpoint of the opposite side. The three medians of any triangle are always concurrent at a single point called the centroid (G).',
     category: 'medians_centroid',
@@ -225,10 +225,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_centroid_theorem',
-    sectionNumber: 'Section 12.6',
+    sectionNumber: 'Section 12.3.2',
     sectionTitle: 'The Centroid Theorem',
     topicTitle: 'Centroid Divides Each Median in the 2:1 Ratio',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Theorem 12.11: Centroid Ratio',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 8 (Centroid Theorem)',
     statement:
       'The centroid of a triangle divides each median in the ratio 2:1, with the longer segment adjacent to the vertex (AG : GD = 2:1, BG : GE = 2:1, CG : GF = 2:1).',
     category: 'medians_centroid',
@@ -248,10 +248,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // --------------------------------------------------------------------------
   {
     id: 'ncert_varignon_parallelogram',
-    sectionNumber: 'Section 12.7',
+    sectionNumber: 'Section 12.3.2',
     sectionTitle: 'Varignon Parallelogram Theorem',
     topicTitle: 'Midpoints of Any Quadrilateral Form a Parallelogram',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Example 1 / Varignon Theorem',
+    ncertReference: 'Chapter 12, Section 12.3.2, Theorem 9 (Midpoint Theorem for Quadrilaterals)',
     statement:
       'For any simple planar quadrilateral ABCD (whether convex or concave), the quadrilateral formed by connecting the midpoints of its four sides in order is always a parallelogram. Furthermore, its area is exactly half the area of the original quadrilateral.',
     category: 'varignon',
@@ -273,10 +273,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // --------------------------------------------------------------------------
   {
     id: 'ncert_quadrilateral_tiling',
-    sectionNumber: 'Section 12.8',
+    sectionNumber: 'Section 12.4',
     sectionTitle: 'Quadrilateral Tiling of the Plane',
     topicTitle: 'Monohedral Tessellation via 180° Rotations & Translations',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Enrichment & Practical Geometry: Tiling the Plane',
+    ncertReference: 'Chapter 12, Section 12.4',
     statement:
       'Any simple planar quadrilateral (convex or concave) can tile the Euclidean plane without gaps or overlaps. Because the four interior angles sum to 360°, rotating copies by 180° about edge midpoints causes all four angles to meet at every shared vertex (∠A + ∠B + ∠C + ∠D = 360°), forming a periodic tessellation.',
     category: 'tiling',
@@ -297,10 +297,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   // --------------------------------------------------------------------------
   {
     id: 'ncert_revision_theorems',
-    sectionNumber: 'Section 12.9',
+    sectionNumber: 'Chapter Summary',
     sectionTitle: 'Euclidean Synthesis & Theorem Investigation',
     topicTitle: 'Deductive Proof Navigation & Multi-Theorem Synthesis',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Summary & Proof Bank',
+    ncertReference: 'Chapter 12, Chapter Summary',
     statement:
       'Integrate all key theorems: Angle sum property, parallelogram invariants, converses, Midpoint Theorem, Centroid 2:1 division, Varignon parallelogram, and tessellation.',
     category: 'revision',
@@ -316,10 +316,10 @@ export const NCERT_QUADRILATERALS_CURRICULUM_REGISTRY: CurriculumTopic[] = [
   },
   {
     id: 'ncert_chapter_practice_revision',
-    sectionNumber: 'Section 12.10',
+    sectionNumber: 'Exercise Sets 12.1 to 12.4',
     sectionTitle: 'Comprehensive Chapter Practice & Examination Questions',
     topicTitle: 'Basic, Standard and Challenge Practice Problem Bank',
-    ncertReference: 'NCERT Class 9 Chapter 12 — Exercises 12.1, 12.2 & Chapter Review',
+    ncertReference: 'Chapter 12, Exercise Sets 12.1 to 12.4 and the Chapter Summary; original questions',
     statement:
       'Practice question bank containing numerical computations, multiple choice questions, diagram reasoning, and formal geometric proofs covering the entirety of Chapter 12.',
     category: 'revision',

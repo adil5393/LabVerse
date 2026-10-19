@@ -20,6 +20,10 @@ import {
   QUAD_GUIDED_LESSONS,
 } from '../../../engine/mathematics/quadrilaterals/curriculumPath';
 import { QUADRILATERAL_EXPERIMENTS } from '../../../engine/mathematics/quadrilaterals/quadrilateralExperiments';
+import { lessonStatus, STATUS_LABEL } from '../../../engine/education/progress';
+import { QUADRILATERALS_CHAPTER } from '../../../engine/mathematics/quadrilaterals/learn/content';
+import { useEducationStore } from '../../../store/useEducationStore';
+import { LEARN_FOR_GUIDED, QuadrilateralsLearnSection } from './learn/QuadrilateralsLearn';
 
 export const QuadrilateralsLab: React.FC = () => {
   const navigate = useNavigate();
@@ -35,6 +39,7 @@ export const QuadrilateralsLab: React.FC = () => {
     selectLesson,
   } = useQuadGuidedLearningStore();
 
+  const learnRecords = useEducationStore((st) => st.lessons);
   const stats = getCompletionStats();
   const nextLesson =
     QUAD_GUIDED_LESSONS[stats.nextRecommendedLessonId] ||
@@ -61,13 +66,13 @@ export const QuadrilateralsLab: React.FC = () => {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8 space-y-10">
         {/* Breadcrumb & Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <Link to="/" className="hover:text-amber-400 transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400">
+            <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-amber-400 transition-colors">
               Subject Explorer
             </Link>
             <span>/</span>
-            <Link to="/mathematics" className="hover:text-amber-400 transition-colors">
+            <Link to="/mathematics" className="inline-flex items-center min-h-[44px] hover:text-amber-400 transition-colors">
               Mathematics
             </Link>
             <span>/</span>
@@ -79,23 +84,23 @@ export const QuadrilateralsLab: React.FC = () => {
             {!confirmReset ? (
               <button
                 onClick={() => setConfirmReset(true)}
-                className="text-xs font-mono text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-surface-border hover:border-red-500/30"
+                className="text-xs font-mono text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-lg border border-surface-border hover:border-red-500/30"
               >
                 <span className="material-symbols-outlined text-[15px]">restart_alt</span>
-                <span>Reset Chapter Progress</span>
+                <span>Reset Investigate progress</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2 bg-red-950/40 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs">
-                <span className="text-red-300">Reset all progress?</span>
+              <div className="flex flex-wrap items-center gap-2 bg-red-950/40 border border-red-500/40 px-3 py-1.5 rounded-lg text-xs">
+                <span className="text-red-300">Reset the Investigate (workbench) progress? Your Learn progress is kept.</span>
                 <button
                   onClick={handleReset}
-                  className="px-2 py-0.5 rounded bg-red-500 hover:bg-red-400 text-slate-950 font-bold font-mono"
+                  className="min-h-[44px] px-3 py-0.5 rounded bg-red-500 hover:bg-red-400 text-slate-950 font-bold font-mono"
                 >
                   Yes, Reset
                 </button>
                 <button
                   onClick={() => setConfirmReset(false)}
-                  className="px-2 py-0.5 rounded bg-surface-elevated hover:bg-surface-border text-slate-300 font-mono"
+                  className="min-h-[44px] px-3 py-0.5 rounded bg-surface-elevated hover:bg-surface-border text-slate-300 font-mono"
                 >
                   Cancel
                 </button>
@@ -213,7 +218,7 @@ export const QuadrilateralsLab: React.FC = () => {
             <div className="pt-6">
               <Link
                 to="/mathematics/quadrilaterals/workbench?mode=explore"
-                className="w-full py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-cyan-500 hover:text-slate-950 text-slate-200 font-bold text-xs transition-all flex items-center justify-center gap-2 border border-surface-border hover:border-cyan-500"
+                className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-cyan-500 hover:text-slate-950 text-slate-200 font-bold text-xs transition-all flex items-center justify-center gap-2 border border-surface-border hover:border-cyan-500"
               >
                 <span>Open Free Workbench</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -230,7 +235,7 @@ export const QuadrilateralsLab: React.FC = () => {
 
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-                  Practice Engine
+                  Practice Bank
                 </span>
                 <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
                   Chapter Practice
@@ -238,21 +243,24 @@ export const QuadrilateralsLab: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-400 leading-relaxed">
-                Tackle comprehensive NCERT examination questions across Basic, Standard, and Challenge difficulty tiers with instant validation.
+                Original practice questions across Basic, Standard, and Challenge tiers, checked instantly. They follow the chapter's topics but are not copied from the textbook.
               </p>
             </div>
 
             <div className="pt-6">
               <Link
                 to="/mathematics/quadrilaterals/workbench?mode=practice"
-                className="w-full py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-emerald-500 hover:text-slate-950 text-slate-200 font-bold text-xs transition-all flex items-center justify-center gap-2 border border-surface-border hover:border-emerald-500"
+                className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-surface-elevated hover:bg-emerald-500 hover:text-slate-950 text-slate-200 font-bold text-xs transition-all flex items-center justify-center gap-2 border border-surface-border hover:border-emerald-500"
               >
-                <span>Launch Practice Engine</span>
+                <span>Open Practice Bank</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </Link>
             </div>
           </div>
         </div>
+
+        {/* Learn the ideas: explanations, worked examples, guided and independent practice */}
+        <QuadrilateralsLearnSection />
 
         {/* ========================================================= */}
         {/* VIEW TOGGLE: GUIDED ROADMAP vs EXPERIMENTS CATALOG */}
@@ -377,7 +385,9 @@ export const QuadrilateralsLab: React.FC = () => {
                           {/* Footer & Action */}
                           <div className="pt-4 mt-4 border-t border-surface-border/60 flex items-center justify-between">
                             <span className="text-[10px] font-mono text-slate-500">
-                              {progress?.practiceAttempted ? (
+                              {progress?.legacyMasteryUnverified ? (
+                                <span>Earlier mastery: Unverified. Practise again to confirm.</span>
+                              ) : progress?.practiceAttempted ? (
                                 <span>
                                   Practice: {progress.practiceCorrectCount}/{progress.practiceTotalQuestions}
                                 </span>
@@ -386,15 +396,25 @@ export const QuadrilateralsLab: React.FC = () => {
                               )}
                             </span>
 
+                            {LEARN_FOR_GUIDED[lesson.id] && (
+                              <Link
+                                to={QUADRILATERALS_CHAPTER.routes.learn(LEARN_FOR_GUIDED[lesson.id])}
+                                data-card-learn={lesson.id}
+                                className="min-h-[44px] inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-elevated hover:bg-cyan-500 hover:text-slate-950 text-slate-200 transition-all"
+                                title={`Learn: ${STATUS_LABEL[lessonStatus(QUADRILATERALS_CHAPTER.lessons[LEARN_FOR_GUIDED[lesson.id]], learnRecords[LEARN_FOR_GUIDED[lesson.id]])]}`}
+                              >
+                                Learn
+                              </Link>
+                            )}
                             <button
                               onClick={() => handleOpenLesson(lesson.id)}
-                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                              className={`min-h-[44px] px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                                 isNext
                                   ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
                                   : 'bg-surface-elevated hover:bg-amber-500 hover:text-slate-950 text-slate-200'
                               }`}
                             >
-                              <span>{completed ? 'Review' : 'Start'}</span>
+                              <span>{completed ? 'Investigate again' : 'Investigate'}</span>
                               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </button>
                           </div>
@@ -466,7 +486,7 @@ export const QuadrilateralsLab: React.FC = () => {
                 key: 'revision',
                 title: 'Unit 7: Synthesis & Practice',
                 badge: '2 Experiments',
-                description: 'Formal Euclidean deduction steps and comprehensive NCERT practice question bank',
+                description: 'Formal Euclidean deduction steps and original practice question bank',
                 filter: (exp: typeof QUADRILATERAL_EXPERIMENTS[0]) =>
                   exp.curriculumCategory === 'revision',
               },

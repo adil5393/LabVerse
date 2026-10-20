@@ -108,6 +108,11 @@ export interface WorkViewProps {
   visibilityMap?: Record<string, boolean>;
   lockMap?: Record<string, boolean>;
   onSetupChange?: (setup: WorkSetup) => void;
+  /** When given, playback is owned by the parent (so a header Run button can drive it). */
+  playing?: boolean;
+  onPlayingChange?: (playing: boolean) => void;
+  showVertical?: boolean;
+  onShowVerticalChange?: (show: boolean) => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
@@ -132,12 +137,30 @@ export const WorkView: React.FC<WorkViewProps> = ({
   visibilityMap = { cart: true, force: true, track: true, caliper: true },
   lockMap = {},
   onSetupChange,
+  playing: controlledPlaying,
+  onPlayingChange,
+  showVertical: controlledShowVertical,
+  onShowVerticalChange,
 }) => {
   const [setup, setSetup] = useState<WorkSetup>(initial);
+  const [lastInitial, setLastInitial] = useState<WorkSetup>(initial);
   const [progress, setProgress] = useState(startProgress);
-  const [playing, setPlaying] = useState(false);
+  const [playingState, setPlayingState] = useState(false);
   const [err, setErr] = useState('');
-  const [showVertical, setShowVertical] = useState(true);
+  const [verticalState, setVerticalState] = useState(true);
+  const playing = controlledPlaying ?? playingState;
+  const showVertical = controlledShowVertical ?? verticalState;
+  const setPlaying = useCallback((v: boolean) => { setPlayingState(v); onPlayingChange?.(v); }, [onPlayingChange]);
+  const setShowVertical = useCallback((v: boolean) => { setVerticalState(v); onShowVerticalChange?.(v); }, [onShowVerticalChange]);
+
+  // The parent can replace the setup (undo, mobile inspector); adopt it when it differs from what is shown.
+  if (initial !== lastInitial) {
+    setLastInitial(initial);
+    if (JSON.stringify(initial) !== JSON.stringify(setup)) {
+      setSetup(initial);
+      setErr('');
+    }
+  }
   const reduced = useReducedMotion();
   const r = computeWork(setup);
 
@@ -152,7 +175,7 @@ export const WorkView: React.FC<WorkViewProps> = ({
     setSetup(next);
     setPlaying(false);
     if (onSetupChange) onSetupChange(next);
-  }, [setup, onSetupChange]);
+  }, [setup, onSetupChange, setPlaying]);
 
   const ref = useRef(progress);
   useEffect(() => {
@@ -161,6 +184,10 @@ export const WorkView: React.FC<WorkViewProps> = ({
 
   useEffect(() => {
     if (!playing) return;
+    if (ref.current >= 1) {
+      ref.current = 0;
+      setProgress(0);
+    }
     if (reduced) {
       const id = window.setTimeout(() => {
         setProgress(1);
@@ -182,7 +209,7 @@ export const WorkView: React.FC<WorkViewProps> = ({
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [playing, reduced]);
+  }, [playing, reduced, setPlaying]);
 
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
 
@@ -215,7 +242,7 @@ export const WorkView: React.FC<WorkViewProps> = ({
           playing={playing}
           onTogglePlay={() => {
             if (progress >= 1) setProgress(0);
-            setPlaying((p) => !p);
+            setPlaying(!playing);
           }}
           onReset={() => {
             setPlaying(false);
@@ -231,6 +258,8 @@ export const WorkView: React.FC<WorkViewProps> = ({
           lockMap={lockMap}
           showVectors={visibilityMap.force}
           showCaliper={visibilityMap.caliper}
+          showCart={visibilityMap.cart !== false}
+          showTrack={visibilityMap.track !== false}
         />
 
         {/* Right Properties Inspector (Desktop) */}

@@ -7,6 +7,7 @@ import {
   type WorkSetup,
   type WorkResult,
 } from '../../../../engine/physics/work/workModel';
+import { NumberInput } from './NumberInput';
 
 export interface PropertiesInspectorProps {
   setup: WorkSetup;
@@ -235,16 +236,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       Applied Force (F_app)
                     </label>
                     <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 focus-within:border-primary w-28 justify-between">
-                      <input
-                        id="field-force"
-                        type="number"
-                        data-field="force"
-                        value={setup.forceN}
-                        disabled={isForceLocked}
-                        onChange={(e) => onChange({ forceN: Number(e.target.value) })}
-                        aria-label="Force in N"
-                        className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-16 focus:ring-0 focus:outline-none disabled:opacity-50"
-                      />
+                      <NumberInput
+ id="field-force"
+ dataField="force"
+ value={setup.forceN}
+ disabled={isForceLocked}
+ onCommit={(v) => onChange({ forceN: v })}
+ ariaLabel="Force in N"
+ className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-16 focus:ring-0 focus:outline-none disabled:opacity-50"
+ />
                       <span className="text-outline font-mono text-[11px] ml-1">N</span>
                     </div>
                   </div>
@@ -328,16 +328,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       Cart Mass (m)
                     </label>
                     <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
-                      <input
-                        id="field-mass"
-                        type="number"
-                        data-field="mass"
-                        disabled={isCartLocked}
-                        value={setup.massKg}
-                        onChange={(e) => onChange({ massKg: Number(e.target.value) })}
-                        aria-label="Mass in kg"
-                        className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
-                      />
+                      <NumberInput
+ id="field-mass"
+ dataField="mass"
+ value={setup.massKg}
+ disabled={isCartLocked}
+ onCommit={(v) => onChange({ massKg: v })}
+ ariaLabel="Mass in kg"
+ className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
+ />
                       <span className="text-outline font-mono text-[11px]">kg</span>
                     </div>
                   </div>
@@ -348,20 +347,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       Initial Position (x_0)
                     </label>
                     <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
-                      <input
-                        id="field-start"
-                        type="number"
-                        step={0.5}
-                        data-field="start"
-                        disabled={isCartLocked}
-                        value={setup.startPos}
-                        onChange={(e) => {
-                          const val = Math.max(0, Math.min(TRACK_LENGTH, Number(e.target.value)));
-                          onChange({ startPos: val });
-                        }}
-                        aria-label="Start position in m"
-                        className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
-                      />
+                      <NumberInput
+ id="field-start"
+ dataField="start"
+ value={setup.startPos}
+ disabled={isCartLocked}
+ onCommit={(v) => onChange({ startPos: Math.max(0, Math.min(TRACK_LENGTH, v)) })}
+ ariaLabel="Start position in m"
+ className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
+ />
                       <span className="text-outline font-mono text-[11px]">m</span>
                     </div>
                   </div>
@@ -425,22 +419,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                               Kinetic Coeff. (μ_k)
                             </label>
                             <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
-                              <input
-                                id="field-custom-mu"
-                                type="number"
-                                step={0.05}
-                                min={0}
-                                max={1.5}
-                                value={currentMu}
-                                disabled={isTrackLocked}
-                                onChange={(e) => {
-                                  const val = Math.max(0, Math.min(1.5, Number(e.target.value)));
-                                  onChange({ customMu: val });
-                                }}
-                                aria-label="Custom coefficient of kinetic friction"
-                                data-testid="field-custom-mu"
-                                className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
-                              />
+                              <NumberInput
+ id="field-custom-mu"
+ testId="field-custom-mu"
+ value={currentMu}
+ disabled={isTrackLocked}
+ onCommit={(v) => onChange({ customMu: Math.max(0, Math.min(1.5, v)) })}
+ ariaLabel="Custom coefficient of kinetic friction"
+ className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
+ />
                               <span className="text-outline font-mono text-[10px] ml-1">μ</span>
                             </div>
                           </div>
@@ -511,17 +498,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       Displacement (Δx / s)
                     </label>
                     <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
-                      <input
-                        id="field-displacement"
-                        type="number"
-                        step={0.5}
-                        data-field="displacement"
-                        disabled={isCaliperLocked}
-                        value={setup.displacement}
-                        onChange={(e) => onChange({ displacement: Number(e.target.value) })}
-                        aria-label="Displacement in m"
-                        className="bg-transparent border-0 p-0 text-right font-mono text-xs text-tertiary font-semibold w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
-                      />
+                      <NumberInput
+ id="field-displacement"
+ dataField="displacement"
+ value={setup.displacement}
+ disabled={isCaliperLocked}
+ onCommit={(v) => onChange({ displacement: v })}
+ ariaLabel="Displacement in m"
+ className="bg-transparent border-0 p-0 text-right font-mono text-xs text-tertiary font-semibold w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
+ />
                       <span className="text-outline font-mono text-[11px]">m</span>
                     </div>
                   </div>
@@ -563,10 +548,16 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     <select
                       value={setup.axis}
                       onChange={(e) =>
-                        onChange({
-                          axis: e.target.value as WorkSetup['axis'],
-                          displacement: Math.min(setup.displacement, TRACK_LENGTH - setup.startPos),
-                        })
+                        {
+                          const axis = e.target.value as WorkSetup['axis'];
+                          // A force perpendicular to the new axis does no work, so turn a cardinal force to follow it.
+                          const along = axis === 'horizontal' ? angle === 90 || angle === 270 : angle === 0 || angle === 180;
+                          onChange({
+                            axis,
+                            displacement: Math.min(setup.displacement, TRACK_LENGTH - setup.startPos),
+                            ...(along ? { angleDeg: axis === 'horizontal' ? 0 : 90 } : {}),
+                          });
+                        }
                       }
                       aria-label="Direction of motion"
                       data-testid="axis-select"
@@ -583,16 +574,14 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                       Force Angle (θ)
                     </label>
                     <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
-                      <input
-                        id="field-angle"
-                        type="number"
-                        step={15}
-                        data-field="angle"
-                        value={setup.angleDeg}
-                        onChange={(e) => onChange({ angleDeg: ((Number(e.target.value) % 360) + 360) % 360 })}
-                        aria-label="Force angle (enrichment) in degrees"
-                        className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none"
-                      />
+                      <NumberInput
+ id="field-angle"
+ dataField="angle"
+ value={setup.angleDeg}
+ onCommit={(v) => onChange({ angleDeg: ((v % 360) + 360) % 360 })}
+ ariaLabel="Force angle (enrichment) in degrees"
+ className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none"
+ />
                       <span className="text-outline font-mono text-[11px]">°</span>
                     </div>
                   </div>

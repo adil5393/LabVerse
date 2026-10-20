@@ -8,9 +8,11 @@ import {
   type WorkResult,
   type WorkSetup,
 } from '../../../../engine/physics/work/workModel';
-import { useViewportCamera, screenToApparatus } from './useViewportCamera';
+import { useViewportCamera, clientToViewBox, viewBoxToApparatus } from './useViewportCamera';
 
 const W = 1000, H = 450;
+/** Matches the 3 s playback in WorkView. */
+const SIM_SECONDS = 3;
 const COLOR: Record<ForceKind, string> = {
   applied: '#adc6ff',
   friction: '#ffb4ab',
@@ -36,6 +38,8 @@ export interface SimulationViewportProps {
   showVectors?: boolean;
   onToggleVectors?: (val: boolean) => void;
   showCaliper?: boolean;
+  showCart?: boolean;
+  showTrack?: boolean;
 }
 
 /**
@@ -60,6 +64,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   showVectors: controlledVectors,
   onToggleVectors,
   showCaliper = true,
+  showCart = true,
+  showTrack = true,
 }) => {
   const [showGrid, setShowGrid] = useState(true);
   const [internalVectors, setInternalVectors] = useState(true);
@@ -71,20 +77,14 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   };
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const touchDistanceRef = useRef<number | null>(null);
 
-  // Drag manipulation state
-  const dragInteractionRef = useRef<{
-    target: 'none' | 'cart' | 'caliper' | 'force';
-    startX: number;
-    startY: number;
-    moved: boolean;
-  }>({
-    target: 'none',
-    startX: 0,
-    startY: 0,
-    moved: false,
-  });
+  // Direct-manipulation state. `select` targets are click-only (no drag) and select `selectId`.
+  type DragTarget = 'none' | 'cart' | 'caliper' | 'force' | 'select';
+  const IDLE_DRAG = { target: 'none' as DragTarget, selectId: null as string | null, startX: 0, startY: 0, moved: false, startMag: 0, startDist: -1, k: 1 };
+  const dragInteractionRef = useRef({ ...IDLE_DRAG });
+  const backgroundDownRef = useRef(false);
 
   const {
     camera,
@@ -94,11 +94,11 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
     zoomOut,
     resetCamera,
     fitToView,
-    zoomAroundPoint,
+    zoomAroundViewPoint,
     startDrag,
     updateDrag,
     endDrag,
-    isDragging,
+    isPanning,
   } = useViewportCamera();
 
   const horizontal = r.setup.axis === 'horizontal';
@@ -129,7 +129,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   const cosA = Math.cos((angle * Math.PI) / 180);
 
   // Live scientific telemetry
-  const simTime = (progress * 2.0).toFixed(2);
+  const simTime = (progress * SIM_SECONDS).toFixed(2);
   const velNow = s !== 0 ? Math.sqrt(Math.max(0, (2 * Math.max(0, r.netWork) * progress) / r.setup.massKg)).toFixed(2) : '0.00';
   const accelNow = s !== 0 ? (r.netWork / (r.setup.massKg * Math.max(0.1, Math.abs(s)))).toFixed(2) : '0.00';
 
@@ -148,21 +148,21 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
     }
   }, [horizontal, startX, endX, startY, endY, fitToView]);
 
-  // Non-passive wheel listener for smooth pointer-centered zoom
+  // Non-passive wheel listener for smooth pointer-centred zoom (uses the SVG's real screen transform).
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const factor = e.deltaY < 0 ? 1.15 : 0.85;
-      zoomAroundPoint(factor, e.clientX, e.clientY, rect);
+      const svg = svgRef.current;
+      const v = svg ? clientToViewBox(svg, e.clientX, e.clientY) : null;
+      if (v) zoomAroundViewPoint(e.deltaY < 0 ? 1.15 : 0.85, v.x, v.y);
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [zoomAroundPoint]);
+  }, [zoomAroundViewPoint]);
 
   // Escape key to deselect
   useEffect(() => {
@@ -175,99 +175,96 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onSelectObject]);
 
-  // General canvas pointer handling (pan tool / middle button)
+  const toApparatus = (clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    const v = svg ? clientToViewBox(svg, clientX, clientY) : null;
+    return v ? viewBoxToApparatus(v.x, v.y, camera) : null;
+  };
+
+  /** Begin a click or drag on a scene object. In pan mode the object is ignored so the canvas can still pan. */
+  const beginObjectDrag = (e: React.PointerEvent, target: DragTarget, selectId: string, extra: Partial<typeof IDLE_DRAG> = {}) => {
+    if (toolMode === 'pan' || e.button === 1) return;
+    e.stopPropagation();
+    dragInteractionRef.current = { ...IDLE_DRAG, target, selectId, startX: e.clientX, startY: e.clientY, ...extra };
+    try { containerRef.current?.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
+  };
+
+  const finishInteraction = (e: React.PointerEvent<HTMLDivElement>, cancelled: boolean) => {
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    if (isPanning()) endDrag();
+    const drag = dragInteractionRef.current;
+    if (drag.target !== 'none') {
+      // A press that never became a drag is a plain click: select the object.
+      if (!cancelled && !drag.moved) onSelectObject?.(drag.selectId);
+      dragInteractionRef.current = { ...IDLE_DRAG };
+    } else if (!cancelled && backgroundDownRef.current && (e.target as Element).closest('svg')) {
+      onSelectObject?.(null);
+    }
+    backgroundDownRef.current = false;
+  };
+
+  // Canvas pointer handling: pan tool or middle button pans; a press on empty canvas clears the selection.
   const handleCanvasPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // The floating toolbar lives inside the canvas: never pan from, or capture the pointer away from, its controls.
+    if ((e.target as Element).closest('button, input, select, a')) return;
     if (e.button === 1 || toolMode === 'pan' || e.buttons === 4) {
       e.preventDefault();
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
       startDrag(e.clientX, e.clientY);
+      return;
     }
+    backgroundDownRef.current = e.button === 0;
   };
 
   const handleCanvasPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      updateDrag(e.clientX, e.clientY);
+    if (isPanning()) {
+      const svg = svgRef.current;
+      const v = svg ? clientToViewBox(svg, e.clientX, e.clientY) : null;
+      updateDrag(e.clientX, e.clientY, v?.unitsPerPx ?? 1);
       return;
     }
 
-    // Direct object manipulation
     const drag = dragInteractionRef.current;
-    if (drag.target !== 'none' && containerRef.current) {
-      const dist = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY);
-      if (dist >= 4) {
-        drag.moved = true;
-        const rect = containerRef.current.getBoundingClientRect();
-        const app = screenToApparatus(e.clientX, e.clientY, rect, camera);
+    if (drag.target === 'none' || drag.target === 'select' || !onSetupChange) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 4) return;
+    drag.moved = true;
+    const app = toApparatus(e.clientX, e.clientY);
+    if (!app) return;
 
-        if (drag.target === 'cart' && !lockMap.cart && onSetupChange) {
-          if (horizontal) {
-            const rawM = ((app.x - 100) / 800) * TRACK_LENGTH;
-            const snappedM = Math.round(rawM * 10) / 10;
-            const clampedM = Math.max(0, Math.min(TRACK_LENGTH, snappedM));
-            // Ensure cart + displacement stays on track
-            const validStart = Math.max(0, Math.min(TRACK_LENGTH - Math.max(0, s), clampedM));
-            onSetupChange({ startPos: validStart });
-          } else {
-            const rawM = ((vBase - app.y) / (vBase - vTop)) * TRACK_LENGTH;
-            const snappedM = Math.round(rawM * 10) / 10;
-            const clampedM = Math.max(0, Math.min(TRACK_LENGTH, snappedM));
-            onSetupChange({ startPos: clampedM });
-          }
-        } else if (drag.target === 'caliper' && !lockMap.caliper && onSetupChange) {
-          if (horizontal) {
-            const rawM = ((app.x - 100) / 800) * TRACK_LENGTH;
-            const rawS = rawM - r.setup.startPos;
-            const snappedS = Math.round(rawS * 2) / 2;
-            const clampedS = Math.max(-r.setup.startPos, Math.min(TRACK_LENGTH - r.setup.startPos, snappedS));
-            onSetupChange({ displacement: clampedS });
-          }
-        } else if (drag.target === 'force' && !lockMap.force && onSetupChange) {
-          const comX = cartX;
-          const comY = cartY + 6;
-          const dx = app.x - comX;
-          const dy = -(app.y - comY);
-          const rawMag = Math.hypot(dx, dy);
-          const snappedMag = Math.round(rawMag / 5) * 5;
-          const clampedMag = Math.max(0, Math.min(200, snappedMag));
-          onSetupChange({ forceN: clampedMag });
-        }
-      }
+    if (drag.target === 'cart' && !lockMap.cart) {
+      const rawM = horizontal ? ((app.x - 100) / 800) * TRACK_LENGTH : ((vBase - app.y) / (vBase - vTop)) * TRACK_LENGTH;
+      // Keep the whole displacement on the track, whichever way it points.
+      const lo = Math.max(0, -s), hi = Math.min(TRACK_LENGTH, TRACK_LENGTH - s);
+      onSetupChange({ startPos: Math.max(lo, Math.min(hi, Math.round(rawM * 10) / 10)) });
+    } else if (drag.target === 'caliper' && !lockMap.caliper) {
+      const rawM = horizontal ? ((app.x - 100) / 800) * TRACK_LENGTH : ((vBase - app.y) / (vBase - vTop)) * TRACK_LENGTH;
+      const snappedS = Math.round((Math.max(0, Math.min(TRACK_LENGTH, rawM)) - r.setup.startPos) * 2) / 2;
+      onSetupChange({ displacement: Math.max(-r.setup.startPos, Math.min(TRACK_LENGTH - r.setup.startPos, snappedS)) });
+    } else if (drag.target === 'force' && !lockMap.force) {
+      // Relative drag: the arrow tip moves with the cursor at the scale frozen when the drag began.
+      const dist = Math.hypot(app.x - cartX, app.y - (cartY + 6));
+      if (drag.startDist < 0) drag.startDist = dist;
+      const mag = drag.startMag + (dist - drag.startDist) / drag.k;
+      onSetupChange({ forceN: Math.max(0, Math.min(200, Math.round(mag / 5) * 5)) });
     }
   };
 
-  const handleCanvasPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {
-        // ignore
-      }
-      endDrag();
-    }
-
-    const drag = dragInteractionRef.current;
-    if (drag.target !== 'none') {
-      // If it was a click without dragging (< 4px), perform pure selection
-      if (!drag.moved) {
-        onSelectObject?.(drag.target);
-      }
-      dragInteractionRef.current = { target: 'none', startX: 0, startY: 0, moved: false };
-    }
-  };
+  const handleCanvasPointerUp = (e: React.PointerEvent<HTMLDivElement>) => finishInteraction(e, false);
+  const handleCanvasPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => finishInteraction(e, true);
 
   // Touch pinch-to-zoom
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && containerRef.current) {
+    if (e.touches.length === 2) {
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       if (touchDistanceRef.current !== null) {
-        const factor = dist / touchDistanceRef.current;
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        const rect = containerRef.current.getBoundingClientRect();
-        zoomAroundPoint(factor, midX, midY, rect);
+        const svg = svgRef.current;
+        const v = svg ? clientToViewBox(svg, midX, midY) : null;
+        if (v) zoomAroundViewPoint(dist / touchDistanceRef.current, v.x, v.y);
       }
       touchDistanceRef.current = dist;
     }
@@ -290,8 +287,10 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
+        onPointerCancel={handleCanvasPointerCancel}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none' }}
         className={`flex-1 relative ${showGrid ? 'cad-grid' : ''} overflow-hidden flex flex-col justify-between ${
           toolMode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
         }`}
@@ -418,7 +417,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           <div className="text-[10px] uppercase text-outline">
             Cam: {horizontal ? 'Orthographic 1D-X' : 'Vertical Rail 1D-Y'} • {Math.round(camera.zoom * 100)}%
           </div>
-          <div className="text-on-surface font-semibold">Scale: 100 px : 1.5 m</div>
+          <div className="text-on-surface font-semibold">Track: 0 – {TRACK_LENGTH} m</div>
           <div className="text-tertiary text-[10px]">
             Model: Kinematic Work • v: {velNow} m/s
           </div>
@@ -427,6 +426,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
         {/* 2D Physics Vector Field & Track SVG Rendering with Camera Transform */}
         <div className="w-full h-full relative flex items-center justify-center p-2 sm:p-4 overflow-hidden">
           <svg
+            ref={svgRef}
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="xMidYMid meet"
             role="img"
@@ -455,7 +455,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             {/* MASTER CAMERA TRANSFORM GROUP (Centered Zoom & Pan in Vector Space) */}
             <g transform={`translate(${500 + camera.panX}, ${225 + camera.panY}) scale(${camera.zoom}) translate(-500, -225)`}>
               {/* WORKBENCH REFERENCE TRACK */}
-              {horizontal ? (
+              {showTrack && (horizontal ? (
                 <g
                   onClick={() => onSelectObject && onSelectObject('track')}
                   className="cursor-pointer"
@@ -505,7 +505,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                     </g>
                   ))}
                 </g>
-              )}
+              ))}
 
               {/* START & END GUIDELINES */}
               {s !== 0 && (
@@ -540,16 +540,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               {s !== 0 && showCaliper && (
                 <g
                   data-testid="displacement-arrow"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    dragInteractionRef.current = {
-                      target: 'caliper',
-                      startX: e.clientX,
-                      startY: e.clientY,
-                      moved: false,
-                    };
-                  }}
-                  className="cursor-ew-resize group"
+                  onPointerDown={(e) => beginObjectDrag(e, 'caliper', 'caliper')}
+                  className={`${horizontal ? 'cursor-ew-resize' : 'cursor-ns-resize'} group`}
                 >
                   {horizontal ? (
                     <>
@@ -586,19 +578,11 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               )}
 
               {/* DYNAMIC CART ASSEMBLY (CART_01 - Manipulable x_0) */}
-              <g
+              {showCart && <g
                 id="cart-assembly"
                 transform={`translate(${cartX - 55}, ${cartY - 15})`}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  dragInteractionRef.current = {
-                    target: 'cart',
-                    startX: e.clientX,
-                    startY: e.clientY,
-                    moved: false,
-                  };
-                }}
-                className="cursor-ew-resize group"
+                onPointerDown={(e) => beginObjectDrag(e, 'cart', 'cart')}
+                className={`${horizontal ? 'cursor-ew-resize' : 'cursor-ns-resize'} group`}
               >
                 {/* Selection Halo */}
                 {isCartSelected && (
@@ -635,7 +619,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                 <circle cx="55" cy="21" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
                 <path d="M 50.5 21 A 4.5 4.5 0 0 0 55 25.5 L 55 21 Z" fill="#4d8eff" />
                 <path d="M 55 16.5 A 4.5 4.5 0 0 0 50.5 21 L 55 21 Z" fill="#0a0e16" />
-              </g>
+              </g>}
 
               {/* FORCE VECTORS ANCHORED AT CENTER OF MASS (Manipulable F_APP) */}
               {vectorsOn &&
@@ -673,17 +657,15 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                         data-arrow={f.id}
                         data-magnitude={f.magnitude}
                         data-work={f.work}
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          dragInteractionRef.current = {
-                            target: f.id === 'applied' ? 'force' : (f.id as any),
-                            startX: e.clientX,
-                            startY: e.clientY,
-                            moved: false,
-                          };
-                        }}
+                        onPointerDown={(e) =>
+                          f.id === 'applied'
+                            ? beginObjectDrag(e, 'force', 'force', { startMag: f.magnitude, k })
+                            : beginObjectDrag(e, 'select', 'cart')
+                        }
                         className="cursor-pointer"
                       >
+                        {/* Wide invisible hit area so thin arrows are easy to grab */}
+                        <line x1={comX} y1={comY} x2={x2} y2={y2} stroke="transparent" strokeWidth={18} />
                         <line
                           x1={comX}
                           y1={comY}
@@ -817,7 +799,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             />
           </div>
           <span className="font-mono text-[11px] text-outline whitespace-nowrap">
-            T_max = 2.00s
+            T_max = {SIM_SECONDS.toFixed(2)}s
           </span>
         </div>
 

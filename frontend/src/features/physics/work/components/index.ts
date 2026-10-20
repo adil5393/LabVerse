@@ -4,7 +4,7 @@ export { SimulationViewport, type SimulationViewportProps } from './SimulationVi
 export { PropertiesInspector, type PropertiesInspectorProps } from './PropertiesInspector';
 export { AnalysisDock, type AnalysisDockProps, type AnalysisTab, type DockSizeMode } from './AnalysisDock';
 export { BlackboardWorkspace, type BlackboardWorkspaceProps } from './BlackboardWorkspace';
-export { useViewportCamera, screenToApparatus, DEFAULT_CAMERA, MIN_ZOOM, MAX_ZOOM, type ViewportCamera } from './useViewportCamera';
+export { useViewportCamera, screenToApparatus, clientToViewBox, viewBoxToApparatus, DEFAULT_CAMERA, MIN_ZOOM, MAX_ZOOM, type ViewportCamera } from './useViewportCamera';
 export { MobileInspectorSheet, type MobileInspectorSheetProps } from './MobileInspectorSheet';
 export { ParameterControl, type ParameterControlProps } from './ParameterControl';
 export { DirectionControl, type DirectionControlProps } from './DirectionControl';
@@ -14,3 +14,4 @@ export { CollapsibleProperties, type CollapsiblePropertiesProps } from './Collap
 export { CalculationPanel, type CalculationPanelProps } from './CalculationPanel';
 export { LaboratoryCanvas, Scene, type LaboratoryCanvasProps } from './LaboratoryCanvas';
 export { ExperimentInspector, type ExperimentInspectorProps } from './ExperimentInspector';
+export { NumberInput, type NumberInputProps } from './NumberInput';

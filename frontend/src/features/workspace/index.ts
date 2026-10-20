@@ -5,3 +5,4 @@ export * from './WorkspaceShell';
 export * from './ViewportFrame';
 export * from './DockTabs';
 export * from './controls';
+export * from './useSetupHistory';

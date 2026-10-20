@@ -101,35 +101,57 @@ const Figure: React.FC<{ r: EnergyResult; st: EnergyState; axis: 'time' | 'dista
 };
 
 /** `startFraction` is the fraction of the DISTANCE along the slope at which the scene is first drawn (0 = top, 1 = bottom). */
-export interface EnergyViewProps { initial: EnergySetup; editable?: boolean; alt?: string; startFraction?: number }
+export interface EnergyViewProps {
+  initial: EnergySetup;
+  editable?: boolean;
+  alt?: string;
+  startFraction?: number;
+  /** Reports every edit so the lab keeps the latest setup (for undo, reset and returning from another tab). */
+  onSetupChange?: (setup: EnergySetup) => void;
+  /** When given, playback is owned by the parent (so a header Run button can drive it). */
+  playing?: boolean;
+  onPlayingChange?: (playing: boolean) => void;
+  /** Hides the advanced settings. */
+  beginnerMode?: boolean;
+}
 
-export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = false, alt, startFraction = 0 }) => {
+export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = false, alt, startFraction = 0, onSetupChange, playing: controlledPlaying, onPlayingChange, beginnerMode = false }) => {
   const [setup, setSetup] = useState<EnergySetup>(initial);
+  const [lastInitial, setLastInitial] = useState<EnergySetup>(initial);
   const r0 = computeEnergy(initial);
   const [t, setT] = useState(r0.valid ? energyAtDistance(r0, r0.sEnd * startFraction).t : 0);
-  const [playing, setPlaying] = useState(false);
+  const [playingState, setPlayingState] = useState(false);
+  const playing = controlledPlaying ?? playingState;
+  const setPlaying = (v: boolean) => { setPlayingState(v); onPlayingChange?.(v); };
   const [rate, setRate] = useState(1);
   const [axis, setAxis] = useState<'time' | 'distance'>('time');
   const reduced = useReducedMotion();
   const r = computeEnergy(setup);
-  const change = (patch: Partial<EnergySetup>) => { setSetup((s) => ({ ...s, ...patch })); setPlaying(false); setT(0); };
+  const change = (patch: Partial<EnergySetup>) => { const next = { ...setup, ...patch }; setSetup(next); setPlaying(false); setT(0); onSetupChange?.(next); };
+
+  // The parent can replace the setup (undo); adopt it when it differs from what is shown.
+  if (initial !== lastInitial) {
+    setLastInitial(initial);
+    if (JSON.stringify(initial) !== JSON.stringify(setup)) { setSetup(initial); setPlayingState(false); setT(0); }
+  }
 
   const ref = useRef({ t, tEnd: r.tEnd, rate });
   useEffect(() => { ref.current = { t, tEnd: r.tEnd, rate }; });
   useEffect(() => {
     if (!playing) return;
+    if (ref.current.t >= ref.current.tEnd) { ref.current.t = 0; setT(0); }
     if (reduced) { const id = window.setTimeout(() => { setT(ref.current.tEnd); setPlaying(false); }, 0); return () => window.clearTimeout(id); }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
       const { t: t0, tEnd, rate: rr } = ref.current;
       const next = tickClock(t0 * 1000, now - last, rr, tEnd * 1000) / 1000;
       last = now; setT(next);
-      if (next >= tEnd) { setPlaying(false); return; }
+      if (next >= tEnd) { setPlayingState(false); onPlayingChange?.(false); return; }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [playing, reduced]);
+  }, [playing, reduced, onPlayingChange]);
 
   const tt = Math.min(t, r.tEnd);
   const st = r.valid ? energyAtTime(r, tt) : null;
@@ -165,7 +187,7 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
             <Field id="angle" label="Ramp angle" unit="° (90 = drop)" value={setup.angleDeg} step={10} onChange={(v) => change({ angleDeg: v })} />
             <Field id="mu" label="Friction coefficient" unit="(0 = none)" value={setup.mu} step={0.1} onChange={(v) => change({ mu: Math.round(v * 100) / 100 })} />
           </div>
-          <details className="rounded-lg border border-surface-border px-3 py-1" data-testid="energy-more">
+          {!beginnerMode && <details className="rounded-lg border border-surface-border px-3 py-1" data-testid="energy-more">
             <summary className="cursor-pointer min-h-[44px] flex items-center text-xs text-slate-200 font-medium">More settings (g, initial speed, reference height, graph axis, playback speed)</summary>
             <div className="py-2 space-y-2">
               <div className="flex flex-wrap gap-3 items-center">
@@ -183,7 +205,7 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
               </div>
               <p className="text-[11px] text-slate-400">Mass {ENERGY_LIMITS.massMin} to {ENERGY_LIMITS.massMax} kg; height {ENERGY_LIMITS.heightMin} to {ENERGY_LIMITS.heightMax} m; angle {ENERGY_LIMITS.angleMin} to {ENERGY_LIMITS.angleMax}°; friction coefficient 0 to {ENERGY_LIMITS.muMax}; g {ENERGY_LIMITS.gMin} to {ENERGY_LIMITS.gMax}; initial speed 0 to {ENERGY_LIMITS.uMax} m/s. The object is released at the top and moves down; the run ends at the bottom (no bounce). The reference height changes U only. Simulated time follows the clock.</p>
             </div>
-          </details>
+          </details>}
         </div>
       )}
       {r.valid && st && (

@@ -15,9 +15,8 @@ import React, { useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   workExperimentById,
-  workRouteOutcome,
 } from '../../../engine/physics/work/experiments';
-import { DEFAULT_WORK, type WorkSetup } from '../../../engine/physics/work/workModel';
+import { DEFAULT_WORK, computeWork, type WorkSetup } from '../../../engine/physics/work/workModel';
 import { WorkView } from './WorkView';
 import {
   WorkstationHeader,
@@ -28,7 +27,7 @@ import {
   type AnalysisTab,
   type DockSizeMode,
 } from './components';
-import { useChapterNavigation } from '../../workspace';
+import { useChapterNavigation, useSetupHistory, useUndoShortcuts } from '../../workspace';
 
 export const WorkLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
@@ -48,8 +47,8 @@ export const WorkLab: React.FC = () => {
   }, [registerLab, load.setup]);
 
   // Undo / Redo parameter history
-  const [undoHistory, setUndoHistory] = useState<WorkSetup[]>([]);
-  const [redoHistory, setRedoHistory] = useState<WorkSetup[]>([]);
+  const history = useSetupHistory<WorkSetup>();
+  const [showVertical, setShowVertical] = useState(true);
 
   // Workspace Modes: 'experiment' | 'blackboard' | 'analyze' | 'learn' | 'exercises'
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('experiment');
@@ -83,30 +82,28 @@ export const WorkLab: React.FC = () => {
   const selectExperiment = useCallback((id: string | null) => {
     const e = workExperimentById(id);
     setParams(id ? { experiment: id } : {});
+    history.clear();
+    setPlaying(false);
     setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_WORK, key: l.key + 1 }));
-  }, [setParams]);
+  }, [setParams, history.clear]);
 
+  // The viewport reports every change; bursts (a drag, typing) become one undo step.
   const handleSetupChange = useCallback((nextSetup: WorkSetup) => {
-    setUndoHistory((prev) => [...prev, load.setup]);
-    setRedoHistory([]);
+    history.record(load.setup);
     setLoad((l) => ({ setup: nextSetup, key: l.key }));
-  }, [load.setup]);
+  }, [load.setup, history.record]);
 
   const handleUndo = useCallback(() => {
-    if (undoHistory.length === 0) return;
-    const previous = undoHistory[undoHistory.length - 1];
-    setUndoHistory((prev) => prev.slice(0, -1));
-    setRedoHistory((prev) => [...prev, load.setup]);
-    setLoad((l) => ({ setup: previous, key: l.key + 1 }));
-  }, [undoHistory, load.setup]);
+    const previous = history.undo(load.setup);
+    if (previous) setLoad((l) => ({ setup: previous, key: l.key }));
+  }, [history.undo, load.setup]);
 
   const handleRedo = useCallback(() => {
-    if (redoHistory.length === 0) return;
-    const next = redoHistory[redoHistory.length - 1];
-    setRedoHistory((prev) => prev.slice(0, -1));
-    setUndoHistory((prev) => [...prev, load.setup]);
-    setLoad((l) => ({ setup: next, key: l.key + 1 }));
-  }, [redoHistory, load.setup]);
+    const next = history.redo(load.setup);
+    if (next) setLoad((l) => ({ setup: next, key: l.key }));
+  }, [history.redo, load.setup]);
+
+  useUndoShortcuts(handleUndo, handleRedo);
 
   const handleTabChange = useCallback((tab: WorkspaceTab) => {
     if (tab === 'exercises') {
@@ -169,8 +166,8 @@ export const WorkLab: React.FC = () => {
         playing={playing}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={undoHistory.length > 0}
-        canRedo={redoHistory.length > 0}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
         onToggleFullscreen={handleToggleFullscreen}
         onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
       />
@@ -178,12 +175,13 @@ export const WorkLab: React.FC = () => {
       {/* 2. MAIN WORKSPACE VIEWPORT BODY */}
       <div className="flex-1 flex overflow-hidden relative w-full h-[calc(100vh-40px)]">
         {/* WORKSPACE MODE: BLACKBOARD */}
-        {activeTab === 'blackboard' ? (
+        {activeTab === 'blackboard' && (
           <BlackboardWorkspace
             onReturnToExperiment={() => setActiveTab('experiment')}
           />
-        ) : (
-          /* WORKSPACE MODE: EXPERIMENT & ANALYZE (Primary 5-Region Workstation) */
+        )}
+        {/* WORKSPACE MODE: EXPERIMENT & ANALYZE (Primary 5-Region Workstation); stays mounted behind the blackboard */}
+        <div className={activeTab === 'blackboard' ? 'hidden' : 'contents'}>
           <>
             {/* Left Outliner / Curriculum Explorer (Desktop) */}
             <div className="hidden md:flex h-full relative">
@@ -252,10 +250,14 @@ export const WorkLab: React.FC = () => {
                 visibilityMap={visibilityMap}
                 lockMap={lockMap}
                 onSetupChange={handleSetupChange}
-                canUndo={undoHistory.length > 0}
-                canRedo={redoHistory.length > 0}
+                canUndo={history.canUndo}
+                canRedo={history.canRedo}
                 onUndo={handleUndo}
                 onRedo={handleRedo}
+                playing={playing}
+                onPlayingChange={setPlaying}
+                showVertical={showVertical}
+                onShowVerticalChange={setShowVertical}
               />
 
               {/* Mobile Floating Inspector CTA (390px reference) */}
@@ -271,7 +273,7 @@ export const WorkLab: React.FC = () => {
               </div>
             </div>
           </>
-        )}
+        </div>
       </div>
 
       {/* Mobile Slide-Out Drawer for Scene Outliner */}
@@ -310,12 +312,13 @@ export const WorkLab: React.FC = () => {
         isOpen={mobileInspectorOpen}
         onClose={() => setMobileInspectorOpen(false)}
         setup={load.setup}
-        result={workRouteOutcome(exp ? exp.routes[0] : { id: 'free', label: '', prompt: '', options: [], setup: load.setup, explain: () => '' }).result}
+        result={computeWork(load.setup)}
         onChange={(patch) => {
-          handleSetupChange({ ...load.setup, ...patch });
+          const next = { ...load.setup, ...patch };
+          if (computeWork(next).valid) handleSetupChange(next);
         }}
-        showVertical={true}
-        onShowVerticalChange={() => {}}
+        showVertical={showVertical}
+        onShowVerticalChange={setShowVertical}
       />
     </div>
   );

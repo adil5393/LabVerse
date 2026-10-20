@@ -44,13 +44,29 @@ const RoutePanel: React.FC<{ route: EnergyRoute; onRun: (r: EnergyRoute) => void
   );
 };
 
-import { WorkspaceShell } from '../../workspace';
+import { WorkspaceShell, useSetupHistory, useUndoShortcuts } from '../../workspace';
 
 export const EnergyLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const exp = energyExperimentById(params.get('experiment'));
   const [load, setLoad] = useState<{ setup: EnergySetup; key: number; at: number }>({ setup: exp ? exp.routes[0].setup : DEFAULT_ENERGY, key: 0, at: exp ? exp.routes[0].at : 0 });
-  const select = (id: string | null) => { const e = energyExperimentById(id); setParams(id ? { experiment: id } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_ENERGY, key: l.key + 1, at: e ? e.routes[0].at : 0 })); };
+  const history = useSetupHistory<EnergySetup>();
+  const [playing, setPlaying] = useState(false);
+  const [beginnerMode, setBeginnerMode] = useState(false);
+  const select = (id: string | null) => {
+    const e = energyExperimentById(id);
+    setParams(id ? { experiment: id } : {});
+    history.clear();
+    setPlaying(false);
+    setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_ENERGY, key: l.key + 1, at: e ? e.routes[0].at : 0 }));
+  };
+
+  // The view reports each edit; bursts (typing, stepping) become one undo step.
+  const onSetupChange = (next: EnergySetup) => { history.record(load.setup); setLoad((l) => ({ ...l, setup: next })); };
+  const undo = () => { const prev = history.undo(load.setup); if (prev) setLoad((l) => ({ ...l, setup: prev })); };
+  const redo = () => { const next = history.redo(load.setup); if (next) setLoad((l) => ({ ...l, setup: next })); };
+  const reset = () => { setPlaying(false); setLoad((l) => ({ ...l, key: l.key + 1, at: 0 })); };
+  useUndoShortcuts(undo, redo);
 
   // Outliner: Investigation presets
   const outlinerContent = (
@@ -152,7 +168,7 @@ export const EnergyLab: React.FC = () => {
   const viewportContent = (
     <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="energy-lab">
       <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
-        <EnergyView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable startFraction={load.at} />
+        <EnergyView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable startFraction={load.at} onSetupChange={onSetupChange} playing={playing} onPlayingChange={setPlaying} beginnerMode={beginnerMode} />
       </div>
     </div>
   );
@@ -198,6 +214,15 @@ export const EnergyLab: React.FC = () => {
       inspector={inspectorContent}
       analysisDockTitle="Analysis & POE"
       analysisDock={analysisDockContent}
+      playing={playing}
+      onTogglePlay={() => setPlaying((p) => !p)}
+      onReset={reset}
+      onUndo={undo}
+      onRedo={redo}
+      canUndo={history.canUndo}
+      canRedo={history.canRedo}
+      beginnerMode={beginnerMode}
+      onToggleBeginnerMode={setBeginnerMode}
     />
   );
 };

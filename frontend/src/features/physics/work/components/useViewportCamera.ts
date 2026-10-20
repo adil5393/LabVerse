@@ -28,6 +28,22 @@ export function screenToApparatus(
 }
 
 /**
+ * Converts a pointer position into the SVG's own viewBox coordinates using the browser's real
+ * screen transform, so letterboxing from `preserveAspectRatio`, padding and CSS sizing are all honoured.
+ */
+export function clientToViewBox(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number; unitsPerPx: number } | null {
+  const ctm = svg.getScreenCTM();
+  if (!ctm || ctm.a === 0) return null;
+  // The viewBox is only scaled and translated (no rotation), so the inverse is direct.
+  return { x: (clientX - ctm.e) / ctm.a, y: (clientY - ctm.f) / ctm.d, unitsPerPx: 1 / ctm.a };
+}
+
+/** Viewbox point (as returned by `clientToViewBox`) to apparatus space under the camera transform. */
+export function viewBoxToApparatus(sx: number, sy: number, camera: ViewportCamera): { x: number; y: number } {
+  return { x: 500 + (sx - 500 - camera.panX) / camera.zoom, y: 225 + (sy - 225 - camera.panY) / camera.zoom };
+}
+
+/**
  * useViewportCamera: Manages 2D viewport pan/zoom transformations
  * independent of the scientific simulation model.
  */
@@ -35,6 +51,7 @@ export function useViewportCamera(initial: ViewportCamera = DEFAULT_CAMERA) {
   const [camera, setCamera] = useState<ViewportCamera>(initial);
   const [toolMode, setToolMode] = useState<'select' | 'pan'>('select');
   const isDraggingRef = useRef(false);
+  const [dragging, setDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; camX: number; camY: number }>({
     x: 0,
     y: 0,
@@ -101,14 +118,10 @@ export function useViewportCamera(initial: ViewportCamera = DEFAULT_CAMERA) {
   /**
    * Smooth pointer-centered zoom (mouse wheel and pinch zoom)
    */
-  const zoomAroundPoint = useCallback((factor: number, clientX: number, clientY: number, containerRect: DOMRect) => {
+  const zoomAroundViewPoint = useCallback((factor: number, sx: number, sy: number) => {
     setCamera((prev) => {
       const newZoom = clampZoom(prev.zoom * factor);
       if (newZoom === prev.zoom) return prev;
-
-      // Pointer position in SVG viewBox coordinates (1000 x 450)
-      const sx = ((clientX - containerRect.left) / Math.max(1, containerRect.width)) * 1000;
-      const sy = ((clientY - containerRect.top) / Math.max(1, containerRect.height)) * 450;
 
       // Invariant transform adjustment: keep the apparatus point under (sx, sy) fixed
       const newPanX = (sx - 500) - (newZoom / prev.zoom) * (sx - 500 - prev.panX);
@@ -122,8 +135,16 @@ export function useViewportCamera(initial: ViewportCamera = DEFAULT_CAMERA) {
     });
   }, []);
 
+  /** Rect-based variant kept for callers that only have a container rectangle. */
+  const zoomAroundPoint = useCallback((factor: number, clientX: number, clientY: number, containerRect: DOMRect) => {
+    const sx = ((clientX - containerRect.left) / Math.max(1, containerRect.width)) * 1000;
+    const sy = ((clientY - containerRect.top) / Math.max(1, containerRect.height)) * 450;
+    zoomAroundViewPoint(factor, sx, sy);
+  }, [zoomAroundViewPoint]);
+
   const startDrag = useCallback((clientX: number, clientY: number) => {
     isDraggingRef.current = true;
+    setDragging(true);
     dragStartRef.current = {
       x: clientX,
       y: clientY,
@@ -132,10 +153,11 @@ export function useViewportCamera(initial: ViewportCamera = DEFAULT_CAMERA) {
     };
   }, [camera.panX, camera.panY]);
 
-  const updateDrag = useCallback((clientX: number, clientY: number) => {
+  /** `unitsPerPx` converts screen pixels to viewBox units so the scene follows the cursor exactly. */
+  const updateDrag = useCallback((clientX: number, clientY: number, unitsPerPx = 1) => {
     if (!isDraggingRef.current) return;
-    const dx = clientX - dragStartRef.current.x;
-    const dy = clientY - dragStartRef.current.y;
+    const dx = (clientX - dragStartRef.current.x) * unitsPerPx;
+    const dy = (clientY - dragStartRef.current.y) * unitsPerPx;
     setCamera((prev) => ({
       ...prev,
       panX: Math.round(dragStartRef.current.camX + dx),
@@ -145,6 +167,7 @@ export function useViewportCamera(initial: ViewportCamera = DEFAULT_CAMERA) {
 
   const endDrag = useCallback(() => {
     isDraggingRef.current = false;
+    setDragging(false);
   }, []);
 
   return {
@@ -157,9 +180,12 @@ export function useViewportCamera(initial: ViewportCamera = DEFAULT_CAMERA) {
     resetCamera,
     fitToView,
     zoomAroundPoint,
+    zoomAroundViewPoint,
     startDrag,
     updateDrag,
     endDrag,
-    isDragging: isDraggingRef.current,
+    isDragging: dragging,
+    /** Always-current panning flag for event handlers (state can lag a render behind). */
+    isPanning: () => isDraggingRef.current,
   };
 }

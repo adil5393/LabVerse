@@ -20,7 +20,7 @@ import {
   type BrakingRoute,
   type FirstLawExperiment,
 } from '../../../engine/physics/forces/firstLaw';
-import { DEFAULT_BRAKING, type BrakingSetup } from '../../../engine/physics/forces/vehicle';
+import { BRAKING_LIMITS, DEFAULT_BRAKING, type BrakingSetup } from '../../../engine/physics/forces/vehicle';
 import {
   SECOND_LAW_EXPERIMENTS,
   secondLawExperimentById,
@@ -34,15 +34,16 @@ import {
   BrakingTimeControls,
   useBrakingDemo,
 } from './BrakingDemo';
-import { DEFAULT_SETUP, G, surfaceById } from '../../../engine/physics/forces/forceModel';
+import { DEFAULT_SETUP, G, LIMITS, SURFACES, surfaceById, type Dir, type Setup } from '../../../engine/physics/forces/forceModel';
 import { netWorking } from '../../../engine/physics/forces/forceDiagram';
-import { ForceDataTable, ForceLive, ForceMomentum, ForceReadout, ForceSetupFields, ForceTimeControls, ForceToggles, r2, Track, useForceCart } from './ForceCart';
+import { ForceDataTable, ForceLive, ForceMomentum, ForceReadout, ForceTimeControls, ForceToggles, r2, Track, useForceCart } from './ForceCart';
 import { ForceFigure } from './ForceFigure';
 import { ForceGraphs } from './ForceGraphs';
 import { PHYS } from '../motion/physicsColors';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { SecondLawDerivationView } from './SecondLawDerivation';
-import { DockTabs, ViewportFrame, WorkspaceShell, type DockTab } from '../../workspace';
+import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useModelHistory, useSceneState, useUndoShortcuts, type DockTab, type SceneObject } from '../../workspace';
+import { LabInspectorSection, LabParameterField, LabSegmentedControl, LabSelect } from '../../workspace/controls';
 
 const RoutePanel: React.FC<{ route: ForceRoute; onRun: (r: ForceRoute) => void }> = ({
   route,
@@ -270,71 +271,107 @@ export const ForcesLab: React.FC = () => {
     const e = byId(id);
     setParams(id ? { experiment: id } : {});
     setLoad((l) => ({ setup: e && e.routes[0] ? e.routes[0].setup : DEFAULT_SETUP, key: l.key + 1 }));
+    cartHist.clear();
+    brakingHist.clear();
   };
   const m = useForceCart({ initial: load.setup, resetToken: load.key, showNet: true });
   const isBraking = exp?.id === 'J';
   const b = useBrakingDemo({ initial: braking.setup, resetToken: braking.key });
+  const scene = useSceneState(['cart', 'pushA', 'pushB', 'surface', 'vehicle', 'passenger', 'restraint']);
+  const [beginnerMode, setBeginnerMode] = useState(false);
+  const cartHist = useModelHistory<Setup>(m.setup, (full) => m.change(full), { shortcuts: false });
+  const brakingHist = useModelHistory<BrakingSetup>(b.setup, (full) => b.change(full), { shortcuts: false });
+  const hist = isBraking ? brakingHist : cartHist;
+  useUndoShortcuts(hist.undo, hist.redo);
+  /** Edits made in the Inspector: remember the setup first so Undo can restore it. */
+  const edit = (patch: Partial<Setup>) => { cartHist.record(); m.change(patch); };
+  const bEdit = (patch: Partial<BrakingSetup>) => { brakingHist.record(); b.change(patch); };
+
+  const CART_OBJECTS: SceneObject[] = [
+    { id: 'cart', name: 'CART_01', category: 'Object / Dynamics', icon: 'directions_car', badge: `${r2(m.setup.massKg)} kg` },
+    { id: 'pushA', name: 'PUSH_A', category: 'Vector / Force', icon: 'arrow_right_alt', badge: `${r2(m.setup.forceA)} N` },
+    { id: 'pushB', name: 'PUSH_B', category: 'Vector / Force', icon: 'arrow_right_alt', badge: `${r2(m.setup.forceB)} N` },
+    { id: 'surface', name: 'SURFACE', category: 'Environment / Friction', icon: 'drag_handle', badge: surfaceById(m.setup.surfaceId).label },
+  ];
+  const BRAKING_OBJECTS: SceneObject[] = [
+    { id: 'vehicle', name: 'VEHICLE', category: 'Object / Dynamics', icon: 'directions_car', badge: `${b.setup.speed} m/s` },
+    { id: 'passenger', name: 'PASSENGER', category: 'Object / Dynamics', icon: 'person', badge: `${b.setup.passengerMassKg} kg` },
+    { id: 'restraint', name: 'SEAT_BELT', category: 'Constraint / Restraint', icon: 'airline_seat_recline_normal', badge: b.setup.restrained ? 'on' : 'off' },
+  ];
 
   const outlinerContent = (
-    <div className="p-3 space-y-4 text-xs font-sans">
-      <div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
-        <div className="mt-1.5 space-y-1">
-          <button type="button" aria-pressed={!exp} onClick={() => select(null)}
-            className={`w-full text-left px-2.5 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-between ${!exp ? 'bg-surface-variant text-primary font-bold border border-primary/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/40'}`}>
-            <span>Free Exploration</span>{!exp && <span className="text-primary text-[11px]">✓</span>}
-          </button>
-          {[...FORCE_EXPERIMENTS, ...FIRST_LAW_EXPERIMENTS, ...SECOND_LAW_EXPERIMENTS].map((x) => (
-            <button key={x.id} type="button" aria-pressed={exp?.id === x.id} data-experiment={x.id} onClick={() => select(x.id)}
-              className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between ${exp?.id === x.id ? 'bg-surface-variant text-primary font-bold border border-primary/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/40'}`}>
-              <span className="truncate">{x.id}. {x.title}</span>{exp?.id === x.id && <span className="text-primary text-[11px]">✓</span>}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="pt-2 border-t border-outline-variant">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Apparatus Hierarchy</span>
-        {isBraking ? (
-          <div className="mt-1.5 space-y-1 font-mono text-[11px]">
-            <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-amber-400">directions_car</span><span>Vehicle ({b.setup.speed} m/s)</span></div>
-            <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-emerald-400">person</span><span>Passenger ({b.setup.passengerMassKg} kg)</span></div>
-            <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-cyan-400">airline_seat_recline_normal</span><span>Restraint: {b.setup.restrained ? 'Belt On' : 'No Belt'}</span></div>
-          </div>
-        ) : (
-          <div className="mt-1.5 space-y-1 font-mono text-[11px]">
-            <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-violet-400">directions_car</span><span>Force_Cart ({m.setup.massKg} kg)</span></div>
-            <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-cyan-400">arrow_right_alt</span><span>Pushes A / B</span></div>
-            <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-rose-400">drag_handle</span><span>Surface: {surfaceById(m.setup.surfaceId).label}</span></div>
-          </div>
-        )}
-      </div>
-    </div>
+    <LabOutliner
+      investigations={[...FORCE_EXPERIMENTS, ...FIRST_LAW_EXPERIMENTS, ...SECOND_LAW_EXPERIMENTS].map((x) => ({ id: x.id, title: x.title, goal: x.goal }))}
+      activeInvestigationId={exp?.id ?? null}
+      onSelectInvestigation={select}
+      objects={isBraking ? BRAKING_OBJECTS : CART_OBJECTS}
+      selectedId={scene.selectedId}
+      onSelect={scene.select}
+      visibility={scene.visibility}
+      onToggleVisibility={scene.toggleVisibility}
+      lockMap={scene.lockMap}
+      onToggleLock={scene.toggleLock}
+    />
   );
 
+  const ICON = (name: string) => <span className="material-symbols-outlined text-[15px]">{name}</span>;
+  const sel = (id: string) => scene.selectedId === id;
+  const lk = (id: string) => scene.isLocked(id);
+  const cs = m.setup;
+  const dirOptions = [{ value: 'left' as Dir, label: '← Left' }, { value: 'right' as Dir, label: 'Right →' }];
+
   const inspectorContent = (
-    <div className="p-3 space-y-4 text-xs font-sans" data-testid="forces-inspector">
+    <div className="p-3 space-y-3 text-xs font-sans" data-testid="forces-inspector">
       {isBraking ? (
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Vehicle & Passenger Properties</span>
-          <div className="mt-2"><BrakingSetupFields b={b} /></div>
+        <div data-testid="braking-controls" className="space-y-3">
+          <LabInspectorSection title="Object · VEHICLE" icon={ICON('directions_car')} selected={sel('vehicle')} locked={lk('vehicle')}>
+            <LabParameterField id="speed" label="Speed" symbol="v" unit="m/s" compact step={5} min={0} max={BRAKING_LIMITS.maxSpeed} value={b.setup.speed} disabled={lk('vehicle')} onChange={(v) => bEdit({ speed: v })} />
+            <LabParameterField id="decel" label="Braking deceleration" symbol="a" unit="m/s²" compact step={1} min={BRAKING_LIMITS.minDecel} max={BRAKING_LIMITS.maxDecel} value={b.setup.decel} disabled={lk('vehicle')} onChange={(v) => bEdit({ decel: v })} />
+          </LabInspectorSection>
+          <LabInspectorSection title="Object · PASSENGER" icon={ICON('person')} selected={sel('passenger')} locked={lk('passenger')}>
+            <LabParameterField id="pmass" label="Passenger mass" symbol="m" unit="kg" compact step={10} min={BRAKING_LIMITS.minMass} max={BRAKING_LIMITS.maxMass} value={b.setup.passengerMassKg} disabled={lk('passenger')} onChange={(v) => bEdit({ passengerMassKg: v })} />
+          </LabInspectorSection>
+          <LabInspectorSection title="Constraint · SEAT_BELT" icon={ICON('airline_seat_recline_normal')} selected={sel('restraint')} locked={lk('restraint')}>
+            <LabSegmentedControl<'off' | 'on'> size="sm" columns={2} ariaLabel="Seat belt" disabled={lk('restraint')} value={b.setup.restrained ? 'on' : 'off'} onChange={(v) => bEdit({ restrained: v === 'on' })} options={[{ value: 'off', label: 'No belt' }, { value: 'on', label: 'Belt on' }]} />
+          </LabInspectorSection>
+          {b.err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }}><span aria-hidden>{'✗ '}</span>{b.err}</p>}
         </div>
       ) : (
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Cart and forces</span>
-          <div className="mt-2"><ForceSetupFields m={m} stacked /></div>
+        <div data-testid="force-controls" className="space-y-3">
+          <LabInspectorSection title="Object · CART_01" icon={ICON('directions_car')} selected={sel('cart')} locked={lk('cart')}>
+            <LabParameterField id="mass" label="Cart mass" symbol="m" unit="kg" compact step={1} min={LIMITS.minMass} max={LIMITS.maxMass} value={cs.massKg} disabled={lk('cart')} onChange={(v) => edit({ massKg: v })} />
+            <LabParameterField id="velocity" label="Starting velocity" symbol="u" unit="m/s" compact step={1} min={-LIMITS.maxVelocity} max={LIMITS.maxVelocity} value={cs.startVelocity} disabled={lk('cart')} onChange={(v) => edit({ startVelocity: v })} />
+          </LabInspectorSection>
+          <LabInspectorSection title="Vector · PUSH_A" icon={ICON('arrow_right_alt')} selected={sel('pushA')} locked={lk('pushA')}>
+            <LabParameterField id="forceA" label="Force A" symbol="A" unit="N" compact step={1} min={0} max={LIMITS.maxForce} value={cs.forceA} disabled={lk('pushA')} onChange={(v) => edit({ forceA: v })} />
+            <LabSegmentedControl<Dir> size="sm" columns={2} ariaLabel="Direction of A" disabled={lk('pushA')} value={cs.dirA} onChange={(d) => edit({ dirA: d })} options={dirOptions} />
+          </LabInspectorSection>
+          <LabInspectorSection title="Vector · PUSH_B" icon={ICON('arrow_right_alt')} selected={sel('pushB')} locked={lk('pushB')}>
+            <LabParameterField id="forceB" label="Force B" symbol="B" unit="N" compact step={1} min={0} max={LIMITS.maxForce} value={cs.forceB} disabled={lk('pushB')} onChange={(v) => edit({ forceB: v })} />
+            <LabSegmentedControl<Dir> size="sm" columns={2} ariaLabel="Direction of B" disabled={lk('pushB')} value={cs.dirB} onChange={(d) => edit({ dirB: d })} options={dirOptions} />
+          </LabInspectorSection>
+          <LabInspectorSection title="Environment · SURFACE" icon={ICON('drag_handle')} selected={sel('surface')} locked={lk('surface')}>
+            <LabSelect compact label="Surface" aria-label="Surface under the cart" data-testid="surface-select" disabled={lk('surface')} value={cs.surfaceId} onChange={(e) => edit({ surfaceId: e.target.value })} options={SURFACES.map((s) => ({ value: s.id, label: s.label }))} />
+            <p className="text-[11px] text-slate-400">{surfaceById(cs.surfaceId).note}</p>
+          </LabInspectorSection>
+          {!beginnerMode && (
+            <LabInspectorSection title="Timing" icon={ICON('timer')}>
+              <LabParameterField id="pulse" label="Pushes last for (0 = always)" symbol="t" unit="s" compact step={1} min={0} max={30} value={cs.pulseS ?? 0} onChange={(v) => edit({ pulseS: v <= 0 ? undefined : Math.round(v / 0.01) * 0.01 })} />
+            </LabInspectorSection>
+          )}
+          <p className="text-[11px] text-slate-400">Assumptions: a cart on a horizontal track (weight = normal force, g = 10 m/s²), right is positive, no air resistance. Mass {LIMITS.minMass} to {LIMITS.maxMass} kg; forces up to {LIMITS.maxForce} N.</p>
+          {m.err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="force-error"><span aria-hidden>{'✗ '}</span>{m.err}</p>}
         </div>
       )}
-      <div className="pt-2 border-t border-outline-variant space-y-2">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Curriculum Links</span>
+      <LabInspectorSection title="Curriculum links" icon={ICON('menu_book')}>
         <Link to="/physics/forces/interactions" data-testid="interactions-link" className="block w-full py-1.5 px-2.5 rounded bg-surface-lowest hover:bg-surface-variant text-[11px] text-cyan-300 border border-outline-variant transition-colors">Interactions Lab (Two Carts) →</Link>
         <Link to="/physics/forces/derivations?d=A" data-testid="sl-derivation-links" className="block w-full py-1.5 px-2.5 rounded bg-surface-lowest hover:bg-surface-variant text-[11px] text-amber-300 border border-outline-variant transition-colors">Derivation: F = ma →</Link>
-      </div>
+      </LabInspectorSection>
       {exp && (
-        <div className="pt-2 border-t border-outline-variant space-y-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigation Concept</span>
+        <LabInspectorSection title={`Investigation ${exp.id}: ${exp.title}`} icon={ICON('school')}>
           <p className="text-xs text-slate-300 leading-relaxed">{exp.goal}</p>
           <div className="p-2 rounded bg-surface-lowest text-[11px] text-emerald-300 border border-emerald-500/20"><strong>Observation:</strong> {exp.lesson}</div>
-        </div>
+        </LabInspectorSection>
       )}
     </div>
   );
@@ -345,11 +382,11 @@ export const ForcesLab: React.FC = () => {
       footnote={<>Simulated time t = {r2(b.tt)} s · braking deceleration {r2(b.setup.decel)} m/s² · passenger inertia model</>}
     >
       <div className="w-full h-full min-h-0 flex flex-col gap-3 p-3 overflow-y-auto" data-visual="brakingDemo" data-testid="braking-viewport">
-        <div className="shrink-0" data-no-pan><BrakingScene b={b} /></div>
+        <div className="shrink-0" data-no-pan>{scene.isVisible('vehicle') ? <BrakingScene b={b} /> : null}</div>
         <div className="shrink-0 max-h-[170px]" data-no-pan>
           <ForceFigure
             object="passenger"
-            arrows={b.arrows}
+            arrows={b.arrows.filter((a) => a.id !== 'belt' || scene.isVisible('restraint'))}
             net={b.net}
             showIndividual
             showNet
@@ -363,8 +400,8 @@ export const ForcesLab: React.FC = () => {
   ) : (
     <ViewportFrame toolbar={<><ForceToggles m={m} compact /><ForceTimeControls m={m} compact /></>} footnote={<>Simulated time t = {r2(m.tt)} s · right is positive · arrow lengths scale with the force</>}>
       <div className="w-full h-full min-h-0 flex flex-col gap-2" data-visual="forceCart" data-testid="force-cart">
-        <div className="shrink-0" data-no-pan><Track setup={m.setup} tMax={m.tMax} t={m.tt} /></div>
-        <div className="flex-1 min-h-0" data-no-pan><ForceFigure object="cart" arrows={m.d.arrows} net={m.d.net} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} listing={false} fill /></div>
+        <div className="shrink-0" data-no-pan>{scene.isVisible('cart') ? <Track setup={m.setup} tMax={m.tMax} t={m.tt} /> : null}</div>
+        <div className="flex-1 min-h-0" data-no-pan><ForceFigure object="cart" arrows={m.d.arrows.filter((a) => !(a.id === 'A' && !scene.isVisible('pushA')) && !(a.id === 'B' && !scene.isVisible('pushB')) && !(a.id === 'friction' && !scene.isVisible('surface')))} net={m.d.net} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} listing={false} fill /></div>
       </div>
     </ViewportFrame>
   );
@@ -387,8 +424,8 @@ export const ForcesLab: React.FC = () => {
         <span className="text-outline">Predict → Experiment → Observe → Explain</span>
       </div>
       {isBraking
-        ? BRAKING_ROUTES.map((r) => <BrakingPanel key={r.id} route={r} onRun={(s) => setBraking((bb) => ({ setup: s, key: bb.key + 1 }))} />)
-        : exp.routes.map((r) => <RoutePanel key={`${exp.id}-${r.id}`} route={r as ForceRoute} onRun={(rr) => setLoad((l) => ({ setup: rr.setup, key: l.key + 1 }))} />)}
+        ? BRAKING_ROUTES.map((r) => <BrakingPanel key={r.id} route={r} onRun={(s) => { brakingHist.clear(); setBraking((bb) => ({ setup: s, key: bb.key + 1 })); }} />)
+        : exp.routes.map((r) => <RoutePanel key={`${exp.id}-${r.id}`} route={r as ForceRoute} onRun={(rr) => { cartHist.clear(); setLoad((l) => ({ setup: rr.setup, key: l.key + 1 })); }} />)}
     </div>
   ) : (
     <div className="text-xs space-y-1 text-slate-300" data-testid="force-experiment-panel">
@@ -431,6 +468,15 @@ export const ForcesLab: React.FC = () => {
       inspectorTitle="Forces Inspector"
       analysisDock={<DockTabs key={exp?.id ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
       experimentSetupSnapshot={load.setup}
+      playing={isBraking ? b.playing : m.playing}
+      onTogglePlay={isBraking ? () => b.setPlaying((p) => !p) : m.togglePlay}
+      onReset={isBraking ? b.reset : m.resetTime}
+      onUndo={hist.undo}
+      onRedo={hist.redo}
+      canUndo={hist.canUndo}
+      canRedo={hist.canRedo}
+      beginnerMode={beginnerMode}
+      onToggleBeginnerMode={setBeginnerMode}
     />
   );
 };

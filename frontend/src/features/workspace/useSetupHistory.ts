@@ -57,3 +57,16 @@ export function useUndoShortcuts(onUndo: () => void, onRedo: () => void) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onUndo, onRedo]);
 }
+
+/**
+ * Undo/redo for a setup that lives inside another hook (the force cart, the braking demo): `record()` is called just before an
+ * edit, `apply` writes a whole earlier setup back. Pass `shortcuts: false` when a page holds several of these.
+ */
+export function useModelHistory<S extends object>(setup: S, apply: (full: S) => void, options: { shortcuts?: boolean } = {}) {
+  const history = useSetupHistory<S>();
+  const record = useCallback(() => history.record(setup), [history.record, setup]);
+  const undo = useCallback(() => { const previous = history.undo(setup); if (previous) apply(previous); }, [history.undo, setup, apply]);
+  const redo = useCallback(() => { const next = history.redo(setup); if (next) apply(next); }, [history.redo, setup, apply]);
+  useUndoShortcuts(options.shortcuts === false ? () => {} : undo, options.shortcuts === false ? () => {} : redo);
+  return { record, undo, redo, clear: history.clear, canUndo: history.canUndo, canRedo: history.canRedo };
+}

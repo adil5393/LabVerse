@@ -8,6 +8,8 @@ export interface LabInspectorSectionProps {
   defaultOpen?: boolean;
   badge?: React.ReactNode;
   locked?: boolean;
+  /** Highlights the card when its object is selected in the outliner. */
+  selected?: boolean;
   testId?: string;
   children: React.ReactNode;
   className?: string;
@@ -25,6 +27,7 @@ export const LabInspectorSection: React.FC<LabInspectorSectionProps> = ({
   defaultOpen = true,
   badge,
   locked = false,
+  selected = false,
   testId,
   children,
   className = '',
@@ -33,7 +36,7 @@ export const LabInspectorSection: React.FC<LabInspectorSectionProps> = ({
 
   if (!collapsible) {
     return (
-      <div className={`rounded-xl border border-surface-border bg-surface-lowest/50 overflow-hidden transition-colors ${className}`} data-testid={testId}>
+      <div className={`rounded-xl border bg-surface-lowest/50 overflow-hidden transition-colors ${selected ? 'border-primary ring-1 ring-primary/40' : 'border-surface-border'} ${className}`} data-testid={testId} data-selected={selected || undefined}>
         <div className="px-3 py-2 bg-surface-container border-b border-surface-border flex items-center justify-between">
           <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface font-semibold flex items-center gap-1.5">
             {icon && <span className="text-primary flex items-center">{icon}</span>}

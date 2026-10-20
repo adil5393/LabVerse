@@ -59,8 +59,8 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   analysisDockTitle = 'Analysis & Data Dock',
   mobileInspector,
   playing = false,
-  onTogglePlay = () => {},
-  onReset = () => {},
+  onTogglePlay,
+  onReset,
   onUndo,
   onRedo,
   canUndo = false,
@@ -150,7 +150,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         activeTab={currentTab}
         onTabChange={handleTabChange}
         beginnerMode={beginnerMode}
-        onToggleBeginnerMode={onToggleBeginnerMode || (() => {})}
+        onToggleBeginnerMode={onToggleBeginnerMode}
         onReset={onReset}
         onTogglePlay={onTogglePlay}
         playing={playing}

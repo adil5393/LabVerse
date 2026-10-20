@@ -7,10 +7,11 @@ export interface WorkstationHeaderProps {
   activeTab: WorkspaceTab;
   onTabChange: (tab: WorkspaceTab) => void;
   beginnerMode: boolean;
-  onToggleBeginnerMode: (val: boolean) => void;
-  onReset: () => void;
-  onTogglePlay: () => void;
-  playing: boolean;
+  /** Each of these is optional: a control whose handler is not given is not shown (no dead buttons). */
+  onToggleBeginnerMode?: (val: boolean) => void;
+  onReset?: () => void;
+  onTogglePlay?: () => void;
+  playing?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
   canUndo?: boolean;
@@ -33,7 +34,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
   onToggleBeginnerMode,
   onReset,
   onTogglePlay,
-  playing,
+  playing = false,
   onUndo,
   onRedo,
   canUndo = false,
@@ -191,7 +192,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
         </div>
 
         {/* Mode Toggle Pill (Beginner vs Advanced) */}
-        <div className="hidden lg:flex items-center bg-surface-container-lowest border border-outline-variant rounded p-0.5 font-mono text-[10px]" role="group" aria-label="Workstation detail level">
+        {onToggleBeginnerMode && <div className="hidden lg:flex items-center bg-surface-container-lowest border border-outline-variant rounded p-0.5 font-mono text-[10px]" role="group" aria-label="Workstation detail level">
           <button
             type="button"
             onClick={() => onToggleBeginnerMode(true)}
@@ -212,13 +213,13 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           >
             Advanced
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Right: Transport, Undo/Redo, Utility Actions & Avatar */}
       <div className="flex items-center space-x-1.5 sm:space-x-2">
         {/* Undo / Redo */}
-        <div className="hidden sm:flex items-center border-r border-outline-variant pr-1.5 space-x-0.5">
+        {(onUndo || onRedo) && <div className="hidden sm:flex items-center border-r border-outline-variant pr-1.5 space-x-0.5">
           <button
             type="button"
             onClick={onUndo}
@@ -237,18 +238,18 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           >
             <span className="material-symbols-outlined text-[16px]">redo</span>
           </button>
-        </div>
+        </div>}
 
         {/* Action Buttons: Reset & Run Sim */}
-        <button
+        {onReset && <button
           type="button"
           onClick={onReset}
           className="hidden sm:inline-flex px-2.5 py-1 bg-surface-container-high border border-outline-variant text-on-surface rounded font-mono text-xs hover:border-primary transition-colors active:translate-y-px"
         >
           Reset
-        </button>
+        </button>}
 
-        <button
+        {onTogglePlay && <button
           type="button"
           onClick={onTogglePlay}
           className={`flex items-center space-x-1 px-3 py-1 font-mono text-xs font-semibold rounded shadow-sm transition-all active:translate-y-px ${
@@ -261,7 +262,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             {playing ? 'pause' : 'play_arrow'}
           </span>
           <span>{playing ? 'Pause' : 'Run Sim'}</span>
-        </button>
+        </button>}
 
         {/* Trailing Action Icons */}
         <div className="hidden md:flex items-center space-x-0.5 pl-1">

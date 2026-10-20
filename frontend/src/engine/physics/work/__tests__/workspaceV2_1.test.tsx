@@ -330,6 +330,8 @@ describe('Workspace V2.2: Workstation Navigation & Header', () => {
           onReset={() => {}}
           onTogglePlay={() => {}}
           playing={false}
+          onUndo={() => {}}
+          onRedo={() => {}}
           canUndo={true}
           canRedo={false}
         />

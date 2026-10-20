@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { clientToViewBox } from './components/useViewportCamera';
 import { computeEnergy, cosT, describeEnergy, ENERGY_LIMITS, energyAtDistance, energyAtTime, energySeries, sinT, type EnergyResult, type EnergySetup, type EnergyState } from '../../../engine/physics/work/energyLab';
 import { tickClock } from '../../../engine/physics/motion/kinematics';
 import { ENERGY, PHYS } from '../motion/physicsColors';
@@ -17,12 +18,26 @@ const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-',
 const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : n > 0 ? `+${f2(n)}` : f2(n));
 const W = 440, H = 250;
 
-const Scene: React.FC<{ r: EnergyResult; st: EnergyState; alt: string }> = ({ r, st, alt }) => {
+/** Direct manipulation of the scene: select objects, drag the release height and the reference level. */
+export interface EnergySceneInteraction {
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  locks: Record<string, boolean>;
+  visibility: Record<string, boolean>;
+  onHeight: (h: number) => void;
+  onReference: (h: number) => void;
+}
+
+export const EnergyScene: React.FC<{ r: EnergyResult; st: EnergyState; alt: string; interaction?: EnergySceneInteraction }> = ({ r, st, alt, interaction: ix }) => {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  // While a handle is dragged the scale is frozen, so the handle stays under the cursor instead of the scene re-fitting.
+  const frozenK = useRef<number | null>(null);
+  const [, redraw] = useState(0);
   const { startHeight: h0, angleDeg: th, refHeight: ref, massKg: m } = r.setup;
   const sin = sinT(th), cos = cosT(th), d = r.slopeLength;
   const Lh = d * cos;
   const vertical = th === 90;
-  const k = Math.min(vertical ? 1e9 : 320 / Math.max(Lh, 1e-9), 170 / h0);
+  const k = frozenK.current ?? Math.min(vertical ? 1e9 : 320 / Math.max(Lh, 1e-9), 170 / h0);
   const x0 = 64, ground = 218, top = ground - k * h0;
   const px = (s: number) => x0 + k * s * cos + (vertical ? 40 : 0), py = (s: number) => ground - k * (h0 - s * sin);
   const bx = px(st.s), by = py(st.s);
@@ -30,25 +45,68 @@ const Scene: React.FC<{ r: EnergyResult; st: EnergyState; alt: string }> = ({ r,
   const refVisible = refY >= 8 && refY <= H - 4;
   const arrow = Math.min(40, st.v * 4);
   const ux = vertical ? 0 : cos, uy = vertical ? 1 : sin;
+  const vis = (id: string) => ix?.visibility[id] !== false;
+  const sel = (id: string) => ix?.selectedId === id;
+  const SEL = '#00d4ff';
+
+  const grab = (e: React.PointerEvent, id: string) => {
+    if (!ix) return;
+    e.stopPropagation();
+    ix.onSelect(id);
+    if (ix.locks[id]) return;
+    frozenK.current = k;
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch { /* capture is a nicety */ }
+  };
+  const dragTo = (e: React.PointerEvent, apply: (metres: number, scale: number) => void) => {
+    const scale = frozenK.current;
+    if (scale === null || !svgRef.current) return;
+    const v = clientToViewBox(svgRef.current, e.clientX, e.clientY);
+    if (v) apply((ground - v.y) / scale, scale);
+  };
+  const release = () => { frozenK.current = null; redraw((n) => n + 1); };
+  const select = (id: string) => (e: React.PointerEvent) => { if (ix) { e.stopPropagation(); ix.onSelect(id); } };
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="energy-svg">
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="energy-svg"
+      style={ix ? { touchAction: 'none' } : undefined} onPointerDown={() => ix?.onSelect(null)}>
       <line x1={x0 - 10} y1={ground} x2={W - 14} y2={ground} stroke={PHYS.axis} strokeWidth={3} />
       <text x={x0 - 14} y={ground + 4} textAnchor="end" fontSize={11} fill="#94A3B8">0 m</text>
       <line x1={x0 - 6} y1={top} x2={x0 - 14} y2={top} stroke={PHYS.axis} strokeWidth={2} /><text x={x0 - 18} y={top + 4} textAnchor="end" fontSize={11} fill="#94A3B8">{f2(h0)} m</text>
-      {vertical
-        ? <line data-testid="ramp" x1={px(0)} y1={top} x2={px(0)} y2={ground} stroke={PHYS.axis} strokeWidth={3} strokeDasharray="2 5" />
-        : <g data-testid="ramp"><polygon points={`${px(0)},${top} ${px(d)},${ground} ${px(0)},${ground}`} fill="#1e293b" opacity={0.7} /><line x1={px(0)} y1={top} x2={px(d)} y2={ground} stroke={PHYS.axis} strokeWidth={4} /></g>}
-      {refVisible && <g data-testid="reference-line"><line x1={x0 - 6} y1={refY} x2={W - 14} y2={refY} stroke={ENERGY.potential} strokeDasharray="6 4" /><text x={x0 + 4} y={refY + 14} textAnchor="start" fontSize={11} fill={ENERGY.potential}>reference height {f2(ref)} m: U = 0</text></g>}
-      {!refVisible && <text x={W - 16} y={16} textAnchor="end" fontSize={11} fill={ENERGY.potential} data-testid="reference-line">reference height {f2(ref)} m (off the picture)</text>}
-      <circle cx={bx} cy={by - 12} r={12} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
-      <text x={bx} y={by - 8} textAnchor="middle" fontSize={10} fontWeight={700} fill="#e2e8f0">{f2(m)}</text>
-      {st.v > 1e-9 && <g data-arrow="velocity"><line x1={bx} y1={by - 12} x2={bx + ux * arrow} y2={by - 12 + uy * arrow} stroke={PHYS.velocity} strokeWidth={3} /><text x={bx + ux * arrow + (bx + ux * arrow > W - 110 ? -4 : 4)} y={by - 12 + uy * arrow + (uy * arrow > 4 ? 12 : -6)} textAnchor={bx + ux * arrow > W - 110 ? 'end' : 'start'} fontSize={11} fontWeight={700} fill={PHYS.velocity}>v {f2(st.v)} m/s</text></g>}
+      {vis('ramp') && (
+        <g onPointerDown={select('ramp')} className={ix ? 'cursor-pointer' : undefined}>
+          {vertical
+            ? <line data-testid="ramp" x1={px(0)} y1={top} x2={px(0)} y2={ground} stroke={sel('ramp') ? SEL : PHYS.axis} strokeWidth={3} strokeDasharray="2 5" />
+            : <g data-testid="ramp"><polygon points={`${px(0)},${top} ${px(d)},${ground} ${px(0)},${ground}`} fill="#1e293b" opacity={0.7} /><line x1={px(0)} y1={top} x2={px(d)} y2={ground} stroke={sel('ramp') ? SEL : PHYS.axis} strokeWidth={4} /></g>}
+        </g>
+      )}
+      {ix && vis('ramp') && (
+        <circle data-handle="height" cx={px(0)} cy={top} r={9} fill="#0f172a" fillOpacity={0.6} stroke={sel('ramp') ? SEL : '#94A3B8'} strokeWidth={2} className={ix.locks.ramp ? 'cursor-not-allowed' : 'cursor-ns-resize'}
+          onPointerDown={(e) => grab(e, 'ramp')}
+          onPointerMove={(e) => dragTo(e, (raw, scale) => ix.onHeight(Math.max(ENERGY_LIMITS.heightMin, Math.min(ENERGY_LIMITS.heightMax, (ground - 6) / scale, Math.round(raw * 2) / 2))))}
+          onPointerUp={release} onPointerCancel={release}><title>Drag to change the release height</title></circle>
+      )}
+      {vis('reference') && refVisible && <g data-testid="reference-line" onPointerDown={select('reference')}><line x1={x0 - 6} y1={refY} x2={W - 14} y2={refY} stroke={sel('reference') ? SEL : ENERGY.potential} strokeDasharray="6 4" strokeWidth={sel('reference') ? 2.5 : 1} /><text x={x0 + 4} y={refY + 14} textAnchor="start" fontSize={11} fill={ENERGY.potential}>reference height {f2(ref)} m: U = 0</text></g>}
+      {ix && vis('reference') && refVisible && (
+        <circle data-handle="reference" cx={W - 24} cy={refY} r={8} fill="#0f172a" fillOpacity={0.6} stroke={sel('reference') ? SEL : ENERGY.potential} strokeWidth={2} className={ix.locks.reference ? 'cursor-not-allowed' : 'cursor-ns-resize'}
+          onPointerDown={(e) => grab(e, 'reference')}
+          onPointerMove={(e) => dragTo(e, (raw) => ix.onReference(Math.max(ENERGY_LIMITS.refMin, Math.min(ENERGY_LIMITS.refMax, Math.round(raw * 2) / 2))))}
+          onPointerUp={release} onPointerCancel={release}><title>Drag to move the reference level (U = 0)</title></circle>
+      )}
+      {vis('reference') && !refVisible && <text x={W - 16} y={16} textAnchor="end" fontSize={11} fill={ENERGY.potential} data-testid="reference-line">reference height {f2(ref)} m (off the picture)</text>}
+      {vis('ball') && (
+        <g onPointerDown={select('ball')} className={ix ? 'cursor-pointer' : undefined}>
+          {sel('ball') && <circle cx={bx} cy={by - 12} r={17} fill="none" stroke={SEL} strokeWidth={2} strokeDasharray="4 3" />}
+          <circle cx={bx} cy={by - 12} r={12} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
+          <text x={bx} y={by - 8} textAnchor="middle" fontSize={10} fontWeight={700} fill="#e2e8f0">{f2(m)}</text>
+          {st.v > 1e-9 && <g data-arrow="velocity"><line x1={bx} y1={by - 12} x2={bx + ux * arrow} y2={by - 12 + uy * arrow} stroke={PHYS.velocity} strokeWidth={3} /><text x={bx + ux * arrow + (bx + ux * arrow > W - 110 ? -4 : 4)} y={by - 12 + uy * arrow + (uy * arrow > 4 ? 12 : -6)} textAnchor={bx + ux * arrow > W - 110 ? 'end' : 'start'} fontSize={11} fontWeight={700} fill={PHYS.velocity}>v {f2(st.v)} m/s</text></g>}
+        </g>
+      )}
       <text x={W - 16} y={H - 6} textAnchor="end" fontSize={11} fill="#94A3B8">height {f2(st.h)} m</text>
     </svg>
   );
 };
 
-const Bars: React.FC<{ r: EnergyResult; st: EnergyState }> = ({ r, st }) => {
+export const EnergyBars: React.FC<{ r: EnergyResult; st: EnergyState }> = ({ r, st }) => {
   const series = energySeries(r, 40);
   const scale = Math.max(1, ...series.flatMap((p) => [Math.abs(p.K), Math.abs(p.U), p.Q, Math.abs(p.mechanical)]), Math.abs(r.E0));
   const neg = Math.min(0, ...series.map((p) => p.U), ...series.map((p) => p.mechanical));
@@ -79,7 +137,7 @@ const Bars: React.FC<{ r: EnergyResult; st: EnergyState }> = ({ r, st }) => {
   );
 };
 
-const Figure: React.FC<{ r: EnergyResult; st: EnergyState; axis: 'time' | 'distance' }> = ({ r, st, axis }) => {
+export const EnergyFigure: React.FC<{ r: EnergyResult; st: EnergyState; axis: 'time' | 'distance' }> = ({ r, st, axis }) => {
   const series = energySeries(r, 80);
   const X = (p: EnergyState) => (axis === 'time' ? p.t : p.s);
   const xmax = Math.max(axis === 'time' ? r.tEnd : r.sEnd, 0.1);
@@ -97,6 +155,31 @@ const Figure: React.FC<{ r: EnergyResult; st: EnergyState; axis: 'time' | 'dista
       cursor={axis === 'time' ? st.t : st.s}
       caption={`Now: K = ${f2(st.K)} J, U = ${f2(st.U)} J, Q = ${f2(st.Q)} J. K + U + Q = ${f2(st.total)} J always. ${r.setup.mu > 0 && r.setup.angleDeg < 90 ? 'With friction the dashed mechanical energy falls while the thermal energy rises by the same amount.' : 'With no friction the dashed mechanical energy is flat.'}`}
       alt={`Energy against ${axis}: kinetic energy rises from ${f2(r.K0)} J, potential energy falls from ${f2(r.U0)} J, thermal energy ${f2(st.Q)} J so far. Mechanical energy K + U goes from ${f2(r.E0)} J to ${f2(energyAtTime(r, r.tEnd).mechanical)} J.`} />
+  );
+};
+
+/** The live energy bookkeeping: K, U, Q, mechanical energy and the check that K + U + Q equals the starting total. */
+export const EnergyReadout: React.FC<{ r: EnergyResult; st: EnergyState }> = ({ r, st }) => {
+  const setup = r.setup;
+  const cell = (k: string, label: string, v: string, color?: string) => <div key={k} data-readout={k} className="rounded-lg bg-surface-card px-2 py-1"><div className="text-[10px] text-slate-400">{label}</div><div className="font-mono text-sm font-bold" style={{ color: color ?? '#e2e8f0' }}>{v}</div></div>;
+  const closes = Math.abs(st.total - r.E0) < 1e-6;
+  const friction = setup.mu > 0 && setup.angleDeg < 90;
+  return (
+    <div className="space-y-2" data-testid="energy-readout-cells">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {cell('t', 'time', `${f2(st.t)} s`, PHYS.time)}
+        {cell('v', 'speed', `${f2(st.v)} m/s`, PHYS.velocity)}
+        {cell('h', 'height above the ground', `${f2(st.h)} m`, PHYS.position)}
+        {cell('a', 'acceleration along the slope', `${sg(r.a)} m/s²`, PHYS.acceleration)}
+        {cell('K', 'kinetic K = ½mv²', `${f2(st.K)} J`, ENERGY.kinetic)}
+        {cell('U', `potential U = mg(h − ${f2(setup.refHeight)})`, `${f2(st.U)} J`, ENERGY.potential)}
+        {cell('Q', 'thermal Q (friction)', `${f2(st.Q)} J`, ENERGY.thermal)}
+        {cell('M', 'mechanical K + U', `${f2(st.mechanical)} J`, ENERGY.total)}
+      </div>
+      <p className="text-sm rounded-xl border px-3 py-2 font-mono text-slate-100" style={{ borderColor: closes ? PHYS.correct : PHYS.error, background: `${PHYS.correct}0D` }} data-testid="energy-total">
+        {closes ? '✓ ' : '✗ '}K + U + Q = {f2(st.K)} + {f2(st.U)} + {f2(st.Q)} = {f2(st.total)} J &nbsp; (the starting total is {f2(r.E0)} J){friction ? ' · the mechanical energy K + U has dropped by exactly Q' : ''}
+      </p>
+    </div>
   );
 };
 
@@ -156,16 +239,13 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
   const tt = Math.min(t, r.tEnd);
   const st = r.valid ? energyAtTime(r, tt) : null;
   const btn = 'min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100';
-  const cell = (k: string, label: string, v: string, color?: string) => <div key={k} data-readout={k} className="rounded-lg bg-surface-card px-2 py-1"><div className="text-[10px] text-slate-400">{label}</div><div className="font-mono text-sm font-bold" style={{ color: color ?? '#e2e8f0' }}>{v}</div></div>;
-  const closes = st ? Math.abs(st.total - r.E0) < 1e-6 : false;
-  const friction = setup.mu > 0 && setup.angleDeg < 90;
 
   return (
     <div className="space-y-3 min-w-0" data-visual="energyLab" data-testid="energy-view">
       {r.valid && st ? (
         <>
-          <Scene r={r} st={st} alt={describeEnergy(r)} />
-          <Bars r={r} st={st} />
+          <EnergyScene r={r} st={st} alt={describeEnergy(r)} />
+          <EnergyBars r={r} st={st} />
         </>
       ) : <p role="alert" className="text-sm rounded-xl border px-3 py-3" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }} data-testid="energy-error">This setup cannot run: {r.reason}</p>}
       {r.valid && (
@@ -210,20 +290,8 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
       )}
       {r.valid && st && (
         <section aria-label="Energy bookkeeping" className="space-y-2" data-testid="energy-readout">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {cell('t', 'time', `${f2(st.t)} s`, PHYS.time)}
-            {cell('v', 'speed', `${f2(st.v)} m/s`, PHYS.velocity)}
-            {cell('h', 'height above the ground', `${f2(st.h)} m`, PHYS.position)}
-            {cell('a', 'acceleration along the slope', `${sg(r.a)} m/s²`, PHYS.acceleration)}
-            {cell('K', 'kinetic K = ½mv²', `${f2(st.K)} J`, ENERGY.kinetic)}
-            {cell('U', `potential U = mg(h − ${f2(setup.refHeight)})`, `${f2(st.U)} J`, ENERGY.potential)}
-            {cell('Q', 'thermal Q (friction)', `${f2(st.Q)} J`, ENERGY.thermal)}
-            {cell('M', 'mechanical K + U', `${f2(st.mechanical)} J`, ENERGY.total)}
-          </div>
-          <p className="text-sm rounded-xl border px-3 py-2 font-mono text-slate-100" style={{ borderColor: closes ? PHYS.correct : PHYS.error, background: `${PHYS.correct}0D` }} data-testid="energy-total">
-            {closes ? '✓ ' : '✗ '}K + U + Q = {f2(st.K)} + {f2(st.U)} + {f2(st.Q)} = {f2(st.total)} J &nbsp; (the starting total is {f2(r.E0)} J){friction ? ' · the mechanical energy K + U has dropped by exactly Q' : ''}
-          </p>
-          <Figure r={r} st={st} axis={axis} />
+          <EnergyReadout r={r} st={st} />
+          <EnergyFigure r={r} st={st} axis={axis} />
           {!alt && <p className="text-xs text-slate-300" data-testid="energy-description">{describeEnergy(r)}</p>}
           <p className="text-[11px] text-slate-400">Assumptions: a point-like object, constant g, a straight ramp, constant kinetic friction (coefficient {f2(setup.mu)}), no air resistance, no bounce at the bottom. U is measured from the reference height you choose: only changes of U matter. A model result, not a proof.</p>
         </section>

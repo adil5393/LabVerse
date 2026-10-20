@@ -1,17 +1,32 @@
 /**
  * Work-Energy Laboratory page (/physics/work/kinetic) and the Derivations page (/physics/work/derivations) (PHY-3B).
- * The laboratory is free exploration (no gates) with six optional investigations A to F: Predict, Experiment, Observe, Explain.
- * The outcome shown is computed from the same model that draws the cart and the graphs.
+ * The laboratory is the Blender-style workstation: free exploration (no gates) with six optional investigations A to F
+ * (Predict, Experiment, Observe, Explain). The cart, the net force and the displacement are scene objects you can select, hide,
+ * lock and drag; the outcome shown is computed from the same model that draws the cart and the graphs.
  */
 
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { KINETIC_EXPERIMENTS, kineticExperimentById, kineticRouteOutcome, type KineticRoute } from '../../../engine/physics/work/kineticExperiments';
-import { DEFAULT_KINETIC, type KineticSetup } from '../../../engine/physics/work/kineticModel';
+import { DEFAULT_KINETIC, KIN_LIMITS, computeKinetic, describeKinetic, kineticAt, type KineticSetup } from '../../../engine/physics/work/kineticModel';
 import { PHYS } from '../motion/physicsColors';
 import { DerivationView } from './DerivationView';
-import { KineticView } from './KineticView';
+import { KineticFigure, KineticReadout, KineticScene } from './KineticView';
+import {
+  DockTabs,
+  LabOutliner,
+  ViewportFrame,
+  WorkspaceShell,
+  useLabSetup,
+  useSceneState,
+  useTimedPlayback,
+  type DockTab,
+  type SceneObject,
+} from '../../workspace';
+import { LabButton, LabInspectorSection, LabParameterField, LabSelect } from '../../workspace/controls';
+
+const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-', '−');
 
 const Crumb: React.FC<{ last: string }> = ({ last }) => (
   <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
@@ -21,6 +36,13 @@ const Crumb: React.FC<{ last: string }> = ({ last }) => (
     <span className="text-sky-300 font-bold">{last}</span>
   </nav>
 );
+
+const SCENE_OBJECTS: SceneObject[] = [
+  { id: 'cart', name: 'CART_01', category: 'Object / Dynamics', icon: 'deployed_code' },
+  { id: 'force', name: 'F_NET', category: 'Vector / Force', icon: 'trending_flat' },
+  { id: 'displacement', name: 'DISP_01', category: 'Measurement / Vector', icon: 'straighten' },
+];
+const OBJECT_IDS = SCENE_OBJECTS.map((o) => o.id);
 
 const RoutePanel: React.FC<{ route: KineticRoute; onRun: (r: KineticRoute) => void }> = ({ route, onRun }) => {
   const [choice, setChoice] = useState<number | null>(null);
@@ -56,141 +78,157 @@ const RoutePanel: React.FC<{ route: KineticRoute; onRun: (r: KineticRoute) => vo
   );
 };
 
-import { WorkspaceShell } from '../../workspace';
-
 export const KineticLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const exp = kineticExperimentById(params.get('experiment'));
-  const [load, setLoad] = useState<{ setup: KineticSetup; key: number }>({ setup: exp ? exp.routes[0].setup : DEFAULT_KINETIC, key: 0 });
-  const select = (id: string | null) => { const e = kineticExperimentById(id); setParams(id ? { experiment: id } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_KINETIC, key: l.key + 1 })); };
+  const lab = useLabSetup<KineticSetup>(exp ? exp.routes[0].setup : DEFAULT_KINETIC);
+  const scene = useSceneState(OBJECT_IDS);
+  const [rate, setRate] = useState(1);
+  const [beginnerMode, setBeginnerMode] = useState(false);
 
-  // Outliner: Investigation presets
+  const r = computeKinetic(lab.setup);
+  const playback = useTimedPlayback(r.valid ? r.tEnd : 0, rate);
+
+  const select = (id: string | null) => {
+    const e = kineticExperimentById(id);
+    setParams(id ? { experiment: id } : {});
+    lab.replace(e ? e.routes[0].setup : DEFAULT_KINETIC);
+    playback.reset();
+  };
+  const runRoute = (route: KineticRoute) => { lab.replace(route.setup); playback.reset(); };
+
+  /** Every edit stops the run and returns to the start, so the scene always matches the numbers. */
+  const edit = (patch: Partial<KineticSetup>) => { lab.change(patch); playback.reset(); };
+  const undo = () => { lab.undo(); playback.reset(); };
+  const redo = () => { lab.redo(); playback.reset(); };
+  const resetRun = () => { lab.restart(); playback.reset(); };
+
   const outlinerContent = (
-    <div className="p-3 space-y-3 text-xs font-sans">
-      <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
-        <span className="text-[11px] font-mono text-primary font-bold">{KINETIC_EXPERIMENTS.length} Total</span>
-      </div>
-      <div role="group" aria-label="Choose an investigation" className="flex flex-col gap-1.5">
-        <button
-          type="button"
-          aria-pressed={!exp}
-          onClick={() => select(null)}
-          className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-            !exp
-              ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
-              : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">{!exp ? 'check_circle' : 'science'}</span>
-            <span>Free Exploration</span>
-          </div>
-        </button>
-        {KINETIC_EXPERIMENTS.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            aria-pressed={exp?.id === x.id}
-            data-experiment={x.id}
-            onClick={() => select(x.id)}
-            className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-              exp?.id === x.id
-                ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
-                : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">{x.id}. {x.title}</span>
-              {exp?.id === x.id && <span className="material-symbols-outlined text-sm text-primary">check</span>}
-            </div>
-            <div className="text-[10px] text-slate-400 truncate mt-0.5">{x.goal}</div>
-          </button>
-        ))}
-      </div>
-    </div>
+    <LabOutliner
+      investigations={KINETIC_EXPERIMENTS.map((x) => ({ id: x.id, title: x.title, goal: x.goal }))}
+      activeInvestigationId={exp?.id ?? null}
+      onSelectInvestigation={select}
+      objects={SCENE_OBJECTS}
+      selectedId={scene.selectedId}
+      onSelect={scene.select}
+      visibility={scene.visibility}
+      onToggleVisibility={scene.toggleVisibility}
+      lockMap={scene.lockMap}
+      onToggleLock={scene.toggleLock}
+    />
   );
 
-  // Inspector: Model details and derivations
+  const L = KIN_LIMITS;
+  const s = lab.setup;
   const inspectorContent = (
-    <div className="p-3 space-y-4 text-xs font-sans">
-      <div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Model Principles</span>
-        <div className="mt-2 space-y-2 font-mono text-slate-300">
-          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
-            <p className="font-bold text-white mb-1">Work-Energy Theorem</p>
-            <p>W<sub>net</sub> = &Delta;K = &frac12;mv&sup2; &minus; &frac12;mu&sup2;</p>
-          </div>
-          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
-            <p className="font-bold text-white mb-1">Constant Net Force</p>
-            <p>W<sub>net</sub> = F<sub>net</sub> &times; s</p>
-          </div>
-        </div>
-      </div>
+    <div className="p-3 space-y-3 text-xs font-sans" data-testid="kinetic-controls">
+      <LabInspectorSection title="Object · CART_01" icon={<span className="material-symbols-outlined text-[15px]">deployed_code</span>} selected={scene.selectedId === 'cart'} locked={scene.isLocked('cart')}>
+        <LabParameterField id="mass" label="Mass" symbol="m" unit="kg" compact step={1} min={L.massMin} max={L.massMax} value={s.massKg} disabled={scene.isLocked('cart')} onChange={(v) => edit({ massKg: v })} />
+        <LabParameterField id="u" label="Initial velocity" symbol="u" unit="m/s" compact step={1} min={-L.speedMax} max={L.speedMax} value={s.u} disabled={scene.isLocked('cart')} onChange={(v) => edit({ u: v })} />
+      </LabInspectorSection>
+      <LabInspectorSection title="Vector · F_NET" icon={<span className="material-symbols-outlined text-[15px]">trending_flat</span>} selected={scene.selectedId === 'force'} locked={scene.isLocked('force')}>
+        <LabParameterField id="force" label="Net force" symbol="F" unit="N" compact step={2} min={-L.forceMax} max={L.forceMax} value={s.netForce} disabled={scene.isLocked('force')} onChange={(v) => edit({ netForce: v })} />
+        <p className="text-[11px] text-slate-400">Drag the round handle at the arrow tip in the scene. Right is positive.</p>
+      </LabInspectorSection>
+      <LabInspectorSection title="Measurement · DISP_01" icon={<span className="material-symbols-outlined text-[15px]">straighten</span>} selected={scene.selectedId === 'displacement'} locked={scene.isLocked('displacement')}>
+        <LabParameterField id="s" label="Displacement" symbol="s" unit="m" compact step={1} min={-L.dispMax} max={L.dispMax} value={s.displacement} disabled={scene.isLocked('displacement')} onChange={(v) => edit({ displacement: v })} />
+        <p className="text-[11px] text-slate-400">Drag the round handle on the dashed end line in the scene.</p>
+      </LabInspectorSection>
+      {!r.valid && <p role="alert" data-testid="kinetic-error" className="text-xs rounded-lg border px-3 py-2" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }}>This setup cannot run: {r.reason}</p>}
 
-      <div className="pt-2 border-t border-outline-variant space-y-2">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Reference Derivations</span>
+      <LabInspectorSection title="Work-energy theorem" icon={<span className="material-symbols-outlined text-[15px]">balance</span>}>
+        <div className="space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]"><p className="font-bold text-white mb-1">Net work</p><p>W<sub>net</sub> = F × s = ΔK</p></div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]"><p className="font-bold text-white mb-1">Kinetic energy</p><p>K = ½ m v²</p></div>
+        </div>
         <p className="text-xs text-slate-300" data-testid="kinetic-derive-link">
-          Why is K = &frac12;mv&sup2;?{' '}
-          <Link className="underline text-sky-400 hover:text-sky-300 font-medium" to="/physics/work/derivations?d=K">
-            Work through the derivation &rarr;
-          </Link>
+          Why is K = ½mv²? <Link className="underline text-sky-400 hover:text-sky-300 font-medium" to="/physics/work/derivations?d=K">Work through the derivation &rarr;</Link>
         </p>
-      </div>
+      </LabInspectorSection>
 
       {exp && (
-        <div className="pt-2 border-t border-outline-variant space-y-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Active Experiment {exp.id}</span>
-          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
-            <h4 className="font-bold text-white text-xs">{exp.title}</h4>
-            <p className="text-[11px] text-slate-300 leading-relaxed">{exp.goal}</p>
-            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
-              <strong>Notice:</strong> {exp.lesson}
-            </div>
-          </div>
-        </div>
+        <LabInspectorSection title={`Investigation ${exp.id}: ${exp.title}`} icon={<span className="material-symbols-outlined text-[15px] text-primary">school</span>}>
+          <p className="text-[11px] text-slate-300 leading-relaxed">{exp.goal}</p>
+          <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300"><strong>Notice:</strong> {exp.lesson}</div>
+        </LabInspectorSection>
       )}
     </div>
   );
 
-  // Viewport: Simulation canvas
+  const transport = r.valid ? (
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" role="group" aria-label="Run the cart">
+      <LabButton type="button" size="sm" variant="primary" onClick={playback.toggle} disabled={r.tEnd === 0} data-testid="kinetic-play" className="font-semibold"
+        icon={<span className="material-symbols-outlined text-[15px]">{playback.playing ? 'pause' : playback.atEnd ? 'replay' : 'play_arrow'}</span>}>
+        {playback.playing ? 'Pause' : playback.atEnd ? 'Replay' : 'Play'}
+      </LabButton>
+      <LabButton type="button" size="sm" onClick={playback.reset} data-testid="kinetic-reset" icon={<span className="material-symbols-outlined text-[15px]">restart_alt</span>}>Back to start</LabButton>
+      <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[150px]">Time
+        <input type="range" min={0} max={r.tEnd} step={Math.max(r.tEnd / 200, 0.001)} value={playback.t} onChange={(e) => playback.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${f2(playback.t)} seconds of ${f2(r.tEnd)}`} className="flex-1 min-w-[90px] accent-primary" data-testid="kinetic-time" />
+        <span className="font-mono text-[11px] w-20 text-right">{f2(playback.t)} / {f2(r.tEnd)} s</span>
+      </label>
+      {!beginnerMode && (
+        <LabSelect compact aria-label="Playback speed" value={rate} onChange={(e) => setRate(Number(e.target.value))} options={[{ value: 0.25, label: '0.25×' }, { value: 0.5, label: '0.5×' }, { value: 1, label: '1×' }, { value: 2, label: '2×' }]} />
+      )}
+    </div>
+  ) : undefined;
+
   const viewportContent = (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="kinetic-lab">
-      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
-        <KineticView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable />
+    <ViewportFrame
+      toolbar={transport}
+      footnote="A constant net force along a straight line; friction would be part of the net force. Drag the round handles to change the net force and the displacement."
+    >
+      <div className="w-full h-full min-h-0 flex flex-col justify-center gap-3" data-visual="kineticLab" data-testid="kinetic-view">
+        {r.valid ? (
+          <KineticScene
+            r={r}
+            t={playback.t}
+            alt={describeKinetic(r)}
+            interaction={{
+              selectedId: scene.selectedId,
+              onSelect: scene.select,
+              locks: scene.lockMap,
+              visibility: scene.visibility,
+              onForce: (n) => edit({ netForce: n }),
+              onDisplacement: (m) => edit({ displacement: m }),
+            }}
+          />
+        ) : <p role="alert" className="text-sm rounded-xl border px-3 py-3 mx-auto" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }}>This setup cannot run: {r.reason}</p>}
       </div>
+    </ViewportFrame>
+  );
+
+  const investigation = exp ? (
+    <div className="space-y-3" data-testid="kinetic-experiment-panel">
+      <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+        <span className="text-primary font-bold">Experiment {exp.id}: {exp.title}</span>
+        <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+      </div>
+      {exp.routes.map((route) => <RoutePanel key={`${exp.id}-${route.id}`} route={route} onRun={runRoute} />)}
+    </div>
+  ) : (
+    <div className="text-xs space-y-1 text-slate-300">
+      <p className="font-mono">Free Exploration: a cart under a net force. The area under the force graph is the change in kinetic energy.</p>
+      <p className="text-outline">Pick an investigation in the Explorer to test a prediction.</p>
     </div>
   );
 
-  // Analysis Dock: POE investigations
-  const analysisDockContent = (
-    <div className="p-3 text-xs space-y-3 font-sans">
-      {exp ? (
-        <div className="space-y-3" data-testid="kinetic-experiment-panel">
-          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
-            <span className="text-primary font-bold">Experiment {exp.id}: {exp.title}</span>
-            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
-          </div>
-          {exp.routes.map((r) => (
-            <RoutePanel key={`${exp.id}-${r.id}`} route={r} onRun={(rr) => setLoad((l) => ({ setup: rr.setup, key: l.key + 1 }))} />
-          ))}
-          <p className="text-xs text-slate-400">
-            Model results for a constant net force on a straight line; exact kinematics without numerical drift.
-          </p>
+  const now = r.valid ? kineticAt(r, playback.t) : null;
+  const tabs: DockTab[] = [
+    { id: 'measurements', label: 'Measurements', content: r.valid ? <KineticReadout r={r} t={playback.t} /> : <p className="text-xs text-slate-400">Fix the setup to see the measurements.</p> },
+    { id: 'graphs', label: 'Graphs', content: r.valid ? <KineticFigure r={r} t={playback.t} showScene={false} /> : <p className="text-xs text-slate-400">Fix the setup to see the graphs.</p> },
+    {
+      id: 'explanation',
+      label: 'Explanation',
+      content: (
+        <div className="space-y-2 text-xs text-slate-200 max-w-3xl" data-testid="kinetic-description">
+          <p>{r.valid ? describeKinetic(r) : r.reason}</p>
+          {now && <p className="text-slate-400">Now (t = {f2(playback.t)} s): x = {f2(now.x)} m, v = {f2(now.v)} m/s, K = {f2(now.K)} J.</p>}
+          <p className="text-slate-400">Assumptions: a constant net force along a straight line; no other energy forms are tracked. Exact kinematics, so there is no numerical drift. A model result, not a proof.</p>
         </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
-          <span className="material-symbols-outlined text-3xl text-outline">tune</span>
-          <p className="font-mono text-xs text-slate-300">
-            Free Exploration Mode: Adjust mass, net force, initial velocity, and displacement in the viewport.
-          </p>
-          <p className="text-[11px] text-outline">
-            Select an investigation in the left Explorer to compare your predictions with the model.
-          </p>
-        </div>
-      )}
-    </div>
-  );
+      ),
+    },
+    { id: 'investigation', label: exp ? `Investigation ${exp.id}` : 'Investigation', content: investigation },
+  ];
 
   return (
     <WorkspaceShell
@@ -201,8 +239,16 @@ export const KineticLab: React.FC = () => {
       viewport={viewportContent}
       inspectorTitle="Model Properties"
       inspector={inspectorContent}
-      analysisDockTitle="Analysis & POE"
-      analysisDock={analysisDockContent}
+      analysisDock={<DockTabs key={exp?.id ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      playing={playback.playing}
+      onTogglePlay={playback.toggle}
+      onReset={resetRun}
+      onUndo={undo}
+      onRedo={redo}
+      canUndo={lab.canUndo}
+      canRedo={lab.canRedo}
+      beginnerMode={beginnerMode}
+      onToggleBeginnerMode={setBeginnerMode}
     />
   );
 };

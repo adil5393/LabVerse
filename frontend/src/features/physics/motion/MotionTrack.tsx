@@ -143,8 +143,20 @@ export const useMotionTrack = ({ range, start, moves, durations, editable, show,
 export type MotionTrackModel = ReturnType<typeof useMotionTrack>;
 
 /** The apparatus: track, ticks, origin, start marker, history rows, displacement arrow and the object. `fill` sizes it to its container. */
-export const MotionScene: React.FC<{ m: MotionTrackModel; alt: string; fill?: boolean }> = ({ m, alt, fill }) => {
-  const { path, s, tMs, editable, step, dragging, svgRef } = m;
+/** Workstation hooks for the scene: which objects are shown, which are locked, and the selection (the Inspector follows it). */
+export interface MotionSceneObjects {
+  visibility: Record<string, boolean>;
+  lockMap: Record<string, boolean>;
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+}
+
+export const MotionScene: React.FC<{ m: MotionTrackModel; alt: string; fill?: boolean; scene?: MotionSceneObjects }> = ({ m, alt, fill, scene }) => {
+  const { path, s, tMs, step, dragging, svgRef } = m;
+  const shown = (id: string) => scene?.visibility[id] !== false;
+  const picked = (id: string) => scene?.selectedId === id;
+  // A locked object cannot be dragged or nudged with the keys.
+  const editable = m.editable && !scene?.lockMap.object;
   const span = metres(path.maxCm - path.minCm);
   const X = (cmv: number) => PAD + ((cmv - path.minCm) / (path.maxCm - path.minCm)) * (W - 2 * PAD);
   const tickStep = niceStep(span);
@@ -174,17 +186,19 @@ export const MotionScene: React.FC<{ m: MotionTrackModel; alt: string; fill?: bo
       className={`${fill ? 'w-full h-full max-h-full' : 'w-full'} rounded-xl bg-surface-lowest border border-surface-border select-none`}
       data-no-pan
       style={{ touchAction: editable ? 'none' : 'auto' }}
+      onPointerDown={(e) => { if (e.target === e.currentTarget) scene?.onSelect(null); }}
       onPointerMove={(e) => { if (dragging.current) m.setTyped(String(fromEvent(e))); }}
       onPointerUp={(e) => { if (dragging.current) { dragging.current = false; m.goTo(fromEvent(e)); m.setTyped(''); } }} onPointerCancel={() => { dragging.current = false; }}>
       <title>{alt}</title>
-      <line x1={PAD} y1={TRACK_Y} x2={W - PAD} y2={TRACK_Y} stroke={C.track} strokeWidth={3} />
-      {ticks.map((v) => (
+      {shown('track') && <line x1={PAD} y1={TRACK_Y} x2={W - PAD} y2={TRACK_Y} stroke={picked('track') ? '#00d4ff' : C.track} strokeWidth={picked('track') ? 5 : 3} />}
+      {shown('track') && <line x1={PAD} y1={TRACK_Y} x2={W - PAD} y2={TRACK_Y} stroke="transparent" strokeWidth={20} onPointerDown={(e) => { if (scene) { e.stopPropagation(); scene.onSelect('track'); } }} style={scene ? { cursor: 'pointer' } : undefined} />}
+      {shown('track') && ticks.map((v) => (
         <g key={v} pointerEvents="none">
           <line x1={X(cm(v))} y1={TRACK_Y - (v === 0 ? 14 : 7)} x2={X(cm(v))} y2={TRACK_Y + (v === 0 ? 14 : 7)} stroke={v === 0 ? C.origin : C.track} strokeWidth={v === 0 ? 3 : 1.5} />
           <text x={X(cm(v))} y={TRACK_Y + 28} textAnchor="middle" fill={v === 0 ? C.origin : '#94a3b8'} fontSize={12} fontWeight={v === 0 ? 700 : 400}>{v < 0 ? `−${Math.abs(v)}` : v}</text>
         </g>
       ))}
-      <text x={X(0)} y={TRACK_Y + 43} textAnchor="middle" fill={C.origin} fontSize={12} fontWeight={800} pointerEvents="none">O (reference point)</text>
+      {shown('origin') && <text x={X(0)} y={TRACK_Y + 43} textAnchor="middle" fill={picked('origin') ? '#00d4ff' : C.origin} fontSize={12} fontWeight={800} onPointerDown={(e) => { if (scene) { e.stopPropagation(); scene.onSelect('origin'); } }} style={scene ? { cursor: 'pointer' } : undefined}>O (reference point)</text>}
       <text x={W - PAD} y={TRACK_Y + 62} textAnchor="end" fill="#94a3b8" fontSize={11} pointerEvents="none">position (m); right is positive</text>
 
       {/* start marker */}
@@ -219,12 +233,13 @@ export const MotionScene: React.FC<{ m: MotionTrackModel; alt: string; fill?: bo
         <text x={W - PAD} y={28} textAnchor="end" fill={C.disp}>{'━▶'} displacement (start to now)</text>
       </g>
       {/* the object */}
-      <g className="group outline-none" {...(editable ? { role: 'button', tabIndex: 0, 'aria-label': `The object at ${fmtM(s.positionCm)}. Left and right arrow keys move it ${step} m, one second of simulated time per move.`, style: { cursor: 'grab' }, onKeyDown: keys, onPointerDown: (e: React.PointerEvent) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); } } : {})}>
+      {shown('object') && <g className="group outline-none" {...(editable ? { role: 'button', tabIndex: 0, 'aria-label': `The object at ${fmtM(s.positionCm)}. Left and right arrow keys move it ${step} m, one second of simulated time per move.`, style: { cursor: 'grab' }, onKeyDown: keys, onPointerDown: (e: React.PointerEvent) => { scene?.onSelect('object'); dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); } } : { onPointerDown: (e: React.PointerEvent) => { if (scene) { e.stopPropagation(); scene.onSelect('object'); } } })}>
         {editable && <circle cx={X(s.positionCm)} cy={TRACK_Y} r={48} fill="transparent" />}
         {editable && <circle cx={X(s.positionCm)} cy={TRACK_Y} r={17} fill="none" strokeWidth={3} className="stroke-transparent group-focus:stroke-white" pointerEvents="none" />}
         <circle cx={X(s.positionCm)} cy={TRACK_Y} r={11} fill={C.obj} stroke="#0f172a" strokeWidth={2} pointerEvents="none" />
+        {picked('object') && <circle cx={X(s.positionCm)} cy={TRACK_Y} r={18} fill="none" stroke="#00d4ff" strokeWidth={2} strokeDasharray="4 3" pointerEvents="none" />}
         <text x={X(s.positionCm)} y={TRACK_Y - 18} textAnchor="middle" fill={C.obj} fontSize={12} fontWeight={800} pointerEvents="none">{fmtSigned(s.positionCm)}</text>
-      </g>
+      </g>}
     </svg>
   );
 };

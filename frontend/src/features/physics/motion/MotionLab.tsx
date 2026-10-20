@@ -19,7 +19,7 @@ import { MotionHistory, MotionMessage, MotionMoveButtons, MotionParameterFields,
 import { MotionTimeGraphs } from './MotionTimeGraph';
 import { PHYS } from './physicsColors';
 import { speedVelocityLines, wholeTrip, pathFromRoute } from '../../../engine/physics/motion/speed';
-import { DockTabs, ViewportFrame, WorkspaceShell, type DockTab } from '../../workspace';
+import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useSceneState, type DockTab, type SceneObject } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabToolbarDivider } from '../../workspace/controls';
 
 const RatePrediction: React.FC<{
@@ -293,37 +293,31 @@ export const MotionLab: React.FC = () => {
   const locked = Boolean(exp);
 
   const m = useMotionTrack({ range, start, moves: load.moves, durations: load.durations, editable: true, show: ['position', 'distance', 'displacement', 'speed', 'velocity'], stepM: 5 });
+  const scene = useSceneState(['object', 'track', 'origin']);
+  const [beginnerMode, setBeginnerMode] = useState(false);
   const alt = `A straight track from ${range[0]} m to ${range[1]} m with reference origin O at 0 m. Move the object with buttons or keyboard.`;
   const resetLoad = () => setLoad((l) => ({ moves: [], key: l.key + 1 }));
 
   const pick = (id?: string) => { setParams(id ? { experiment: id } : {}); resetLoad(); };
 
+  const SCENE_OBJECTS: SceneObject[] = [
+    { id: 'object', name: 'Moving_Object', category: 'Object / Kinematics', icon: 'toys', badge: `${m.s.positionCm / 100} m` },
+    { id: 'track', name: `Track_[${range[0]}, ${range[1]}]m`, category: 'Environment / Track', icon: 'straighten' },
+    { id: 'origin', name: 'Reference_Origin (0m)', category: 'Measurement / Reference', icon: 'navigation' },
+  ];
   const outlinerContent = (
-    <div className="p-3 space-y-4 text-xs font-sans">
-      <div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
-        <div className="mt-1.5 space-y-1">
-          <button type="button" aria-pressed={!exp} onClick={() => pick()}
-            className={`w-full text-left px-2.5 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-between ${!exp ? 'bg-surface-variant text-primary font-bold border border-primary/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/40'}`}>
-            <span>Free Exploration</span>{!exp && <span className="text-primary text-[11px]">✓</span>}
-          </button>
-          {MOTION_EXPERIMENTS.map((x) => (
-            <button key={x.id} type="button" aria-pressed={expId === x.id} data-experiment={x.id} onClick={() => pick(x.id)}
-              className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between ${expId === x.id ? 'bg-surface-variant text-primary font-bold border border-primary/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/40'}`}>
-              <span className="truncate">{x.id}. {x.title}</span>{expId === x.id && <span className="text-primary text-[11px]">✓</span>}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="pt-2 border-t border-outline-variant">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Scene Hierarchy</span>
-        <div className="mt-1.5 space-y-1 font-mono text-[11px]">
-          <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-cyan-400">toys</span><span>Moving_Object</span></div>
-          <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-amber-400">straighten</span><span>Track_[{range[0]}, {range[1]}]m</span></div>
-          <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-emerald-400">navigation</span><span>Reference_Origin (0m)</span></div>
-        </div>
-      </div>
-    </div>
+    <LabOutliner
+      investigations={MOTION_EXPERIMENTS.map((x) => ({ id: x.id, title: x.title, goal: x.goal }))}
+      activeInvestigationId={expId ?? null}
+      onSelectInvestigation={(id) => pick(id ?? undefined)}
+      objects={SCENE_OBJECTS}
+      selectedId={scene.selectedId}
+      onSelect={scene.select}
+      visibility={scene.visibility}
+      onToggleVisibility={scene.toggleVisibility}
+      lockMap={scene.lockMap}
+      onToggleLock={scene.toggleLock}
+    />
   );
 
   const inspectorContent = (
@@ -331,7 +325,8 @@ export const MotionLab: React.FC = () => {
       <LabInspectorSection
         title="Track Configuration"
         icon={<span className="material-symbols-outlined text-[15px]">straighten</span>}
-        locked={locked}
+        selected={scene.selectedId === 'track' || scene.selectedId === 'origin'}
+        locked={locked || scene.isLocked('track')}
         badge={locked ? <span className="text-[9px] font-mono font-bold text-amber-300 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/30">FIXED</span> : undefined}
       >
         <div className="space-y-1.5 font-mono">
@@ -344,7 +339,7 @@ export const MotionLab: React.FC = () => {
             compact
             symbol="x_min"
             symbolColor="#f59e0b"
-            disabled={locked}
+            disabled={locked || scene.isLocked('track')}
             ariaLabel="Track start in metres"
             onChange={(v) => { if (v < freeStart && v < freeRange[1]) { setFreeRange([v, freeRange[1]]); resetLoad(); } }}
           />
@@ -357,7 +352,7 @@ export const MotionLab: React.FC = () => {
             compact
             symbol="x_max"
             symbolColor="#f59e0b"
-            disabled={locked}
+            disabled={locked || scene.isLocked('track')}
             ariaLabel="Track end in metres"
             onChange={(v) => { if (v > freeStart && v > freeRange[0]) { setFreeRange([freeRange[0], v]); resetLoad(); } }}
           />
@@ -370,7 +365,7 @@ export const MotionLab: React.FC = () => {
             compact
             symbol="x₀"
             symbolColor="#38bdf8"
-            disabled={locked}
+            disabled={locked || scene.isLocked('track')}
             ariaLabel="Start position in metres"
             onChange={(v) => { if (v >= freeRange[0] && v <= freeRange[1]) { setFreeStart(v); resetLoad(); } }}
           />
@@ -385,6 +380,8 @@ export const MotionLab: React.FC = () => {
       <LabInspectorSection
         title="Motion Parameters"
         icon={<span className="material-symbols-outlined text-[15px]">tune</span>}
+        selected={scene.selectedId === 'object'}
+        locked={scene.isLocked('object')}
       >
         <MotionParameterFields m={m} stacked />
         <MotionMessage m={m} />
@@ -434,7 +431,7 @@ export const MotionLab: React.FC = () => {
       footnote={<>Simulated time t = {(m.s.tMs / 1000).toFixed(1)} s · positions are exact in this model · right is positive</>}
     >
       <div data-visual="motionTrack" data-testid="motion-track" className="w-full h-full min-h-0 flex items-center justify-center">
-        <MotionScene m={m} alt={alt} fill />
+        <MotionScene m={m} alt={alt} fill scene={{ visibility: scene.visibility, lockMap: scene.lockMap, selectedId: scene.selectedId, onSelect: scene.select }} />
       </div>
     </ViewportFrame>
   );
@@ -488,6 +485,13 @@ export const MotionLab: React.FC = () => {
       inspectorTitle="Motion Inspector"
       analysisDock={<DockTabs key={expId ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
       experimentSetupSnapshot={load}
+      playing={m.playing}
+      onTogglePlay={m.path.legs.length > 0 ? m.togglePlay : undefined}
+      onReset={m.reset}
+      onUndo={m.undo}
+      canUndo={m.path.legs.length > 0}
+      beginnerMode={beginnerMode}
+      onToggleBeginnerMode={setBeginnerMode}
     />
   );
 };

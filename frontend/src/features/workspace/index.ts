@@ -6,3 +6,7 @@ export * from './ViewportFrame';
 export * from './DockTabs';
 export * from './controls';
 export * from './useSetupHistory';
+export * from './useSceneState';
+export * from './useLabSetup';
+export * from './useTimedPlayback';
+export * from './LabOutliner';

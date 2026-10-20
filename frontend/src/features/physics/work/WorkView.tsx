@@ -184,6 +184,20 @@ export const WorkView: React.FC<WorkViewProps> = ({
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (e.key === 'n' || e.key === 'N') {
+        setInspectorCollapsed((c) => !c);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const description = describeWork(r);
   const s = setup.displacement;
 
@@ -213,6 +227,8 @@ export const WorkView: React.FC<WorkViewProps> = ({
           }}
           selectedObjectId={selectedObjectId}
           onSelectObject={onSelectObject}
+          onSetupChange={change}
+          lockMap={lockMap}
           showVectors={visibilityMap.force}
           showCaliper={visibilityMap.caliper}
         />
@@ -230,6 +246,8 @@ export const WorkView: React.FC<WorkViewProps> = ({
               beginnerMode={beginnerMode}
               selectedObjectId={selectedObjectId}
               lockMap={lockMap}
+              collapsed={inspectorCollapsed}
+              onToggleCollapse={() => setInspectorCollapsed((c) => !c)}
             />
           </div>
         )}

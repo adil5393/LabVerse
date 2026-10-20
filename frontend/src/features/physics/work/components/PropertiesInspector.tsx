@@ -18,6 +18,8 @@ export interface PropertiesInspectorProps {
   beginnerMode?: boolean;
   selectedObjectId?: string | null;
   lockMap?: Record<string, boolean>;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const DIRS = [
@@ -29,8 +31,9 @@ const DIRS = [
 
 /**
  * PropertiesInspector: Blender Properties Editor style panel matching Stitch design.
- * Features grouped cards for FORCES, OBJECT, ENVIRONMENT, EXPERIMENT,
- * ADVANCED PROPERTIES accordion, vertical 40px icon tab strip, and functional Export Data.
+ * Features collapsible sidebar (releases width to simulation viewport), grouped property cards,
+ * full friction editing (presets + custom dimensionless coefficient), synchronized entity headers,
+ * and functional data export.
  */
 export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   setup,
@@ -42,17 +45,19 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   beginnerMode = false,
   selectedObjectId = null,
   lockMap = {},
+  collapsed = false,
+  onToggleCollapse,
 }) => {
   const [activeInspectorTab, setActiveInspectorTab] = useState<'all' | 'physics' | 'object' | 'env' | 'scene'>('all');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Sync active tab with outliner selection
+  // Sync active tab with outliner/viewport selection
   useEffect(() => {
-    if (selectedObjectId === 'force') setActiveInspectorTab('physics');
-    else if (selectedObjectId === 'cart') setActiveInspectorTab('object');
-    else if (selectedObjectId === 'track') setActiveInspectorTab('env');
-    else if (selectedObjectId === 'caliper') setActiveInspectorTab('scene');
+    if (selectedObjectId === 'force' || selectedObjectId === 'F_APP') setActiveInspectorTab('physics');
+    else if (selectedObjectId === 'cart' || selectedObjectId === 'CART_01') setActiveInspectorTab('object');
+    else if (selectedObjectId === 'track' || selectedObjectId === 'Linear_Track') setActiveInspectorTab('env');
+    else if (selectedObjectId === 'caliper' || selectedObjectId === 'DISP_01') setActiveInspectorTab('scene');
   }, [selectedObjectId]);
 
   const horizontal = setup.axis === 'horizontal';
@@ -62,6 +67,12 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   const frictionForce = r.forces.find((f) => f.id === 'friction');
   const frictionMag = frictionForce ? frictionForce.magnitude : 0;
   const surfaceObj = SURFACES.find((s) => s.id === setup.surfaceId);
+  const currentMu = setup.surfaceId === 'custom' && typeof setup.customMu === 'number'
+    ? setup.customMu
+    : surfaceObj?.mu ?? 0;
+
+  const normalForce = r.forces.find((f) => f.id === 'normal');
+  const normalMag = normalForce ? normalForce.magnitude : Math.max(0, setup.massKg * 10 - setup.forceN * Math.sin((setup.angleDeg * Math.PI) / 180));
 
   const isForceLocked = lockMap.force ?? false;
   const isCartLocked = lockMap.cart ?? false;
@@ -74,7 +85,9 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       `====================================`,
       `Applied Force (F_app): ${setup.forceN} N @ ${setup.angleDeg}°`,
       `Cart Mass (m): ${setup.massKg} kg`,
-      `Surface: ${surfaceObj?.label ?? 'Default'} (μ = ${surfaceObj?.mu ?? 0})`,
+      `Surface: ${surfaceObj?.label ?? 'Default'} (μ_k = ${currentMu})`,
+      `Normal Force (N): ${fmt(normalMag)} N`,
+      `Kinetic Friction (f_k): ${fmt(frictionMag)} N`,
       `Displacement (s): ${setup.displacement} m`,
       `------------------------------------`,
       `Applied Work (W_app): ${fmtSigned(r.appliedWork)} J`,
@@ -93,6 +106,77 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
   const showEnv = activeInspectorTab === 'all' || activeInspectorTab === 'env';
   const showExperiment = activeInspectorTab === 'all' || activeInspectorTab === 'scene';
 
+  // If collapsed: render only the narrow 40px icon rail with expand button
+  if (collapsed) {
+    return (
+      <aside
+        className="w-10 flex-shrink-0 bg-surface-container border-l border-outline-variant flex flex-col items-center py-2 space-y-2 z-30 select-none h-full"
+        data-testid="work-controls"
+      >
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="p-1.5 rounded text-primary hover:bg-surface-variant transition-colors"
+          title="Expand Properties Inspector (N)"
+          aria-label="Expand Properties Inspector"
+        >
+          <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+        </button>
+
+        <div className="h-px w-6 bg-outline-variant/60 my-1" />
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveInspectorTab('physics');
+            onToggleCollapse?.();
+          }}
+          className="p-1.5 rounded text-outline hover:text-on-surface hover:bg-surface-variant transition-colors"
+          title="Forces (Click to expand)"
+        >
+          <span className="material-symbols-outlined text-[18px]">trending_up</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveInspectorTab('object');
+            onToggleCollapse?.();
+          }}
+          className="p-1.5 rounded text-outline hover:text-on-surface hover:bg-surface-variant transition-colors"
+          title="Cart Object (Click to expand)"
+        >
+          <span className="material-symbols-outlined text-[18px]">deployed_code</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveInspectorTab('env');
+            onToggleCollapse?.();
+          }}
+          className="p-1.5 rounded text-outline hover:text-on-surface hover:bg-surface-variant transition-colors"
+          title="Environment & Friction (Click to expand)"
+        >
+          <span className="material-symbols-outlined text-[18px]">texture</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveInspectorTab('scene');
+            onToggleCollapse?.();
+          }}
+          className="p-1.5 rounded text-outline hover:text-on-surface hover:bg-surface-variant transition-colors"
+          title="Experiment Parameters (Click to expand)"
+        >
+          <span className="material-symbols-outlined text-[18px]">tune</span>
+        </button>
+      </aside>
+    );
+  }
+
+  // Expanded Inspector (268px properties panel + 40px icon rail = 308px)
   return (
     <aside
       className="w-[308px] flex-shrink-0 bg-surface-container-low flex z-30 select-none h-full border-l border-outline-variant"
@@ -101,25 +185,43 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
       {/* Grouped Properties Scroll Area (268px wide) */}
       <div className="flex-1 flex flex-col justify-between overflow-y-auto border-r border-outline-variant">
         <div>
-          {/* Inspector Header */}
+          {/* Inspector Header with Collapse Button and Active Entity */}
           <div className="h-8 px-3 border-b border-outline-variant flex items-center justify-between bg-surface-container">
-            <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface-variant font-semibold truncate max-w-[170px]">
-              {selectedObjectId ? `ENTITY: ${selectedObjectId.toUpperCase()}` : 'RIG_WORK_ENERGY_01'}
-            </span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-surface-variant text-tertiary">
-              {beginnerMode ? 'MODE: BEGINNER' : 'MODE: ADVANCED'}
-            </span>
+            <div className="flex items-center space-x-1.5 truncate max-w-[190px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface-variant font-bold truncate">
+                {selectedObjectId ? `ENTITY: ${selectedObjectId.toUpperCase()}` : 'RIG_WORK_ENERGY_01'}
+              </span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-surface-variant text-tertiary">
+                {beginnerMode ? 'BEGINNER' : 'ADVANCED'}
+              </span>
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className="p-0.5 rounded text-outline hover:text-white hover:bg-surface-container-high transition-colors"
+                title="Collapse Inspector (N)"
+                aria-label="Collapse Properties Inspector"
+              >
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              </button>
+            </div>
           </div>
 
           {/* Grouped Property Cards */}
           <div className="p-2.5 space-y-2.5">
             {/* GROUP: FORCES */}
             {showForces && (
-              <div className="border border-outline-variant rounded bg-surface-container-lowest overflow-hidden">
+              <div className={`border rounded bg-surface-container-lowest overflow-hidden transition-colors ${
+                selectedObjectId === 'force' || selectedObjectId === 'F_APP'
+                  ? 'border-primary ring-1 ring-primary/40'
+                  : 'border-outline-variant'
+              }`}>
                 <div className="px-3 py-1.5 bg-surface-container border-b border-outline-variant flex items-center justify-between">
                   <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface font-semibold flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[13px] text-primary">trending_up</span>
-                    <span>FORCES</span>
+                    <span>FORCES (F_APP)</span>
                   </span>
                   {isForceLocked && (
                     <span className="material-symbols-outlined text-[13px] text-amber-400" title="Force parameters locked">lock</span>
@@ -188,7 +290,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                         <div>
                           <div className="text-on-surface-variant text-[11px]">Kinetic Friction (f_k)</div>
                           <div className="text-[9px] text-outline font-mono">
-                            μ = {surfaceObj ? surfaceObj.mu : '0.00'} • N = {fmt(r.setup.massKg * 10)} N
+                            μ_k = {currentMu.toFixed(2)} • N = {fmt(normalMag)} N
                           </div>
                         </div>
                         <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
@@ -204,7 +306,11 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
             {/* GROUP: OBJECT */}
             {showObject && (
-              <div className="border border-outline-variant rounded bg-surface-container-lowest overflow-hidden">
+              <div className={`border rounded bg-surface-container-lowest overflow-hidden transition-colors ${
+                selectedObjectId === 'cart' || selectedObjectId === 'CART_01'
+                  ? 'border-primary ring-1 ring-primary/40'
+                  : 'border-outline-variant'
+              }`}>
                 <div className="px-3 py-1.5 bg-surface-container border-b border-outline-variant flex items-center justify-between">
                   <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface font-semibold flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[13px] text-secondary">deployed_code</span>
@@ -236,38 +342,44 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                     </div>
                   </div>
 
-                  {/* Initial Position (Advanced only) */}
-                  {!beginnerMode && (
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="field-start" className="text-on-surface-variant text-[11px]">
-                        Initial Position (x_0)
-                      </label>
-                      <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
-                        <input
-                          id="field-start"
-                          type="number"
-                          data-field="start"
-                          disabled={isCartLocked}
-                          value={setup.startPos}
-                          onChange={(e) => onChange({ startPos: Number(e.target.value) })}
-                          aria-label="Start position in m"
-                          className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
-                        />
-                        <span className="text-outline font-mono text-[11px]">m</span>
-                      </div>
+                  {/* Initial Position (Editable x_0) */}
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="field-start" className="text-on-surface-variant text-[11px]">
+                      Initial Position (x_0)
+                    </label>
+                    <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
+                      <input
+                        id="field-start"
+                        type="number"
+                        step={0.5}
+                        data-field="start"
+                        disabled={isCartLocked}
+                        value={setup.startPos}
+                        onChange={(e) => {
+                          const val = Math.max(0, Math.min(TRACK_LENGTH, Number(e.target.value)));
+                          onChange({ startPos: val });
+                        }}
+                        aria-label="Start position in m"
+                        className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
+                      />
+                      <span className="text-outline font-mono text-[11px]">m</span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* GROUP: ENVIRONMENT */}
+            {/* GROUP: ENVIRONMENT & FULL FRICTION CONFIGURATION */}
             {showEnv && (
-              <div className="border border-outline-variant rounded bg-surface-container-lowest overflow-hidden">
+              <div className={`border rounded bg-surface-container-lowest overflow-hidden transition-colors ${
+                selectedObjectId === 'track' || selectedObjectId === 'Linear_Track'
+                  ? 'border-primary ring-1 ring-primary/40'
+                  : 'border-outline-variant'
+              }`}>
                 <div className="px-3 py-1.5 bg-surface-container border-b border-outline-variant flex items-center justify-between">
                   <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface font-semibold flex items-center space-x-1">
-                    <span className="material-symbols-outlined text-[13px] text-tertiary">public</span>
-                    <span>ENVIRONMENT</span>
+                    <span className="material-symbols-outlined text-[13px] text-tertiary">texture</span>
+                    <span>ENVIRONMENT & FRICTION</span>
                   </span>
                   {isTrackLocked && (
                     <span className="material-symbols-outlined text-[13px] text-amber-400" title="Environment locked">lock</span>
@@ -281,22 +393,94 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
                   </div>
 
                   {horizontal && (
-                    <div className="flex flex-col space-y-1 pt-1">
-                      <span className="text-[10px] text-outline">Surface Pair</span>
+                    <div className="flex flex-col space-y-1.5 pt-1">
+                      <span className="text-[10px] text-outline">Surface Friction Mode</span>
                       <select
                         value={setup.surfaceId}
                         disabled={isTrackLocked}
-                        onChange={(e) => onChange({ surfaceId: e.target.value as WorkSetup['surfaceId'] })}
-                        aria-label="Surface under the object"
+                        onChange={(e) => {
+                          const newSurface = e.target.value as WorkSetup['surfaceId'];
+                          if (newSurface === 'custom') {
+                            onChange({ surfaceId: 'custom', customMu: setup.customMu ?? 0.4 });
+                          } else {
+                            onChange({ surfaceId: newSurface });
+                          }
+                        }}
+                        aria-label="Surface friction selection"
                         data-testid="surface-select"
                         className="min-h-[32px] rounded border border-outline-variant bg-surface-container-high px-2 py-1 text-xs text-white font-mono focus:border-primary focus:outline-none disabled:opacity-50"
                       >
                         {SURFACES.map((x) => (
                           <option key={x.id} value={x.id} className="bg-surface-card text-white">
-                            {x.label} (μ = {x.mu})
+                            {x.label} {x.id !== 'custom' ? `(μ = ${x.mu})` : ''}
                           </option>
                         ))}
                       </select>
+
+                      {/* Custom Friction Slider and Input */}
+                      {setup.surfaceId === 'custom' && (
+                        <div className="pt-1.5 pb-1 space-y-2 border-t border-outline-variant/60">
+                          <div className="flex items-center justify-between">
+                            <label htmlFor="field-custom-mu" className="text-on-surface-variant text-[11px]">
+                              Kinetic Coeff. (μ_k)
+                            </label>
+                            <div className="flex items-center bg-surface-container-high border border-outline-variant rounded px-2 py-0.5 w-24 justify-between">
+                              <input
+                                id="field-custom-mu"
+                                type="number"
+                                step={0.05}
+                                min={0}
+                                max={1.5}
+                                value={currentMu}
+                                disabled={isTrackLocked}
+                                onChange={(e) => {
+                                  const val = Math.max(0, Math.min(1.5, Number(e.target.value)));
+                                  onChange({ customMu: val });
+                                }}
+                                aria-label="Custom coefficient of kinetic friction"
+                                data-testid="field-custom-mu"
+                                className="bg-transparent border-0 p-0 text-right font-mono text-xs text-on-surface w-14 focus:ring-0 focus:outline-none disabled:opacity-50"
+                              />
+                              <span className="text-outline font-mono text-[10px] ml-1">μ</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="range"
+                              min={0}
+                              max={1.5}
+                              step={0.05}
+                              value={currentMu}
+                              disabled={isTrackLocked}
+                              onChange={(e) => onChange({ customMu: Number(e.target.value) })}
+                              className="w-full h-1.5 bg-surface-container rounded appearance-none cursor-pointer accent-primary"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-outline font-mono">
+                            <span>0.00 (Smooth)</span>
+                            <span className="text-primary font-bold">μ_k = {currentMu.toFixed(2)}</span>
+                            <span>1.50 (High)</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Physics Accounting for Friction */}
+                      <div className="pt-1 border-t border-outline-variant/40 space-y-1 text-[10px] font-mono">
+                        <div className="flex justify-between text-outline">
+                          <span>Normal Force (N):</span>
+                          <span className="text-on-surface font-semibold">{fmt(normalMag)} N</span>
+                        </div>
+                        <div className="flex justify-between text-outline">
+                          <span>Friction Force (f_k):</span>
+                          <span className="text-error font-semibold">{fmt(frictionMag)} N</span>
+                        </div>
+                        <div className="flex justify-between text-outline">
+                          <span>Friction Work (W_f):</span>
+                          <span className="text-error font-semibold">{fmtSigned(frictionForce?.work ?? 0)} J</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -305,11 +489,15 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
 
             {/* GROUP: EXPERIMENT PARAMETERS */}
             {showExperiment && (
-              <div className="border border-outline-variant rounded bg-surface-container-lowest overflow-hidden">
+              <div className={`border rounded bg-surface-container-lowest overflow-hidden transition-colors ${
+                selectedObjectId === 'caliper' || selectedObjectId === 'DISP_01'
+                  ? 'border-primary ring-1 ring-primary/40'
+                  : 'border-outline-variant'
+              }`}>
                 <div className="px-3 py-1.5 bg-surface-container border-b border-outline-variant flex items-center justify-between">
                   <span className="font-mono text-[10px] tracking-wider uppercase text-on-surface font-semibold flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[13px] text-primary">science</span>
-                    <span>EXPERIMENT</span>
+                    <span>EXPERIMENT (DISP_01)</span>
                   </span>
                   {isCaliperLocked && (
                     <span className="material-symbols-outlined text-[13px] text-amber-400" title="Displacement locked">lock</span>
@@ -495,7 +683,7 @@ export const PropertiesInspector: React.FC<PropertiesInspectorProps> = ({
               ? 'bg-primary text-on-primary'
               : 'text-outline hover:text-on-surface hover:bg-surface-variant'
           }`}
-          title="Environment & Surface Properties"
+          title="Environment & Friction Properties"
         >
           <span className="material-symbols-outlined text-[18px]">texture</span>
         </button>

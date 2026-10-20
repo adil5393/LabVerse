@@ -16,12 +16,13 @@ export const G = 10;
 export const TRACK_LENGTH = 12;
 
 export type Axis = 'horizontal' | 'vertical';
-export type SurfaceId = 'smooth' | 'wood' | 'rough';
+export type SurfaceId = 'smooth' | 'wood' | 'rough' | 'custom';
 export interface Surface { id: SurfaceId; label: string; mu: number }
 export const SURFACES: Surface[] = [
   { id: 'smooth', label: 'Smooth (no friction)', mu: 0 },
   { id: 'wood', label: 'Wood (friction coefficient 0.3)', mu: 0.3 },
   { id: 'rough', label: 'Rough (friction coefficient 0.5)', mu: 0.5 },
+  { id: 'custom', label: 'Custom Friction Coefficient', mu: 0.4 },
 ];
 export const surfaceById = (id: SurfaceId): Surface => SURFACES.find((s) => s.id === id) ?? SURFACES[0];
 
@@ -38,6 +39,8 @@ export interface WorkSetup {
   massKg: number;
   /** Only used on the horizontal track. */
   surfaceId: SurfaceId;
+  /** Optional custom friction coefficient (0 to 1.5) when surfaceId is 'custom' */
+  customMu?: number;
 }
 
 export const DEFAULT_WORK: WorkSetup = { axis: 'horizontal', forceN: 10, angleDeg: 0, displacement: 3, startPos: 1, massKg: 2, surfaceId: 'smooth' };
@@ -132,7 +135,10 @@ export function computeWork(setup: WorkSetup): WorkResult {
     }
     n = Math.max(0, clean(n));
     if (n > 0) forces.push(make('normal', 'Normal force', 'the track', 0, n));
-    const mu = surfaceById(setup.surfaceId).mu;
+    const sObj = surfaceById(setup.surfaceId);
+    const mu = setup.surfaceId === 'custom' && typeof setup.customMu === 'number'
+      ? Math.max(0, Math.min(1.5, clean(setup.customMu)))
+      : sObj.mu;
     if (mu > 0 && n > 0) {
       if (s !== 0) forces.push(make('friction', 'Kinetic friction', 'the surface', -Math.sign(s) * mu * n, 0));
       else if (applied.fx !== 0) { staticFriction = true; forces.push(make('friction', 'Static friction', 'the surface', -Math.sign(applied.fx) * Math.min(Math.abs(applied.fx), mu * n), 0)); }

@@ -6,8 +6,9 @@ import {
   workAtProgress,
   type ForceKind,
   type WorkResult,
+  type WorkSetup,
 } from '../../../../engine/physics/work/workModel';
-import { useViewportCamera } from './useViewportCamera';
+import { useViewportCamera, screenToApparatus } from './useViewportCamera';
 
 const W = 1000, H = 450;
 const COLOR: Record<ForceKind, string> = {
@@ -30,6 +31,8 @@ export interface SimulationViewportProps {
   onProgressChange: (p: number) => void;
   selectedObjectId?: string | null;
   onSelectObject?: (id: string | null) => void;
+  onSetupChange?: (patch: Partial<WorkSetup>) => void;
+  lockMap?: Record<string, boolean>;
   showVectors?: boolean;
   onToggleVectors?: (val: boolean) => void;
   showCaliper?: boolean;
@@ -37,8 +40,8 @@ export interface SimulationViewportProps {
 
 /**
  * SimulationViewport: Blender-inspired central simulation canvas matching Stitch design.
- * Features CAD precision grid, real pan/zoom/fit viewport camera, 2D physics vector overlays,
- * dynamic cart assembly with selection highlights, displacement calipers, and docked playback transport.
+ * Features CAD precision grid, real pan/zoom/fit viewport camera, direct object manipulation,
+ * selection highlights, displacement calipers, and docked playback transport.
  */
 export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   result: r,
@@ -52,6 +55,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   onProgressChange,
   selectedObjectId = null,
   onSelectObject,
+  onSetupChange,
+  lockMap = {},
   showVectors: controlledVectors,
   onToggleVectors,
   showCaliper = true,
@@ -67,6 +72,19 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const touchDistanceRef = useRef<number | null>(null);
+
+  // Drag manipulation state
+  const dragInteractionRef = useRef<{
+    target: 'none' | 'cart' | 'caliper' | 'force';
+    startX: number;
+    startY: number;
+    moved: boolean;
+  }>({
+    target: 'none',
+    startX: 0,
+    startY: 0,
+    moved: false,
+  });
 
   const {
     camera,
@@ -130,7 +148,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
     }
   }, [horizontal, startX, endX, startY, endY, fitToView]);
 
-  // Non-passive wheel listener to prevent page scrolling while zooming
+  // Non-passive wheel listener for smooth pointer-centered zoom
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -146,9 +164,19 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoomAroundPoint]);
 
-  // Pointer drag panning
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Middle click (button 1) or pan tool active or space pressed
+  // Escape key to deselect
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onSelectObject?.(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onSelectObject]);
+
+  // General canvas pointer handling (pan tool / middle button)
+  const handleCanvasPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button === 1 || toolMode === 'pan' || e.buttons === 4) {
       e.preventDefault();
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -156,20 +184,74 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
     }
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDragging) {
       updateDrag(e.clientX, e.clientY);
+      return;
+    }
+
+    // Direct object manipulation
+    const drag = dragInteractionRef.current;
+    if (drag.target !== 'none' && containerRef.current) {
+      const dist = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY);
+      if (dist >= 4) {
+        drag.moved = true;
+        const rect = containerRef.current.getBoundingClientRect();
+        const app = screenToApparatus(e.clientX, e.clientY, rect, camera);
+
+        if (drag.target === 'cart' && !lockMap.cart && onSetupChange) {
+          if (horizontal) {
+            const rawM = ((app.x - 100) / 800) * TRACK_LENGTH;
+            const snappedM = Math.round(rawM * 10) / 10;
+            const clampedM = Math.max(0, Math.min(TRACK_LENGTH, snappedM));
+            // Ensure cart + displacement stays on track
+            const validStart = Math.max(0, Math.min(TRACK_LENGTH - Math.max(0, s), clampedM));
+            onSetupChange({ startPos: validStart });
+          } else {
+            const rawM = ((vBase - app.y) / (vBase - vTop)) * TRACK_LENGTH;
+            const snappedM = Math.round(rawM * 10) / 10;
+            const clampedM = Math.max(0, Math.min(TRACK_LENGTH, snappedM));
+            onSetupChange({ startPos: clampedM });
+          }
+        } else if (drag.target === 'caliper' && !lockMap.caliper && onSetupChange) {
+          if (horizontal) {
+            const rawM = ((app.x - 100) / 800) * TRACK_LENGTH;
+            const rawS = rawM - r.setup.startPos;
+            const snappedS = Math.round(rawS * 2) / 2;
+            const clampedS = Math.max(-r.setup.startPos, Math.min(TRACK_LENGTH - r.setup.startPos, snappedS));
+            onSetupChange({ displacement: clampedS });
+          }
+        } else if (drag.target === 'force' && !lockMap.force && onSetupChange) {
+          const comX = cartX;
+          const comY = cartY + 6;
+          const dx = app.x - comX;
+          const dy = -(app.y - comY);
+          const rawMag = Math.hypot(dx, dy);
+          const snappedMag = Math.round(rawMag / 5) * 5;
+          const clampedMag = Math.max(0, Math.min(200, snappedMag));
+          onSetupChange({ forceN: clampedMag });
+        }
+      }
     }
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handleCanvasPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDragging) {
       try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
-        // ignore if not captured
+        // ignore
       }
       endDrag();
+    }
+
+    const drag = dragInteractionRef.current;
+    if (drag.target !== 'none') {
+      // If it was a click without dragging (< 4px), perform pure selection
+      if (!drag.moved) {
+        onSelectObject?.(drag.target);
+      }
+      dragInteractionRef.current = { target: 'none', startX: 0, startY: 0, moved: false };
     }
   };
 
@@ -205,9 +287,9 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
       {/* Viewport Canvas Arena */}
       <div
         ref={containerRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        onPointerDown={handleCanvasPointerDown}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerUp={handleCanvasPointerUp}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={`flex-1 relative ${showGrid ? 'cad-grid' : ''} overflow-hidden flex flex-col justify-between ${
@@ -225,7 +307,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                 ? 'bg-primary text-on-primary font-bold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
             }`}
-            title="Select Tool (Pointer mode)"
+            title="Select Tool (Click to select, drag to position)"
             aria-pressed={toolMode === 'select'}
           >
             <span className="material-symbols-outlined text-[16px]">arrow_selector_tool</span>
@@ -246,12 +328,13 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             <span className="material-symbols-outlined text-[16px]">pan_tool</span>
           </button>
 
-          {/* Fit to View */}
+          {/* Fit to Scene */}
           <button
             type="button"
             onClick={handleFit}
             className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
-            title="Fit to View (Frame active experiment geometry)"
+            title="Fit to Scene (Frame active experiment apparatus)"
+            aria-label="Fit to Scene"
           >
             <span className="material-symbols-outlined text-[16px]">aspect_ratio</span>
           </button>
@@ -262,6 +345,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             onClick={resetCamera}
             className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
             title="Reset Camera (100% Zoom, Centered)"
+            aria-label="Reset Camera"
           >
             <span className="material-symbols-outlined text-[16px]">center_focus_strong</span>
           </button>
@@ -270,8 +354,9 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           <button
             type="button"
             onClick={zoomIn}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors active:scale-95"
             title="Zoom In"
+            aria-label="Zoom In"
           >
             <span className="material-symbols-outlined text-[16px]">zoom_in</span>
           </button>
@@ -280,8 +365,9 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           <button
             type="button"
             onClick={zoomOut}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors active:scale-95"
             title="Zoom Out"
+            aria-label="Zoom Out"
           >
             <span className="material-symbols-outlined text-[16px]">zoom_out</span>
           </button>
@@ -366,8 +452,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               </pattern>
             </defs>
 
-            {/* MASTER CAMERA TRANSFORM GROUP */}
-            <g transform={`translate(${camera.panX}, ${camera.panY}) scale(${camera.zoom})`} style={{ transformOrigin: '500px 225px' }}>
+            {/* MASTER CAMERA TRANSFORM GROUP (Centered Zoom & Pan in Vector Space) */}
+            <g transform={`translate(${500 + camera.panX}, ${225 + camera.panY}) scale(${camera.zoom}) translate(-500, -225)`}>
               {/* WORKBENCH REFERENCE TRACK */}
               {horizontal ? (
                 <g
@@ -450,12 +536,20 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                 </g>
               )}
 
-              {/* DISPLACEMENT CALIPER BRACKET */}
+              {/* DISPLACEMENT CALIPER BRACKET (Manipulable) */}
               {s !== 0 && showCaliper && (
                 <g
                   data-testid="displacement-arrow"
-                  onClick={() => onSelectObject && onSelectObject('caliper')}
-                  className="cursor-pointer"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    dragInteractionRef.current = {
+                      target: 'caliper',
+                      startX: e.clientX,
+                      startY: e.clientY,
+                      moved: false,
+                    };
+                  }}
+                  className="cursor-ew-resize group"
                 >
                   {horizontal ? (
                     <>
@@ -491,12 +585,20 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                 </g>
               )}
 
-              {/* DYNAMIC CART ASSEMBLY (CART_01) */}
+              {/* DYNAMIC CART ASSEMBLY (CART_01 - Manipulable x_0) */}
               <g
                 id="cart-assembly"
                 transform={`translate(${cartX - 55}, ${cartY - 15})`}
-                onClick={() => onSelectObject && onSelectObject('cart')}
-                className="cursor-pointer"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  dragInteractionRef.current = {
+                    target: 'cart',
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    moved: false,
+                  };
+                }}
+                className="cursor-ew-resize group"
               >
                 {/* Selection Halo */}
                 {isCartSelected && (
@@ -535,7 +637,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                 <path d="M 55 16.5 A 4.5 4.5 0 0 0 50.5 21 L 55 21 Z" fill="#0a0e16" />
               </g>
 
-              {/* FORCE VECTORS ANCHORED AT CENTER OF MASS */}
+              {/* FORCE VECTORS ANCHORED AT CENTER OF MASS (Manipulable F_APP) */}
               {vectorsOn &&
                 r.forces
                   .filter((f) => f.magnitude > 0)
@@ -571,7 +673,15 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                         data-arrow={f.id}
                         data-magnitude={f.magnitude}
                         data-work={f.work}
-                        onClick={() => onSelectObject && onSelectObject(f.id === 'applied' ? 'force' : f.id)}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          dragInteractionRef.current = {
+                            target: f.id === 'applied' ? 'force' : (f.id as any),
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            moved: false,
+                          };
+                        }}
                         className="cursor-pointer"
                       >
                         <line

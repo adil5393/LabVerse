@@ -22,7 +22,7 @@ import { WorkView } from '../../../../features/physics/work/WorkView';
 import { MOTION_CHAPTER } from '../../motion/learn/content';
 import { FORCES_CHAPTER } from '../../forces/learn/content';
 
-describeChapterIntegrity('Work', CH, ['workLab', 'kineticLab', 'workDerivation', 'energyLab']);
+describeChapterIntegrity('Work', CH, ['workLab', 'kineticLab', 'workDerivation', 'energyLab', 'rampLab', 'pulleyLab', 'leverLab', 'powerLab']);
 
 class MemoryStorage {
   private m = new Map<string, string>();
@@ -255,16 +255,16 @@ describe('energy foundations (hand values)', () => {
 });
 
 describe('curriculum map and textbook inventory', () => {
-  it('lists every verified section of Chapter 7 with honest status, and only Sections 7.1 to 7.4.3 are claimed by the Learn lessons so far', () => {
+  it('lists every verified section of Chapter 7 with honest status, and only Sections 7.1 to 7.6 are claimed by the Learn lessons so far', () => {
     expect(WORK_TEXTBOOK_INVENTORY.sections).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6', '7.6.1', '7.6.2', '7.6.3']);
     expect(WORK_TEXTBOOK_INVENTORY.exercises).toBe(15);
     const sections = new Set(WORK_MAP.map((r) => r.section));
     for (const s of ['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6']) expect(sections.has(s), s).toBe(true);
     const learn = WORK_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook' && r.lessonIds.length);
-    expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3']);
+    expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6']);
     for (const r of WORK_MAP.filter((x) => x.status === 'planned')) expect(r.lessonIds).toEqual([]);
     for (const r of WORK_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], id).toBeDefined();
-    const c = workCoverageCounts(); expect(c.available + c.planned).toBe(c.total); expect(c.planned).toBeGreaterThanOrEqual(4);
+    const c = workCoverageCounts(); expect(c.available + c.planned).toBe(c.total); expect(c.planned).toBeGreaterThanOrEqual(2);
     for (const r of WORK_MAP.filter((x) => x.id === 'w-lab')) expect(r.kind).toBe('enrichment');
   });
 });
@@ -278,13 +278,13 @@ describe('NCERT exercise inventory and solutions', () => {
   });
   it('only the parts the lessons so far support are solved, and everything else is Upcoming with no solution', () => {
     const unsolved = WORK_EXERCISES.flatMap((e) => e.parts.filter((p) => p.status === 'upcoming').map((p) => `${e.number}${p.id}`));
-    expect(unsolved).toEqual(['2v', '6all', '7all', '9all']);
+    expect(unsolved).toEqual([]);
     for (const e of WORK_EXERCISES) for (const p of e.parts) {
       expect(p.status === 'solved').toBe(Boolean(p.solution));
       if (p.status === 'upcoming') { expect(p.needs, `Q${e.number}${p.id}`).toBeTruthy(); expect(p.solution).toBeUndefined(); }
     }
-    const c = workExerciseCounts(); expect(c.parts).toBe(43); expect(c.solvedParts).toBe(39);
-    expect(WORK_EXERCISES.filter(exerciseSolved).map((e) => e.number)).toEqual([1, 3, 4, 5, 8, 10, 11, 12, 13, 14, 15]);
+    const c = workExerciseCounts(); expect(c.parts).toBe(43); expect(c.solvedParts).toBe(43);
+    expect(WORK_EXERCISES.filter(exerciseSolved).map((e) => e.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
   });
   it('every solution is complete: principle, hint, reasoning with reasons, calculation, final answer, meaning and a real lab link or a reason', () => {
     for (const e of WORK_EXERCISES) for (const p of e.parts.filter((x) => x.solution)) {

@@ -196,7 +196,28 @@ export const PWP_ALGEBRA: Prerequisite = {
   ],
 };
 
-export const PW_PREREQUISITES: Prerequisite[] = [PWP_FORCE, PWP_DISPLACEMENT, PWP_VELOCITY, PWP_WEIGHT, PWP_UNITS, PWP_GRAPH, PWP_EQMOTION, PWP_ALGEBRA];
+export const PWP_RATIO: Prerequisite = {
+  id: 'pwp-ratio',
+  title: 'Ratios and right-angled triangles',
+  why: 'A mechanical advantage is a ratio of a load to an effort or of one length to another, and the length of a ramp is the longest side of a right-angled triangle.',
+  connection: 'Earlier grades: ratio and the Pythagoras relation (Chapter 4 uses ratios of distances and times too)',
+  refresher: [
+    {
+      id: 'pwp-ra-step', title: 'A ratio compares two quantities of the same kind',
+      paragraphs: [
+        'A ratio is one quantity divided by another of the same kind: a 300 N load and a 100 N effort give 300 ÷ 100 = 3 (no unit, because the units cancel). A ratio of 1 means they are equal; greater than 1 means the first is larger.',
+        'In a right-angled triangle the longest side (the hypotenuse) satisfies a² + b² = c². A ramp 0.3 m high and 0.4 m wide has a length √(0.3² + 0.4²) = 0.5 m.',
+      ],
+      misconception: { wrong: 'The length of a ramp is the sum of its height and width.', right: 'The ramp is the slanting side: its length is found from a² + b² = c², and it is shorter than the sum of the other two sides.' },
+    },
+  ],
+  checks: [
+    numQ('pwp-ra-c1', 'A load of 240 N is lifted by an effort of 80 N. What is the ratio load ÷ effort?', 3, '240 ÷ 80 = 3.', { refresherId: 'pwp-ra-step', rules: [[[0.33], 'You divided the effort by the load. The ratio asked for is load ÷ effort.', 'inverted'], [[160], 'You subtracted. A ratio is a division.', 'subtracted']] }),
+    numQ('pwp-ra-c2', 'A right-angled triangle has two shorter sides of 6 m and 8 m. How long is the longest side, in metres?', 10, '√(6² + 8²) = √100 = 10 m.', { unit: 'm', refresherId: 'pwp-ra-step', rules: [[[14], 'You added the two sides. The longest side comes from a² + b² = c².', 'added'], [[100], 'That is c². Take the square root.', 'forgot_root']] }),
+  ],
+};
+
+export const PW_PREREQUISITES: Prerequisite[] = [PWP_FORCE, PWP_DISPLACEMENT, PWP_VELOCITY, PWP_WEIGHT, PWP_UNITS, PWP_GRAPH, PWP_EQMOTION, PWP_ALGEBRA, PWP_RATIO];
 
 export const PW_UNITS: EduUnit[] = [
   {
@@ -234,5 +255,21 @@ export const PW_UNITS: EduUnit[] = [
     ],
     discover: ['How work against gravity is stored as potential energy, U = mgh', 'Why only changes of potential energy matter (the reference level)', 'How kinetic and potential energy change into each other while the total stays the same', 'Where the mechanical energy goes when there is friction'],
     prerequisiteIds: ['pwp-weight', 'pwp-eqmotion', 'pwp-algebra', 'pwp-units', 'pwp-force'], lessonIds: ['pw-l6', 'pw-l7'],
+  },
+  {
+    id: 'pw-unit-4', number: 4, title: 'Power',
+    centralIdea: 'Power is the rate at which work is done, P = W ÷ t, measured in watts (1 W = 1 J/s). The same work done faster needs more power.',
+    connection: 'This is Section 7.5. It uses work and energy from Units 1 to 3.',
+    vocabulary: [{ term: 'power', meaning: 'the rate of doing work, P = W ÷ t' }, { term: 'watt (W)', meaning: 'the unit of power: 1 W = 1 J per second' }, { term: 'horsepower', meaning: 'an older unit: 1 hp = 746 W' }],
+    discover: ['Why work and power are different', 'How to find the power of a person or a machine', 'How the work of lifting or of speeding up gives the power'],
+    prerequisiteIds: ['pwp-units', 'pwp-algebra', 'pwp-weight'], lessonIds: ['pw-l8'],
+  },
+  {
+    id: 'pw-unit-5', number: 5, title: 'Simple machines',
+    centralIdea: 'A simple machine makes a task easier by changing the force or its direction: an effort moves a load, the mechanical advantage is load ÷ effort, and the smaller force acts over a longer distance. Machines do not reduce the work: an ideal machine gives out as much work as is put in.',
+    connection: 'This is Section 7.6 (the pulley, the inclined plane and the lever). It uses work, potential energy and the conservation of energy.',
+    vocabulary: [{ term: 'effort and load', meaning: 'the force we apply to a machine and the force it has to overcome' }, { term: 'mechanical advantage', meaning: 'load ÷ effort' }, { term: 'fulcrum', meaning: 'the fixed point about which a lever turns' }],
+    discover: ['How a pulley, a ramp and a lever reduce the force needed', 'Why they cannot reduce the work', 'The mechanical advantage of each machine and the three classes of lever'],
+    prerequisiteIds: ['pwp-force', 'pwp-weight', 'pwp-ratio', 'pwp-units'], lessonIds: ['pw-l9', 'pw-l10'],
   },
 ];

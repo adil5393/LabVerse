@@ -43,7 +43,7 @@ const WorkLearnSection: React.FC = () => {
       <section id="learn" aria-label="Learn" className="space-y-6" data-testid="work-learn-section">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-black text-white">Learn: Work and energy</h2>
+            <h2 className="text-2xl font-black text-white">Learn: Work, energy, power and machines</h2>
             <p className="text-sm text-slate-300 max-w-3xl">When does a force really do work in physics, and how does work change energy, and why is the mechanical energy conserved? Why is the kinetic energy one half the mass times the speed squared, and the potential energy mgh? Short explanations, a scene you can change, worked examples and problems of your own. You can skip any prerequisite refresher and still start any lesson.</p>
           </div>
           <Link data-testid="work-start-learning" to={ch.routes.learn(next.id)} className="min-h-[48px] px-5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm inline-flex items-center">{started ? `Continue Learn: Lesson ${next.number}` : 'Start Learn: Lesson 1'}</Link>
@@ -72,11 +72,7 @@ const WorkLearnSection: React.FC = () => {
             </ol>
           </div>
         ))}
-        <div className="rounded-2xl border border-dashed border-surface-border p-4 space-y-1" data-testid="work-upcoming-units">
-          <h3 className="text-sm font-black text-slate-300">Upcoming units</h3>
-          <p className="text-xs text-slate-400">Power and simple machines (the pulley, the inclined plane and the lever) are upcoming. They are not available yet.</p>
-        </div>
-      </section>
+              </section>
     </VisualRegistryProvider>
   );
 };
@@ -103,7 +99,7 @@ export const WorkHub: React.FC = () => {
         <header className="space-y-2">
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">{WORK_TEXTBOOK.book} ({WORK_TEXTBOOK.edition}) · Chapter {WORK_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{WORK_TEXTBOOK.title}</h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Work and energy: when a force really does work in physics, how to calculate it in joules, how work changes energy, kinetic and potential energy, and why the mechanical energy is conserved. Power and simple machines come in the later parts of this chapter and are upcoming.</p>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Work and energy: when a force really does work in physics, how to calculate it in joules, how work changes energy, kinetic and potential energy, why the mechanical energy is conserved, power, and how pulleys, ramps and levers make tasks easier without reducing the work.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="work-destinations">
@@ -128,7 +124,7 @@ export const WorkHub: React.FC = () => {
         <section aria-label="Laboratories" className="space-y-3" data-testid="work-labs">
           <h2 className="text-xl font-black text-white">Laboratories</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {[{ to: '/physics/work/lab', d: 'work-lab', t: 'Work Laboratory', x: 'Force, direction and displacement: the signed work of each force.' }, { to: '/physics/work/kinetic', d: 'kinetic-lab', t: 'Work-Energy Laboratory', x: 'A cart under a net force: the area under the force graph is the change in kinetic energy.' }, { to: '/physics/work/energy', d: 'energy-lab', t: 'Energy Laboratory', x: 'Release an object on a ramp or drop it: kinetic, potential and thermal energy, with and without friction.' }, { to: '/physics/work/derivations', d: 'derivations', t: 'Derivations', x: 'Step-by-step derivations with your own numbers and missing-step questions.' }].map((l) => (
+            {[{ to: '/physics/work/lab', d: 'work-lab', t: 'Work Laboratory', x: 'Force, direction and displacement: the signed work of each force.' }, { to: '/physics/work/kinetic', d: 'kinetic-lab', t: 'Work-Energy Laboratory', x: 'A cart under a net force: the area under the force graph is the change in kinetic energy.' }, { to: '/physics/work/energy', d: 'energy-lab', t: 'Energy Laboratory', x: 'Release an object on a ramp or drop it: kinetic, potential and thermal energy, with and without friction.' }, { to: '/physics/work/power', d: 'power-lab', t: 'Power Laboratory', x: 'Change the work and the time: the power P = W \u00F7 t in watts, with a work-time graph.' }, { to: '/physics/work/machines', d: 'machines-lab', t: 'Simple Machines Laboratory', x: 'An inclined plane, a pulley system and a lever, each with its forces, distances and work.' }, { to: '/physics/work/derivations', d: 'derivations', t: 'Derivations', x: 'Step-by-step derivations with your own numbers and missing-step questions.' }].map((l) => (
               <Link key={l.d} to={l.to} data-destination={l.d} className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-4 space-y-1 min-h-[96px]"><div className="font-bold text-white">{l.t}</div><p className="text-xs text-slate-300">{l.x}</p></Link>
             ))}
           </div>

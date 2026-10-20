@@ -1,0 +1,77 @@
+/** NCERT Chapter 7 solutions from PHY-3D: parts supported by Sections 7.5 and 7.6 (power and simple machines). Original wording. */
+
+import type { WorkSolution } from './exerciseTypes';
+
+export const SOLUTIONS_D: Record<string, WorkSolution> = {
+  '2-v': {
+    given: ['Power is defined as the ____ at which work is done.'], find: ['The missing word.'],
+    principle: 'Power is the rate of doing work: P = W ÷ t.',
+    hint: 'Compare running up and walking up the same stairs: what differs, if the work is the same?',
+    reasoning: [
+      { text: 'Power measures how quickly work is done, not how much.', why: 'The same work done in a shorter time needs more power.' },
+      { text: 'A rate is a quantity divided by the time: work per unit time, W ÷ t.', why: 'Eq. 7.11, with the unit joule per second (watt).' },
+    ],
+    calculation: ['P = W ÷ t, in watts (1 W = 1 J s⁻¹)'],
+    finalAnswer: 'Power is defined as the rate at which work is done.',
+    meaning: 'A 100 W device transfers 100 J every second.',
+    commonMistake: 'Writing "amount" or "force". Power involves the time: it is work per second, not work itself.',
+    lab: { href: '/physics/work/power?experiment=A', label: 'Experiment A: the same work in different times' },
+    verification: 'The Power Laboratory gives P = W ÷ t for every work and time tested (automated test).',
+  },
+  '6-all': {
+    given: ['A crane lifts a mass m to the 10th floor in a time t.', 'It then raises the same mass to the 20th floor in a time 2t.', 'All the floors have the same height H.'], find: ['How much more energy and power are required for the second lift.'],
+    assumptions: ['Both lifts start from the ground, so the heights are 10H and 20H (floor n is at a height nH). The mass is raised slowly, so the energy supplied is the gain in potential energy, mgh.', 'Reading the other way (the second lift only from the 10th to the 20th floor) is discussed at the end.'],
+    principle: 'The energy supplied is the potential energy gained, U = mgh, and the average power is P = W ÷ t.',
+    hint: 'Find the energy of each lift (it depends on the height), then divide by the time. Compare the two.',
+    reasoning: [
+      { text: 'First lift: energy E₁ = m g × (10H) = 10 m g H, in a time t, so P₁ = 10 m g H ÷ t.', why: 'Potential energy gained and P = W ÷ t.' },
+      { text: 'Second lift: E₂ = m g × (20H) = 20 m g H, in a time 2t, so P₂ = 20 m g H ÷ (2t) = 10 m g H ÷ t.', why: 'Twice the height is twice the energy; twice the time halves the power again.' },
+      { text: 'So E₂ = 2 E₁ (an extra 10 m g H) and P₂ = P₁.', why: 'Compare the results.' },
+    ],
+    calculation: ['E₂ ÷ E₁ = 20 m g H ÷ 10 m g H = 2', 'P₂ ÷ P₁ = (E₂ ÷ 2t) ÷ (E₁ ÷ t) = 2 ÷ 2 = 1', 'Example: m = 1000 kg, H = 3 m, t = 60 s: E₁ = 300 000 J, P₁ = 5000 W; E₂ = 600 000 J, P₂ = 5000 W'],
+    finalAnswer: 'The second lift needs twice the energy (an extra 10 m g H), and the same power (the power is not more).',
+    meaning: 'Twice the energy in twice the time is the same rate of doing work.',
+    commonMistake: 'Saying the power is also doubled. Doubling the time cancels the doubling of the energy. (If the second lift went only from the 10th to the 20th floor, the energy would be the same, 10 m g H, and the power would be half.)',
+    illustrations: [{ kind: 'power', caption: 'Example: 1000 kg raised to the 10th floor (30 m) in 60 s needs 300 000 J: 5000 W.', setup: { scenario: 'lift', workJ: 0, massKg: 1000, height: 30, speed: 0, timeS: 60 } }, { kind: 'power', caption: 'The 20th floor (60 m) in twice the time (120 s) needs 600 000 J: still 5000 W.', setup: { scenario: 'lift', workJ: 0, massKg: 1000, height: 60, speed: 0, timeS: 120 } }],
+    lab: { href: '/physics/work/power', label: 'Power Laboratory: choose "Lift a load" and compare 30 m in 60 s with 60 m in 120 s' },
+    verification: 'Independent calculation with m = 1000 kg, H = 3 m, t = 60 s: P = 5000 W both times (automated test).',
+  },
+  '7-all': {
+    given: ['A flag is raised from the ground to the top of a flagpole using a pulley.'], find: ['The factors that decide the energy needed.', 'Whether raising it slowly or quickly changes the work.', 'How the power changes if the speed is doubled.'],
+    assumptions: ['The flag is raised at a steady speed, so its kinetic energy does not change, and the pulley and rope are ideal (no friction, a light rope).', 'The rope is long enough that its own weight is ignored.'],
+    principle: 'The energy supplied is the gain in potential energy, mgh (Sections 7.4.2 and 7.6.1), and the power is P = W ÷ t (Section 7.5).',
+    hint: 'What does the pulley do to the effort and to the energy? Then think about what changes with speed: the work, or the time?',
+    reasoning: [
+      { text: 'The energy needed is the potential energy gained: m g h. It depends on the mass of the flag (and the rope, if included), on g, and on the height of the pole.', why: 'Work done against gravity is stored as potential energy.' },
+      { text: 'A fixed pulley only changes the direction of the effort (the mechanical advantage is 1): it does not change the energy needed. The rope pulled equals the rise of the flag.', why: 'A fixed pulley does not reduce the force or the work.' },
+      { text: 'Raising the flag slowly or quickly does not change the work: W = m g h is the same, because the weight and the height are the same.', why: 'The work depends on the force and the displacement, not on the time.' },
+      { text: 'If the speed is doubled the time taken is halved, so with the same work the power doubles: P = W ÷ t.', why: 'Power is the rate of doing work.' },
+    ],
+    calculation: ['W = m g h (independent of the speed)', 'P = W ÷ t, with t → t ÷ 2: P → 2P'],
+    finalAnswer: 'The energy needed depends on the mass of the flag and the height of the pole (and g); the work does not depend on how fast it is raised; doubling the speed doubles the power.',
+    meaning: 'A pulley makes the job convenient (you pull down), not cheaper in energy; going faster costs power, not work.',
+    commonMistake: 'Saying the faster pull needs more work. The work is the same; the same work in less time needs more power.',
+    illustrations: [{ kind: 'pulley', caption: 'A single fixed pulley: the effort equals the load and the rope pulled equals the rise (example: a 2 kg flag raised 5 m).', setup: { massKg: 2, strands: 1, blockKg: 0, lift: 5, g: 10 } }],
+    lab: { href: '/physics/work/machines?apparatus=pulley&experiment=A', label: 'Pulley Experiment A: the fixed pulley changes only the direction of the effort' },
+    verification: 'The Pulley model gives work in = m g h and effort = load for one strand for every mass and height tested; P = W ÷ t doubles when t halves (automated tests).',
+  },
+  '9-all': {
+    given: ['A seesaw is balanced with a child on one side and an adult, who weighs twice as much, on the other.', 'The seats slide.'], find: ['A figure showing the distances from the fulcrum where each sits.'],
+    assumptions: ['The seesaw is a light, rigid bar balanced about the fulcrum; the child weighs w and the adult 2w.', 'The distances in the figure (adult 1 m, child 2 m) are one example: only their ratio is fixed.'],
+    principle: 'A lever balances when weight₁ × distance₁ = weight₂ × distance₂ (effort × effort arm = load × load arm, Eq. 7.15).',
+    hint: 'Write weight × distance for each side and make them equal. Which person must sit farther?',
+    reasoning: [
+      { text: 'Let the adult sit at a distance L_a and the child at L_c from the fulcrum, on opposite sides.', why: 'Each distance is the arm of that weight.' },
+      { text: 'Balance: 2w × L_a = w × L_c.', why: 'The two turning effects (weight × arm) are equal.' },
+      { text: 'So L_c = 2 L_a: the lighter child sits twice as far from the fulcrum as the adult.', why: 'Divide both sides by w.' },
+      { text: 'Draw the seesaw with the fulcrum in the middle, the adult at 1 m on one side and the child at 2 m on the other (any distances in the ratio 1 : 2 work).', why: 'The ratio of the distances is the inverse of the ratio of the weights.' },
+    ],
+    calculation: ['2w × L_a = w × L_c ⇒ L_c ÷ L_a = 2', 'Example: adult 2w at 1 m, child w at 2 m: 2w × 1 = w × 2 ✓'],
+    finalAnswer: 'The adult sits half as far from the fulcrum as the child: for example the adult 1 m and the child 2 m on opposite sides (see the figure).',
+    meaning: 'A heavier person can balance a lighter one by sitting nearer the fulcrum: the lever trades weight for distance.',
+    commonMistake: 'Putting the heavier person farther from the fulcrum, which makes that side go down.',
+    illustrations: [{ kind: 'lever', caption: 'The balanced seesaw: the adult (weight 2w, here 300 N) sits 1 m from the fulcrum and the child (weight w, 150 N) sits 2 m on the other side. 300 × 1 = 150 × 2.', setup: { loadKg: 30, loadArm: 1, effortArm: 2, kind: 'I', effort: 150, turnDeg: 5, g: 10 } }],
+    lab: { href: '/physics/work/machines?apparatus=lever&experiment=B', label: 'Lever Experiment B: the seesaw' },
+    verification: 'The lever model reports "balanced" for weights 300 N and 150 N at 1 m and 2 m, and "load falls" when both sit at 1 m (automated test).',
+  },
+};

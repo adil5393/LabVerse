@@ -6,6 +6,8 @@ import { PHYS } from '../motion/physicsColors';
 import { EnergyPlot } from './EnergyPlot';
 import { EnergyView } from './EnergyView';
 import { KineticView } from './KineticView';
+import { LeverView, PulleyView, RampView } from './MachineViews';
+import { PowerView } from './PowerView';
 import { WorkView } from './WorkView';
 
 export const ExerciseIllustrationView: React.FC<{ ill: ExerciseIllustration; id: string }> = ({ ill, id }) => (
@@ -13,6 +15,10 @@ export const ExerciseIllustrationView: React.FC<{ ill: ExerciseIllustration; id:
     <figcaption className="text-xs text-slate-300"><strong style={{ color: PHYS.prediction }}>Illustration. </strong>{ill.caption}</figcaption>
     {ill.kind === 'work' && <WorkView initial={ill.setup} graph />}
     {ill.kind === 'kinetic' && <KineticView initial={ill.setup} />}
+    {ill.kind === 'lever' && <LeverView initial={ill.setup} startProgress={1} />}
+    {ill.kind === 'ramp' && <RampView initial={ill.setup} />}
+    {ill.kind === 'pulley' && <PulleyView initial={ill.setup} />}
+    {ill.kind === 'power' && <PowerView initial={ill.setup} />}
     {ill.kind === 'energy' && <EnergyView initial={ill.setup} startFraction={ill.fraction ?? 0} />}
     {ill.kind === 'graph' && (
       <>

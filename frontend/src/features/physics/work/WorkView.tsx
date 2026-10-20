@@ -229,7 +229,7 @@ export const WorkView: React.FC<WorkViewProps> = ({
   const s = setup.displacement;
 
   return (
-    <div className="w-full h-full flex flex-col flex-1 min-w-0 overflow-hidden" data-visual="workLab" data-testid="work-view">
+    <div className="w-full h-full min-h-[460px] md:min-h-[540px] flex flex-col flex-1 min-w-0 overflow-hidden" data-visual="workLab" data-testid="work-view">
       {/* Upper Area: Viewport + Inspector */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Central Viewport */}

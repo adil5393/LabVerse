@@ -91,7 +91,7 @@ export const SecondLawDerivationView: React.FC<{ id?: string; alt?: string }> = 
           </div>
         ) : (
           <>
-            <div className="rounded-lg bg-surface-lowest p-2 font-mono text-sm text-white space-y-1" data-testid="derivation-math">{step.math.map((l) => <div key={l}>{l}</div>)}</div>
+            <div className="rounded-lg bg-surface-lowest p-2 font-mono text-xs sm:text-sm text-white space-y-1 overflow-x-auto break-words" data-testid="derivation-math">{step.math.map((l) => <div key={l}>{l}</div>)}</div>
             <p className="text-xs text-slate-200"><strong>Why this is valid: </strong>{step.why}</p>
             {rel && (
               <p className="text-xs rounded-lg p-2 border" style={{ borderColor: `${PHYS.correct}66`, color: '#e2e8f0' }} data-testid="derivation-numbers">

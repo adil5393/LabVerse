@@ -18,7 +18,7 @@ const Plot: React.FC<{ title: string; yLabel: string; lines: Line[]; totalS: num
   const X = (t: number) => L + (t / Math.max(totalS, 1e-9)) * (W - L - R);
   const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
   return (
-    <figure className="rounded-lg border border-surface-border bg-surface-lowest p-2 min-w-[260px] flex-1" data-testid={testId}>
+    <figure className="rounded-lg border border-surface-border bg-surface-lowest p-2 min-w-0 w-full sm:min-w-[260px] flex-1" data-testid={testId}>
       <figcaption className="text-[11px] font-mono uppercase tracking-wider text-slate-300 mb-1">{title}</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`${title}. ${lines.map((l) => l.label).join(', ')} against simulated time.`}>
         <line x1={L} y1={Y(0)} x2={W - R} y2={Y(0)} stroke="#475569" strokeWidth={1} />

@@ -250,7 +250,7 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
       ) : <p role="alert" className="text-sm rounded-xl border px-3 py-3" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }} data-testid="energy-error">This setup cannot run: {r.reason}</p>}
       {r.valid && (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Run the experiment">
-          <button type="button" onClick={() => { if (t >= r.tEnd) setT(0); setPlaying((p) => !p); }} disabled={r.tEnd === 0} className={`${btn} bg-surface-elevated`} data-testid="energy-play">{playing ? 'Pause' : t >= r.tEnd && r.tEnd > 0 ? 'Replay' : 'Play'}</button>
+          <button type="button" onClick={() => { if (t >= r.tEnd) setT(0); setPlaying(!playing); }} disabled={r.tEnd === 0} className={`${btn} bg-surface-elevated`} data-testid="energy-play">{playing ? 'Pause' : t >= r.tEnd && r.tEnd > 0 ? 'Replay' : 'Play'}</button>
           <button type="button" onClick={() => { setPlaying(false); setT(0); }} className={`${btn} bg-surface-card`} data-testid="energy-reset">Back to start</button>
           <label className="flex items-center gap-2 text-xs text-slate-300 flex-1 min-w-[160px]">Time
             <input type="range" min={0} max={r.tEnd} step={Math.max(r.tEnd / 200, 0.001)} value={tt} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${f2(tt)} seconds of ${f2(r.tEnd)}`} className="flex-1 min-h-[44px]" data-testid="energy-time" />

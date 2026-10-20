@@ -30,7 +30,6 @@ import {
   BrakingLiveStatus,
   BrakingReadout,
   BrakingScene,
-  BrakingSetupFields,
   BrakingTimeControls,
   useBrakingDemo,
 } from './BrakingDemo';

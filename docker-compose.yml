@@ -1,0 +1,22 @@
+# LabVerse: web app (nginx) + circuit solver API (FastAPI).
+#   docker compose up --build        ->  http://localhost:8080
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: labverse-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    image: labverse-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"

@@ -71,3 +71,21 @@ npm run preview
 - [ ] **Milestone C**: Multi-pin snapping constraints, hole occupancy, jumper-wire routing, and client-side DSU electrical connectivity.
 - [ ] **Milestone D**: Python DC circuit solver, direct supply short-circuit detection, and live FastAPI telemetry integration.
 - [ ] **Milestone E**: Guided experiment topological validator, IndexedDB persistence, diagnostics, and acceptance test suite.
+
+---
+
+## Docker
+
+Two services: the web app (nginx serving the Vite build, with `/api` proxied to the solver) and the FastAPI circuit solver.
+
+```bash
+docker compose up --build            # production-style, http://localhost:8080
+docker compose down
+
+docker compose -f docker-compose.dev.yml up --build   # hot reload: Vite on :5173, uvicorn --reload on :8000
+```
+
+- `frontend/Dockerfile` builds with Node 20 (`npm ci`, `tsc -b`, `vite build`) and serves `dist/` from nginx with single-page-app routing.
+- `backend/Dockerfile` is built from the repository root (the solver is the `backend` package) and runs as a non-root user with a `/health` check.
+- The app calls the relative URL `/api/solve`, so no CORS or host configuration is needed in either mode. Set `VITE_API_PROXY` to point the dev server at a different solver.
+- Backend tests: `pip install -r backend/requirements-dev.txt && pytest backend/tests`.

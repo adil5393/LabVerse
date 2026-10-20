@@ -6,7 +6,7 @@ export type WorkspaceTab = 'learn' | 'experiment' | 'analyze' | 'exercises' | 'b
 export interface WorkstationHeaderProps {
   activeTab: WorkspaceTab;
   onTabChange: (tab: WorkspaceTab) => void;
-  beginnerMode: boolean;
+  beginnerMode?: boolean;
   /** Each of these is optional: a control whose handler is not given is not shown (no dead buttons). */
   onToggleBeginnerMode?: (val: boolean) => void;
   onReset?: () => void;
@@ -30,7 +30,7 @@ export interface WorkstationHeaderProps {
 export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
   activeTab,
   onTabChange,
-  beginnerMode,
+  beginnerMode = false,
   onToggleBeginnerMode,
   onReset,
   onTogglePlay,

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { WorkbenchHeader } from './WorkbenchHeader';
 import { GuidanceStrip } from './GuidanceStrip';
 import { EquipmentTray } from './EquipmentTray';
 import { CanvasContainer } from './CanvasContainer';
@@ -36,12 +35,18 @@ import type {
   WorkbenchSaveFile,
 } from '../../types/workbench';
 import type { ConnectionEndpoint, JumperWire } from '../../types/connections';
+import { useChapterNavigation, WorkspaceShell } from '../workspace';
 
 type InteractionState = 'idle' | 'dragging-component' | 'panning' | 'creating-wire' | 'reconnecting-wire';
 
 export const WorkbenchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const isGuided = searchParams.get('mode') !== 'free';
+  const { registerLab } = useChapterNavigation('electricity');
+
+  React.useEffect(() => {
+    registerLab(window.location.pathname + window.location.search, 'Circuit Workbench');
+  }, [registerLab]);
 
   const {
     instances,
@@ -669,29 +674,67 @@ export const WorkbenchPage: React.FC = () => {
     </div>
   ) : null;
 
-  return (
-    <div className="h-screen w-screen flex flex-col bg-background text-on-surface overflow-hidden select-none">
-      {/* Top Application Bar */}
-      <WorkbenchHeader
-        onExportLab={handleExportLab}
-        onResetWorkbench={handleResetWorkbench}
+  const outlinerContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      <EquipmentTray
+        catalog={PHYSICS_ELECTRICITY_CATALOG}
+        onAddEquipment={handleAddEquipment}
       />
+    </div>
+  );
 
-      {/* Guided Progression Banner Strip (shown if in guided mode) */}
+  const inspectorContent = (
+    <InspectorPanel
+      catalog={PHYSICS_ELECTRICITY_CATALOG}
+      nodes={connectivityGraph.nodes}
+      selectedWireId={selectedWireId}
+      onSelectWire={(id) => selectWire(id)}
+    />
+  );
+
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-2 font-mono">
+      <SimulationFaultBanner faults={simulationResult?.faults || []} />
       {isGuided && <GuidanceStrip />}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">COMPONENTS</span>
+          <span className="text-white font-bold text-sm">{instances.length} active</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">JUMPER WIRES</span>
+          <span className="text-white font-bold text-sm">{wires.length} placed</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">NODES</span>
+          <span className="text-white font-bold text-sm">{connectivityGraph.nodes.length} nets</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">SIMULATION</span>
+          <span className={`font-bold text-sm ${simulationResult?.faults?.length ? 'text-amber-400' : 'text-emerald-400'}`}>
+            {simulationResult?.faults?.length ? `${simulationResult.faults.length} Faults` : 'Equilibrium OK'}
+          </span>
+        </div>
+      </div>
+      <div className="flex justify-end pt-1">
+        <button
+          type="button"
+          onClick={handleExportLab}
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-surface-variant hover:bg-surface-elevated text-white rounded border border-outline-variant font-mono"
+          title="Export circuit snapshot"
+        >
+          <span className="material-symbols-outlined text-[14px]">download</span>
+          <span>Export .lab JSON</span>
+        </button>
+      </div>
+    </div>
+  );
 
-      {/* Main Workbench Body */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left: Collapsible Equipment Tray */}
-        <EquipmentTray
-          catalog={PHYSICS_ELECTRICITY_CATALOG}
-          onAddEquipment={handleAddEquipment}
-        />
-
-        {/* Center: Interactive SVG Canvas Container with Authoritative Refs */}
-        <CanvasContainer
-          svgRef={svgRef}
-          worldGroupRef={worldGroupRef}
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+      <CanvasContainer
+        svgRef={svgRef}
+        worldGroupRef={worldGroupRef}
           activeInteractionState={interactionState}
           cursorWorldMM={cursorWorldMM}
           onCanvasPointerMove={handleCanvasPointerMove}
@@ -889,22 +932,27 @@ export const WorkbenchPage: React.FC = () => {
               </text>
             </g>
           )}
-        </CanvasContainer>
+      </CanvasContainer>
 
-        {/* Simulation Controls Toolbar (Milestone D) */}
-        <SimulationToolbar />
+      {/* Simulation Controls Toolbar (Milestone D) */}
+      <SimulationToolbar />
+    </div>
+  );
 
-        {/* Educational Simulation Fault Feedback Banner */}
-        <SimulationFaultBanner faults={simulationResult?.faults || []} />
-
-        {/* Right: Contextual Inspector Sidebar */}
-        <InspectorPanel
-          catalog={PHYSICS_ELECTRICITY_CATALOG}
-          nodes={connectivityGraph.nodes}
-          selectedWireId={selectedWireId}
-          onSelectWire={(id) => selectWire(id)}
-        />
-      </div>
+  return (
+    <>
+      <WorkspaceShell
+        chapterId="electricity"
+        labTitle="Circuit Workbench"
+        outlinerTitle="Equipment Tray"
+        outliner={outlinerContent}
+        viewport={viewportContent}
+        inspectorTitle="Component Inspector"
+        inspector={inspectorContent}
+        analysisDockTitle="Circuit Analysis & Faults"
+        analysisDock={analysisDockContent}
+        onReset={handleResetWorkbench}
+      />
 
       {/* Ephemeral Toast Notification */}
       {notification && (
@@ -913,6 +961,6 @@ export const WorkbenchPage: React.FC = () => {
           <span>{notification}</span>
         </div>
       )}
-    </div>
+    </>
   );
 };

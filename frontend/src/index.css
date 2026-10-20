@@ -49,6 +49,31 @@
   background-size: 100% 100%, 48px 48px, 48px 48px;
 }
 
+/* CAD Precision Grid from Stitch Reference */
+.cad-grid {
+  background-size: 16px 16px, 64px 64px;
+  background-image: 
+    linear-gradient(to right, rgba(66, 71, 84, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(66, 71, 84, 0.15) 1px, transparent 1px),
+    linear-gradient(to right, rgba(66, 71, 84, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(66, 71, 84, 0.35) 1px, transparent 1px);
+}
+
+/* Blackboard Dot Grid & Chalk styling */
+.blackboard-dot-grid {
+  background-color: #0A0E17;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.chalk-font {
+  font-family: 'Caveat', cursive;
+}
+
+.chalk-glow {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.35));
+}
+
 /* Depth tie-point sockets for breadboard holes */
 .bb-hole {
   width: 8px;

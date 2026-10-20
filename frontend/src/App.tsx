@@ -159,6 +159,9 @@ const MachinesLab = lazy(() =>
 const PowerLab = lazy(() =>
   import('./features/physics/work/MachinesLab').then((m) => ({ default: m.PowerLab }))
 );
+const WorkPractice = lazy(() =>
+  import('./features/physics/work/WorkPractice').then((m) => ({ default: m.WorkPractice }))
+);
 const WorkDerivations = lazy(() =>
   import('./features/physics/work/KineticLab').then((m) => ({ default: m.WorkDerivations }))
 );
@@ -208,6 +211,7 @@ export const App: React.FC = () => {
           <Route path="/physics/work/energy" element={<EnergyLab />} />
           <Route path="/physics/work/machines" element={<MachinesLab />} />
           <Route path="/physics/work/power" element={<PowerLab />} />
+          <Route path="/physics/work/practice" element={<WorkPractice />} />
           <Route path="/physics/work/derivations" element={<WorkDerivations />} />
           <Route path="/physics/work/exercises" element={<WorkExercises />} />
           <Route path="/physics/work/learn/:lessonId" element={<WorkLearnPage />} />

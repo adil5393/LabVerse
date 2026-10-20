@@ -8,7 +8,8 @@ import { Link, useParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { WORK_CHAPTER } from '../../../engine/physics/work/learn/content';
 import { WORK_MAP, WORK_TEXTBOOK, workCoverageCounts } from '../../../engine/physics/work/curriculum';
-import { WORK_EXERCISES, exerciseSolved, solvedWorkParts, workExerciseCounts, type WorkExercisePart } from '../../../engine/physics/work/exercises';
+import { WORK_PRACTICE_ITEMS } from '../../../engine/physics/work/practice';
+import { WORK_EXERCISES, exerciseSolved, workExerciseCounts, type WorkExercisePart } from '../../../engine/physics/work/exercises';
 import { lessonStatus, STATUS_LABEL } from '../../../engine/education/progress';
 import type { LearningStatus } from '../../../engine/education/types';
 import { useEducationStore } from '../../../store/useEducationStore';
@@ -104,7 +105,7 @@ export const WorkHub: React.FC = () => {
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="work-destinations">
           <div className={`${card} border-sky-500/40`} style={{ borderTop: '4px solid #38BDF8' }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} units and {Object.keys(WORK_CHAPTER.lessons).length} lessons so far, with prerequisites, worked examples and practice. More units are upcoming.</p></div>
+            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} units and {Object.keys(WORK_CHAPTER.lessons).length} lessons so far, with prerequisites, worked examples and practice.</p></div>
             <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #818CF8' }}>
@@ -112,12 +113,12 @@ export const WorkHub: React.FC = () => {
             <Link to="/physics/work/lab" data-destination="lab" className={btn}>Open the laboratory</Link>
           </div>
           <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #A78BFA' }}>
-            <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">All {ex.questions} questions are listed with their parts. {ex.solvedParts} of {ex.parts} parts are solved so far; the rest are upcoming.</p></div>
+            <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">All {ex.questions} questions, with every part ({ex.parts} in all), solved step by step.</p></div>
             <Link to="/physics/work/exercises" data-destination="exercises" className={btn}>Open the exercises</Link>
           </div>
-          <div className={`${card} border-dashed border-surface-border opacity-80`} aria-disabled="true" data-destination="practice">
-            <div><h2 className="text-lg font-black text-slate-300">Chapter Practice</h2><p className="text-xs text-slate-400">Upcoming. Chapter-wide practice will arrive once the later units are built. Each lesson already has its own independent practice.</p></div>
-            <span className="min-h-[44px] inline-flex items-center justify-center rounded-xl border border-surface-border text-slate-400 font-bold text-sm">Upcoming</span>
+          <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #34D399' }}>
+            <div><h2 className="text-lg font-black text-white">Chapter Practice</h2><p className="text-xs text-slate-300">{WORK_PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order; no prerequisites, no login.</p></div>
+            <Link to="/physics/work/practice" data-destination="practice" className={btn}>Open Chapter Practice</Link>
           </div>
         </section>
 
@@ -207,7 +208,6 @@ const Solution: React.FC<{ qn: number; part: WorkExercisePart }> = ({ qn, part }
 export const WorkExercises: React.FC = () => {
   const counts = workExerciseCounts();
   const [open, setOpen] = useState<string | null>(null);
-  const solved = solvedWorkParts().map((p) => `${p.number}(${p.part})`).join(', ');
   return (
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="work-exercises">
       <GlobalHeader />
@@ -215,7 +215,7 @@ export const WorkExercises: React.FC = () => {
         <Crumb last="NCERT Exercises" />
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">NCERT Exercises: Chapter 7</h1>
-          <p className="text-sm text-slate-300">The chapter ends with fifteen questions (&ldquo;Revise, Reflect, Refine&rdquo;), listed here with their textbook numbers and subparts. The summaries are in our own words; open the textbook for the exact wording. {counts.solvedParts} of {counts.parts} parts have step-by-step solutions so far ({solved}); the others are upcoming, with what must be taught first, and show no solution.</p>
+          <p className="text-sm text-slate-300">The chapter ends with fifteen questions (&ldquo;Revise, Reflect, Refine&rdquo;), listed here with their textbook numbers and subparts. The summaries are in our own words; open the textbook for the exact wording. All {counts.parts} parts of all {counts.questions} questions have step-by-step solutions.</p>
           <p className="text-xs text-slate-400">Viewing a solution never counts toward mastery. Practise first, then check.</p>
         </header>
         <ol className="space-y-3">

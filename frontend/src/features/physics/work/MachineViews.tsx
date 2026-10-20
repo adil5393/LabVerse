@@ -10,7 +10,8 @@ import { computeLever, computePulley, computeRamp, LEVER_LIMITS, PULLEY_LIMITS, 
 import { ENERGY, PHYS } from '../motion/physicsColors';
 import type { VisualProps } from '../../education/visuals';
 import { Field } from './Field';
-import { Arrow, barColors, cellOf, f2, ProgressControl, WorkBars } from './MachineParts';
+import { Arrow, ProgressControl, WorkBars } from './MachineParts';
+import { barColors, cellOf, f2 } from './MachineUtil';
 
 const errBox = (msg: string, id: string) => <p role="alert" className="text-sm rounded-xl border px-3 py-3" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }} data-testid={id}>This setup cannot run: {msg}</p>;
 const ctl = 'space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3';
@@ -48,7 +49,7 @@ export const RampView: React.FC<{ initial: RampSetup; editable?: boolean; alt?: 
         <rect x={cx - 11} y={cy - 11} width={22} height={22} rx={3} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} transform={`rotate(${-Math.atan2(along.y, along.x) * 180 / Math.PI + 180} ${cx} ${cy})`} />
         <g data-arrow="effort"><Arrow x1={cx} y1={cy} x2={cx + along.x * Math.max(24, r.effort * scale)} y2={cy + along.y * Math.max(24, r.effort * scale)} color={ENERGY.work} width={4} /><text x={cx + along.x * Math.max(24, r.effort * scale) + 4} y={cy + along.y * Math.max(24, r.effort * scale) - 6} fontSize={11} fontWeight={800} fill={ENERGY.work}>effort {f2(r.effort)} N</text></g>
         <g data-arrow="weight"><Arrow x1={cx} y1={cy} x2={cx} y2={cy + Math.min(46, Math.max(24, r.load * scale))} color={PHYS.vertical} /><text x={cx - 6} y={cy + Math.min(46, Math.max(24, r.load * scale)) + 14} textAnchor="end" fontSize={11} fontWeight={700} fill={PHYS.vertical}>weight {f2(r.load)} N</text></g>
-        {setup.mu > 0 && <g data-arrow="friction"><Arrow x1={cx - along.x * 0} y1={cy} x2={cx - along.x * Math.max(18, setup.mu * r.load * (r.width / setup.length) * scale)} y2={cy - along.y * Math.max(18, setup.mu * r.load * (r.width / setup.length) * scale)} color={PHYS.friction} /></g>}
+        {setup.mu > 0 && <g data-arrow="friction"><Arrow x1={cx} y1={cy} x2={cx - along.x * Math.max(18, setup.mu * r.load * (r.width / setup.length) * scale)} y2={cy - along.y * Math.max(18, setup.mu * r.load * (r.width / setup.length) * scale)} color={PHYS.friction} /></g>}
       </svg>
       <div className="flex flex-wrap items-center gap-2"><ProgressControl value={p} onChange={setP} label="How far up the ramp" testid="ramp-progress" unit="along the ramp" /></div>
       <p className="text-xs text-slate-300" data-testid="ramp-now">Moved {f2(p * setup.length)} m along the ramp and risen {f2(p * setup.height)} m; work done by the effort so far {f2(p * r.inputWork)} J, useful work so far {f2(p * r.outputWork)} J.</p>

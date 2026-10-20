@@ -33,5 +33,6 @@ export const WORK_CHAPTER: EduChapter = {
     learn: (id) => `/physics/work/learn/${id}`,
     prerequisites: (id) => `/physics/work#${id}`,
     lab: '/physics/work/lab',
+    practice: '/physics/work/practice',
   },
 };

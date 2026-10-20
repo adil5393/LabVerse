@@ -10,7 +10,7 @@ import { ENERGY, PHYS } from '../motion/physicsColors';
 import type { VisualProps } from '../../education/visuals';
 import { EnergyPlot } from './EnergyPlot';
 import { Field } from './Field';
-import { cellOf, f2 } from './MachineParts';
+import { cellOf, f2 } from './MachineUtil';
 
 export const PowerView: React.FC<{ initial: PowerSetup; editable?: boolean; alt?: string }> = ({ initial, editable = false, alt }) => {
   const [setup, setSetup] = useState(initial);

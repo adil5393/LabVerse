@@ -1,9 +1,7 @@
 /** Shared pieces for the machine scenes (PHY-3D): an arrow, a work-bars chart and the "how far through" control. */
 
 import React from 'react';
-import { ENERGY, PHYS } from '../motion/physicsColors';
-
-export const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-', '−');
+import { f2 } from './MachineUtil';
 
 export const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: string; width?: number; dash?: string }> = ({ x1, y1, x2, y2, color, width = 3, dash }) => {
   const a = Math.atan2(y2 - y1, x2 - x1), s = 9;
@@ -36,7 +34,3 @@ export const ProgressControl: React.FC<{ value: number; onChange: (p: number) =>
     <span className="font-mono w-14 text-right">{Math.round(value * 100)}%</span>
   </label>
 );
-
-export const cellOf = (k: string, label: string, v: string, color?: string) => <div key={k} data-readout={k} className="rounded-lg bg-surface-card px-2 py-1"><div className="text-[10px] text-slate-400">{label}</div><div className="font-mono text-sm font-bold" style={{ color: color ?? '#e2e8f0' }}>{v}</div></div>;
-
-export const barColors = { input: ENERGY.work, useful: ENERGY.potential, lost: ENERGY.thermal, stored: PHYS.distance } as const;

@@ -49,6 +49,7 @@ export const WORK_MAP: WorkMapRow[] = [
   { id: 'w-quest', section: 'The Journey Beyond; The Quest Continues', topic: 'Rubber-band pen launcher, building simple machines, PhET simulations; dark energy', kind: 'textbook', status: 'planned', lessonIds: [] },
   { id: 'w-bridge', section: 'Bridging Science and Society; At a Glance', topic: 'The watermill (gharat or panchakki) and the chapter summary', kind: 'textbook', status: 'planned', lessonIds: [] },
   { id: 'w-pre', section: 'enrichment', topic: 'Prerequisite refreshers: force and Newton\'s laws, displacement and direction, speed and velocity, mass and weight, multiplying, dividing and units, reading a basic graph, equations of motion, squares and rearranging, ratios and right-angled triangles', kind: 'enrichment', status: 'learn', lessonIds: ['pw-l1', 'pw-l2', 'pw-l3', 'pw-l4', 'pw-l5', 'pw-l6', 'pw-l7', 'pw-l8', 'pw-l9', 'pw-l10'] },
+  { id: 'w-practice', section: 'enrichment', topic: 'Chapter Practice: 33 original questions on the whole chapter (work, energy, conservation, friction, power, machines, diagrams and derivation reasoning), each mapped to a lesson objective', kind: 'enrichment', status: 'learn', lessonIds: [], note: 'Open to everyone; practice results are shown to the student only and never change lesson mastery.' },
   { id: 'w-found', section: 'enrichment', topic: 'Energy and power calculation helpers (kinetic, potential and mechanical energy, work-energy bookkeeping, power) shared by the laboratories', kind: 'enrichment', status: 'laboratory', lessonIds: [] },
 ];
 

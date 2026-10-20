@@ -10,3 +10,4 @@ export * from './useSceneState';
 export * from './useLabSetup';
 export * from './useTimedPlayback';
 export * from './LabOutliner';
+export * from './mobile';

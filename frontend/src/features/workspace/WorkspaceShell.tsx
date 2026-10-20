@@ -18,6 +18,7 @@ export interface WorkspaceShellProps {
   analysisDock?: React.ReactNode;
   analysisDockTitle?: string;
   mobileInspector?: React.ReactNode;
+  mobileLayout?: React.ReactNode;
   // Controls & Playback
   playing?: boolean;
   onTogglePlay?: () => void;
@@ -58,6 +59,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   analysisDock,
   analysisDockTitle = 'Analysis & Data Dock',
   mobileInspector,
+  mobileLayout,
   playing = false,
   onTogglePlay,
   onReset,
@@ -142,7 +144,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden flex flex-col bg-background text-on-surface antialiased select-none font-sans"
+      className="h-dvh w-full overflow-hidden flex flex-col bg-background text-on-surface antialiased select-none font-sans"
       data-workspace={chapterId}
       data-testid="workspace-shell"
     >
@@ -152,14 +154,15 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         onTabChange={handleTabChange}
         beginnerMode={beginnerMode}
         onToggleBeginnerMode={onToggleBeginnerMode}
-        onReset={onReset}
-        onTogglePlay={onTogglePlay}
+        onReset={mobileLayout ? undefined : onReset}
+        onTogglePlay={mobileLayout ? undefined : onTogglePlay}
         playing={playing}
         onUndo={onUndo}
         onRedo={onRedo}
         canUndo={canUndo}
         canRedo={canRedo}
-        onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
+        onOpenMobileDrawer={outliner ? () => setMobileDrawerOpen(true) : undefined}
+        onOpenInspector={mobileInspector || inspector ? () => setMobileInspectorOpen(true) : undefined}
         chapterTitle={meta?.title || 'Scientific Laboratory'}
         labTitle={labTitle}
         chapterUrl={meta?.chapterUrl || meta?.subjectUrl || '/'}
@@ -173,10 +176,18 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
           splitContent={blackboardSplitContent || viewport}
         />
       ) : (
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-          {/* Left Outliner / Explorer Slot (Desktop) */}
-          {outliner && (
-            <div className="hidden md:flex shrink-0 h-full">
+        <>
+          {/* Mobile-first Layout Mode (< sm) */}
+          {mobileLayout && (
+            <div className="flex-1 flex flex-col sm:hidden overflow-hidden w-full max-w-full relative">
+              {mobileLayout}
+            </div>
+          )}
+          {/* Desktop Workstation Mode (>= sm when mobileLayout is provided, or default) */}
+          <div className={`flex-1 flex flex-col md:flex-row overflow-hidden relative ${mobileLayout ? 'hidden sm:flex' : ''}`}>
+            {/* Left Outliner / Explorer Slot (Desktop) */}
+            {outliner && (
+              <div className="hidden md:flex shrink-0 h-full">
               {isOutlinerCollapsed ? (
                 <button
                   type="button"
@@ -227,8 +238,8 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                     : dockMode === 'collapsed'
                     ? 'h-8'
                     : dockMode === 'focus'
-                    ? 'h-[55vh] sm:h-[360px]'
-                    : 'h-[40vh] sm:h-[220px]'
+                    ? 'h-[52vh] sm:h-[360px]'
+                    : 'h-[34vh] sm:h-[220px]'
                 }`}
               >
                 <div
@@ -252,6 +263,18 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
+                    {(inspector || mobileInspector) && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setMobileInspectorOpen(true); }}
+                        className="md:hidden min-h-[28px] px-2 rounded bg-primary/15 text-primary font-semibold flex items-center gap-1"
+                        aria-label="Open Properties Inspector"
+                        data-testid="dock-inspector-button"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">tune</span>
+                        <span className="text-[10px]">Properties</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setDockMode('collapsed'); }}
@@ -321,20 +344,21 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
             </div>
           )}
         </div>
+        </>
       )}
 
-      {/* Mobile Inspector Sheet (Mobile only) */}
-      {(mobileInspector || inspector) && (
+      {/* Mobile Inspector Sheet (Mobile only - fallback when mobileLayout is not provided) */}
+      {!mobileLayout && (mobileInspector || inspector) && (
         <div className="md:hidden">
-          {/* Mobile Inspector Floating Trigger */}
-          <button
+          {/* Mobile Inspector Floating Trigger (only when there is no dock bar to hold the button) */}
+          {!analysisDock && <button
             type="button"
             onClick={() => setMobileInspectorOpen(true)}
             className="fixed bottom-4 right-4 z-40 bg-primary text-on-primary p-3 rounded-full shadow-lg border border-primary-container flex items-center justify-center"
             aria-label="Open Properties Inspector"
           >
             <span className="material-symbols-outlined text-[20px]">tune</span>
-          </button>
+          </button>}
 
           {/* Mobile Bottom Sheet Drawer */}
           {mobileInspectorOpen && (

@@ -50,8 +50,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const simCompState = selectedInstance ? simulationResult?.componentStates[selectedInstance.instanceId] : undefined;
   const compSubcircuit = selectedInstance
     ? simulationResult?.subcircuits?.find((sub) =>
-        sub.componentInstanceIds.includes(selectedInstance.instanceId)
-      )
+      sub.componentInstanceIds.includes(selectedInstance.instanceId)
+    )
     : undefined;
 
   const selectedWire = wires.find((w) => w.id === selectedWireId);
@@ -127,11 +127,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   <button
                     key={c.id}
                     onClick={() => useWorkbenchStore.getState().updateWireColor(selectedWire.id, c.hex)}
-                    className={`w-5 h-5 rounded-full transition-transform ${
-                      selectedWire.color === c.hex
-                        ? 'scale-125 ring-2 ring-white ring-offset-1 ring-offset-surface-card'
-                        : 'hover:scale-110 opacity-75 hover:opacity-100'
-                    }`}
+                    className={`w-5 h-5 rounded-full transition-transform ${selectedWire.color === c.hex
+                      ? 'scale-125 ring-2 ring-white ring-offset-1 ring-offset-surface-card'
+                      : 'hover:scale-110 opacity-75 hover:opacity-100'
+                      }`}
                     style={{ backgroundColor: c.hex }}
                     title={`Color ${c.id}`}
                   />
@@ -273,11 +272,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     SIMULATED ELECTRICAL VALUES
                   </span>
                   <span
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                      simCompState.conducting
-                        ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}
+                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${simCompState.conducting
+                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700/60'
+                      : 'bg-slate-800 text-slate-400'
+                      }`}
                   >
                     {simCompState.conducting ? 'CONDUCTING' : 'OFF / OPEN'}
                   </span>
@@ -350,8 +348,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                                 term.polarity === 'positive'
                                   ? '#ef4444'
                                   : term.polarity === 'negative'
-                                  ? '#1f2937'
-                                  : '#4edea3',
+                                    ? '#1f2937'
+                                    : '#4edea3',
                             }}
                           />
                           <span className="text-white font-medium">{term.label}</span>
@@ -410,12 +408,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 
             const isPowerRail = selectedHoleDef.type === 'power_rail';
             const stripTitle = isPowerRail
-              ? `${(selectedHoleDef.railLocation || '').toUpperCase()} ${
-                  selectedHoleDef.railType === 'pos' ? 'POSITIVE (+)' : 'NEGATIVE (-)'
-                } POWER RAIL`
-              : `COLUMN ${selectedHoleDef.column} (ROWS ${
-                  ['a', 'b', 'c', 'd', 'e'].includes(selectedHoleDef.row || '') ? 'a–e' : 'f–j'
-                })`;
+              ? `${(selectedHoleDef.railLocation || '').toUpperCase()} ${selectedHoleDef.railType === 'pos' ? 'POSITIVE (+)' : 'NEGATIVE (-)'
+              } POWER RAIL`
+              : `COLUMN ${selectedHoleDef.column} (ROWS ${['a', 'b', 'c', 'd', 'e'].includes(selectedHoleDef.row || '') ? 'a–e' : 'f–j'
+              })`;
 
             return (
               <div className="space-y-4">
@@ -563,11 +559,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     onClick={() =>
                       setHighlightedNodeId(isNodeHighlighted ? null : node.id)
                     }
-                    className={`p-2.5 rounded-lg border text-xs font-mono cursor-pointer transition-all ${
-                      isNodeHighlighted
-                        ? 'border-white bg-surface-card shadow-md'
-                        : 'border-surface-border bg-surface-lowest hover:border-slate-500'
-                    }`}
+                    className={`p-2.5 rounded-lg border text-xs font-mono cursor-pointer transition-all ${isNodeHighlighted
+                      ? 'border-white bg-surface-card shadow-md'
+                      : 'border-surface-border bg-surface-lowest hover:border-slate-500'
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

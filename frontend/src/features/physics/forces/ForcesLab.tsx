@@ -42,6 +42,7 @@ import { PHYS } from '../motion/physicsColors';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { SecondLawDerivationView } from './SecondLawDerivation';
 import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useModelHistory, useSceneState, useUndoShortcuts, type DockTab, type SceneObject } from '../../workspace';
+import { ForcesMobileLab } from './ForcesMobileLab';
 import { LabInspectorSection, LabParameterField, LabSegmentedControl, LabSelect } from '../../workspace/controls';
 
 const RoutePanel: React.FC<{ route: ForceRoute; onRun: (r: ForceRoute) => void }> = ({
@@ -457,6 +458,18 @@ export const ForcesLab: React.FC = () => {
     { id: 'investigation', label: exp ? `Investigation ${exp.id}` : 'Investigation', content: investigation },
   ];
 
+  const mobileLayoutContent = (
+    <ForcesMobileLab
+      m={m}
+      scene={scene}
+      isBraking={isBraking}
+      b={b}
+      exp={exp}
+      tabs={tabs}
+      inspector={inspectorContent}
+    />
+  );
+
   return (
     <WorkspaceShell
       chapterId="forces"
@@ -467,6 +480,7 @@ export const ForcesLab: React.FC = () => {
       inspector={inspectorContent}
       inspectorTitle="Forces Inspector"
       analysisDock={<DockTabs key={exp?.id ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      mobileLayout={mobileLayoutContent}
       experimentSetupSnapshot={load.setup}
       playing={isBraking ? b.playing : m.playing}
       onTogglePlay={isBraking ? () => b.setPlaying((p) => !p) : m.togglePlay}

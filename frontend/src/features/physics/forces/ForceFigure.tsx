@@ -36,9 +36,11 @@ export interface ForceFigureProps {
    * makes every arrow change size whenever any force is edited; the laboratory passes a fixed scale instead.
    */
   fixedScale?: number;
+  /** Mobile compact framing: trims empty side/top void so cart and vectors fill the mobile viewport */
+  compact?: boolean;
 }
 
-export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, showIndividual, showNet, alt, listing = true, fill = false, fixedScale }) => {
+export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, showIndividual, showNet, alt, listing = true, fill = false, fixedScale, compact = false }) => {
   const horizontals = arrows.filter((a) => a.direction === 'left' || a.direction === 'right');
   const verticals = arrows.filter((a) => a.direction === 'up' || a.direction === 'down');
   const maxMag = Math.max(1e-9, ...horizontals.map((a) => a.magnitude), net?.magnitude ?? 0);
@@ -68,7 +70,7 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
 
   return (
     <figure className={`min-w-0 ${fill ? 'h-full min-h-0 w-full' : 'space-y-2'}`} data-testid="force-figure">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
+      <svg viewBox={compact ? '30 40 560 230' : `0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
         <line x1={20} y1={GROUND} x2={W - 20} y2={GROUND} stroke={PHYS.axis} strokeWidth={3} />
         <rect x={CX - BW / 2} y={top} width={BW} height={BH} rx={6} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
         <text x={CX} y={top + BH / 2 + 4} textAnchor="middle" fontSize={13} fontWeight={700} fill="#e2e8f0">{object}</text>
@@ -88,7 +90,7 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
         })}
         {showNet && (net
           ? <g data-arrow="net" data-direction={net.direction} data-magnitude={net.magnitude}>{hArrow(net, netY, 6)}<text x={CX} y={netY - 22} textAnchor="middle" fontSize={11} fill={PHYS.netForce}>net force on the {object}</text></g>
-          : <text x={CX} y={H - 10} textAnchor="middle" fontSize={12} fontWeight={700} fill={PHYS.correct} data-arrow="net-zero">{'✓'} net force = 0 N (balanced)</text>)}
+          : <text x={CX} y={compact ? 258 : H - 10} textAnchor="middle" fontSize={12} fontWeight={700} fill={PHYS.correct} data-arrow="net-zero">{'✓'} net force = 0 N (balanced)</text>)}
       </svg>
       {listing && (
         <figcaption className="text-xs text-slate-200 space-y-1" data-testid="force-listing">

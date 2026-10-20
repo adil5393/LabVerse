@@ -107,4 +107,12 @@ describe('shared lab workstation', () => {
     expect(renderToStaticMarkup(<PowerView initial={DEFAULT_POWER} part="scene" />)).not.toContain('data-testid="power-readout"');
     expect(renderToStaticMarkup(<PowerView initial={DEFAULT_POWER} part="readout" />)).toContain('data-testid="power-readout"');
   });
+
+  it('small screens get an overflow menu for the modes and secondary actions, and the mode tabs only show from md up', () => {
+    const html = renderToStaticMarkup(<MemoryRouter><WorkstationHeader activeTab="experiment" onTabChange={none} onTogglePlay={none} onReset={none} onUndo={none} onToggleBeginnerMode={none} onOpenInspector={none} labTitle="Force Laboratory" /></MemoryRouter>);
+    expect(html).toContain('data-testid="header-menu-button"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('class="hidden md:flex items-center space-x-3 h-full');
+    expect(html).toContain('Force Laboratory');
+  });
 });

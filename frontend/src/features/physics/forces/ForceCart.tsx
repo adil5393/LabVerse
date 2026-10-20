@@ -59,7 +59,7 @@ const TRACK_W = 620, TRACK_H = 110;
  * `fixedSpan` (metres) keeps the picture at one scale however the setup is edited: the window is `fixedSpan` wide and moves in
  * half-window steps to keep the cart in view. Without it the window is fitted to the whole run (the lesson pictures).
  */
-export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?: number }> = ({ setup, tMax, t, fixedSpan }) => {
+export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?: number; compact?: boolean }> = ({ setup, tMax, t, fixedSpan, compact = false }) => {
   const all = useMemo(() => simulate(setup, tMax), [setup, tMax]);
   let lo = Math.min(...all.map((p) => p.x), 0), hi = Math.max(...all.map((p) => p.x), 0);
   if (fixedSpan) {
@@ -78,7 +78,7 @@ export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?
   const p = sampleAtTime(setup, t, tMax);
   const surface = surfaceById(setup.surfaceId);
   return (
-    <svg viewBox={`0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
+    <svg viewBox={compact ? '20 20 580 85' : `0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
       <line x1={20} y1={70} x2={TRACK_W - 20} y2={70} stroke={surface.muK === 0 ? '#38bdf8' : PHYS.axis} strokeWidth={4} strokeDasharray={surface.muK === 0 ? '2 6' : '0'} />
       {ticks.map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
       <text x={TRACK_W - 24} y={106} textAnchor="end" fontSize={10} fill="#94a3b8">position (m) · surface: {surface.label}</text>
@@ -218,8 +218,8 @@ export const ForceToggles: React.FC<{ m: ForceCartModel; compact?: boolean }> = 
 /** Play, step, reset, replay speed, run length and the time slider. `compact` is the single-row viewport toolbar. */
 export const ForceTimeControls: React.FC<{ m: ForceCartModel; compact?: boolean }> = ({ m, compact }) => {
   const { tt, tMax, playing, rate, reduced } = m;
-  const h = compact ? 'min-h-[32px] text-xs' : 'min-h-[44px] text-sm';
-  const sel = `${compact ? 'min-h-[32px] text-xs' : 'min-h-[44px]'} rounded-lg border border-surface-border bg-surface-lowest px-2 text-white`;
+  const h = compact ? 'min-h-[40px] sm:min-h-[32px] text-xs' : 'min-h-[44px] text-sm';
+  const sel = `${compact ? 'min-h-[40px] sm:min-h-[32px] text-xs' : 'min-h-[44px]'} rounded-lg border border-surface-border bg-surface-lowest px-2 text-white`;
   return (
     <div role="group" aria-label="Time controls" className={`flex flex-wrap items-center gap-2 ${compact ? '' : 'rounded-xl border border-surface-border bg-surface-card/60 p-3'}`} data-testid="force-time">
       {!compact && <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (fixed 0.01 s steps)</span>}
@@ -234,7 +234,7 @@ export const ForceTimeControls: React.FC<{ m: ForceCartModel; compact?: boolean 
         <select value={tMax} onChange={(e) => m.setRunLength(Number(e.target.value))} aria-label="Length of the run in seconds" className={sel}><option value={10}>10 s</option><option value={20}>20 s</option><option value={30}>30 s</option></select>
       </label>
       <label className={`flex items-center gap-2 text-xs text-slate-300 grow ${compact ? 'min-w-[120px]' : 'min-w-[160px]'}`}>{compact ? '' : 'Time'}
-        <input type="range" min={0} max={tMax} step={0.1} value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className={`w-full ${compact ? 'min-h-[32px]' : 'min-h-[44px]'}`} />
+        <input type="range" min={0} max={tMax} step={0.1} value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className={`w-full ${compact ? 'min-h-[40px] sm:min-h-[32px]' : 'min-h-[44px]'}`} />
       </label>
       {!compact && <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; the physics uses simulated time.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>}
     </div>

@@ -6,7 +6,7 @@
 
 import { subjectCrumb } from '../../engine/education/subjects';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { GlobalHeader } from '../../components/GlobalHeader';
 import { lessonStatus, objectiveCoverage, STATUS_LABEL, summarizeLesson, reviewRecommendations } from '../../engine/education/progress';
 import type { EduChapter, EduLesson, JudgeRegistry, LessonRecord } from '../../engine/education/types';
@@ -36,8 +36,13 @@ function resumeStageFor(lesson: EduLesson | undefined, rec: LessonRecord | undef
   return 'reflect';
 }
 
-export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRegistry; judges?: JudgeRegistry; lessonId: string; crumb: string }> = ({ chapter, registry, judges = {}, lessonId, crumb }) => {
+interface LearnLessonProps { chapter: EduChapter; registry: VisualRegistry; judges?: JudgeRegistry; lessonId: string; crumb: string }
+
+const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {}, lessonId, crumb }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // "Next lesson" asks for a fresh start: Understand, first step, even if this lesson was visited before.
+  const [restart] = useState(() => Boolean((location.state as { restart?: boolean } | null)?.restart));
   const lesson = chapter.lessons[lessonId];
   const rec = useEducationStore((s) => s.lessons[lessonId]);
   const readiness = useEducationStore((s) => s.readiness);
@@ -46,17 +51,24 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
   const markInvestigated = useEducationStore((s) => s.markInvestigated);
 
   // Resume where the student left off (decided once, on mount).
-  const [stage, setStageState] = useState<Stage>(() => resumeStageFor(lesson, rec));
+  const [stage, setStageState] = useState<Stage>(() => (restart ? 'understand' : resumeStageFor(lesson, rec)));
   const setLastStage = useEducationStore((s) => s.setLastStage);
   const setStage = (next: Stage) => { setStageState(next); if (lesson) setLastStage(lesson.id, next); };
   const [stepIdx, setStepIdx] = useState(() => {
-    if (!lesson || !rec) return 0;
+    if (restart || !lesson || !rec) return 0;
     const firstUnseen = lesson.steps.findIndex((s) => !rec.stepsSeen.includes(s.id));
     return firstUnseen === -1 ? 0 : firstUnseen;
   });
   const [refresherId, setRefresherId] = useState<string | null>(null);
 
   useEffect(() => { window.scrollTo?.({ top: 0 }); }, [stage, stepIdx]);
+
+  // Having started afresh, remember it and drop the one-shot router state so a refresh resumes normally.
+  useEffect(() => {
+    if (!restart || !lesson) return;
+    setLastStage(lesson.id, 'understand');
+    navigate(location.pathname + location.search, { replace: true, state: null });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openRefresher = useCallback((id: string) => setRefresherId(id), []);
   if (!lesson) {
@@ -199,7 +211,7 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                {next && <Link className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm inline-flex items-center" to={chapter.routes.learn(next)}>Next lesson</Link>}
+                {next && <Link className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm inline-flex items-center" to={chapter.routes.learn(next)} state={{ restart: true }}>Next lesson</Link>}
                 <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={chapter.routes.landing}>Chapter overview</Link>
                 <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={chapter.routes.lab}>Free laboratory</Link>
                 {chapter.routes.practice && <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={chapter.routes.practice}>Chapter practice</Link>}
@@ -220,3 +232,9 @@ export const LearnLessonPage: React.FC<{ chapter: EduChapter; registry: VisualRe
     </VisualRegistryProvider>
   );
 };
+
+/**
+ * Moving to another lesson keeps this page mounted (same route, new `:lessonId`), so the stage, the step and the open refresher
+ * would carry over from the lesson just finished (the next lesson opened on Reflect). Keying by lesson starts each one fresh.
+ */
+export const LearnLessonPage: React.FC<LearnLessonProps> = (props) => <LearnLesson key={props.lessonId} {...props} />;

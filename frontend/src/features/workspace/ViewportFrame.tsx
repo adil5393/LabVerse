@@ -16,7 +16,7 @@ export interface ViewportFrameProps {
 const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 3;
 
-const toolBtn = 'p-1 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95';
+const toolBtn = 'p-1 max-sm:p-2 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95';
 const idle = 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant';
 const on = 'bg-primary text-on-primary font-bold';
 
@@ -41,6 +41,9 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
   const [toolMode, setToolMode] = useState<'select' | 'pan'>('select');
   const [isDragging, setIsDragging] = useState(false);
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  // Touch: every finger on the scene, and the pinch in progress (two fingers zoom and pan together).
+  const fingers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; zoom: number; mx: number; my: number; px: number; py: number } | null>(null);
 
   const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 100) / 100));
   const fit = useCallback(() => {
@@ -50,7 +53,19 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
   const zoomIn = useCallback(() => setZoom((z) => clamp(z * 1.25)), []);
   const zoomOut = useCallback(() => setZoom((z) => clamp(z / 1.25)), []);
 
+  const startPinch = () => {
+    const [p1, p2] = [...fingers.current.values()];
+    drag.current = null;
+    setIsDragging(false);
+    pinch.current = { dist: Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1, zoom, mx: (p1.x + p2.x) / 2, my: (p1.y + p2.y) / 2, px: pan.x, py: pan.y };
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+      if (fingers.current.size === 2) { startPinch(); return; }
+    }
     if (e.button !== 0) return;
     if (toolMode !== 'pan') {
       if (zoom === 1 || (e.target as Element).closest('[data-no-pan]')) return;
@@ -61,11 +76,22 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (fingers.current.has(e.pointerId)) fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pz = pinch.current;
+    if (pz && fingers.current.size >= 2) {
+      const [p1, p2] = [...fingers.current.values()];
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y) || 1;
+      setZoom(clamp(pz.zoom * (dist / pz.dist)));
+      setPan({ x: pz.px + (p1.x + p2.x) / 2 - pz.mx, y: pz.py + (p1.y + p2.y) / 2 - pz.my });
+      return;
+    }
     const d = drag.current;
     if (d) setPan({ x: d.px + e.clientX - d.x, y: d.py + e.clientY - d.y });
   };
 
-  const end = () => {
+  const end = (e?: React.PointerEvent) => {
+    if (e) fingers.current.delete(e.pointerId);
+    if (fingers.current.size < 2) pinch.current = null;
     drag.current = null;
     setIsDragging(false);
   };

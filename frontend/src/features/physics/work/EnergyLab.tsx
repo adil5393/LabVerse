@@ -23,6 +23,7 @@ import {
   type SceneObject,
 } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabSelect } from '../../workspace/controls';
+import { EnergyMobileLab } from './EnergyMobileLab';
 
 const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-', '−');
 
@@ -249,6 +250,22 @@ export const EnergyLab: React.FC = () => {
       inspectorTitle="Model Properties"
       inspector={inspectorContent}
       analysisDock={<DockTabs key={exp?.id ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      mobileLayout={
+        <EnergyMobileLab
+          r={r}
+          st={st}
+          playback={playback}
+          rate={rate}
+          setRate={setRate}
+          scene={scene}
+          exp={exp}
+          tabs={tabs}
+          inspector={inspectorContent}
+          alt={describeEnergy(r)}
+          onHeight={(h) => edit({ startHeight: h })}
+          onReference={(h) => edit({ refHeight: h })}
+        />
+      }
       playing={playback.playing}
       onTogglePlay={playback.toggle}
       onReset={resetRun}

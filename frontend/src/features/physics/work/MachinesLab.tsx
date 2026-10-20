@@ -27,6 +27,7 @@ import {
   type SceneObject,
 } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabSegmentedControl } from '../../workspace/controls';
+import { MachinesMobileLab, PowerMobileLab } from './MachinesMobileLab';
 
 interface GRoute<S, R> { id: string; label: string; setup: S; prompt: string; options: { label: string; why: string }[]; explain: (r: R) => string }
 
@@ -298,6 +299,21 @@ export const MachinesLab: React.FC = () => {
       inspectorTitle="Machine Properties"
       inspector={inspectorContent}
       analysisDock={<DockTabs key={`${app}-${exp?.id ?? 'free'}`} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      mobileLayout={
+        <MachinesMobileLab
+          app={app}
+          sceneView={sceneView}
+          playback={playback}
+          runSeconds={RUN_SECONDS}
+          progress={p}
+          runLabel={runLabel}
+          exp={exp}
+          tabs={tabs}
+          inspector={inspectorContent}
+          onReset={() => { active.restart(); playback.reset(); }}
+          onSelectApparatus={(a) => setParams({ apparatus: a })}
+        />
+      }
       playing={playback.playing}
       onTogglePlay={playback.toggle}
       onReset={() => { active.restart(); playback.reset(); }}
@@ -416,6 +432,16 @@ export const PowerLab: React.FC = () => {
       inspectorTitle="Power Properties"
       inspector={inspectorContent}
       analysisDock={<DockTabs key={exp?.id ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      mobileLayout={
+        <PowerMobileLab
+          s={s}
+          power={power}
+          sceneView={<PowerView initial={s} setup={s} part="scene" />}
+          exp={exp}
+          tabs={tabs}
+          inspector={inspectorContent}
+        />
+      }
       onUndo={lab.undo}
       onRedo={lab.redo}
       canUndo={lab.canUndo}

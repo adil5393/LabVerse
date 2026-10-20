@@ -2,7 +2,7 @@ import React from 'react';
 
 export interface MobileLabShellProps {
   viewport: React.ReactNode;
-  transport: React.ReactNode;
+  transport?: React.ReactNode;
   toolbar?: React.ReactNode;
   analysisSheet?: React.ReactNode;
   parameterSheet?: React.ReactNode;

@@ -9,6 +9,7 @@ import { GlobalHeader } from '../../../components/GlobalHeader';
 import { EQUATION_PRESETS } from '../../../engine/physics/motion/equations';
 import { validateProfile, type Profile } from '../../../engine/physics/motion/profile';
 import { DerivationView } from './DerivationView';
+import { CircularMobileLab } from './CircularMobileLab';
 
 const Shell: React.FC<{ last: string; title: string; intro: string; testid: string; children: React.ReactNode }> = ({ last, title, intro, testid, children }) => (
   <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter={testid}>
@@ -189,6 +190,15 @@ export const CircularLab: React.FC = () => {
     },
   ];
 
+  const mobileLayoutContent = (
+    <CircularMobileLab
+      c={c}
+      scene={scene}
+      tabs={tabs}
+      inspector={inspectorContent}
+    />
+  );
+
   return (
     <WorkspaceShell
       chapterId="motion"
@@ -199,6 +209,7 @@ export const CircularLab: React.FC = () => {
       inspectorTitle="Circular Parameters"
       inspector={inspectorContent}
       analysisDock={<DockTabs tabs={tabs} initial="measurements" />}
+      mobileLayout={mobileLayoutContent}
       playing={c.playing}
       onTogglePlay={c.togglePlay}
       onReset={c.rewind}

@@ -10,6 +10,7 @@ export interface MobileAnalysisTab {
 export interface MobileLabAnalysisSheetProps {
   tabs: MobileAnalysisTab[];
   activeTabId?: string;
+  defaultTab?: string;
   onTabChange?: (tabId: string) => void;
   title?: string;
   /** Live subtitle / summary chips for the handle bar (e.g. "F_net: 8 N | v: 2.4 m/s") */
@@ -26,13 +27,14 @@ export interface MobileLabAnalysisSheetProps {
 export const MobileLabAnalysisSheet: React.FC<MobileLabAnalysisSheetProps> = ({
   tabs,
   activeTabId: controlledTabId,
+  defaultTab,
   onTabChange: controlledOnTabChange,
   title = 'Analysis & Data',
   summaryChip,
   initialExpanded = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
-  const [internalTabId, setInternalTabId] = useState(tabs[0]?.id || '');
+  const [internalTabId, setInternalTabId] = useState(defaultTab || tabs[0]?.id || '');
   const activeTabId = controlledTabId ?? internalTabId;
 
   const handleTabSelect = (id: string) => {

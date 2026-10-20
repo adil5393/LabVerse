@@ -4,6 +4,7 @@ export interface MobileLabParameterSheetProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  subtitle?: string;
   children: React.ReactNode;
 }
 
@@ -15,6 +16,7 @@ export const MobileLabParameterSheet: React.FC<MobileLabParameterSheetProps> = (
   isOpen,
   onClose,
   title = 'Experiment Parameters',
+  subtitle,
   children,
 }) => {
   useEffect(() => {
@@ -49,7 +51,10 @@ export const MobileLabParameterSheet: React.FC<MobileLabParameterSheetProps> = (
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-outline-variant bg-surface-container shrink-0">
           <div className="flex items-center space-x-2">
             <span className="material-symbols-outlined text-primary text-[20px]">tune</span>
-            <span className="font-bold text-sm text-on-surface">{title}</span>
+            <div>
+              <span className="font-bold text-sm text-on-surface block leading-tight">{title}</span>
+              {subtitle && <span className="text-[11px] text-slate-400 block leading-tight mt-0.5">{subtitle}</span>}
+            </div>
           </div>
           <button
             type="button"

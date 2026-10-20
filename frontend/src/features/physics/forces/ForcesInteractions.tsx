@@ -10,6 +10,7 @@ import { PAIR_EXPERIMENTS, TB_EXPERIMENTS, tbExperimentById, tbOutcome, type TbE
 import { DEFAULT_TWO_BODY, type TwoBodySetup } from '../../../engine/physics/forces/twoBody';
 import { PairIdentifyView } from './TwoBody';
 import { PHYS } from '../motion/physicsColors';
+import { TwoBodyMobileLab } from './TwoBodyMobileLab';
 
 const RoutePanel: React.FC<{ route: TbRoute; onRun: (s: TwoBodySetup) => void }> = ({ route, onRun }) => {
   const [choice, setChoice] = useState<number | null>(null);
@@ -215,6 +216,19 @@ export const ForcesInteractions: React.FC = () => {
     { id: 'investigation', label: id ? `Investigation ${id}` : 'Investigation', content: investigation },
   ];
 
+  const mobileLayoutContent = (
+    <TwoBodyMobileLab
+      m={m}
+      scene={scene}
+      pairExp={pairExp}
+      id={id}
+      tabs={tabs}
+      inspector={inspectorContent}
+      onReset={!pairExp ? m.rewind : undefined}
+      comparePredict={<ComparePredict />}
+    />
+  );
+
   return (
     <WorkspaceShell
       chapterId="forces"
@@ -225,6 +239,7 @@ export const ForcesInteractions: React.FC = () => {
       inspectorTitle="Interaction Inspector"
       inspector={inspectorContent}
       analysisDock={<DockTabs key={id ?? 'free'} tabs={tabs} initial={id ? 'investigation' : 'measurements'} />}
+      mobileLayout={mobileLayoutContent}
       playing={!pairExp ? m.playing : undefined}
       onTogglePlay={!pairExp ? m.togglePlay : undefined}
       onReset={!pairExp ? m.rewind : undefined}

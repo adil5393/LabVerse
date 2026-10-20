@@ -21,6 +21,7 @@ import {
 } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabSelect } from '../../workspace/controls';
 import { PHYS } from './physicsColors';
+import { GraphMobileLab } from './GraphMobileLab';
 
 const GRAPH_OBJECTS: Record<GraphKind, SceneObject & { means: string }> = {
   xt: { id: 'xt', name: 'X_T_GRAPH', category: 'Graph / Position', icon: 'show_chart', means: 'Height is the position; the slope is the velocity.' },
@@ -142,6 +143,20 @@ export const GraphLab: React.FC<GraphLabProps> = ({ labTitle, outlinerTitle, ins
     { id: 'notes', label: 'Notes', content: <div className="text-xs text-slate-300 space-y-2 max-w-3xl">{notes}</div> },
   ];
 
+  const mobileLayoutContent = (
+    <GraphMobileLab
+      g={g}
+      scene={scene}
+      kinds={kinds}
+      tabs={tabs}
+      inspector={inspectorContent}
+      activeId={activeId}
+      items={items}
+      onPick={onPick}
+      listTitle={listTitle}
+    />
+  );
+
   return (
     <WorkspaceShell
       chapterId="motion"
@@ -152,6 +167,7 @@ export const GraphLab: React.FC<GraphLabProps> = ({ labTitle, outlinerTitle, ins
       inspectorTitle={inspectorTitle}
       inspector={inspectorContent}
       analysisDock={<DockTabs key={activeId} tabs={tabs} initial={g.pred ? 'investigation' : 'measurements'} />}
+      mobileLayout={mobileLayoutContent}
       playing={g.playing}
       onTogglePlay={g.togglePlay}
       onReset={g.rewind}

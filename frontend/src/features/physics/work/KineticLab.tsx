@@ -25,6 +25,7 @@ import {
   type SceneObject,
 } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabSelect } from '../../workspace/controls';
+import { KineticMobileLab } from './KineticMobileLab';
 
 const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-', '−');
 
@@ -240,6 +241,21 @@ export const KineticLab: React.FC = () => {
       inspectorTitle="Model Properties"
       inspector={inspectorContent}
       analysisDock={<DockTabs key={exp?.id ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      mobileLayout={
+        <KineticMobileLab
+          r={r}
+          playback={playback}
+          rate={rate}
+          setRate={setRate}
+          scene={scene}
+          exp={exp}
+          tabs={tabs}
+          inspector={inspectorContent}
+          alt={describeKinetic(r)}
+          onForce={(n) => edit({ netForce: n })}
+          onDisplacement={(m) => edit({ displacement: m })}
+        />
+      }
       playing={playback.playing}
       onTogglePlay={playback.toggle}
       onReset={resetRun}

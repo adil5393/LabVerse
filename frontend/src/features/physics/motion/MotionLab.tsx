@@ -21,6 +21,7 @@ import { PHYS } from './physicsColors';
 import { speedVelocityLines, wholeTrip, pathFromRoute } from '../../../engine/physics/motion/speed';
 import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useSceneState, type DockTab, type SceneObject } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabToolbarDivider } from '../../workspace/controls';
+import { MotionMobileLab } from './MotionMobileLab';
 
 const RatePrediction: React.FC<{
   e: MotionExperiment;
@@ -474,6 +475,18 @@ export const MotionLab: React.FC = () => {
     { id: 'investigation', label: exp ? `Investigation ${exp.id}` : 'Investigation', content: investigation },
   ];
 
+  const mobileLayoutContent = (
+    <MotionMobileLab
+      m={m}
+      scene={scene}
+      exp={exp}
+      tabs={tabs}
+      inspector={inspectorContent}
+      alt={alt}
+      onReset={resetLoad}
+    />
+  );
+
   return (
     <WorkspaceShell
       chapterId="motion"
@@ -484,6 +497,7 @@ export const MotionLab: React.FC = () => {
       inspector={inspectorContent}
       inspectorTitle="Motion Inspector"
       analysisDock={<DockTabs key={expId ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      mobileLayout={mobileLayoutContent}
       experimentSetupSnapshot={load}
       playing={m.playing}
       onTogglePlay={m.path.legs.length > 0 ? m.togglePlay : undefined}

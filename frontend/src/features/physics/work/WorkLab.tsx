@@ -18,6 +18,7 @@ import {
 } from '../../../engine/physics/work/experiments';
 import { DEFAULT_WORK, computeWork, type WorkSetup } from '../../../engine/physics/work/workModel';
 import { WorkView } from './WorkView';
+import { WorkMobileLab } from './WorkMobileLab';
 import {
   WorkstationHeader,
   SceneOutliner,
@@ -79,6 +80,29 @@ export const WorkLab: React.FC = () => {
 
   // Global transport playback state
   const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  // Animation timer loop
+  React.useEffect(() => {
+    if (!playing) return;
+    let animId: number;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = (now - last) / 3000;
+      last = now;
+      setProgress((p) => {
+        const next = p + dt;
+        if (next >= 1) {
+          setPlaying(false);
+          return 1;
+        }
+        return next;
+      });
+      animId = requestAnimationFrame(tick);
+    };
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [playing]);
 
   const selectExperiment = useCallback((id: string | null) => {
     const e = workExperimentById(id);
@@ -182,11 +206,40 @@ export const WorkLab: React.FC = () => {
             onReturnToExperiment={() => setActiveTab('experiment')}
           />
         )}
-        {/* WORKSPACE MODE: EXPERIMENT & ANALYZE (Primary 5-Region Workstation); stays mounted behind the blackboard */}
+        {/* WORKSPACE MODE: EXPERIMENT & ANALYZE */}
         <div className={activeTab === 'blackboard' ? 'hidden' : 'contents'}>
-          <>
+          {/* Mobile Design A View (< md) */}
+          <div className="flex md:hidden flex-1 flex-col h-full overflow-hidden w-full">
+            <WorkMobileLab
+              setup={load.setup}
+              result={computeWork(load.setup)}
+              progress={progress}
+              playing={playing}
+              onTogglePlay={() => setPlaying((p) => !p)}
+              onReset={() => {
+                setPlaying(false);
+                setProgress(0);
+                setLoad((l) => ({ ...l, key: l.key + 1 }));
+              }}
+              onProgressChange={setProgress}
+              onSetupChange={(patch) => {
+                const next = { ...load.setup, ...patch };
+                if (computeWork(next).valid) handleSetupChange(next);
+              }}
+              showVertical={showVertical}
+              onShowVerticalChange={setShowVertical}
+              selectedObjectId={selectedObjectId}
+              onSelectObject={setSelectedObjectId}
+              visibilityMap={visibilityMap}
+              lockMap={lockMap}
+              expTitle={exp?.title}
+            />
+          </div>
+
+          {/* Desktop 5-Region Workstation (>= md) */}
+          <div className="hidden md:flex flex-1 h-full overflow-hidden w-full">
             {/* Left Outliner / Curriculum Explorer (Desktop) */}
-            <div className="hidden md:flex h-full relative">
+            <div className="flex h-full relative">
               {!outlinerCollapsed ? (
                 <SceneOutliner
                   cartMassKg={load.setup.massKg}
@@ -261,20 +314,8 @@ export const WorkLab: React.FC = () => {
                 showVertical={showVertical}
                 onShowVerticalChange={setShowVertical}
               />
-
-              {/* Mobile Floating Inspector CTA (390px reference) */}
-              <div className="md:hidden fixed bottom-14 right-3 z-40">
-                <button
-                  type="button"
-                  onClick={() => setMobileInspectorOpen(true)}
-                  className="flex items-center space-x-2 px-4 py-2.5 rounded-full bg-primary text-on-primary font-mono text-xs font-bold shadow-2xl border border-primary-light active:scale-95 transition-transform"
-                >
-                  <span className="material-symbols-outlined text-[16px]">tune</span>
-                  <span>Inspect Properties</span>
-                </button>
-              </div>
             </div>
-          </>
+          </div>
         </div>
       </div>
 

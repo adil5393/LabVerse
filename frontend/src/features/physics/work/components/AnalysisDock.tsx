@@ -19,7 +19,7 @@ const COLOR: Record<ForceKind, string> = {
 };
 
 const MODE_HEIGHTS: Record<DockSizeMode, number> = {
-  compact: 56,
+  compact: 40,
   balanced: 240,
   focus: 420,
 };
@@ -62,7 +62,8 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
   const [internalTab, setInternalTab] = useState<AnalysisTab>('measurements');
   const activeTab = controlledTab ?? internalTab;
 
-  const [internalMode, setInternalMode] = useState<DockSizeMode>(expanded ? 'focus' : 'balanced');
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const [internalMode, setInternalMode] = useState<DockSizeMode>(expanded ? 'focus' : (isMobile ? 'compact' : 'balanced'));
   const currentMode = controlledMode ?? (expanded ? 'focus' : internalMode);
 
   // Custom dragged height (if user manually dragged the handle)
@@ -157,18 +158,25 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
       </div>
 
       {/* Analysis Editor Header & Mode Controls */}
-      <div className="h-8 px-3 border-b border-outline-variant flex items-center justify-between bg-surface-container shrink-0">
-        <div className="flex items-center space-x-1 h-full">
-          <div className="flex items-center space-x-1 text-primary pr-2 border-r border-outline-variant mr-1">
+      <div
+        onClick={() => {
+          if (window.innerWidth < 640 && isCompact) {
+            setMode('balanced');
+          }
+        }}
+        className="h-8 px-2 sm:px-3 border-b border-outline-variant flex items-center justify-between bg-surface-container shrink-0 cursor-pointer sm:cursor-default"
+      >
+        <div className="flex items-center space-x-1 h-full overflow-x-auto no-scrollbar">
+          <div className="flex items-center space-x-1 text-primary pr-2 border-r border-outline-variant mr-1 shrink-0">
             <span className="material-symbols-outlined text-[15px]">analytics</span>
-            <span className="font-mono text-[10px] uppercase font-bold tracking-wider">ANALYSIS</span>
+            <span className="font-mono text-[10px] uppercase font-bold tracking-wider hidden sm:inline">ANALYSIS</span>
           </div>
 
           {/* Horizontal Editor Tabs */}
           <button
             type="button"
-            onClick={() => handleTabChange('measurements')}
-            className={`px-2.5 h-full flex items-center font-mono text-xs transition-colors ${
+            onClick={(e) => { e.stopPropagation(); handleTabChange('measurements'); }}
+            className={`px-2 sm:px-2.5 h-full flex items-center font-mono text-xs transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'measurements'
                 ? 'border-b-2 border-primary text-primary font-semibold bg-surface-container-high/60'
                 : 'text-on-surface-variant hover:text-on-surface'
@@ -179,8 +187,8 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
 
           <button
             type="button"
-            onClick={() => handleTabChange('calculations')}
-            className={`px-2.5 h-full flex items-center font-mono text-xs transition-colors ${
+            onClick={(e) => { e.stopPropagation(); handleTabChange('calculations'); }}
+            className={`px-2 sm:px-2.5 h-full flex items-center font-mono text-xs transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'calculations'
                 ? 'border-b-2 border-primary text-primary font-semibold bg-surface-container-high/60'
                 : 'text-on-surface-variant hover:text-on-surface'
@@ -191,8 +199,8 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
 
           <button
             type="button"
-            onClick={() => handleTabChange('graphs')}
-            className={`px-2.5 h-full flex items-center font-mono text-xs transition-colors ${
+            onClick={(e) => { e.stopPropagation(); handleTabChange('graphs'); }}
+            className={`px-2 sm:px-2.5 h-full flex items-center font-mono text-xs transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'graphs'
                 ? 'border-b-2 border-primary text-primary font-semibold bg-surface-container-high/60'
                 : 'text-on-surface-variant hover:text-on-surface'
@@ -203,8 +211,8 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
 
           <button
             type="button"
-            onClick={() => handleTabChange('data')}
-            className={`px-2.5 h-full flex items-center font-mono text-xs transition-colors ${
+            onClick={(e) => { e.stopPropagation(); handleTabChange('data'); }}
+            className={`px-2 sm:px-2.5 h-full flex items-center font-mono text-xs transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'data'
                 ? 'border-b-2 border-primary text-primary font-semibold bg-surface-container-high/60'
                 : 'text-on-surface-variant hover:text-on-surface'
@@ -215,8 +223,8 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
 
           <button
             type="button"
-            onClick={() => handleTabChange('explanation')}
-            className={`px-2.5 h-full flex items-center font-mono text-xs transition-colors ${
+            onClick={(e) => { e.stopPropagation(); handleTabChange('explanation'); }}
+            className={`px-2 sm:px-2.5 h-full flex items-center font-mono text-xs transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'explanation'
                 ? 'border-b-2 border-primary text-primary font-semibold bg-surface-container-high/60'
                 : 'text-on-surface-variant hover:text-on-surface'
@@ -523,8 +531,8 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
         </div>
       )}
 
-      {/* Very Bottom Workbench Global Status Bar */}
-      <footer className="h-6 bg-surface-container-high border-t border-outline-variant px-3 sm:px-4 flex items-center justify-between text-[10px] font-mono text-outline shrink-0">
+      {/* Very Bottom Workbench Global Status Bar (Hidden on mobile to save vertical space) */}
+      <footer className="h-6 bg-surface-container-high border-t border-outline-variant px-3 sm:px-4 hidden sm:flex items-center justify-between text-[10px] font-mono text-outline shrink-0">
         <div className="flex items-center space-x-3">
           <span className="flex items-center space-x-1">
             <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />

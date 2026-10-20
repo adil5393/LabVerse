@@ -160,8 +160,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       {/* Optional Developer Diagnostics Overlay */}
       {showDiagnostics && diagnosticsOverlay}
 
-      {/* Bottom-left telemetry & coordinates readout badge */}
-      <div className="absolute bottom-4 left-4 bg-surface-lowest/90 backdrop-blur-md border border-surface-border px-3 py-1.5 rounded-lg text-[11px] font-mono text-slate-400 flex items-center gap-3 shadow-lg select-none">
+      {/* Bottom-left telemetry & coordinates readout badge (desktop only) */}
+      <div className="hidden sm:flex absolute bottom-4 left-4 bg-surface-lowest/90 backdrop-blur-md border border-surface-border px-3 py-1.5 rounded-lg text-[11px] font-mono text-slate-400 items-center gap-3 shadow-lg select-none">
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
           <span>

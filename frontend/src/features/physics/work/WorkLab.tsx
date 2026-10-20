@@ -53,7 +53,8 @@ export const WorkLab: React.FC = () => {
   // Workspace Modes: 'experiment' | 'blackboard' | 'analyze' | 'learn' | 'exercises'
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('experiment');
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<AnalysisTab>('measurements');
-  const [dockMode, setDockMode] = useState<DockSizeMode>('balanced');
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const [dockMode, setDockMode] = useState<DockSizeMode>(isMobile ? 'compact' : 'balanced');
   const [beginnerMode, setBeginnerMode] = useState(false);
 
   // Outliner interactive state
@@ -170,6 +171,7 @@ export const WorkLab: React.FC = () => {
         canRedo={history.canRedo}
         onToggleFullscreen={handleToggleFullscreen}
         onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
+        chapterUrl="/physics/work"
       />
 
       {/* 2. MAIN WORKSPACE VIEWPORT BODY */}

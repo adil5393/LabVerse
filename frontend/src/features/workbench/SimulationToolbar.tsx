@@ -17,11 +17,11 @@ export const SimulationToolbar: React.FC = () => {
   const status = simulationResult?.status;
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#161b26]/90 backdrop-blur-md border border-[#2d3748] shadow-2xl text-xs select-none">
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#161b26]/90 backdrop-blur-md border border-[#2d3748] shadow-2xl text-xs select-none max-w-[calc(100%-1rem)] overflow-x-auto no-scrollbar">
       {/* 1. Run / Pause Visualization */}
       <button
         onClick={() => setSimulationSettings({ isRunning: !isRunning })}
-        className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-medium transition-all ${
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-medium transition-all shrink-0 ${
           isRunning
             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
             : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
@@ -37,18 +37,18 @@ export const SimulationToolbar: React.FC = () => {
       {/* 2. Reset Button */}
       <button
         onClick={resetSimulation}
-        className="p-1 rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+        className="p-1 rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors shrink-0"
         title="Reset simulation visual settings"
       >
         <span className="material-symbols-outlined text-[15px]">restart_alt</span>
       </button>
 
-      <div className="w-[1px] h-4 bg-slate-700 mx-0.5" />
+      <div className="w-[1px] h-4 bg-slate-700 mx-0.5 shrink-0" />
 
       {/* 3. Show Current Flow Toggle */}
       <button
         onClick={() => setSimulationSettings({ showCurrentFlow: !showCurrentFlow })}
-        className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all ${
+        className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all shrink-0 ${
           showCurrentFlow
             ? 'bg-[#4d8eff]/25 text-[#79a9ff] border border-[#4d8eff]/40 font-medium'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -56,13 +56,14 @@ export const SimulationToolbar: React.FC = () => {
         title="Toggle conventional current particle flow animation"
       >
         <span className="material-symbols-outlined text-[15px]">electric_bolt</span>
-        <span>Current Flow</span>
+        <span className="hidden sm:inline">Current Flow</span>
+        <span className="sm:hidden">Current</span>
       </button>
 
       {/* 4. Show Voltage Toggle */}
       <button
         onClick={() => setSimulationSettings({ showVoltage: !showVoltage })}
-        className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all ${
+        className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all shrink-0 ${
           showVoltage
             ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40 font-medium'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -70,10 +71,11 @@ export const SimulationToolbar: React.FC = () => {
         title="Toggle node voltage gradient visualization"
       >
         <span className="material-symbols-outlined text-[15px]">speed</span>
-        <span>Voltage</span>
+        <span className="hidden sm:inline">Voltage</span>
+        <span className="sm:hidden">Volt</span>
       </button>
 
-      <div className="w-[1px] h-4 bg-slate-700 mx-0.5" />
+      <div className="w-[1px] h-4 bg-slate-700 mx-0.5 shrink-0" />
 
       {/* 5. Animation Speed Selector */}
       <div className="flex items-center bg-slate-900/60 rounded-full p-0.5 border border-slate-700/60">

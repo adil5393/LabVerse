@@ -98,7 +98,7 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
 
         {/* Floating viewport toolbar (top-left), the same as the Work Laboratory's */}
         <div
-          className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1 max-w-[calc(100%-1.5rem)] bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md"
+          className="absolute top-3 left-3 z-20 flex items-center gap-1 max-w-[calc(100%-1.5rem)] overflow-x-auto no-scrollbar bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md"
           role="group"
           aria-label="Viewport camera"
           data-testid="viewport-toolbar"
@@ -123,13 +123,14 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
           </span>
           {(onToggleVectors || onToggleGrid) && <div className="h-4 w-px bg-outline-variant mx-1" />}
           {onToggleVectors && (
-            <button type="button" onClick={onToggleVectors} className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center gap-1 transition-colors ${showVectors ? 'bg-surface-variant text-primary border border-primary/40' : idle}`} title="Toggle Motion Vectors" aria-label="Toggle Vectors" data-testid="viewport-vectors-toggle">
+            <button type="button" onClick={onToggleVectors} className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center gap-1 transition-colors shrink-0 ${showVectors ? 'bg-surface-variant text-primary border border-primary/40' : idle}`} title="Toggle Motion Vectors" aria-label="Toggle Vectors" data-testid="viewport-vectors-toggle">
               <span className="material-symbols-outlined text-[12px]">navigation</span>
-              <span>Vectors: {showVectors ? 'ON' : 'OFF'}</span>
+              <span className="hidden sm:inline">Vectors: {showVectors ? 'ON' : 'OFF'}</span>
+              <span className="sm:hidden">Vec</span>
             </button>
           )}
           {onToggleGrid && (
-            <button type="button" onClick={onToggleGrid} className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${showGrid ? 'bg-surface-variant text-primary' : idle}`} title="Toggle Background Grid" aria-label="Toggle Grid" data-testid="viewport-grid-toggle">
+            <button type="button" onClick={onToggleGrid} className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${showGrid ? 'bg-surface-variant text-primary' : idle}`} title="Toggle Background Grid" aria-label="Toggle Grid" data-testid="viewport-grid-toggle">
               Grid
             </button>
           )}
@@ -139,7 +140,7 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
       {/* Docked transport strip (bottom), the same place as the Work Laboratory's playback bar */}
       {toolbar && (
         <div
-          className="shrink-0 min-h-12 bg-surface-container border-t border-outline-variant px-3 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 z-30 select-none"
+          className="shrink-0 min-h-11 sm:min-h-12 bg-surface-container border-t border-outline-variant px-2 sm:px-3 py-1 sm:py-1.5 flex items-center overflow-x-auto no-scrollbar gap-2 z-30 select-none"
           data-testid="viewport-experiment-tools"
         >
           {toolbar}
@@ -147,7 +148,7 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
       )}
 
       {footnote && (
-        <div className="shrink-0 px-3 py-1 border-t border-outline-variant text-[10px] text-outline bg-surface-container-low">
+        <div className="shrink-0 px-3 py-0.5 sm:py-1 border-t border-outline-variant text-[9px] sm:text-[10px] text-outline bg-surface-container-low truncate">
           {footnote}
         </div>
       )}

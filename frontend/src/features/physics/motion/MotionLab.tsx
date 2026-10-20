@@ -418,7 +418,7 @@ export const MotionLab: React.FC = () => {
   const viewportContent = (
     <ViewportFrame
       toolbar={
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center overflow-x-auto no-scrollbar gap-1.5 sm:gap-2 max-w-full">
           <MotionMoveButtons m={m} compact />
           {m.path.legs.length > 0 && (
             <>

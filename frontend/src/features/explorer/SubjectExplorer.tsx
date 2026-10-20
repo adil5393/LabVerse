@@ -4,28 +4,43 @@ import { GlobalHeader } from '../../components/GlobalHeader';
 import {
   LABVERSE_SUBJECTS,
   type SubjectId,
-  getAllSubjects,
-  getAvailableSubjects,
-  getInDevelopmentSubjects,
 } from '../../types/subjectRegistry';
 
-type FilterType = 'all' | 'ready' | 'dev';
+type SubjectFilter = 'all' | 'physics' | 'chemistry' | 'mathematics';
+
+interface MobileNavItem {
+  id: string;
+  subjectId: SubjectId;
+  subjectName: string;
+  title: string;
+  subtitle: string;
+  route?: string;
+  badge: string;
+  isReady: boolean;
+  icon: string;
+  testId?: string;
+  accent: {
+    border: string;
+    iconBg: string;
+    text: string;
+    badgeColor: string;
+  };
+}
 
 export const SubjectExplorer: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<SubjectFilter>('all');
   const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   const filteredSubjects = LABVERSE_SUBJECTS.filter((subj) => {
-    if (activeFilter === 'ready') return subj.status === 'ready';
-    if (activeFilter === 'dev') return subj.status === 'in_development';
-    return true;
+    if (activeFilter === 'all') return true;
+    return subj.id === activeFilter;
   });
 
   const getSubjectColorStyles = (id: SubjectId) => {
     switch (id) {
       case 'physics':
         return {
-          border: 'border-sky-500/50 hover:border-sky-400',
+          border: 'border-sky-500/40 hover:border-sky-400',
           iconBg: 'bg-sky-500/20 text-sky-400',
           categoryText: 'text-sky-400',
           btnBg: 'bg-sky-600 hover:bg-sky-500 shadow-sky-500/25',
@@ -33,7 +48,7 @@ export const SubjectExplorer: React.FC = () => {
         };
       case 'chemistry':
         return {
-          border: 'border-emerald-500/50 hover:border-emerald-400',
+          border: 'border-emerald-500/40 hover:border-emerald-400',
           iconBg: 'bg-emerald-500/20 text-emerald-400',
           categoryText: 'text-emerald-400',
           btnBg: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25',
@@ -41,7 +56,7 @@ export const SubjectExplorer: React.FC = () => {
         };
       case 'mathematics':
         return {
-          border: 'border-purple-500/50 hover:border-purple-400',
+          border: 'border-purple-500/40 hover:border-purple-400',
           iconBg: 'bg-purple-500/20 text-purple-400',
           categoryText: 'text-purple-400',
           btnBg: 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/25',
@@ -58,64 +73,233 @@ export const SubjectExplorer: React.FC = () => {
     }
   };
 
+  // Mobile-first compact launcher destinations
+  const mobileNavItems: MobileNavItem[] = [
+    {
+      id: 'physics-electricity',
+      subjectId: 'physics',
+      subjectName: 'Physics',
+      title: 'Electricity & Circuits',
+      subtitle: 'DC loops, solderless breadboard & solver',
+      route: '/physics/electricity',
+      badge: 'Active Lab',
+      isReady: true,
+      icon: 'electric_bolt',
+      accent: {
+        border: 'border-sky-500/40 hover:border-sky-400',
+        iconBg: 'bg-sky-500/20 text-sky-400',
+        text: 'text-sky-400',
+        badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      },
+    },
+    {
+      id: 'physics-chapters',
+      subjectId: 'physics',
+      subjectName: 'Physics',
+      title: 'All Physics Chapters',
+      subtitle: 'Class 9 Motion, Forces, Work & Electricity',
+      route: '/physics',
+      badge: '4 Chapters',
+      isReady: true,
+      icon: 'auto_stories',
+      testId: 'physics-chapters-link',
+      accent: {
+        border: 'border-sky-500/40 hover:border-sky-400',
+        iconBg: 'bg-sky-500/15 text-sky-300',
+        text: 'text-sky-300',
+        badgeColor: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+      },
+    },
+    {
+      id: 'chemistry-matter',
+      subjectId: 'chemistry',
+      subjectName: 'Chemistry',
+      title: 'States of Matter',
+      subtitle: 'Molecular kinematics & phase transitions',
+      route: '/chemistry',
+      badge: 'Active Lab',
+      isReady: true,
+      icon: 'science',
+      accent: {
+        border: 'border-emerald-500/40 hover:border-emerald-400',
+        iconBg: 'bg-emerald-500/20 text-emerald-400',
+        text: 'text-emerald-400',
+        badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      },
+    },
+    {
+      id: 'mathematics-hub',
+      subjectId: 'mathematics',
+      subjectName: 'Mathematics',
+      title: 'Mathematics Lab Hub',
+      subtitle: '6 Class 9 labs: Geometry, Circles, Logic & Data',
+      route: '/mathematics',
+      badge: '6 Labs',
+      isReady: true,
+      icon: 'calculate',
+      accent: {
+        border: 'border-purple-500/40 hover:border-purple-400',
+        iconBg: 'bg-purple-500/20 text-purple-400',
+        text: 'text-purple-400',
+        badgeColor: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+      },
+    },
+    {
+      id: 'biology-planned',
+      subjectId: 'biology',
+      subjectName: 'Biology',
+      title: 'Biology Laboratories',
+      subtitle: 'Virtual microscopy, genetics & physiology',
+      badge: 'Coming Soon',
+      isReady: false,
+      icon: 'biotech',
+      accent: {
+        border: 'border-surface-border',
+        iconBg: 'bg-surface-elevated text-slate-400',
+        text: 'text-slate-400',
+        badgeColor: 'bg-surface-elevated text-slate-400 border-surface-border',
+      },
+    },
+    {
+      id: 'robotics-planned',
+      subjectId: 'robotics',
+      subjectName: 'Robotics',
+      title: 'Robotics & Control Logic',
+      subtitle: 'Microcontrollers, sensors & motor drivers',
+      badge: 'Coming Soon',
+      isReady: false,
+      icon: 'precision_manufacturing',
+      accent: {
+        border: 'border-surface-border',
+        iconBg: 'bg-surface-elevated text-slate-400',
+        text: 'text-slate-400',
+        badgeColor: 'bg-surface-elevated text-slate-400 border-surface-border',
+      },
+    },
+  ];
+
+  const filteredMobileItems = mobileNavItems.filter((item) => {
+    if (activeFilter === 'all') return true;
+    return item.subjectId === activeFilter;
+  });
+
+  const filterTabs: { id: SubjectFilter; label: string; mobileLabel: string }[] = [
+    { id: 'all', label: 'All Subjects', mobileLabel: 'All' },
+    { id: 'physics', label: 'Physics', mobileLabel: 'Physics' },
+    { id: 'chemistry', label: 'Chemistry', mobileLabel: 'Chemistry' },
+    { id: 'mathematics', label: 'Mathematics', mobileLabel: 'Math' },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f17] text-slate-100 lab-grid select-none">
       <GlobalHeader onOpenGuide={() => setGuideModalOpen(true)} />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 sm:px-10 py-10 lg:py-12 flex flex-col gap-10">
-        {/* Hero Section */}
-        <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-surface-border">
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[15px]">school</span>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10 flex flex-col gap-6 sm:gap-8">
+        {/* Compact Hero Section */}
+        {/* Hero & Subject Filter Bar */}
+        <section className="flex flex-col gap-4 sm:gap-5 pb-4 sm:pb-6 border-b border-surface-border">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary text-[11px] font-semibold uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[14px]">school</span>
               <span>Interactive Virtual STEM Laboratories</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white leading-tight">
-              Choose a Subject to Explore
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Choose a Laboratory
             </h1>
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-              Open-ended virtual laboratory workbenches for students and educators. Real physical geometry, live circuit simulation, thermodynamic modeling, and zero login barriers.
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
+              Virtual workbenches with real physical solvers for NCERT Class 9–10. Choose a subject below to begin exploring immediately.
             </p>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="inline-flex p-1 bg-surface-card border border-surface-border rounded-xl self-start md:self-auto shadow-inner">
-            <button
-              onClick={() => setActiveFilter('all')}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                activeFilter === 'all'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              All Subjects ({getAllSubjects().length})
-            </button>
-            <button
-              onClick={() => setActiveFilter('ready')}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                activeFilter === 'ready'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Available Now ({getAvailableSubjects().length})
-            </button>
-            <button
-              onClick={() => setActiveFilter('dev')}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                activeFilter === 'dev'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              In Development ({getInDevelopmentSubjects().length})
-            </button>
+          {/* Subject Navigation Filter Bar */}
+          <div
+            className="flex items-center gap-1.5 p-1 bg-surface-card border border-surface-border rounded-xl self-start shadow-inner overflow-x-auto no-scrollbar max-w-full"
+            role="tablist"
+            aria-label="Filter by subject"
+          >
+            {filterTabs.map((tab) => {
+              const active = activeFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFilter(tab.id)}
+                  role="tab"
+                  aria-selected={active}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap min-h-[34px] flex items-center justify-center transition-all ${
+                    active
+                      ? 'bg-primary text-slate-950 font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-surface-elevated/60'
+                  }`}
+                >
+                  <span className="sm:hidden">{tab.mobileLabel}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        {/* Subjects Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* 1. MOBILE-FIRST COMPACT APPLICATION LAUNCHER (< 640px) */}
+        <section className="block sm:hidden space-y-2.5" aria-label="Laboratories launcher">
+          {filteredMobileItems.map((item) => {
+            if (item.isReady && item.route) {
+              return (
+                <Link
+                  key={item.id}
+                  to={item.route}
+                  data-testid={item.testId}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border bg-gradient-to-r from-surface-card to-[#121620] ${item.accent.border} transition-all active:scale-[0.99] gap-3 min-h-[76px] shadow-sm`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-xl ${item.accent.iconBg} flex items-center justify-center shrink-0`}>
+                      <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white truncate">{item.title}</span>
+                        <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold shrink-0 ${item.accent.badgeColor}`}>
+                          {item.badge}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{item.subtitle}</p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex items-center text-slate-400">
+                    <span className="material-symbols-outlined text-[20px] text-slate-400">chevron_right</span>
+                  </div>
+                </Link>
+              );
+            }
+
+            // In Development Row on Mobile
+            return (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-3.5 rounded-xl border border-surface-border bg-surface-card/60 opacity-70 gap-3 min-h-[72px]"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-surface-elevated text-slate-500 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-300 truncate">{item.title}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-elevated text-slate-400 border border-surface-border shrink-0">
+                        {item.badge}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{item.subtitle}</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-[18px] text-slate-500 shrink-0">lock</span>
+              </div>
+            );
+          })}
+        </section>
+
+        {/* 2. TABLET & DESKTOP BALANCED GRID (>= 640px) */}
+        <section className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6">
           {filteredSubjects.map((subject) => {
             const isReady = subject.status === 'ready';
             const colors = getSubjectColorStyles(subject.id);
@@ -124,87 +308,66 @@ export const SubjectExplorer: React.FC = () => {
               return (
                 <article
                   key={subject.id}
-                  className={`md:col-span-2 lg:col-span-2 rounded-2xl bg-gradient-to-b from-surface-card to-[#121620] border-2 ${colors.border} transition-all duration-300 shadow-xl shadow-primary/5 flex flex-col justify-between overflow-hidden relative group`}
+                  className={`rounded-2xl bg-gradient-to-b from-surface-card to-[#121620] border-2 ${colors.border} transition-all duration-300 shadow-lg flex flex-col justify-between overflow-hidden relative group`}
                 >
-                  {/* Top Bar Banner */}
-                  <div className="px-6 py-4 bg-surface-elevated/70 border-b border-surface-border flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg ${colors.iconBg} flex items-center justify-center`}>
-                        <span className="material-symbols-outlined text-[22px]">{subject.icon}</span>
+                  {/* Top Bar */}
+                  <div className="px-5 py-3.5 bg-surface-elevated/70 border-b border-surface-border flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-lg ${colors.iconBg} flex items-center justify-center`}>
+                        <span className="material-symbols-outlined text-[20px]">{subject.icon}</span>
                       </div>
                       <div>
-                        <span className={`text-xs font-mono font-medium tracking-wider ${colors.categoryText} uppercase`}>
-                          {subject.name} Laboratory
+                        <span className={`text-[10px] font-mono font-bold tracking-wider ${colors.categoryText} uppercase`}>
+                          {subject.name}
                         </span>
-                        <h2 className="text-xl font-bold text-white tracking-tight">{subject.category}</h2>
+                        <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">{subject.name} Laboratory</h2>
                       </div>
                     </div>
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                       {subject.badgeText}
                     </span>
                   </div>
 
-                  {/* Body Content */}
-                  <div className="p-6 sm:p-8 space-y-6">
-                    <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
-                      {subject.description}
-                    </p>
+                  {/* Body Content with Progressive Disclosure */}
+                  <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <p className="text-xs font-mono text-primary font-semibold uppercase tracking-wider">{subject.category}</p>
+                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mt-1 line-clamp-3">
+                        {subject.description}
+                      </p>
+                    </div>
 
-                    {/* Active Lab Topics Preview */}
-                    {subject.features && subject.features.length > 0 && (
-                      <div
-                        className={`grid grid-cols-1 ${
-                          subject.features.length > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
-                        } gap-4`}
-                      >
-                        {subject.features.map((feat, idx) => (
-                          <div
-                            key={idx}
-                            className="p-4 rounded-xl bg-surface-lowest/70 border border-surface-border/80 flex items-start gap-3"
-                          >
-                            <span className={`material-symbols-outlined ${colors.featureIcon} text-xl mt-0.5`}>
-                              {feat.icon}
-                            </span>
-                            <div>
-                              <h4 className="text-sm font-semibold text-white">{feat.title}</h4>
-                              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                                {feat.description}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Footer Action */}
-                  <div className="px-6 py-4 bg-surface-lowest/80 border-t border-surface-border flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-slate-500">grid_view</span>
-                        {subject.topicsCount} Core {subject.topicsCount === 1 ? 'Topic' : 'Modules'}
+                    <div className="flex items-center gap-3 text-xs font-mono text-slate-400 pt-2 border-t border-surface-border/50">
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-slate-500">grid_view</span>
+                        {subject.topicsCount} {subject.topicsCount === 1 ? 'Topic' : 'Modules'}
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-sm text-slate-500">science</span>
+                      <span className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[15px] text-slate-500">science</span>
                         {subject.experimentsCount} Experiments
                       </span>
                     </div>
+                  </div>
 
+                  {/* Footer Action */}
+                  <div className="px-5 py-3 bg-surface-lowest/80 border-t border-surface-border flex flex-wrap items-center justify-between gap-2">
                     <Link
                       to={subject.route}
-                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${colors.btnBg} text-white font-semibold text-sm shadow-lg transition-all group-hover:gap-3`}
+                      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl ${colors.btnBg} text-white font-semibold text-xs sm:text-sm shadow-md transition-all active:scale-95`}
                     >
                       <span>{subject.buttonText}</span>
-                      <span className="material-symbols-outlined text-base">arrow_forward</span>
+                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
                     </Link>
+
                     {subject.id === 'physics' && (
                       <Link
                         to="/physics"
                         data-testid="physics-chapters-link"
-                        className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-sky-500/40 text-sky-300 hover:bg-sky-500/10 font-semibold text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-sky-500/40 text-sky-300 hover:bg-sky-500/10 font-semibold text-xs transition-colors"
                       >
                         <span>All physics chapters</span>
+                        <span className="material-symbols-outlined text-xs">chevron_right</span>
                       </Link>
                     )}
                   </div>
@@ -212,24 +375,24 @@ export const SubjectExplorer: React.FC = () => {
               );
             }
 
-            // In Development Card
+            // In Development Card on Tablet/Desktop
             return (
               <article
                 key={subject.id}
-                className="rounded-2xl bg-surface-card/60 border border-surface-border flex flex-col justify-between overflow-hidden opacity-85 hover:opacity-100 transition-opacity"
+                className="rounded-2xl bg-surface-card/60 border border-surface-border flex flex-col justify-between overflow-hidden opacity-80 hover:opacity-100 transition-opacity"
               >
-                <div className="p-6 space-y-4">
+                <div className="p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-lg bg-surface-elevated text-slate-400 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[20px]">{subject.icon}</span>
+                    <div className="w-8 h-8 rounded-lg bg-surface-elevated text-slate-400 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[18px]">{subject.icon}</span>
                     </div>
-                    <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-surface-elevated text-slate-400 border border-surface-border">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-elevated text-slate-400 border border-surface-border">
                       {subject.badgeText}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-bold text-white tracking-tight">{subject.name}</h3>
+                    <h3 className="text-base font-bold text-white tracking-tight">{subject.name}</h3>
                     <p className="text-xs text-primary font-mono mt-0.5">{subject.category}</p>
                   </div>
 
@@ -238,8 +401,8 @@ export const SubjectExplorer: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="px-6 py-3.5 bg-surface-lowest/40 border-t border-surface-border flex items-center justify-between">
-                  <span className="text-xs font-mono text-slate-500">
+                <div className="px-5 py-3 bg-surface-lowest/40 border-t border-surface-border flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-slate-500">
                     {subject.topicsCount} Topics Planned
                   </span>
                   <button
@@ -256,34 +419,34 @@ export const SubjectExplorer: React.FC = () => {
           })}
         </section>
 
-        {/* Value Proposition Features Banner */}
-        <section className="mt-6 rounded-2xl bg-surface-card/40 border border-surface-border p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-slate-300">
-          <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-primary text-2xl mt-0.5">no_accounts</span>
+        {/* Compact Value Proposition Features Footer Banner */}
+        <section className="mt-2 sm:mt-4 rounded-xl bg-surface-card/40 border border-surface-border p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 text-slate-300">
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-primary text-xl mt-0.5 shrink-0">no_accounts</span>
             <div>
-              <h4 className="text-sm font-semibold text-white">Zero Authentication</h4>
-              <p className="text-xs text-slate-400 mt-1">
-                No login, no passwords, and no user tracking. Starts immediately in any modern browser.
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Zero Authentication</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                No login, no passwords, and zero tracking. Starts instantly in your browser.
               </p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-emerald-400 text-2xl mt-0.5">precision_manufacturing</span>
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-emerald-400 text-xl mt-0.5 shrink-0">precision_manufacturing</span>
             <div>
-              <h4 className="text-sm font-semibold text-white">Scientific Physical Modeling</h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Authoritative calculations from real electrical graph topology, thermodynamic kinematics, and Euclidean geometry.
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Authoritative Physical Modeling</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                Real electrical circuit solvers, molecular kinematics, and Euclidean geometry.
               </p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <span className="material-symbols-outlined text-purple-400 text-2xl mt-0.5">save</span>
+          <div className="flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-purple-400 text-xl mt-0.5 shrink-0">save</span>
             <div>
-              <h4 className="text-sm font-semibold text-white">Browser Local Storage</h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Saved experiments persist locally in your browser with exportable JSON `.lab` files.
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Local Browser Autosave</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
+                Experiments persist locally with exportable JSON `.lab` files.
               </p>
             </div>
           </div>
@@ -332,3 +495,4 @@ export const SubjectExplorer: React.FC = () => {
     </div>
   );
 };
+

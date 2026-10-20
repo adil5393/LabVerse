@@ -20,6 +20,7 @@ export interface WorkstationHeaderProps {
   onOpenMobileDrawer?: () => void;
   chapterTitle?: string;
   labTitle?: string;
+  chapterUrl?: string;
 }
 
 /**
@@ -43,6 +44,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
   onOpenMobileDrawer,
   chapterTitle = 'Ch. 7 Work, Energy & Machines',
   labTitle = 'Work Laboratory',
+  chapterUrl,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -67,24 +69,36 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
   };
 
   return (
-    <header className="flex justify-between items-center w-full px-3 sm:px-4 h-10 border-b border-outline-variant bg-surface-container shrink-0 z-50 select-none">
+    <header className="flex justify-between items-center w-full px-2 sm:px-4 h-10 border-b border-outline-variant bg-surface-container shrink-0 z-50 select-none overflow-x-auto no-scrollbar">
       {/* Left: Brand + Breadcrumb Navigation */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
-        {/* Mobile Drawer Trigger (visible on mobile only) */}
-        <button
-          type="button"
-          onClick={onOpenMobileDrawer}
-          className="md:hidden p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
-          aria-label="Toggle curriculum drawer"
+      <div className="flex items-center space-x-1 sm:space-x-3 shrink-0">
+        {/* Mobile Back Navigation: Returns to chapter or parent catalogue */}
+        <Link
+          to={chapterUrl || '/'}
+          className="sm:hidden p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center"
+          title={`Back to ${chapterTitle || 'Chapter'}`}
+          aria-label="Back to chapter"
         >
-          <span className="material-symbols-outlined text-[20px]">menu</span>
-        </button>
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+        </Link>
+
+        {/* Mobile Drawer Trigger (visible on mobile only if drawer given) */}
+        {onOpenMobileDrawer && (
+          <button
+            type="button"
+            onClick={onOpenMobileDrawer}
+            className="md:hidden p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            aria-label="Toggle curriculum drawer"
+          >
+            <span className="material-symbols-outlined text-[18px]">menu</span>
+          </button>
+        )}
 
         <div className="flex items-center space-x-1.5">
           <span className="text-primary flex items-center justify-center p-1 rounded bg-surface-container-high border border-outline-variant">
-            <span className="material-symbols-outlined text-primary text-[18px]">science</span>
+            <span className="material-symbols-outlined text-primary text-[16px] sm:text-[18px]">science</span>
           </span>
-          <Link to="/" className="text-sm font-semibold tracking-tight text-primary hover:text-white transition-colors">
+          <Link to="/" className="text-xs sm:text-sm font-semibold tracking-tight text-primary hover:text-white transition-colors">
             LabVerse
           </Link>
         </div>
@@ -97,7 +111,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             Physics
           </Link>
           <span className="text-outline">/</span>
-          <Link to="/physics/work" className="hover:text-on-surface transition-colors truncate max-w-[170px]" title={chapterTitle}>
+          <Link to={chapterUrl || "/physics/work"} className="hover:text-on-surface transition-colors truncate max-w-[170px]" title={chapterTitle}>
             {chapterTitle}
           </Link>
           <span className="text-outline">/</span>
@@ -106,7 +120,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
       </div>
 
       {/* Center: Workspace Mode Tabs & Beginner/Advanced Toggle */}
-      <div className="flex items-center space-x-2 sm:space-x-3 h-full">
+      <div className="flex items-center space-x-1 sm:space-x-3 h-full overflow-x-auto no-scrollbar mx-1">
         <div className="flex items-center space-x-0.5 sm:space-x-1 h-full pt-0.5" role="tablist" aria-label="Workstation modes">
           {/* Learn Tab */}
           <button
@@ -114,7 +128,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'learn'}
             onClick={() => onTabChange('learn')}
-            className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
+            className={`px-1.5 sm:px-3 h-full flex items-center text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'learn'
                 ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
@@ -129,14 +143,14 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'experiment'}
             onClick={() => onTabChange('experiment')}
-            className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
+            className={`px-1.5 sm:px-3 h-full flex items-center text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'experiment'
                 ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
             }`}
           >
             {activeTab === 'experiment' && (
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary mr-1.5 animate-pulse" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary mr-1 animate-pulse" />
             )}
             Experiment
           </button>
@@ -147,14 +161,14 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'analyze'}
             onClick={() => onTabChange('analyze')}
-            className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
+            className={`px-1.5 sm:px-3 h-full flex items-center text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'analyze'
                 ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
             }`}
           >
             {activeTab === 'analyze' && (
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-tertiary mr-1.5" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-tertiary mr-1" />
             )}
             Analyze
           </button>
@@ -165,7 +179,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'exercises'}
             onClick={() => onTabChange('exercises')}
-            className={`hidden md:flex px-2 sm:px-3 h-full items-center text-xs font-medium transition-colors ${
+            className={`hidden md:flex px-2 sm:px-3 h-full items-center text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'exercises'
                 ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
@@ -180,7 +194,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             role="tab"
             aria-selected={activeTab === 'blackboard'}
             onClick={() => onTabChange('blackboard')}
-            className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
+            className={`px-1.5 sm:px-3 h-full flex items-center text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'blackboard'
                 ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
@@ -217,7 +231,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
       </div>
 
       {/* Right: Transport, Undo/Redo, Utility Actions & Avatar */}
-      <div className="flex items-center space-x-1.5 sm:space-x-2">
+      <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
         {/* Undo / Redo */}
         {(onUndo || onRedo) && <div className="hidden sm:flex items-center border-r border-outline-variant pr-1.5 space-x-0.5">
           <button
@@ -252,7 +266,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
         {onTogglePlay && <button
           type="button"
           onClick={onTogglePlay}
-          className={`flex items-center space-x-1 px-3 py-1 font-mono text-xs font-semibold rounded shadow-sm transition-all active:translate-y-px ${
+          className={`flex items-center space-x-1 px-2.5 sm:px-3 py-1 font-mono text-xs font-semibold rounded shadow-sm transition-all active:translate-y-px shrink-0 ${
             playing
               ? 'bg-amber-400 text-slate-950 hover:bg-amber-300'
               : 'bg-primary text-on-primary hover:bg-primary-light'
@@ -261,7 +275,8 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           <span className="material-symbols-outlined text-[14px]">
             {playing ? 'pause' : 'play_arrow'}
           </span>
-          <span>{playing ? 'Pause' : 'Run Sim'}</span>
+          <span className="hidden sm:inline">{playing ? 'Pause' : 'Run Sim'}</span>
+          <span className="sm:hidden">{playing ? 'Pause' : 'Run'}</span>
         </button>}
 
         {/* Trailing Action Icons */}

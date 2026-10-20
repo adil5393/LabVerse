@@ -79,9 +79,10 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
   // Panel collapse states: on tablet widths the side panels start collapsed so the experiment keeps the room (they open from their rails).
   const narrow = typeof window !== 'undefined' && window.innerWidth < 1100;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
   const [isOutlinerCollapsed, setIsOutlinerCollapsed] = useState(narrow);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(narrow);
-  const [dockMode, setDockModeState] = useState<'collapsed' | 'balanced' | 'focus'>('balanced');
+  const [dockMode, setDockModeState] = useState<'collapsed' | 'balanced' | 'focus'>(isMobile ? 'collapsed' : 'balanced');
   // A dragged height overrides the preset heights until a preset button is chosen again.
   const [dockPx, setDockPx] = useState<number | null>(null);
   const setDockMode = (mode: 'collapsed' | 'balanced' | 'focus') => { setDockPx(null); setDockModeState(mode); };
@@ -161,6 +162,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
         chapterTitle={meta?.title || 'Scientific Laboratory'}
         labTitle={labTitle}
+        chapterUrl={meta?.chapterUrl || meta?.subjectUrl || '/'}
       />
 
       {/* 2. Workspace Content: Blackboard vs Scientific Workstation */}
@@ -219,14 +221,14 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                 data-testid="analysis-dock"
                 data-dock-mode={dockMode}
                 style={dockMode !== 'collapsed' && dockPx ? { height: dockPx } : undefined}
-                className={`shrink-0 max-h-[60vh] border-t border-outline-variant bg-surface-container flex flex-col relative ${dockPx && dockMode !== 'collapsed' ? '' : 'transition-all duration-200'} ${
+                className={`shrink-0 max-h-[75vh] sm:max-h-[60vh] border-t border-outline-variant bg-surface-container flex flex-col relative ${dockPx && dockMode !== 'collapsed' ? '' : 'transition-all duration-200'} ${
                   dockPx && dockMode !== 'collapsed'
                     ? ''
                     : dockMode === 'collapsed'
                     ? 'h-8'
                     : dockMode === 'focus'
-                    ? 'h-[360px]'
-                    : 'h-[220px]'
+                    ? 'h-[55vh] sm:h-[360px]'
+                    : 'h-[40vh] sm:h-[220px]'
                 }`}
               >
                 <div
@@ -234,15 +236,25 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                   onPointerDown={dragDock} onKeyDown={dockKey}
                   className="absolute -top-1 left-0 right-0 h-2 cursor-row-resize z-10 hover:bg-primary/40 focus:bg-primary/40 touch-none"
                 />
-                <div className="flex items-center justify-between px-3 h-8 border-b border-outline-variant bg-surface-container-high text-xs font-mono text-outline shrink-0">
+                <div
+                  onClick={() => {
+                    if (window.innerWidth < 640) {
+                      setDockMode(dockMode === 'collapsed' ? 'balanced' : 'collapsed');
+                    }
+                  }}
+                  className="flex items-center justify-between px-3 h-8 border-b border-outline-variant bg-surface-container-high text-xs font-mono text-outline shrink-0 cursor-pointer sm:cursor-default"
+                >
                   <div className="flex items-center space-x-2">
                     <span className="material-symbols-outlined text-[16px] text-primary">analytics</span>
                     <span className="font-bold uppercase tracking-wider text-on-surface whitespace-nowrap truncate">{analysisDockTitle}</span>
+                    <span className="sm:hidden text-[10px] text-primary font-mono ml-1">
+                      {dockMode === 'collapsed' ? '(Tap to expand)' : '(Tap to collapse)'}
+                    </span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <button
                       type="button"
-                      onClick={() => setDockMode('collapsed')}
+                      onClick={(e) => { e.stopPropagation(); setDockMode('collapsed'); }}
                       className={`p-1 rounded ${dockMode === 'collapsed' ? 'bg-surface-variant text-primary' : 'hover:text-white'}`}
                       title="Collapse Dock"
                     >
@@ -250,7 +262,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDockMode('balanced')}
+                      onClick={(e) => { e.stopPropagation(); setDockMode('balanced'); }}
                       className={`p-1 rounded ${dockMode === 'balanced' ? 'bg-surface-variant text-primary' : 'hover:text-white'}`}
                       title="Balanced Height (220px)"
                     >
@@ -258,7 +270,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDockMode('focus')}
+                      onClick={(e) => { e.stopPropagation(); setDockMode('focus'); }}
                       className={`p-1 rounded ${dockMode === 'focus' ? 'bg-surface-variant text-primary' : 'hover:text-white'}`}
                       title="Focus Height (360px)"
                     >

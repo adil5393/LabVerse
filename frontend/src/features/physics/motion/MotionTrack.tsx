@@ -280,7 +280,7 @@ export const MotionMoveButtons: React.FC<{ m: MotionTrackModel; compact?: boolea
   const { step, moveS } = m;
   const sz = compact ? 'sm' : 'md';
   return (
-    <div role="group" aria-label="Move the object" className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+    <div role="group" aria-label="Move the object" className="flex items-center overflow-x-auto no-scrollbar gap-1.5 sm:gap-2">
       <LabButton
         type="button"
         size={sz}

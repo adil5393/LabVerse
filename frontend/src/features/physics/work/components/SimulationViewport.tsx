@@ -296,7 +296,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
         }`}
       >
         {/* Floating Mini Viewport Toolbar (Top Left) */}
-        <div className="absolute top-3 left-3 z-20 flex items-center space-x-1 bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md">
+        <div className="absolute top-3 left-3 z-20 flex items-center space-x-1 max-w-[calc(100%-1.5rem)] overflow-x-auto no-scrollbar bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md">
           {/* Select Tool */}
           <button
             type="button"
@@ -381,19 +381,20 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           <button
             type="button"
             onClick={() => handleToggleVectors(!vectorsOn)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center space-x-1 transition-colors ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center space-x-1 transition-colors shrink-0 ${
               vectorsOn ? 'bg-surface-variant text-primary border border-primary/40' : 'text-on-surface-variant hover:bg-surface-variant'
             }`}
           >
             <span className="material-symbols-outlined text-[12px]">navigation</span>
-            <span>Vectors: {vectorsOn ? 'ON' : 'OFF'}</span>
+            <span className="hidden sm:inline">Vectors: {vectorsOn ? 'ON' : 'OFF'}</span>
+            <span className="sm:hidden">Vec</span>
           </button>
 
           {/* Grid Toggle */}
           <button
             type="button"
             onClick={() => setShowGrid(!showGrid)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${
               showGrid ? 'bg-surface-variant text-primary' : 'text-on-surface-variant hover:bg-surface-variant'
             }`}
           >
@@ -404,16 +405,17 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           <button
             type="button"
             onClick={() => onShowVerticalChange(!showVertical)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${
               showVertical ? 'bg-surface-variant text-secondary' : 'text-on-surface-variant hover:bg-surface-variant'
             }`}
           >
-            {showVertical ? 'W & N: ON' : 'W & N: OFF'}
+            <span className="hidden sm:inline">{showVertical ? 'W & N: ON' : 'W & N: OFF'}</span>
+            <span className="sm:hidden">W&N</span>
           </button>
         </div>
 
-        {/* Floating Viewport Telemetry HUD (Top Right - Genuine Physical Model Data) */}
-        <div className="absolute top-3 right-3 z-20 bg-surface-container/85 border border-outline-variant px-2.5 py-1 rounded text-right font-mono text-[11px] text-on-surface-variant shadow-sm backdrop-blur">
+        {/* Floating Viewport Telemetry HUD (Desktop only - hidden on mobile to avoid viewport clutter) */}
+        <div className="hidden sm:block absolute top-3 right-3 z-20 bg-surface-container/85 border border-outline-variant px-2.5 py-1 rounded text-right font-mono text-[11px] text-on-surface-variant shadow-sm backdrop-blur">
           <div className="text-[10px] uppercase text-outline">
             Cam: {horizontal ? 'Orthographic 1D-X' : 'Vertical Rail 1D-Y'} • {Math.round(camera.zoom * 100)}%
           </div>
@@ -724,8 +726,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           </svg>
         </div>
 
-        {/* In-Canvas Quick State Annotation (Bottom-Left) */}
-        <div className="absolute bottom-2 left-3 font-mono text-[10px] sm:text-xs text-outline flex items-center space-x-2 sm:space-x-3 bg-surface-container/80 px-2.5 py-1 rounded border border-outline-variant/40 backdrop-blur">
+        {/* In-Canvas Quick State Annotation (Desktop only to maximize mobile viewport) */}
+        <div className="hidden sm:flex absolute bottom-2 left-3 font-mono text-[10px] sm:text-xs text-outline items-center space-x-2 sm:space-x-3 bg-surface-container/80 px-2.5 py-1 rounded border border-outline-variant/40 backdrop-blur">
           <span>RIG: Linear 1-DOF Dynamics</span>
           <span>•</span>
           <span className="text-tertiary font-bold">Work = F · Δx · cos(θ)</span>
@@ -735,21 +737,21 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
       </div>
 
       {/* Docked Bottom Transport / Playback Strip */}
-      <div className="h-12 bg-surface-container border-t border-outline-variant px-3 sm:px-4 flex items-center justify-between z-30 select-none">
+      <div className="h-11 sm:h-12 bg-surface-container border-t border-outline-variant px-2 sm:px-4 flex items-center justify-between z-30 select-none overflow-x-auto no-scrollbar">
         {/* Playback action buttons */}
-        <div className="flex items-center space-x-1.5" role="group" aria-label="Playback Controls">
+        <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0" role="group" aria-label="Playback Controls">
           <button
             type="button"
             onClick={onTogglePlay}
             disabled={!r.valid || s === 0}
             data-testid="work-play"
-            className={`h-8 px-3.5 rounded font-mono text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm active:translate-y-px disabled:opacity-40 disabled:pointer-events-none ${
+            className={`h-7 sm:h-8 px-2.5 sm:px-3.5 rounded font-mono text-xs font-semibold flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm active:translate-y-px disabled:opacity-40 disabled:pointer-events-none shrink-0 ${
               playing
                 ? 'bg-amber-400 text-slate-950 hover:bg-amber-300'
                 : 'bg-primary text-on-primary hover:bg-primary-light'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
               {playing ? 'pause' : progress >= 1 ? 'replay' : 'play_arrow'}
             </span>
             <span>{playing ? 'Pause' : progress >= 1 ? 'Replay' : 'Play'}</span>
@@ -761,10 +763,10 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               const next = Math.min(1, progress + 0.05);
               onProgressChange(next);
             }}
-            className="h-8 px-2 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded font-mono text-[11px] flex items-center space-x-1 transition-colors"
+            className="h-7 sm:h-8 px-1.5 sm:px-2 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded font-mono text-[10px] sm:text-[11px] flex items-center space-x-0.5 sm:space-x-1 transition-colors shrink-0"
             title="Step Forward +0.05s"
           >
-            <span className="material-symbols-outlined text-[15px]">step</span>
+            <span className="material-symbols-outlined text-[14px] sm:text-[15px]">step</span>
             <span>+0.05</span>
           </button>
 
@@ -772,16 +774,16 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             type="button"
             onClick={onReset}
             data-testid="work-reset"
-            className="h-8 w-8 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded flex items-center justify-center transition-colors"
+            className="h-7 w-7 sm:h-8 sm:w-8 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded flex items-center justify-center transition-colors shrink-0"
             title="Reset to Start"
           >
-            <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+            <span className="material-symbols-outlined text-[15px] sm:text-[16px]">restart_alt</span>
           </button>
         </div>
 
         {/* Central Timeline Scrub Track */}
-        <div className="flex-1 max-w-xs sm:max-w-md mx-3 sm:mx-6 flex items-center space-x-2 sm:space-x-3">
-          <span className="font-mono text-[11px] text-primary whitespace-nowrap">
+        <div className="flex-1 max-w-xs sm:max-w-md mx-2 sm:mx-6 flex items-center space-x-1.5 sm:space-x-3 min-w-[100px]">
+          <span className="font-mono text-[10px] sm:text-[11px] text-primary whitespace-nowrap">
             t = {simTime}s
           </span>
           <div className="relative w-full flex items-center">
@@ -798,7 +800,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               className="w-full h-1.5 bg-surface-container-lowest rounded-lg appearance-none cursor-pointer accent-primary border border-outline-variant"
             />
           </div>
-          <span className="font-mono text-[11px] text-outline whitespace-nowrap">
+          <span className="font-mono text-[10px] sm:text-[11px] text-outline whitespace-nowrap hidden sm:inline">
             T_max = {SIM_SECONDS.toFixed(2)}s
           </span>
         </div>

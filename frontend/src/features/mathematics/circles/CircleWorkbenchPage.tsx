@@ -13,23 +13,20 @@
  *    - Independent Explore, Investigate, and Practice engines
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCircleStore } from '../../../store/useCircleStore';
 import { useGuidedLearningStore } from '../../../store/useGuidedLearningStore';
 import { CIRCLES_GUIDED_LESSONS } from '../../../engine/mathematics/circles/curriculumPath';
-import { CircleToolbar } from './CircleToolbar';
-import { CircleGuidedToolbar } from './CircleGuidedToolbar';
 import { CircleToolRail } from './CircleToolRail';
 import { CircleCanvas } from './CircleCanvas';
 import { CircleInspectorPanel } from './CircleInspectorPanel';
 import { CircleGuidedInspector } from './CircleGuidedInspector';
 import type { CircleMode } from '../../../engine/mathematics/circles/types';
+import { WorkspaceShell } from '../../workspace';
 
 export const CircleWorkbenchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
-
   const { setExperiment, setMode, fitToConstruction } = useCircleStore();
   const { selectLesson } = useGuidedLearningStore();
 
@@ -63,50 +60,75 @@ export const CircleWorkbenchPage: React.FC = () => {
     }
   }, [lessonParam, expParam, modeParam, isGuidedMode, activeGuidedLesson, setExperiment, selectLesson, setMode, fitToConstruction]);
 
-  return (
-    <div className="flex flex-col h-screen w-screen bg-surface-lowest text-slate-100 overflow-hidden font-sans">
-      {/* 1. Header Toolbar (Guided vs Free Lab) */}
-      {isGuidedMode ? (
-        <CircleGuidedToolbar
-          isPanelOpen={isPanelOpen}
-          onTogglePanel={() => setIsPanelOpen(!isPanelOpen)}
-        />
-      ) : (
-        <CircleToolbar />
-      )}
+  const outlinerContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      <CircleToolRail
+        allowedTools={isGuidedMode && activeGuidedLesson ? activeGuidedLesson.allowedTools : undefined}
+      />
+    </div>
+  );
 
-      {/* 2. Main Layout: Tool Rail | Canvas | Inspector Panel */}
-      <div className="flex-1 flex flex-row overflow-hidden relative">
-        {/* Left: Tool Rail (Gradually filtered in Guided Mode, complete in Free Lab) */}
-        <CircleToolRail
-          allowedTools={isGuidedMode && activeGuidedLesson ? activeGuidedLesson.allowedTools : undefined}
-        />
+  const viewportContent = (
+    <div className="flex-1 h-full relative overflow-hidden">
+      <CircleCanvas />
 
-        {/* Center: Interactive Geometry Canvas */}
-        <div className="flex-1 h-full relative overflow-hidden">
-          <CircleCanvas />
-
-          {/* Smart TV / Beginner floating instruction pill in Guided Mode */}
-          {isGuidedMode && activeGuidedLesson && (
-            <div className="absolute top-4 left-4 z-10 pointer-events-none max-w-md hidden sm:block">
-              <div className="px-3.5 py-2 rounded-xl bg-surface-card/90 backdrop-blur-md border border-amber-500/30 text-xs shadow-lg space-y-0.5">
-                <div className="font-bold text-amber-400 font-mono text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span>Lesson {activeGuidedLesson.lessonNumber} Goal</span>
-                </div>
-                <div className="text-slate-200 text-xs leading-snug">
-                  {activeGuidedLesson.experimentGuide.instruction}
-                </div>
-              </div>
+      {/* Smart TV / Beginner floating instruction pill in Guided Mode */}
+      {isGuidedMode && activeGuidedLesson && (
+        <div className="absolute top-4 left-4 z-10 pointer-events-none max-w-md hidden sm:block">
+          <div className="px-3.5 py-2 rounded-xl bg-surface-card/90 backdrop-blur-md border border-amber-500/30 text-xs shadow-lg space-y-0.5">
+            <div className="font-bold text-amber-400 font-mono text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span>Lesson {activeGuidedLesson.lessonNumber} Goal</span>
             </div>
-          )}
+            <div className="text-slate-200 text-xs leading-snug">
+              {activeGuidedLesson.experimentGuide.instruction}
+            </div>
+          </div>
         </div>
+      )}
+    </div>
+  );
 
-        {/* Right: Inspector Panel (Guided Orchestrator vs Scientific Inspector) */}
-        {isPanelOpen && (
-          isGuidedMode ? <CircleGuidedInspector /> : <CircleInspectorPanel />
-        )}
+  const inspectorContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      {isGuidedMode ? <CircleGuidedInspector /> : <CircleInspectorPanel />}
+    </div>
+  );
+
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-2 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">EXPERIMENT</span>
+          <span className="text-primary font-bold text-sm uppercase">{expParam ?? 'Chords & Angles'}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">MODE</span>
+          <span className="text-white font-bold text-sm uppercase">{isGuidedMode ? 'Guided Lesson' : (modeParam ?? 'Explore')}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">TOOLSET</span>
+          <span className="text-white font-bold text-sm">{isGuidedMode ? 'Stage Filtered' : 'Unrestricted'}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">THEOREM VERIFICATION</span>
+          <span className="text-emerald-400 font-bold text-sm">Active Invariant</span>
+        </div>
       </div>
     </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="circles"
+      labTitle="Circles Laboratory"
+      outlinerTitle="Construction Rail"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Properties & Proofs"
+      inspector={inspectorContent}
+      analysisDockTitle="Theorem Telemetry & Invariants"
+      analysisDock={analysisDockContent}
+    />
   );
 };

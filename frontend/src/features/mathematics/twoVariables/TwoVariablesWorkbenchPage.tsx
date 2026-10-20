@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useTwoVariablesStore } from '../../../store/useTwoVariablesStore';
 import { TV_GUIDED_LESSONS } from '../../../engine/mathematics/twoVariables/curriculumPath';
 import { TV_EXPERIMENTS } from '../../../engine/mathematics/twoVariables/experimentRegistry';
@@ -26,6 +26,8 @@ const TABS: { id: TVWorkbenchTab; label: string; icon: string }[] = [
 ];
 
 const isTab = (v: string | null): v is TVWorkbenchTab => v === 'graph' || v === 'system' || v === 'algebra';
+
+import { WorkspaceShell } from '../../workspace';
 
 export const TwoVariablesWorkbenchPage: React.FC = () => {
   const [params] = useSearchParams();
@@ -60,53 +62,117 @@ export const TwoVariablesWorkbenchPage: React.FC = () => {
   const lessonNode = guided ? <GuidedPanel /> : undefined;
   const showPractice = mode === 'practice' && !guided;
 
-  return (
-    <div className="flex flex-col h-[100dvh] w-full bg-surface-lowest text-slate-100 overflow-hidden font-sans">
-      <header className="min-h-14 bg-surface-low border-b border-surface-border px-2 sm:px-4 py-1.5 flex items-center gap-2 shrink-0 flex-wrap">
-        <Link to="/mathematics/two-variables" className="min-h-11 px-3 inline-flex items-center gap-1.5 rounded-lg bg-surface-card border border-surface-border text-slate-300 hover:text-white text-xs font-semibold" aria-label="Back to the chapter page">
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          <span className="hidden sm:inline">Chapter</span>
-        </Link>
-
-        {guided ? (
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-mono text-amber-400 font-bold">Lesson {lesson!.lessonNumber}</div>
-            <div className="text-sm font-bold text-white truncate">{lesson!.title}</div>
-          </div>
-        ) : (
-          <>
-            <select
-              value={experimentId}
-              onChange={(e) => {
+  // Outliner: Workbench Views & Presets
+  const outlinerContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Workbench View</span>
+        <div className="grid grid-cols-1 gap-1.5 mt-2">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              aria-pressed={activeTab === t.id && mode === 'explore'}
+              onClick={() => {
                 setMode('explore');
-                setExperiment(e.target.value);
+                setActiveTab(t.id);
               }}
-              aria-label="Experiment preset"
-              className="min-h-11 bg-surface-card border border-surface-border text-slate-200 text-xs font-semibold rounded-lg px-2 max-w-[180px] sm:max-w-xs"
+              className={`min-h-[38px] text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                activeTab === t.id && mode === 'explore'
+                  ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                  : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+              }`}
             >
-              {TV_EXPERIMENTS.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
-            </select>
-
-            {mode === 'explore' && (
-              <nav className="flex items-center gap-1 bg-surface-lowest p-1 rounded-xl border border-surface-border text-xs font-mono" aria-label="Workbench">
-                {TABS.map((t) => (
-                  <button key={t.id} type="button" aria-pressed={activeTab === t.id} onClick={() => setActiveTab(t.id)} className={`min-h-10 px-2.5 sm:px-3 rounded-lg font-bold flex items-center gap-1.5 ${activeTab === t.id ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}>
-                    <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
-                    <span className="hidden md:inline">{t.label}</span>
-                  </button>
-                ))}
-              </nav>
-            )}
-
-            <div className="ml-auto flex items-center gap-1 bg-surface-card p-1 rounded-lg border border-surface-border text-xs font-mono font-semibold">
-              {(['explore', 'practice'] as const).map((m) => (
-                <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)} className={`min-h-10 px-3 rounded capitalize ${mode === m ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}>{m}</button>
-              ))}
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
+                <span>{t.label}</span>
+              </div>
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-pressed={mode === 'practice'}
+            onClick={() => setMode('practice')}
+            className={`min-h-[38px] text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+              mode === 'practice'
+                ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">quiz</span>
+              <span>Chapter Practice</span>
             </div>
-          </>
-        )}
-      </header>
+          </button>
+        </div>
+      </div>
 
+      <div className="pt-2 border-t border-outline-variant">
+        <div className="flex items-center justify-between pb-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Experiment Presets</span>
+          <span className="text-[11px] font-mono text-primary font-bold">{TV_EXPERIMENTS.length} Total</span>
+        </div>
+        <div className="space-y-1.5">
+          {TV_EXPERIMENTS.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => {
+                setMode('explore');
+                setExperiment(e.id);
+              }}
+              className={`min-h-[36px] w-full text-left px-2.5 py-1.5 rounded-lg border text-xs transition-colors ${
+                experimentId === e.id
+                  ? 'bg-surface-elevated border-primary text-white font-semibold'
+                  : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+              }`}
+            >
+              <div className="truncate">{e.title}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Inspector: Equations & Systems theory
+  const inspectorContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      {guided && lesson ? (
+        <div>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">
+            Lesson {lesson.lessonNumber}
+          </span>
+          <h4 className="text-white font-bold text-sm mt-1">{lesson.title}</h4>
+          <p className="text-xs text-slate-300 mt-1 leading-relaxed">{lesson.learningObjective || lesson.subtitle}</p>
+        </div>
+      ) : (
+        <div>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Equation Principles</span>
+          <div className="mt-2 space-y-2 font-mono text-slate-300">
+            <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+              <p className="font-bold text-white mb-1">General Linear Form</p>
+              <p>ax + by + c = 0</p>
+            </div>
+            <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+              <p className="font-bold text-white mb-1">Slope-Intercept Form</p>
+              <p>y = mx + c &nbsp;(m = &minus;a/b)</p>
+            </div>
+            <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+              <p className="font-bold text-white mb-1">Simultaneous Intersection</p>
+              <p className="text-[10px] leading-relaxed">
+                Unique solution if slopes differ; coincident if equations proportional.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Viewport: Graph / System / Algebra / Practice
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full relative overflow-hidden">
       {showPractice ? (
         <PracticePanel />
       ) : activeTab === 'system' ? (
@@ -117,5 +183,43 @@ export const TwoVariablesWorkbenchPage: React.FC = () => {
         <GraphWorkbench lesson={lessonNode} />
       )}
     </div>
+  );
+
+  // Analysis Dock: Algebraic Telemetry
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-2 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">ACTIVE VIEW</span>
+          <span className="text-primary font-bold text-sm uppercase">{mode === 'practice' ? 'Practice' : activeTab}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">MODE</span>
+          <span className="text-white font-bold text-sm uppercase">{mode}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">EQUATION FORM</span>
+          <span className="text-white font-bold text-sm">ax + by + c = 0</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">SYSTEM STATUS</span>
+          <span className="text-emerald-400 font-bold text-sm">Linear Equilibrium</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="two-variables"
+      labTitle="Two Variables, One Line"
+      outlinerTitle="Views & Presets"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Properties & Systems"
+      inspector={inspectorContent}
+      analysisDockTitle="Algebraic Telemetry & Solutions"
+      analysisDock={analysisDockContent}
+    />
   );
 };

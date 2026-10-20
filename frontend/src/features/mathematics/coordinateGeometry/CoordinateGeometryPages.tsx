@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { COORDINATE_GEOMETRY as CHAPTER } from '../../../engine/mathematics/coordinateGeometry/content';
 import { ChapterHub } from '../../education/ChapterHub';
@@ -7,6 +7,7 @@ import { LearnLessonPage } from '../../education/LearnLessonPage';
 import { IndependentPractice } from '../../education/LessonParts';
 import { VisualRegistryProvider } from '../../education/visuals';
 import { CG_VISUALS } from './visuals';
+import { ChapterWorkspaceNav } from '../../workspace';
 
 const CRUMB = 'Class 9 Coordinate Geometry';
 
@@ -32,11 +33,12 @@ export const CoordinateGeometryPracticePage: React.FC = () => (
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid">
       <GlobalHeader />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 md:px-6 py-6 space-y-6">
-        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400">
-          <Link to="/mathematics" className="hover:text-amber-400">Mathematics</Link><span>/</span>
-          <Link to={CHAPTER.routes.landing} className="hover:text-amber-400">{CRUMB}</Link><span>/</span>
-          <span className="text-amber-400 font-bold">Chapter practice</span>
-        </nav>
+        <ChapterWorkspaceNav
+          chapterId="coordinate-geometry"
+          currentPageTitle="Chapter Practice"
+          currentMode="practice"
+          showBackToLab={true}
+        />
         <h1 className="text-3xl font-black text-white">Chapter practice</h1>
         <p className="text-sm text-slate-300">Try any problems in any order. Each one counts toward the lesson it belongs to, and the same honest rules apply: independent success means the first try with no hints or solutions.</p>
         {CHAPTER.units.map((u) => (

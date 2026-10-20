@@ -5,8 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { GlobalHeader } from '../../../components/GlobalHeader';
+import { useSearchParams } from 'react-router-dom';
 import { PAIR_EXPERIMENTS, TB_EXPERIMENTS, tbExperimentById, tbOutcome, type TbExperiment, type TbRoute } from '../../../engine/physics/forces/twoBodyExperiments';
 import { DEFAULT_TWO_BODY, type TwoBodySetup } from '../../../engine/physics/forces/twoBody';
 import { PairIdentifyView, TwoBodyView } from './TwoBody';
@@ -72,6 +71,8 @@ const ComparePredict: React.FC = () => {
   );
 };
 
+import { WorkspaceShell } from '../../workspace';
+
 export const ForcesInteractions: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const id = params.get('experiment');
@@ -81,50 +82,161 @@ export const ForcesInteractions: React.FC = () => {
   const [load, setLoad] = useState<{ setup: TwoBodySetup; key: number }>({ setup: tb ? tb.routes[0].setup : params.get('arrangement') === 'tow' ? tow : DEFAULT_TWO_BODY, key: 0 });
   const select = (x: string | null) => { const e = tbExperimentById(x); setParams(x ? { experiment: x } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_TWO_BODY, key: l.key + 1 })); };
   const all = [...TB_EXPERIMENTS.map((e) => ({ id: e.id, title: e.title })), ...PAIR_EXPERIMENTS.map((e) => ({ id: e.id, title: e.title }))];
-  return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="forces-interactions">
-      <GlobalHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
-          <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
-          <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
-          <Link to="/physics/forces" className="inline-flex items-center min-h-[44px] hover:text-sky-400">How Forces Affect Motion</Link><span>/</span>
-          <span className="text-sky-300 font-bold">Interactions Laboratory</span>
-        </nav>
-        <header className="space-y-2">
-          <h1 className="text-3xl font-black text-white">Interactions Laboratory</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">Two objects interact: each exerts a force on the other. Push two carts apart, change the masses and see that the two forces are equal and opposite while the accelerations differ. Free exploration: nothing to unlock.</p>
-        </header>
 
-        {!pairExp && <section aria-label="Two carts"><TwoBodyView key={`${tb?.id ?? 'free'}-${load.key}`} initial={load.setup} editable /></section>}
-
-        <section aria-label="Guided investigations" className="space-y-3">
-          <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
-          <div role="group" aria-label="Choose an investigation" className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={!id} onClick={() => select(null)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${!id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={!id ? { borderColor: PHYS.position } : undefined}>{!id ? '✓ ' : ''}Free exploration</button>
-            {all.map((x) => <button key={x.id} type="button" aria-pressed={id === x.id} data-experiment={x.id} onClick={() => select(x.id)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${id === x.id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={id === x.id ? { borderColor: PHYS.prediction } : undefined}>{id === x.id ? '✓ ' : ''}{x.id}. {x.title}</button>)}
+  // Outliner: Investigation Selector
+  const outlinerContent = (
+    <div className="p-3 space-y-3 text-xs font-sans">
+      <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+        <span className="text-[11px] font-mono text-primary font-bold">{all.length} Total</span>
+      </div>
+      <div role="group" aria-label="Choose an investigation" className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          aria-pressed={!id}
+          onClick={() => select(null)}
+          className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+            !id
+              ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+              : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">{!id ? 'check_circle' : 'science'}</span>
+            <span>Free Exploration</span>
           </div>
-          {tb && (
-            <div className="space-y-3" data-testid="tb-experiment-panel">
-              <div className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" style={{ borderLeft: `4px solid ${PHYS.time}` }}>
-                <h3 className="text-lg font-bold text-white">Experiment {tb.id}: {tb.title}</h3>
-                <p className="text-sm text-slate-300">{tb.goal} Predict first, set up the experiment, press Play or move the time slider, then compare.</p>
-              </div>
-              {tb.routes.map((r) => <RoutePanel key={`${tb.id}-${r.id}`} route={r} onRun={(s) => setLoad((l) => ({ setup: s, key: l.key + 1 }))} />)}
-              <p className="text-sm text-slate-200 rounded-xl border p-3" style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}><strong style={{ color: PHYS.correct }}>{'✓ '}What to notice: </strong>{tb.lesson}</p>
+        </button>
+        {all.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            aria-pressed={id === x.id}
+            data-experiment={x.id}
+            onClick={() => select(x.id)}
+            className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+              id === x.id
+                ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">{x.id}. {x.title}</span>
+              {id === x.id && <span className="material-symbols-outlined text-sm text-primary">check</span>}
             </div>
-          )}
-          {pairExp && id === 'S' && <div className="space-y-3" data-testid="pair-experiment-panel"><div className="rounded-xl border border-surface-border bg-surface-card p-3" style={{ borderLeft: `4px solid ${PHYS.time}` }}><h3 className="text-lg font-bold text-white">Experiment S: {pairExp.title}</h3><p className="text-sm text-slate-300">{pairExp.goal}</p></div><ComparePredict /></div>}
-          {pairExp && id !== 'S' && (
-            <div className="space-y-3" data-testid="pair-experiment-panel">
-              <div className="rounded-xl border border-surface-border bg-surface-card p-3" style={{ borderLeft: `4px solid ${PHYS.time}` }}><h3 className="text-lg font-bold text-white">Experiment {pairExp.id}: {pairExp.title}</h3><p className="text-sm text-slate-300">{pairExp.goal} Look at the forces on each object, choose two forces, then check.</p></div>
-              <PairIdentifyView key={pairExp.id} scenarioId={pairExp.scenarios[0]} />
-            </div>
-          )}
-          {!id && <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>}
-          <p className="text-xs text-slate-400">These are <em>model</em> results for idealised carts on a frictionless track. The model does not simulate collisions, rebounds or deformation.</p>
-        </section>
-      </main>
+          </button>
+        ))}
+      </div>
     </div>
+  );
+
+  // Inspector: Third law principles
+  const inspectorContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Newton&apos;s Third Law</span>
+        <div className="mt-2 space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Action &amp; Reaction</p>
+            <p>F<sub>A on B</sub> = &minus;F<sub>B on A</sub></p>
+          </div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Two Different Bodies</p>
+            <p className="text-[10px] leading-relaxed">
+              Action and reaction forces never act on the same object, so they never cancel each other out.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {tb && (
+        <div className="pt-2 border-t border-outline-variant space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigation {tb.id}</span>
+          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
+            <h4 className="font-bold text-white text-xs">{tb.title}</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{tb.goal}</p>
+            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
+              <strong>Notice:</strong> {tb.lesson}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pairExp && (
+        <div className="pt-2 border-t border-outline-variant space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Pair Study {pairExp.id}</span>
+          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
+            <h4 className="font-bold text-white text-xs">{pairExp.title}</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{pairExp.goal}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Viewport: Simulation / Interaction Canvas
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="forces-interactions">
+      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
+        {!pairExp && <TwoBodyView key={`${tb?.id ?? 'free'}-${load.key}`} initial={load.setup} editable />}
+        {pairExp && id === 'S' && <ComparePredict />}
+        {pairExp && id !== 'S' && <PairIdentifyView key={pairExp.id} scenarioId={pairExp.scenarios[0]} />}
+      </div>
+    </div>
+  );
+
+  // Analysis Dock: POE investigations
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-3 font-sans">
+      {tb && (
+        <div className="space-y-3" data-testid="tb-experiment-panel">
+          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+            <span className="text-primary font-bold">Experiment {tb.id}: {tb.title}</span>
+            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+          </div>
+          {tb.routes.map((r) => <RoutePanel key={`${tb.id}-${r.id}`} route={r} onRun={(s) => setLoad((l) => ({ setup: s, key: l.key + 1 }))} />)}
+          <p className="text-xs text-slate-400">
+            Model results for idealised carts on a frictionless track; equal mutual forces with accelerations inversely proportional to masses.
+          </p>
+        </div>
+      )}
+
+      {pairExp && (
+        <div className="space-y-2" data-testid="pair-experiment-panel">
+          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+            <span className="text-primary font-bold">Experiment {pairExp.id}: {pairExp.title}</span>
+            <span className="text-outline">Free-Body Diagram Analysis</span>
+          </div>
+          <p className="text-slate-300 text-xs">
+            Look at the forces on each object, verify that third-law pairs are equal in magnitude, opposite in direction, and act on separate entities.
+          </p>
+        </div>
+      )}
+
+      {!id && (
+        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
+          <span className="material-symbols-outlined text-3xl text-outline">compare_arrows</span>
+          <p className="font-mono text-xs text-slate-300">
+            Free Exploration Mode: Two interacting carts on a frictionless horizontal track.
+          </p>
+          <p className="text-[11px] text-outline">
+            Choose an investigation in the left Explorer to test predictions against Newton&apos;s Third Law.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="forces"
+      labTitle="Two-Body Interactions"
+      outlinerTitle="Interactions & Pairs"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Interaction Inspector"
+      inspector={inspectorContent}
+      analysisDockTitle="Analysis & POE"
+      analysisDock={analysisDockContent}
+    />
   );
 };

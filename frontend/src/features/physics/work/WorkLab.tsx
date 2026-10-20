@@ -28,16 +28,24 @@ import {
   type AnalysisTab,
   type DockSizeMode,
 } from './components';
+import { useChapterNavigation } from '../../workspace';
 
 export const WorkLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+  const { registerLab, getLabSetup } = useChapterNavigation('work');
 
   const exp = workExperimentById(params.get('experiment'));
+  const restoredSetup = !params.get('experiment') ? getLabSetup<WorkSetup>() : undefined;
   const [load, setLoad] = useState<{ setup: WorkSetup; key: number }>({
-    setup: exp ? exp.routes[0].setup : DEFAULT_WORK,
+    setup: restoredSetup ?? (exp ? exp.routes[0].setup : DEFAULT_WORK),
     key: 0,
   });
+
+  // Sync active lab context and parameters for seamless return from exercises/lessons
+  React.useEffect(() => {
+    registerLab(window.location.pathname + window.location.search, 'Work Laboratory', load.setup);
+  }, [registerLab, load.setup]);
 
   // Undo / Redo parameter history
   const [undoHistory, setUndoHistory] = useState<WorkSetup[]>([]);
@@ -144,6 +152,8 @@ export const WorkLab: React.FC = () => {
     <div
       className="h-screen w-screen overflow-hidden flex flex-col bg-background text-on-surface antialiased select-none font-sans"
       data-chapter="work-lab"
+      data-workspace="work"
+      data-testid="workspace-shell"
     >
       {/* 1. TOP WORKSPACE APPLICATION BAR (Stitch Blender-inspired header) */}
       <WorkstationHeader

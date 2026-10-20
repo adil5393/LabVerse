@@ -13,6 +13,7 @@ import { VisualRegistryProvider } from '../../education/visuals';
 import { QuestionView } from '../../education/QuestionView';
 import { PHYS } from '../motion/physicsColors';
 import { WORK_VISUALS } from './visuals';
+import { ChapterWorkspaceNav } from '../../workspace';
 
 export const WorkPractice: React.FC = () => {
   const [first, setFirst] = useState<Record<string, boolean>>({});
@@ -24,12 +25,12 @@ export const WorkPractice: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="work-practice">
       <GlobalHeader />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
-          <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
-          <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
-          <Link to="/physics/work" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Work, Energy, and Simple Machines</Link><span>/</span>
-          <span className="text-sky-300 font-bold">Chapter Practice</span>
-        </nav>
+        <ChapterWorkspaceNav
+          chapterId="work"
+          currentPageTitle="Chapter Practice"
+          currentMode="practice"
+          showBackToLab={true}
+        />
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">Chapter Practice</h1>
           <p className="text-sm text-slate-300 max-w-3xl">{WORK_PRACTICE_ITEMS.length} original questions across the whole chapter: work, energy, conservation, friction, power, machines, diagrams and the reasoning behind the derivations. Open to everyone, in any order. Each question appears once, and your first answer is the one that counts in the summary.</p>

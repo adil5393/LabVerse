@@ -29,9 +29,11 @@ export interface ForceFigureProps {
   alt: string;
   /** Show the net force and individual forces listing text under the drawing. */
   listing?: boolean;
+  /** Size the drawing to its container (the lab viewport) instead of to the page width. */
+  fill?: boolean;
 }
 
-export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, showIndividual, showNet, alt, listing = true }) => {
+export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, showIndividual, showNet, alt, listing = true, fill = false }) => {
   const horizontals = arrows.filter((a) => a.direction === 'left' || a.direction === 'right');
   const verticals = arrows.filter((a) => a.direction === 'up' || a.direction === 'down');
   const maxMag = Math.max(1e-9, ...horizontals.map((a) => a.magnitude), net?.magnitude ?? 0);
@@ -60,8 +62,8 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
   };
 
   return (
-    <figure className="space-y-2 min-w-0" data-testid="force-figure">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} className="w-full rounded-xl bg-surface-lowest border border-surface-border">
+    <figure className={`min-w-0 ${fill ? 'h-full min-h-0 w-full' : 'space-y-2'}`} data-testid="force-figure">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
         <line x1={20} y1={GROUND} x2={W - 20} y2={GROUND} stroke={PHYS.axis} strokeWidth={3} />
         <rect x={CX - BW / 2} y={top} width={BW} height={BH} rx={6} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
         <text x={CX} y={top + BH / 2 + 4} textAnchor="middle" fontSize={13} fontWeight={700} fill="#e2e8f0">{object}</text>

@@ -26,6 +26,7 @@ import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { netArrow } from '../../../engine/physics/forces/forceDiagram';
 import { toArrows } from '../../../engine/physics/forces/learn/questions';
+import { ChapterWorkspaceNav } from '../../workspace';
 
 export const FORCE_VISUALS: VisualRegistry = { forceCart: ForceCartVisual, forceArrows: ForceArrowsVisual, brakingDemo: BrakingDemoVisual, motionGraphs: MotionGraphsVisual, secondLawDerivation: SecondLawDerivationVisual, twoBody: TwoBodyVisual, pairIdentify: PairIdentifyVisual };
 
@@ -228,7 +229,12 @@ export const ForcesExercises: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="forces-exercises">
       <GlobalHeader />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <Crumb last="NCERT Exercises" />
+        <ChapterWorkspaceNav
+          chapterId="forces"
+          currentPageTitle="NCERT Exercises"
+          currentMode="exercises"
+          showBackToLab={true}
+        />
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">NCERT Exercises: Chapter 6</h1>
           <p className="text-sm text-slate-300">The chapter ends with sixteen questions (“Revise, Reflect, Refine”), listed here with their textbook numbers. The summaries are in our own words; open the textbook for the exact wording. {solved.length} of 16 have step-by-step solutions so far (questions {solved.join(', ')}); the others are upcoming, with the milestone that will cover them, and show no solution.</p>

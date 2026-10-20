@@ -56,46 +56,154 @@ const RoutePanel: React.FC<{ route: KineticRoute; onRun: (r: KineticRoute) => vo
   );
 };
 
+import { WorkspaceShell } from '../../workspace';
+
 export const KineticLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const exp = kineticExperimentById(params.get('experiment'));
   const [load, setLoad] = useState<{ setup: KineticSetup; key: number }>({ setup: exp ? exp.routes[0].setup : DEFAULT_KINETIC, key: 0 });
   const select = (id: string | null) => { const e = kineticExperimentById(id); setParams(id ? { experiment: id } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_KINETIC, key: l.key + 1 })); };
-  return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="kinetic-lab">
-      <GlobalHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <Crumb last="Work-Energy Laboratory" />
-        <header className="space-y-2">
-          <h1 className="text-3xl font-black text-white">Work-Energy Laboratory</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">A cart under a constant net force. Change the mass, the net force, the starting velocity and the displacement: the force graph (its area is the work), the kinetic energy and the check W<sub>net</sub> = ΔK all come from one model. This is free exploration: nothing to unlock.</p>
-          <p className="text-sm text-slate-300" data-testid="kinetic-derive-link">Why is K = ½mv²? <Link className="underline hover:text-sky-300" to="/physics/work/derivations?d=K">Work through the derivation</Link>.</p>
-        </header>
 
-        <section aria-label="The experiment"><KineticView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable /></section>
-
-        <section aria-label="Guided investigations" className="space-y-3">
-          <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
-          <div role="group" aria-label="Choose an investigation" className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={!exp} onClick={() => select(null)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${!exp ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={!exp ? { borderColor: PHYS.position } : undefined}>{!exp ? '✓ ' : ''}Free exploration</button>
-            {KINETIC_EXPERIMENTS.map((x) => (
-              <button key={x.id} type="button" aria-pressed={exp?.id === x.id} data-experiment={x.id} onClick={() => select(x.id)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${exp?.id === x.id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={exp?.id === x.id ? { borderColor: PHYS.prediction } : undefined}>{exp?.id === x.id ? '✓ ' : ''}{x.id}. {x.title}</button>
-            ))}
+  // Outliner: Investigation presets
+  const outlinerContent = (
+    <div className="p-3 space-y-3 text-xs font-sans">
+      <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+        <span className="text-[11px] font-mono text-primary font-bold">{KINETIC_EXPERIMENTS.length} Total</span>
+      </div>
+      <div role="group" aria-label="Choose an investigation" className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          aria-pressed={!exp}
+          onClick={() => select(null)}
+          className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+            !exp
+              ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+              : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">{!exp ? 'check_circle' : 'science'}</span>
+            <span>Free Exploration</span>
           </div>
-          {exp ? (
-            <div className="space-y-3" data-testid="kinetic-experiment-panel">
-              <div className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" style={{ borderLeft: `4px solid ${PHYS.time}` }}>
-                <h3 className="text-lg font-bold text-white">Experiment {exp.id}: {exp.title}</h3>
-                <p className="text-sm text-slate-300">{exp.goal} Predict first, set up the experiment, press Play, then compare. Afterwards change any setting and repeat.</p>
-              </div>
-              {exp.routes.map((r) => <RoutePanel key={`${exp.id}-${r.id}`} route={r} onRun={(rr) => setLoad((l) => ({ setup: rr.setup, key: l.key + 1 }))} />)}
-              <p className="text-sm text-slate-200 rounded-xl border p-3" style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}><strong style={{ color: PHYS.correct }}>{'✓ '}What to notice: </strong>{exp.lesson}</p>
-              <p className="text-xs text-slate-400">These are <em>model</em> results for a constant net force on a straight line; a simulation shows what the model does, it is not a proof (the derivation is).</p>
+        </button>
+        {KINETIC_EXPERIMENTS.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            aria-pressed={exp?.id === x.id}
+            data-experiment={x.id}
+            onClick={() => select(x.id)}
+            className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+              exp?.id === x.id
+                ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">{x.id}. {x.title}</span>
+              {exp?.id === x.id && <span className="material-symbols-outlined text-sm text-primary">check</span>}
             </div>
-          ) : <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>}
-        </section>
-      </main>
+            <div className="text-[10px] text-slate-400 truncate mt-0.5">{x.goal}</div>
+          </button>
+        ))}
+      </div>
     </div>
+  );
+
+  // Inspector: Model details and derivations
+  const inspectorContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Model Principles</span>
+        <div className="mt-2 space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Work-Energy Theorem</p>
+            <p>W<sub>net</sub> = &Delta;K = &frac12;mv&sup2; &minus; &frac12;mu&sup2;</p>
+          </div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Constant Net Force</p>
+            <p>W<sub>net</sub> = F<sub>net</sub> &times; s</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-outline-variant space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Reference Derivations</span>
+        <p className="text-xs text-slate-300" data-testid="kinetic-derive-link">
+          Why is K = &frac12;mv&sup2;?{' '}
+          <Link className="underline text-sky-400 hover:text-sky-300 font-medium" to="/physics/work/derivations?d=K">
+            Work through the derivation &rarr;
+          </Link>
+        </p>
+      </div>
+
+      {exp && (
+        <div className="pt-2 border-t border-outline-variant space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Active Experiment {exp.id}</span>
+          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
+            <h4 className="font-bold text-white text-xs">{exp.title}</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{exp.goal}</p>
+            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
+              <strong>Notice:</strong> {exp.lesson}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Viewport: Simulation canvas
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="kinetic-lab">
+      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
+        <KineticView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable />
+      </div>
+    </div>
+  );
+
+  // Analysis Dock: POE investigations
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-3 font-sans">
+      {exp ? (
+        <div className="space-y-3" data-testid="kinetic-experiment-panel">
+          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+            <span className="text-primary font-bold">Experiment {exp.id}: {exp.title}</span>
+            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+          </div>
+          {exp.routes.map((r) => (
+            <RoutePanel key={`${exp.id}-${r.id}`} route={r} onRun={(rr) => setLoad((l) => ({ setup: rr.setup, key: l.key + 1 }))} />
+          ))}
+          <p className="text-xs text-slate-400">
+            Model results for a constant net force on a straight line; exact kinematics without numerical drift.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
+          <span className="material-symbols-outlined text-3xl text-outline">tune</span>
+          <p className="font-mono text-xs text-slate-300">
+            Free Exploration Mode: Adjust mass, net force, initial velocity, and displacement in the viewport.
+          </p>
+          <p className="text-[11px] text-outline">
+            Select an investigation in the left Explorer to compare your predictions with the model.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="work"
+      labTitle="Work-Energy Laboratory"
+      outlinerTitle="Investigations"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Model Properties"
+      inspector={inspectorContent}
+      analysisDockTitle="Analysis & POE"
+      analysisDock={analysisDockContent}
+    />
   );
 };
 

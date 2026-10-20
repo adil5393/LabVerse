@@ -5,7 +5,6 @@
 
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { GlobalHeader } from '../../../components/GlobalHeader';
 import { DEFAULT_LEVER, DEFAULT_PULLEY, DEFAULT_RAMP } from '../../../engine/physics/work/machines';
 import { LEVER_EXPERIMENTS, leverOutcome, PULLEY_EXPERIMENTS, pulleyOutcome, RAMP_EXPERIMENTS, rampOutcome } from '../../../engine/physics/work/machineExperiments';
 import { DEFAULT_POWER } from '../../../engine/physics/work/power';
@@ -13,15 +12,6 @@ import { POWER_EXPERIMENTS, powerExperimentById, powerOutcome } from '../../../e
 import { PHYS } from '../motion/physicsColors';
 import { LeverView, PulleyView, RampView } from './MachineViews';
 import { PowerView } from './PowerView';
-
-const Crumb: React.FC<{ last: string }> = ({ last }) => (
-  <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
-    <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
-    <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
-    <Link to="/physics/work" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Work, Energy, and Simple Machines</Link><span>/</span>
-    <span className="text-sky-300 font-bold">{last}</span>
-  </nav>
-);
 
 interface GRoute<S, R> { id: string; label: string; setup: S; prompt: string; options: { label: string; why: string }[]; explain: (r: R) => string }
 
@@ -66,17 +56,9 @@ const Pick: React.FC<{ exps: { id: string; title: string }[]; current: string | 
   </div>
 );
 
-const Header: React.FC<{ goal: string; id: string; title: string; lesson: string }> = ({ goal, id, title, lesson }) => (
-  <>
-    <div className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" style={{ borderLeft: `4px solid ${PHYS.time}` }}>
-      <h3 className="text-lg font-bold text-white">Experiment {id}: {title}</h3>
-      <p className="text-sm text-slate-300">{goal} Predict first, set up the experiment, drag the slider, then compare. Afterwards change any setting and repeat.</p>
-    </div>
-    <p className="text-sm text-slate-200 rounded-xl border p-3" style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}><strong style={{ color: PHYS.correct }}>{'✓ '}What to notice: </strong>{lesson}</p>
-  </>
-);
-
 type Apparatus = 'ramp' | 'pulley' | 'lever';
+import { WorkspaceShell } from '../../workspace';
+
 interface AnyExp { id: string; title: string; goal: string; lesson: string; routes: { setup: unknown }[] }
 const TABS: { id: Apparatus; label: string }[] = [{ id: 'ramp', label: 'Inclined plane' }, { id: 'pulley', label: 'Pulley' }, { id: 'lever', label: 'Lever' }];
 
@@ -100,39 +82,152 @@ export const MachinesLab: React.FC = () => {
     else setLever(e ? (e.routes[0].setup as typeof lever) : DEFAULT_LEVER);
     reload();
   };
-  return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="machines-lab">
-      <GlobalHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <Crumb last="Simple Machines Laboratory" />
-        <header className="space-y-2">
-          <h1 className="text-3xl font-black text-white">Simple Machines Laboratory</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">An inclined plane, a pulley system and a lever, each drawn from one model: the geometry, the forces, the distances and the work put in and taken out always agree. Machines make a task easier by changing the force, never by reducing the work. This is free exploration: nothing to unlock.</p>
-          <p className="text-sm text-slate-300" data-testid="machines-derive-links">Why does it work? <Link className="underline hover:text-sky-300" to="/physics/work/derivations?d=R">Derive the ramp relation</Link> · <Link className="underline hover:text-sky-300" to="/physics/work/derivations?d=L">Derive the lever relation</Link>.</p>
-        </header>
-        <div role="tablist" aria-label="Choose a machine" className="flex flex-wrap gap-2">
-          {TABS.map((t) => <button key={t.id} type="button" role="tab" aria-selected={app === t.id} data-apparatus={t.id} onClick={() => { set(t.id, null); reload(); }} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${app === t.id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={app === t.id ? { borderColor: PHYS.force } : undefined}>{t.label}</button>)}
+
+  // Outliner: Apparatus switch & Investigation presets
+  const outlinerContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Select Apparatus</span>
+        <div role="tablist" aria-label="Choose a machine" className="grid grid-cols-1 gap-1.5 mt-2">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={app === t.id}
+              data-apparatus={t.id}
+              onClick={() => { set(t.id, null); reload(); }}
+              className={`min-h-[38px] text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                app === t.id
+                  ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                  : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span>{t.label}</span>
+                {app === t.id && <span className="material-symbols-outlined text-sm text-primary">check</span>}
+              </div>
+            </button>
+          ))}
         </div>
-        <section aria-label="The machine">
-          {app === 'ramp' && <RampView key={`r-${key}`} initial={ramp} editable />}
-          {app === 'pulley' && <PulleyView key={`p-${key}`} initial={pulley} editable />}
-          {app === 'lever' && <LeverView key={`l-${key}`} initial={lever} editable />}
-        </section>
-        <section aria-label="Guided investigations" className="space-y-3">
-          <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
+      </div>
+
+      <div className="pt-2 border-t border-outline-variant">
+        <div className="flex items-center justify-between pb-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+          <span className="text-[11px] font-mono text-primary font-bold">{exps.length} Total</span>
+        </div>
+        <div className="space-y-1.5">
           <Pick exps={exps} current={exp?.id} onPick={choose} />
-          {exp ? (
-            <div className="space-y-3" data-testid="machine-experiment-panel">
-              <Header goal={exp.goal} id={exp.id} title={exp.title} lesson={exp.lesson} />
-              {app === 'ramp' && RAMP_EXPERIMENTS.find((x) => x.id === exp.id)!.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={rampOutcome(r)} onRun={(s) => { setRamp(s); reload(); }} tag="machine" />)}
-              {app === 'pulley' && PULLEY_EXPERIMENTS.find((x) => x.id === exp.id)!.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={pulleyOutcome(r)} onRun={(s) => { setPulley(s); reload(); }} tag="machine" />)}
-              {app === 'lever' && LEVER_EXPERIMENTS.find((x) => x.id === exp.id)!.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={leverOutcome(r)} onRun={(s) => { setLever(s); reload(); }} tag="machine" />)}
-              <p className="text-xs text-slate-400">These are <em>model</em> results for ideal or explicitly modelled machines; a simulation shows what the model does, it is not a proof (the derivations are).</p>
-            </div>
-          ) : <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>}
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
+  );
+
+  // Inspector: Machine principles and derivations
+  const inspectorContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Machine Laws</span>
+        <div className="mt-2 space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Golden Rule of Mechanics</p>
+            <p className="text-[10px] leading-relaxed">
+              Work Input = Work Output + Losses. A machine never reduces total work needed.
+            </p>
+          </div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Mechanical Advantage (MA)</p>
+            <p className="text-[10px]">MA = Load Force &divide; Effort Force</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-outline-variant space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Reference Derivations</span>
+        <div className="space-y-1 text-xs text-slate-300" data-testid="machines-derive-links">
+          <p>
+            Why does it work?{' '}
+            <Link className="underline text-sky-400 hover:text-sky-300" to="/physics/work/derivations?d=R">
+              Derive the ramp relation &rarr;
+            </Link>
+          </p>
+          <p>
+            <Link className="underline text-sky-400 hover:text-sky-300" to="/physics/work/derivations?d=L">
+              Derive the lever relation &rarr;
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {exp && (
+        <div className="pt-2 border-t border-outline-variant space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Active Experiment {exp.id}</span>
+          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
+            <h4 className="font-bold text-white text-xs">{exp.title}</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{exp.goal}</p>
+            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
+              <strong>Notice:</strong> {exp.lesson}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Viewport: Machine canvas
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="machines-lab">
+      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
+        {app === 'ramp' && <RampView key={`r-${key}`} initial={ramp} editable />}
+        {app === 'pulley' && <PulleyView key={`p-${key}`} initial={pulley} editable />}
+        {app === 'lever' && <LeverView key={`l-${key}`} initial={lever} editable />}
+      </div>
+    </div>
+  );
+
+  // Analysis Dock: POE investigations
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-3 font-sans">
+      {exp ? (
+        <div className="space-y-3" data-testid="machine-experiment-panel">
+          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+            <span className="text-primary font-bold">Experiment {exp.id}: {exp.title}</span>
+            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+          </div>
+          {app === 'ramp' && RAMP_EXPERIMENTS.find((x) => x.id === exp.id)!.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={rampOutcome(r)} onRun={(s) => { setRamp(s); reload(); }} tag="machine" />)}
+          {app === 'pulley' && PULLEY_EXPERIMENTS.find((x) => x.id === exp.id)!.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={pulleyOutcome(r)} onRun={(s) => { setPulley(s); reload(); }} tag="machine" />)}
+          {app === 'lever' && LEVER_EXPERIMENTS.find((x) => x.id === exp.id)!.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={leverOutcome(r)} onRun={(s) => { setLever(s); reload(); }} tag="machine" />)}
+          <p className="text-xs text-slate-400">
+            Model results for ideal or explicitly modelled machines; simulation demonstrates exact equilibrium and energy conservation.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
+          <span className="material-symbols-outlined text-3xl text-outline">precision_manufacturing</span>
+          <p className="font-mono text-xs text-slate-300">
+            Free Exploration Mode: Choose an inclined plane, pulley, or lever above.
+          </p>
+          <p className="text-[11px] text-outline">
+            Machines alter force and displacement tradeoffs, but work input always matches or exceeds work output.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="work"
+      labTitle="Simple Machines Laboratory"
+      outlinerTitle="Apparatus & Routes"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Machine Properties"
+      inspector={inspectorContent}
+      analysisDockTitle="Analysis & POE"
+      analysisDock={analysisDockContent}
+    />
   );
 };
 
@@ -141,29 +236,110 @@ export const PowerLab: React.FC = () => {
   const exp = powerExperimentById(params.get('experiment'));
   const [load, setLoad] = useState({ setup: exp ? exp.routes[0].setup : DEFAULT_POWER, key: 0 });
   const choose = (id: string | null) => { const e = powerExperimentById(id); setParams(id ? { experiment: id } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_POWER, key: l.key + 1 })); };
-  return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="power-lab">
-      <GlobalHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <Crumb last="Power Laboratory" />
-        <header className="space-y-2">
-          <h1 className="text-3xl font-black text-white">Power Laboratory</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">Change the work and the time and watch the power. Power is the rate of doing work: P = W ÷ t, in watts. This is free exploration: nothing to unlock.</p>
-          <p className="text-sm text-slate-300" data-testid="power-derive-link">Why is power W ÷ t? <Link className="underline hover:text-sky-300" to="/physics/work/derivations?d=P">Work through the explanation</Link>.</p>
-        </header>
-        <section aria-label="The experiment"><PowerView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable /></section>
-        <section aria-label="Guided investigations" className="space-y-3">
-          <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
-          <Pick exps={POWER_EXPERIMENTS} current={exp?.id} onPick={choose} />
-          {exp ? (
-            <div className="space-y-3" data-testid="power-experiment-panel">
-              <Header goal={exp.goal} id={exp.id} title={exp.title} lesson={exp.lesson} />
-              {exp.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={powerOutcome(r)} onRun={(s) => setLoad((l) => ({ setup: s, key: l.key + 1 }))} tag="power" />)}
-              <p className="text-xs text-slate-400">These are <em>model</em> results for the average power; they are not proofs.</p>
-            </div>
-          ) : <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>}
-        </section>
-      </main>
+
+  // Outliner: Guided investigations
+  const outlinerContent = (
+    <div className="p-3 space-y-3 text-xs font-sans">
+      <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+        <span className="text-[11px] font-mono text-primary font-bold">{POWER_EXPERIMENTS.length} Total</span>
+      </div>
+      <div className="space-y-1.5">
+        <Pick exps={POWER_EXPERIMENTS} current={exp?.id} onPick={choose} />
+      </div>
     </div>
+  );
+
+  // Inspector: Power definitions and derivations
+  const inspectorContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Power Principles</span>
+        <div className="mt-2 space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Rate of Doing Work</p>
+            <p>P = W &divide; t = &Delta;E &divide; &Delta;t</p>
+          </div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Standard SI Unit</p>
+            <p>1 Watt (W) = 1 Joule per second (J/s)</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-outline-variant space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Reference Derivations</span>
+        <p className="text-xs text-slate-300" data-testid="power-derive-link">
+          Why is power W &divide; t?{' '}
+          <Link className="underline text-sky-400 hover:text-sky-300 font-medium" to="/physics/work/derivations?d=P">
+            Work through the explanation &rarr;
+          </Link>
+        </p>
+      </div>
+
+      {exp && (
+        <div className="pt-2 border-t border-outline-variant space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Active Experiment {exp.id}</span>
+          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
+            <h4 className="font-bold text-white text-xs">{exp.title}</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{exp.goal}</p>
+            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
+              <strong>Notice:</strong> {exp.lesson}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Viewport: PowerView
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="power-lab">
+      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
+        <PowerView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable />
+      </div>
+    </div>
+  );
+
+  // Analysis Dock: POE investigations
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-3 font-sans">
+      {exp ? (
+        <div className="space-y-3" data-testid="power-experiment-panel">
+          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+            <span className="text-primary font-bold">Experiment {exp.id}: {exp.title}</span>
+            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+          </div>
+          {exp.routes.map((r) => <GuidedPanel key={r.id} route={r} outcome={powerOutcome(r)} onRun={(s) => setLoad((l) => ({ setup: s, key: l.key + 1 }))} tag="power" />)}
+          <p className="text-xs text-slate-400">
+            Model results for the average power; power measures how quickly energy is transferred or transformed.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
+          <span className="material-symbols-outlined text-3xl text-outline">bolt</span>
+          <p className="font-mono text-xs text-slate-300">
+            Free Exploration Mode: Adjust work and time to observe the resulting mechanical power.
+          </p>
+          <p className="text-[11px] text-outline">
+            Select an investigation in the left Explorer to compare your predictions with the model.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="work"
+      labTitle="Power Laboratory"
+      outlinerTitle="Investigations"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Power Properties"
+      inspector={inspectorContent}
+      analysisDockTitle="Analysis & POE"
+      analysisDock={analysisDockContent}
+    />
   );
 };

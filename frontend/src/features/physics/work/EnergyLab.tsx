@@ -5,20 +5,10 @@
 
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { GlobalHeader } from '../../../components/GlobalHeader';
 import { ENERGY_EXPERIMENTS, energyExperimentById, energyRouteOutcome, type EnergyRoute } from '../../../engine/physics/work/energyExperiments';
 import { DEFAULT_ENERGY, type EnergySetup } from '../../../engine/physics/work/energyLab';
 import { PHYS } from '../motion/physicsColors';
 import { EnergyView } from './EnergyView';
-
-const Crumb: React.FC<{ last: string }> = ({ last }) => (
-  <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
-    <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
-    <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
-    <Link to="/physics/work" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Work, Energy, and Simple Machines</Link><span>/</span>
-    <span className="text-sky-300 font-bold">{last}</span>
-  </nav>
-);
 
 const RoutePanel: React.FC<{ route: EnergyRoute; onRun: (r: EnergyRoute) => void }> = ({ route, onRun }) => {
   const [choice, setChoice] = useState<number | null>(null);
@@ -54,47 +44,161 @@ const RoutePanel: React.FC<{ route: EnergyRoute; onRun: (r: EnergyRoute) => void
   );
 };
 
+import { WorkspaceShell } from '../../workspace';
+
 export const EnergyLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const exp = energyExperimentById(params.get('experiment'));
   const [load, setLoad] = useState<{ setup: EnergySetup; key: number; at: number }>({ setup: exp ? exp.routes[0].setup : DEFAULT_ENERGY, key: 0, at: exp ? exp.routes[0].at : 0 });
   const select = (id: string | null) => { const e = energyExperimentById(id); setParams(id ? { experiment: id } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_ENERGY, key: l.key + 1, at: e ? e.routes[0].at : 0 })); };
-  return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="energy-lab">
-      <GlobalHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <Crumb last="Energy Laboratory" />
-        <header className="space-y-2">
-          <h1 className="text-3xl font-black text-white">Energy Laboratory</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">Release an object on a ramp or let it fall. Watch the kinetic, potential and thermal energy change together: the bars, the graph, the numbers and the check K + U + Q = constant all come from one model. This is free exploration: nothing to unlock.</p>
-          <p className="text-sm text-slate-300" data-testid="energy-derive-links">Why does it work? <Link className="underline hover:text-sky-300" to="/physics/work/derivations?d=U">Derive U = mgh</Link> · <Link className="underline hover:text-sky-300" to="/physics/work/derivations?d=C">Derive conservation of mechanical energy</Link>.</p>
-          
-        </header>
 
-        <section aria-label="The experiment"><EnergyView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable startFraction={load.at} /></section>
-
-        <section aria-label="Guided investigations" className="space-y-3">
-          <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
-          <div role="group" aria-label="Choose an investigation" className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={!exp} onClick={() => select(null)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${!exp ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={!exp ? { borderColor: PHYS.position } : undefined}>{!exp ? '✓ ' : ''}Free exploration</button>
-            {ENERGY_EXPERIMENTS.map((x) => (
-              <button key={x.id} type="button" aria-pressed={exp?.id === x.id} data-experiment={x.id} onClick={() => select(x.id)} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${exp?.id === x.id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={exp?.id === x.id ? { borderColor: PHYS.prediction } : undefined}>{exp?.id === x.id ? '✓ ' : ''}{x.id}. {x.title}</button>
-            ))}
+  // Outliner: Investigation presets
+  const outlinerContent = (
+    <div className="p-3 space-y-3 text-xs font-sans">
+      <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+        <span className="text-[11px] font-mono text-primary font-bold">{ENERGY_EXPERIMENTS.length} Total</span>
+      </div>
+      <div role="group" aria-label="Choose an investigation" className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          aria-pressed={!exp}
+          onClick={() => select(null)}
+          className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+            !exp
+              ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+              : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">{!exp ? 'check_circle' : 'science'}</span>
+            <span>Free Exploration</span>
           </div>
-          {exp ? (
-            <div className="space-y-3" data-testid="energy-experiment-panel">
-              <div className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" style={{ borderLeft: `4px solid ${PHYS.time}` }}>
-                <h3 className="text-lg font-bold text-white">Experiment {exp.id}: {exp.title}</h3>
-                <p className="text-sm text-slate-300">{exp.goal} Predict first, set up the experiment, press Play, then compare. Afterwards change any setting and repeat.</p>
-              </div>
-              {exp.routes.map((r) => <RoutePanel key={`${exp.id}-${r.id}`} route={r} onRun={(rr) => setLoad((l) => ({ setup: rr.setup, key: l.key + 1, at: rr.at }))} />)}
-              <p className="text-sm text-slate-200 rounded-xl border p-3" style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}><strong style={{ color: PHYS.correct }}>{'✓ '}What to notice: </strong>{exp.lesson}</p>
-              <p className="text-xs text-slate-400">These are <em>model</em> results for a point-like object on a straight ramp with constant friction and no air resistance; a simulation shows what the model does, it is not a proof (the derivations are).</p>
+        </button>
+        {ENERGY_EXPERIMENTS.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            aria-pressed={exp?.id === x.id}
+            data-experiment={x.id}
+            onClick={() => select(x.id)}
+            className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+              exp?.id === x.id
+                ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">{x.id}. {x.title}</span>
+              {exp?.id === x.id && <span className="material-symbols-outlined text-sm text-primary">check</span>}
             </div>
-          ) : <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>}
-        </section>
-      </main>
+            <div className="text-[10px] text-slate-400 truncate mt-0.5">{x.goal}</div>
+          </button>
+        ))}
+      </div>
     </div>
+  );
+
+  // Inspector: Model details and derivations
+  const inspectorContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Conservation Laws</span>
+        <div className="mt-2 space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Total Mechanical Energy</p>
+            <p>E<sub>total</sub> = K + U + Q = constant</p>
+          </div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
+            <p className="font-bold text-white mb-1">Gravitational Potential</p>
+            <p>U = mgh</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-outline-variant space-y-2">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Reference Derivations</span>
+        <div className="space-y-1 text-xs text-slate-300" data-testid="energy-derive-links">
+          <p>
+            Why does it work?{' '}
+            <Link className="underline text-sky-400 hover:text-sky-300" to="/physics/work/derivations?d=U">
+              Derive U = mgh &rarr;
+            </Link>
+          </p>
+          <p>
+            <Link className="underline text-sky-400 hover:text-sky-300" to="/physics/work/derivations?d=C">
+              Derive conservation of mechanical energy &rarr;
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {exp && (
+        <div className="pt-2 border-t border-outline-variant space-y-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Active Experiment {exp.id}</span>
+          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
+            <h4 className="font-bold text-white text-xs">{exp.title}</h4>
+            <p className="text-[11px] text-slate-300 leading-relaxed">{exp.goal}</p>
+            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
+              <strong>Notice:</strong> {exp.lesson}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Viewport: Simulation canvas
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="energy-lab">
+      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
+        <EnergyView key={`${exp?.id ?? 'free'}-${load.key}`} initial={load.setup} editable startFraction={load.at} />
+      </div>
+    </div>
+  );
+
+  // Analysis Dock: POE investigations
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-3 font-sans">
+      {exp ? (
+        <div className="space-y-3" data-testid="energy-experiment-panel">
+          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+            <span className="text-primary font-bold">Experiment {exp.id}: {exp.title}</span>
+            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+          </div>
+          {exp.routes.map((r) => (
+            <RoutePanel key={`${exp.id}-${r.id}`} route={r} onRun={(rr) => setLoad((l) => ({ setup: rr.setup, key: l.key + 1, at: rr.at }))} />
+          ))}
+          <p className="text-xs text-slate-400">
+            Model results for a point-like object on a straight ramp with constant friction and no air resistance.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
+          <span className="material-symbols-outlined text-3xl text-outline">bar_chart</span>
+          <p className="font-mono text-xs text-slate-300">
+            Free Exploration Mode: Release an object on a ramp or let it fall.
+          </p>
+          <p className="text-[11px] text-outline">
+            Watch kinetic, potential, and thermal energy change together in real time.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="work"
+      labTitle="Energy Laboratory"
+      outlinerTitle="Investigations"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Model Properties"
+      inspector={inspectorContent}
+      analysisDockTitle="Analysis & POE"
+      analysisDock={analysisDockContent}
+    />
   );
 };
 

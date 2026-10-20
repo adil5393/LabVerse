@@ -20,6 +20,7 @@ import { VisualRegistryProvider } from '../../education/visuals';
 import { PHYS } from '../motion/physicsColors';
 import { ExerciseIllustrationView } from './ExerciseIllustration';
 import { WORK_VISUALS } from './visuals';
+import { ChapterWorkspaceNav } from '../../workspace';
 
 const CRUMB = 'Work, Energy, and Simple Machines';
 
@@ -98,17 +99,17 @@ export const WorkHub: React.FC = () => {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-8">
         <Crumb last={CRUMB} />
         <header className="space-y-2">
-          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">{WORK_TEXTBOOK.book} ({WORK_TEXTBOOK.edition}) · Chapter {WORK_TEXTBOOK.chapterNumber}</span>
+          <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">{WORK_TEXTBOOK.book} ({WORK_TEXTBOOK.edition}) · Chapter {WORK_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{WORK_TEXTBOOK.title}</h1>
           <p className="text-sm md:text-base text-slate-300 max-w-3xl">Work and energy: when a force really does work in physics, how to calculate it in joules, how work changes energy, kinetic and potential energy, why the mechanical energy is conserved, power, and how pulleys, ramps and levers make tasks easier without reducing the work.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="work-destinations">
-          <div className={`${card} border-sky-500/40`} style={{ borderTop: '4px solid #38BDF8' }}>
+          <div className={`${card} border-amber-500/40`} style={{ borderTop: '4px solid #F59E0B' }}>
             <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} units and {Object.keys(WORK_CHAPTER.lessons).length} lessons so far, with prerequisites, worked examples and practice.</p></div>
-            <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
+            <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-sm">Start learning</a>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #818CF8' }}>
+          <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #FBBF24' }}>
             <div><h2 className="text-lg font-black text-white">Free Laboratory</h2><p className="text-xs text-slate-300">Work Laboratory: choose a force, its direction and a displacement, and see the signed work of each force. Five optional investigations (A to E). No gates.</p></div>
             <Link to="/physics/work/lab" data-destination="lab" className={btn}>Open the laboratory</Link>
           </div>
@@ -212,7 +213,12 @@ export const WorkExercises: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="work-exercises">
       <GlobalHeader />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <Crumb last="NCERT Exercises" />
+        <ChapterWorkspaceNav
+          chapterId="work"
+          currentPageTitle="NCERT Exercises"
+          currentMode="exercises"
+          showBackToLab={true}
+        />
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">NCERT Exercises: Chapter 7</h1>
           <p className="text-sm text-slate-300">The chapter ends with fifteen questions (&ldquo;Revise, Reflect, Refine&rdquo;), listed here with their textbook numbers and subparts. The summaries are in our own words; open the textbook for the exact wording. All {counts.parts} parts of all {counts.questions} questions have step-by-step solutions.</p>

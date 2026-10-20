@@ -1,18 +1,32 @@
 /**
- * Motion Laboratory: the Free Laboratory for one-dimensional motion (PHY-1A).
- * It opens at once with an editable track: no login, gate or onboarding. The guided
- * investigations are optional and only compare the student's predictions with the model.
+ * Motion Laboratory: Free Laboratory for one-dimensional motion (PHY-1A).
+ * Full integration with the Blender-inspired scientific workstation (Workspace V3).
  */
 
-import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { GlobalHeader } from '../../../components/GlobalHeader';
-import { compareRatePrediction, comparePrediction, experimentById, MOTION_EXPERIMENTS, routeRates, routeValues, type MotionExperiment, type PredictionFeedback } from '../../../engine/physics/motion/experiments';
-import { MotionTrackView } from './MotionTrack';
+import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  compareRatePrediction,
+  comparePrediction,
+  experimentById,
+  MOTION_EXPERIMENTS,
+  routeRates,
+  routeValues,
+  type MotionExperiment,
+  type PredictionFeedback,
+} from '../../../engine/physics/motion/experiments';
+import { MotionHistory, MotionMessage, MotionMoveButtons, MotionParameterFields, MotionPlaybackControls, MotionReadout, MotionScene, useMotionTrack } from './MotionTrack';
+import { MotionTimeGraphs } from './MotionTimeGraph';
 import { PHYS } from './physicsColors';
 import { speedVelocityLines, wholeTrip, pathFromRoute } from '../../../engine/physics/motion/speed';
+import { DockTabs, ViewportFrame, WorkspaceShell, type DockTab } from '../../workspace';
+import { LabButton, LabInspectorSection, LabParameterField, LabToolbarDivider } from '../../workspace/controls';
 
-const RatePrediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun: (moves: number[], durations?: number[]) => void }> = ({ e, routeIndex, onRun }) => {
+const RatePrediction: React.FC<{
+  e: MotionExperiment;
+  routeIndex: number;
+  onRun: (moves: number[], durations?: number[]) => void;
+}> = ({ e, routeIndex, onRun }) => {
   const r = e.routes[routeIndex];
   const [sp, setSp] = useState('');
   const [ve, setVe] = useState('');
@@ -20,137 +34,460 @@ const RatePrediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun:
   const [bad, setBad] = useState('');
   const check = (ev: React.FormEvent) => {
     ev.preventDefault();
-    const a = Number(sp.replace('−', '-')), b = Number(ve.replace('−', '-'));
-    if (sp.trim() === '' || ve.trim() === '' || !Number.isFinite(a) || !Number.isFinite(b)) { setBad('Type a number for both predictions (use a minus sign for a velocity to the left).'); setFb(null); return; }
-    setBad(''); setFb(compareRatePrediction(routeRates(e, r), { speed: a, velocity: b }));
+    const a = Number(sp.replace('−', '-')),
+      b = Number(ve.replace('−', '-'));
+    if (sp.trim() === '' || ve.trim() === '' || !Number.isFinite(a) || !Number.isFinite(b)) {
+      setBad('Type a number for both predictions (use a minus sign for a velocity to the left).');
+      setFb(null);
+      return;
+    }
+    setBad('');
+    setFb(compareRatePrediction(routeRates(e, r), { speed: a, velocity: b }));
   };
-  const lines = speedVelocityLines(wholeTrip(pathFromRoute({ startM: e.start, legs: r.moves.map((m, i) => ({ toM: m, durationS: r.durations?.[i] ?? 1 })) }, e.range)));
+  const lines = speedVelocityLines(
+    wholeTrip(
+      pathFromRoute(
+        { startM: e.start, legs: r.moves.map((m, i) => ({ toM: m, durationS: r.durations?.[i] ?? 1 })) },
+        e.range
+      )
+    )
+  );
   const ok = fb && fb.speedRight && fb.velocityRight;
   return (
-    <form onSubmit={check} className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3" data-prediction={r.id}>
+    <form
+      onSubmit={check}
+      className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3"
+      data-prediction={r.id}
+    >
       <p className="text-sm text-slate-100 font-medium">{r.label}</p>
-      <div className="rounded-lg p-3 space-y-2" style={{ border: `1px solid ${PHYS.prediction}66`, background: `${PHYS.prediction}0D` }}>
-        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.prediction }}>{'★'} 1 · Prediction (whole trip, before you run it)</h4>
+      <div
+        className="rounded-lg p-3 space-y-2"
+        style={{ border: `1px solid ${PHYS.prediction}66`, background: `${PHYS.prediction}0D` }}
+      >
+        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.prediction }}>
+          ★ 1 · Prediction (whole trip, before you run it)
+        </h4>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-xs text-slate-200 flex items-center gap-2"><span style={{ color: PHYS.speed }}>Average speed (m/s)</span>
-            <input value={sp} onChange={(x) => setSp(x.target.value)} inputMode="decimal" aria-label={`Predicted average speed in metres per second for ${r.label}`} className="w-24 min-h-[44px] rounded-lg border bg-surface-lowest px-2 text-white font-mono" style={{ borderColor: PHYS.prediction }} /></label>
-          <label className="text-xs text-slate-200 flex items-center gap-2"><span style={{ color: PHYS.velocity }}>Average velocity (m/s)</span>
-            <input value={ve} onChange={(x) => setVe(x.target.value)} inputMode="decimal" aria-label={`Predicted average velocity in metres per second for ${r.label}`} className="w-24 min-h-[44px] rounded-lg border bg-surface-lowest px-2 text-white font-mono" style={{ borderColor: PHYS.prediction }} /></label>
-          <button type="submit" className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.prediction }}>Check my prediction</button>
+          <label className="text-xs text-slate-200 flex items-center gap-2">
+            <span style={{ color: PHYS.speed }}>Average speed (m/s)</span>
+            <input
+              value={sp}
+              onChange={(x) => setSp(x.target.value)}
+              inputMode="decimal"
+              aria-label={`Predicted average speed in metres per second for ${r.label}`}
+              className="w-24 min-h-[36px] rounded-lg border bg-surface-lowest px-2 text-white font-mono"
+              style={{ borderColor: PHYS.prediction }}
+            />
+          </label>
+          <label className="text-xs text-slate-200 flex items-center gap-2">
+            <span style={{ color: PHYS.velocity }}>Average velocity (m/s)</span>
+            <input
+              value={ve}
+              onChange={(x) => setVe(x.target.value)}
+              inputMode="decimal"
+              aria-label={`Predicted average velocity in metres per second for ${r.label}`}
+              className="w-24 min-h-[36px] rounded-lg border bg-surface-lowest px-2 text-white font-mono"
+              style={{ borderColor: PHYS.prediction }}
+            />
+          </label>
+          <LabButton
+            type="submit"
+            size="sm"
+            icon={<span className="material-symbols-outlined text-[15px]">verified</span>}
+            style={{ background: PHYS.prediction, borderColor: PHYS.prediction, color: '#0f172a' }}
+            className="font-bold border-2"
+          >
+            Check my prediction
+          </LabButton>
         </div>
       </div>
-      <div className="rounded-lg p-3 space-y-2" style={{ border: `1px solid ${PHYS.position}66`, background: `${PHYS.position}0D` }}>
-        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.position }}>{'▶'} 2 · Action</h4>
-        <button type="button" onClick={() => onRun(r.moves, r.durations)} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.position }} data-testid={`run-${r.id}`}>Run this route in the track</button>
-        <p className="text-[11px] text-slate-400">Replay speed on screen is a separate setting. It never changes the speed of the object in the model.</p>
+      <div
+        className="rounded-lg p-3 space-y-2"
+        style={{ border: `1px solid ${PHYS.position}66`, background: `${PHYS.position}0D` }}
+      >
+        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.position }}>
+          ▶ 2 · Action
+        </h4>
+        <LabButton
+          type="button"
+          size="sm"
+          onClick={() => onRun(r.moves, r.durations)}
+          icon={<span className="material-symbols-outlined text-[15px]">play_arrow</span>}
+          style={{ background: PHYS.position, borderColor: PHYS.position, color: '#0f172a' }}
+          className="font-bold border-2"
+          data-testid={`run-${r.id}`}
+        >
+          Run this route in the track
+        </LabButton>
       </div>
-      {bad && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }}>{bad}</p>}
+      {bad && (
+        <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }}>
+          {bad}
+        </p>
+      )}
       {fb && (
-        <div role="status" aria-live="polite" data-testid="prediction-feedback" className="rounded-lg p-3 text-xs text-slate-100 space-y-1" style={{ border: `1px solid ${ok ? PHYS.correct : PHYS.error}`, background: `${ok ? PHYS.correct : PHYS.error}14` }}>
-          <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: ok ? PHYS.correct : PHYS.error }}>{ok ? '✓ 3 · Observation: matches the model' : '✗ 3 · Observation: differs from the model'}</h4>
-          <p style={{ color: PHYS.speed }} data-testid="calc-speed">{lines.speed}</p>
-          <p style={{ color: PHYS.velocity }} data-testid="calc-velocity">{lines.velocity}</p>
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="prediction-feedback"
+          className="rounded-lg p-3 text-xs text-slate-100 space-y-1"
+          style={{
+            border: `1px solid ${ok ? PHYS.correct : PHYS.error}`,
+            background: `${ok ? PHYS.correct : PHYS.error}14`,
+          }}
+        >
+          <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: ok ? PHYS.correct : PHYS.error }}>
+            {ok ? '✓ 3 · Observation: matches the model' : '✗ 3 · Observation: differs from the model'}
+          </h4>
+          <p style={{ color: PHYS.speed }} data-testid="calc-speed">
+            {lines.speed}
+          </p>
+          <p style={{ color: PHYS.velocity }} data-testid="calc-velocity">
+            {lines.velocity}
+          </p>
           <p>{lines.direction}</p>
-          {fb.messages.map((m) => <p key={m}>{m}</p>)}
+          {fb.messages.map((m) => (
+            <p key={m}>{m}</p>
+          ))}
         </div>
       )}
     </form>
   );
 };
 
-const Prediction: React.FC<{ e: MotionExperiment; routeIndex: number; onRun: (moves: number[], durations?: number[]) => void }> = ({ e, routeIndex, onRun }) => {
+const Prediction: React.FC<{
+  e: MotionExperiment;
+  routeIndex: number;
+  onRun: (moves: number[], durations?: number[]) => void;
+}> = ({ e, routeIndex, onRun }) => {
   const r = e.routes[routeIndex];
   const [dist, setDist] = useState('');
   const [disp, setDisp] = useState('');
-  const [fb, setFb] = useState<(PredictionFeedback & { distanceM: number; displacementM: number }) | null>(null);
+  const [fb, setFb] = useState<
+    (PredictionFeedback & { distanceM: number; displacementM: number }) | null
+  >(null);
   const check = (ev: React.FormEvent) => {
     ev.preventDefault();
-    const d = Number(dist.replace('−', '-')), s = Number(disp.replace('−', '-'));
-    if (dist.trim() === '' || disp.trim() === '' || !Number.isFinite(d) || !Number.isFinite(s)) { setFb({ distanceRight: false, displacementRight: false, messages: ['Type a number for both predictions (use a minus sign for displacement to the left).'], distanceM: NaN, displacementM: NaN }); return; }
+    const d = Number(dist.replace('−', '-')),
+      s = Number(disp.replace('−', '-'));
+    if (dist.trim() === '' || disp.trim() === '' || !Number.isFinite(d) || !Number.isFinite(s)) {
+      setFb({
+        distanceRight: false,
+        displacementRight: false,
+        messages: ['Type a number for both predictions (use a minus sign for displacement to the left).'],
+        distanceM: NaN,
+        displacementM: NaN,
+      });
+      return;
+    }
     const actual = routeValues(e, r);
     setFb({ ...comparePrediction(actual, { distanceM: d, displacementM: s }), ...actual });
   };
   const ok = fb && fb.distanceRight && fb.displacementRight;
   return (
-    <form onSubmit={check} className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3" data-prediction={r.id}>
+    <form
+      onSubmit={check}
+      className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3"
+      data-prediction={r.id}
+    >
       <p className="text-sm text-slate-100 font-medium">{r.label}</p>
-      <div className="rounded-lg p-3 space-y-2" style={{ border: `1px solid ${PHYS.prediction}66`, background: `${PHYS.prediction}0D` }}>
-        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.prediction }}>{'\u2605'} 1 · Prediction (before you run it)</h4>
+      <div
+        className="rounded-lg p-3 space-y-2"
+        style={{ border: `1px solid ${PHYS.prediction}66`, background: `${PHYS.prediction}0D` }}>
+        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.prediction }}>
+          ★ 1 · Prediction (before you run it)
+        </h4>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-xs text-slate-200 flex items-center gap-2"><span style={{ color: PHYS.distance }}>Distance (m)</span>
-            <input value={dist} onChange={(x) => setDist(x.target.value)} inputMode="decimal" aria-label={`Predicted distance in metres for ${r.label}`} className="w-24 min-h-[44px] rounded-lg border bg-surface-lowest px-2 text-white font-mono" style={{ borderColor: PHYS.prediction }} /></label>
-          <label className="text-xs text-slate-200 flex items-center gap-2"><span style={{ color: PHYS.displacement }}>Displacement (m)</span>
-            <input value={disp} onChange={(x) => setDisp(x.target.value)} inputMode="decimal" aria-label={`Predicted displacement in metres for ${r.label}`} className="w-24 min-h-[44px] rounded-lg border bg-surface-lowest px-2 text-white font-mono" style={{ borderColor: PHYS.prediction }} /></label>
-          <button type="submit" className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.prediction }}>Check my prediction</button>
+          <label className="text-xs text-slate-200 flex items-center gap-2">
+            <span style={{ color: PHYS.distance }}>Distance (m)</span>
+            <input
+              value={dist}
+              onChange={(x) => setDist(x.target.value)}
+              inputMode="decimal"
+              aria-label={`Predicted distance in metres for ${r.label}`}
+              className="w-24 min-h-[36px] rounded-lg border bg-surface-lowest px-2 text-white font-mono"
+              style={{ borderColor: PHYS.prediction }}
+            />
+          </label>
+          <label className="text-xs text-slate-200 flex items-center gap-2">
+            <span style={{ color: PHYS.displacement }}>Displacement (m)</span>
+            <input
+              value={disp}
+              onChange={(x) => setDisp(x.target.value)}
+              inputMode="decimal"
+              aria-label={`Predicted displacement in metres for ${r.label}`}
+              className="w-24 min-h-[36px] rounded-lg border bg-surface-lowest px-2 text-white font-mono"
+              style={{ borderColor: PHYS.prediction }}
+            />
+          </label>
+          <LabButton
+            type="submit"
+            size="sm"
+            icon={<span className="material-symbols-outlined text-[15px]">verified</span>}
+            style={{ background: PHYS.prediction, borderColor: PHYS.prediction, color: '#0f172a' }}
+            className="font-bold border-2"
+          >
+            Check my prediction
+          </LabButton>
         </div>
       </div>
-      <div className="rounded-lg p-3 space-y-2" style={{ border: `1px solid ${PHYS.position}66`, background: `${PHYS.position}0D` }}>
-        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.position }}>{'\u25B6'} 2 · Action</h4>
-        <button type="button" onClick={() => onRun(r.moves)} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.position }} data-testid={`run-${r.id}`}>Run this route in the track</button>
+      <div
+        className="rounded-lg p-3 space-y-2"
+        style={{ border: `1px solid ${PHYS.position}66`, background: `${PHYS.position}0D` }}
+      >
+        <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.position }}>
+          ▶ 2 · Action
+        </h4>
+        <LabButton
+          type="button"
+          size="sm"
+          onClick={() => onRun(r.moves)}
+          icon={<span className="material-symbols-outlined text-[15px]">play_arrow</span>}
+          style={{ background: PHYS.position, borderColor: PHYS.position, color: '#0f172a' }}
+          className="font-bold border-2"
+          data-testid={`run-${r.id}`}
+        >
+          Run this route in the track
+        </LabButton>
       </div>
       {fb && (
-        <div role="status" aria-live="polite" data-testid="prediction-feedback" className="rounded-lg p-3 text-xs text-slate-100 space-y-1" style={{ border: `1px solid ${ok ? PHYS.correct : PHYS.error}`, background: `${ok ? PHYS.correct : PHYS.error}14` }}>
-          <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: ok ? PHYS.correct : PHYS.error }}>{ok ? '\u2713 3 · Observation: matches the model' : '\u2717 3 · Observation: differs from the model'}</h4>
-          {Number.isFinite(fb.distanceM) && <p>Model values: <span style={{ color: PHYS.distance }}>distance {fb.distanceM} m</span>, <span style={{ color: PHYS.displacement }}>displacement {fb.displacementM} m</span>.</p>}
-          {fb.messages.map((m) => <p key={m}>{m}</p>)}
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="prediction-feedback"
+          className="rounded-lg p-3 text-xs text-slate-100 space-y-1"
+          style={{
+            border: `1px solid ${ok ? PHYS.correct : PHYS.error}`,
+            background: `${ok ? PHYS.correct : PHYS.error}14`,
+          }}
+        >
+          <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: ok ? PHYS.correct : PHYS.error }}>
+            {ok ? '✓ 3 · Observation: matches the model' : '✗ 3 · Observation: differs from the model'}
+          </h4>
+          {Number.isFinite(fb.distanceM) && (
+            <p>
+              Model values: <span style={{ color: PHYS.distance }}>distance {fb.distanceM} m</span>,{' '}
+              <span style={{ color: PHYS.displacement }}>displacement {fb.displacementM} m</span>.
+            </p>
+          )}
+          {fb.messages.map((m) => (
+            <p key={m}>{m}</p>
+          ))}
         </div>
       )}
     </form>
   );
 };
 
+
 export const MotionLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const exp = experimentById(params.get('experiment'));
   const [load, setLoad] = useState<{ moves: number[]; durations?: number[]; key: number }>({ moves: [], key: 0 });
-  const range: [number, number] = exp?.range ?? [-50, 100];
-  const start = exp?.start ?? 0;
+  // Free exploration lets the student configure the track; an investigation fixes it (its numbers are part of the question).
+  const [freeRange, setFreeRange] = useState<[number, number]>([-50, 100]);
+  const [freeStart, setFreeStart] = useState(0);
+  const expId = exp?.id;
+  const range = useMemo<[number, number]>(() => exp?.range ?? freeRange, [exp, freeRange]);
+  const start = exp?.start ?? freeStart;
+  const locked = Boolean(exp);
+
+  const m = useMotionTrack({ range, start, moves: load.moves, durations: load.durations, editable: true, show: ['position', 'distance', 'displacement', 'speed', 'velocity'], stepM: 5 });
+  const alt = `A straight track from ${range[0]} m to ${range[1]} m with reference origin O at 0 m. Move the object with buttons or keyboard.`;
+  const resetLoad = () => setLoad((l) => ({ moves: [], key: l.key + 1 }));
+
+  const pick = (id?: string) => { setParams(id ? { experiment: id } : {}); resetLoad(); };
+
+  const outlinerContent = (
+    <div className="p-3 space-y-4 text-xs font-sans">
+      <div>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+        <div className="mt-1.5 space-y-1">
+          <button type="button" aria-pressed={!exp} onClick={() => pick()}
+            className={`w-full text-left px-2.5 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-between ${!exp ? 'bg-surface-variant text-primary font-bold border border-primary/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/40'}`}>
+            <span>Free Exploration</span>{!exp && <span className="text-primary text-[11px]">✓</span>}
+          </button>
+          {MOTION_EXPERIMENTS.map((x) => (
+            <button key={x.id} type="button" aria-pressed={expId === x.id} data-experiment={x.id} onClick={() => pick(x.id)}
+              className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-colors flex items-center justify-between ${expId === x.id ? 'bg-surface-variant text-primary font-bold border border-primary/30' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/40'}`}>
+              <span className="truncate">{x.id}. {x.title}</span>{expId === x.id && <span className="text-primary text-[11px]">✓</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="pt-2 border-t border-outline-variant">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Scene Hierarchy</span>
+        <div className="mt-1.5 space-y-1 font-mono text-[11px]">
+          <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-cyan-400">toys</span><span>Moving_Object</span></div>
+          <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-amber-400">straighten</span><span>Track_[{range[0]}, {range[1]}]m</span></div>
+          <div className="flex items-center space-x-2 px-2 py-1 rounded bg-surface-lowest/50 text-slate-300"><span className="material-symbols-outlined text-[14px] text-emerald-400">navigation</span><span>Reference_Origin (0m)</span></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const inspectorContent = (
+    <div className="p-3 space-y-3 text-xs font-sans" data-testid="motion-inspector">
+      <LabInspectorSection
+        title="Track Configuration"
+        icon={<span className="material-symbols-outlined text-[15px]">straighten</span>}
+        locked={locked}
+        badge={locked ? <span className="text-[9px] font-mono font-bold text-amber-300 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/30">FIXED</span> : undefined}
+      >
+        <div className="space-y-1.5 font-mono">
+          <LabParameterField
+            id="track-start"
+            label="Track start"
+            value={range[0]}
+            unit="m"
+            step={5}
+            compact
+            symbol="x_min"
+            symbolColor="#f59e0b"
+            disabled={locked}
+            ariaLabel="Track start in metres"
+            onChange={(v) => { if (v < freeStart && v < freeRange[1]) { setFreeRange([v, freeRange[1]]); resetLoad(); } }}
+          />
+          <LabParameterField
+            id="track-end"
+            label="Track end"
+            value={range[1]}
+            unit="m"
+            step={5}
+            compact
+            symbol="x_max"
+            symbolColor="#f59e0b"
+            disabled={locked}
+            ariaLabel="Track end in metres"
+            onChange={(v) => { if (v > freeStart && v > freeRange[0]) { setFreeRange([freeRange[0], v]); resetLoad(); } }}
+          />
+          <LabParameterField
+            id="track-start-pos"
+            label="Start position"
+            value={start}
+            unit="m"
+            step={5}
+            compact
+            symbol="x₀"
+            symbolColor="#38bdf8"
+            disabled={locked}
+            ariaLabel="Start position in metres"
+            onChange={(v) => { if (v >= freeRange[0] && v <= freeRange[1]) { setFreeStart(v); resetLoad(); } }}
+          />
+        </div>
+        {locked && (
+          <p className="mt-1 text-[10px] text-amber-400/90 font-mono bg-amber-400/10 p-2 rounded-lg border border-amber-400/20">
+            Fixed by this investigation. Pick Free Exploration to change the track.
+          </p>
+        )}
+      </LabInspectorSection>
+
+      <LabInspectorSection
+        title="Motion Parameters"
+        icon={<span className="material-symbols-outlined text-[15px]">tune</span>}
+      >
+        <MotionParameterFields m={m} stacked />
+        <MotionMessage m={m} />
+      </LabInspectorSection>
+
+      <div className="pt-1">
+        <LabButton
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={resetLoad}
+          icon={<span className="material-symbols-outlined text-[15px]">restart_alt</span>}
+          className="w-full justify-center font-semibold"
+        >
+          Reset experiment to start
+        </LabButton>
+      </div>
+
+      {exp && (
+        <LabInspectorSection
+          title={`Investigation ${exp.id}: Concept`}
+          icon={<span className="material-symbols-outlined text-[15px] text-primary">school</span>}
+        >
+          <p className="text-xs text-slate-300 leading-relaxed">{exp.goal}</p>
+          <div className="p-2.5 rounded-lg bg-surface-lowest text-[11px] text-emerald-300 border border-emerald-500/25 flex items-start gap-1.5">
+            <span className="material-symbols-outlined text-[14px] shrink-0 text-emerald-400 mt-0.5">check_circle</span>
+            <div><strong>Notice:</strong> {exp.lesson}</div>
+          </div>
+        </LabInspectorSection>
+      )}
+    </div>
+  );
+
+  const viewportContent = (
+    <ViewportFrame
+      toolbar={
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <MotionMoveButtons m={m} compact />
+          {m.path.legs.length > 0 && (
+            <>
+              <LabToolbarDivider vertical className="hidden sm:block" />
+              <MotionPlaybackControls m={m} compact />
+            </>
+          )}
+        </div>
+      }
+      footnote={<>Simulated time t = {(m.s.tMs / 1000).toFixed(1)} s · positions are exact in this model · right is positive</>}
+    >
+      <div data-visual="motionTrack" data-testid="motion-track" className="w-full h-full min-h-0 flex items-center justify-center">
+        <MotionScene m={m} alt={alt} fill />
+      </div>
+    </ViewportFrame>
+  );
+
+  const explanation = (
+    <div className="space-y-2 text-xs text-slate-200 max-w-3xl" data-testid="motion-explanation">
+      <p data-testid="motion-live" role="status" aria-live="polite">{m.live}</p>
+      <p><strong>Distance</strong> is the total length of the route and never decreases. <strong>Displacement</strong> is the signed change of position from the start, so it can shrink or change sign when the object turns back.</p>
+      <p><strong>Speed</strong> = distance ÷ time has no direction. <strong>Velocity</strong> = displacement ÷ time keeps the sign: negative means leftward.</p>
+      {exp && <p className="text-emerald-300"><strong>Notice:</strong> {exp.lesson}</p>}
+    </div>
+  );
+
+  const investigation = exp ? (
+    <div className="space-y-3" data-testid="experiment-panel">
+      <div className="flex items-center justify-between text-xs font-mono">
+        <span className="text-primary font-bold">Investigation {exp.id}: {exp.title}</span>
+        <span className="text-outline">Predict → Run → Compare</span>
+      </div>
+      {exp.routes.map((_r, i) =>
+        exp.predict === 'speed' ? (
+          <RatePrediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves, durations) => setLoad((l) => ({ moves, durations, key: l.key + 1 }))} />
+        ) : (
+          <Prediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves) => setLoad((l) => ({ moves, key: l.key + 1 }))} />
+        )
+      )}
+    </div>
+  ) : (
+    <div className="text-xs space-y-1 text-slate-300" data-testid="experiment-panel">
+      <p className="font-mono">Free Exploration: move the object along the track and read the live measurements, data and graphs.</p>
+      <p className="text-outline">Select an investigation in the Explorer to compare your predictions against the model.</p>
+    </div>
+  );
+
+  const tabs: DockTab[] = [
+    { id: 'measurements', label: 'Measurements', content: <MotionReadout m={m} className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2" /> },
+    { id: 'data', label: 'Data', content: <MotionHistory m={m} /> },
+    { id: 'graphs', label: 'Graphs', content: <MotionTimeGraphs path={m.path} tMs={m.tMs} /> },
+    { id: 'explanation', label: 'Explanation', content: explanation },
+    { id: 'investigation', label: exp ? `Investigation ${exp.id}` : 'Investigation', content: investigation },
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="motion-lab">
-      <GlobalHeader />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
-          <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
-          <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
-          <Link to="/physics/motion" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Describing Motion</Link><span>/</span>
-          <span className="text-sky-300 font-bold">Motion Laboratory</span>
-        </nav>
-        <header className="space-y-2">
-          <h1 className="text-3xl font-black text-white">Motion Laboratory</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">Move the object along a straight track. The distance travelled, the displacement and the history all come from one model of the path. This is free exploration: try anything, there is nothing to unlock.</p>
-        </header>
-
-        <section aria-label="Motion track">
-          <MotionTrackView key={`${exp?.id ?? 'free'}-${load.key}`} range={range} start={start} moves={load.moves} durations={load.durations} editable playback show={['position', 'distance', 'displacement', 'speed', 'velocity']} stepM={5} alt="A straight track from −50 m or less to 100 m with the reference point O at 0 m. Move the object with the buttons, the keyboard or by typing a position; the readouts give its position, the distance travelled and the displacement." />
-        </section>
-
-        <section aria-label="Guided investigations" className="space-y-3">
-          <h2 className="text-xl font-black text-white">Guided investigations (optional)</h2>
-          <div role="group" aria-label="Choose an investigation" className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={!exp} onClick={() => { setParams({}); setLoad({ moves: [], key: load.key + 1 }); }} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${!exp ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={!exp ? { borderColor: PHYS.position } : undefined}>{!exp ? '\u2713 ' : ''}Free exploration</button>
-            {MOTION_EXPERIMENTS.map((x) => (
-              <button key={x.id} type="button" aria-pressed={exp?.id === x.id} data-experiment={x.id} onClick={() => { setParams({ experiment: x.id }); setLoad({ moves: [], key: load.key + 1 }); }} className={`min-h-[44px] px-4 rounded-xl border-2 text-sm font-bold ${exp?.id === x.id ? 'bg-surface-elevated text-white' : 'bg-surface-card border-surface-border text-slate-300'}`} style={exp?.id === x.id ? { borderColor: PHYS.prediction } : undefined}>{exp?.id === x.id ? '\u2713 ' : ''}{x.id}. {x.title}</button>
-            ))}
-          </div>
-          {exp ? (
-            <div className="space-y-3" data-testid="experiment-panel">
-              <div className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" style={{ borderLeft: `4px solid ${PHYS.time}` }}>
-                <h3 className="text-lg font-bold text-white">Experiment {exp.id}: {exp.title}</h3>
-                <p className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.time }}>Instructions</p>
-                <p className="text-sm text-slate-300">{exp.goal} First predict, then run the route and compare. You can then change the moves and test your own ideas.</p>
-              </div>
-              {exp.routes.map((_r, i) => exp.predict === 'speed'
-                ? <RatePrediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves, durations) => setLoad((l) => ({ moves, durations, key: l.key + 1 }))} />
-                : <Prediction key={`${exp.id}-${i}`} e={exp} routeIndex={i} onRun={(moves) => setLoad((l) => ({ moves, key: l.key + 1 }))} />)}
-              <p className="text-sm text-slate-200 rounded-xl border p-3" style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}><strong style={{ color: PHYS.correct }}>{"\u2713 "}What to notice: </strong>{exp.lesson}</p>
-              <p className="text-xs text-slate-400">These are <em>model</em> values for an idealised straight track. Real measurements with a tape and a stopwatch would carry small errors.</p>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">Pick an investigation to predict first and compare with the model, or keep exploring freely.</p>
-          )}
-        </section>
-      </main>
-    </div>
+    <WorkspaceShell
+      chapterId="motion"
+      labTitle="Motion Laboratory"
+      outliner={outlinerContent}
+      outlinerTitle="Investigations"
+      viewport={viewportContent}
+      inspector={inspectorContent}
+      inspectorTitle="Motion Inspector"
+      analysisDock={<DockTabs key={expId ?? 'free'} tabs={tabs} initial={exp ? 'investigation' : 'measurements'} />}
+      experimentSetupSnapshot={load}
+    />
   );
 };

@@ -19,10 +19,10 @@ import type { ArrowsVisualProps, CartVisualProps } from '../../../engine/physics
 import { toArrows } from '../../../engine/physics/forces/learn/questions';
 import { describeDiagram, netArrow } from '../../../engine/physics/forces/forceDiagram';
 
-const r2 = (n: number, p = 2): string => { const r = Math.round(n * 10 ** p) / 10 ** p; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
-const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : `${n > 0 ? '+' : '−'}${r2(Math.abs(n))}`);
+export const r2 = (n: number, p = 2): string => { const r = Math.round(n * 10 ** p) / 10 ** p; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
+export const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : `${n > 0 ? '+' : '−'}${r2(Math.abs(n))}`);
 
-const Stat: React.FC<{ id: string; label: string; value: string; color: string; symbol: string; note?: string }> = ({ id, label, value, color, symbol, note }) => (
+export const Stat: React.FC<{ id: string; label: string; value: string; color: string; symbol: string; note?: string }> = ({ id, label, value, color, symbol, note }) => (
   <div className="rounded-lg border border-surface-border bg-surface-card px-3 py-2 min-w-0" style={{ borderLeft: `4px solid ${color}` }}>
     <dt className="text-[11px] flex items-center gap-1.5 text-slate-300"><span aria-hidden style={{ color }}>{symbol}</span>{label}</dt>
     <dd data-readout={id} className="font-mono text-lg font-bold leading-tight" style={{ color }}>{value}</dd>
@@ -30,7 +30,7 @@ const Stat: React.FC<{ id: string; label: string; value: string; color: string; 
   </div>
 );
 
-const Field: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
+export const Field: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
   const [text, setText] = useState(String(value));
   const [last, setLast] = useState(value);
   if (last !== value) { setLast(value); setText(String(value)); }
@@ -45,7 +45,7 @@ const Field: React.FC<{ id: string; label: string; unit: string; value: number; 
   );
 };
 
-const DirToggle: React.FC<{ label: string; value: Dir; onChange: (d: Dir) => void }> = ({ label, value, onChange }) => (
+export const DirToggle: React.FC<{ label: string; value: Dir; onChange: (d: Dir) => void }> = ({ label, value, onChange }) => (
   <div role="group" aria-label={`Direction of ${label}`} className="flex gap-1">
     {(['left', 'right'] as Dir[]).map((d) => (
       <button key={d} type="button" aria-pressed={value === d} data-dir={`${label}-${d}`} onClick={() => onChange(d)} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: value === d ? PHYS.force : '#334155' }}>{value === d ? '✓ ' : ''}{d === 'left' ? '← Left' : 'Right →'}</button>
@@ -55,7 +55,7 @@ const DirToggle: React.FC<{ label: string; value: Dir; onChange: (d: Dir) => voi
 
 const TRACK_W = 620, TRACK_H = 110;
 
-const Track: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tMax, t }) => {
+export const Track: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tMax, t }) => {
   const all = useMemo(() => simulate(setup, tMax), [setup, tMax]);
   let lo = Math.min(...all.map((p) => p.x), 0), hi = Math.max(...all.map((p) => p.x), 0);
   if (hi - lo < 4) { lo -= 2; hi += 2; }
@@ -78,7 +78,7 @@ const Track: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tMa
   );
 };
 
-const VStrip: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tMax, t }) => {
+export const VStrip: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tMax, t }) => {
   const all = useMemo(() => simulate(setup, tMax), [setup, tMax]);
   const pts = all.filter((_, i) => i % 5 === 0);
   let lo = Math.min(0, ...pts.map((p) => p.v)), hi = Math.max(0, ...pts.map((p) => p.v));
@@ -100,11 +100,11 @@ const VStrip: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tM
 
 export interface ForceCartProps { initial?: Setup; editable?: boolean; showNet?: boolean; startTime?: number; alt?: string; resetToken?: number; graphs?: boolean }
 
-export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETUP, editable = true, showNet = true, startTime = 0, alt, resetToken, graphs = false }) => {
+/** All state and actions of one force cart. The lab slots and the lesson composite read the same instance. */
+export const useForceCart = ({ initial = DEFAULT_SETUP, showNet = true, startTime = 0, resetToken, alt }: Pick<ForceCartProps, 'initial' | 'showNet' | 'startTime' | 'resetToken' | 'alt'>) => {
   const [setup, setSetup] = useState<Setup>(initial);
   const [prevInit, setPrevInit] = useState(initial);
   const [prevTok, setPrevTok] = useState(resetToken);
-  if (prevInit !== initial || prevTok !== resetToken) { setPrevInit(initial); setPrevTok(resetToken); setSetup(initial); }
   const [tMax, setTMax] = useState(20);
   const [t, setT] = useState(startTime);
   const [playing, setPlaying] = useState(false);
@@ -113,6 +113,7 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
   const [showIndividual, setShowIndividual] = useState(true);
   const [showNetForce, setShowNetForce] = useState(showNet);
   const reduced = useReducedMotion();
+  if (prevInit !== initial || prevTok !== resetToken) { setPrevInit(initial); setPrevTok(resetToken); setSetup(initial); setErr(''); setT(startTime); setPlaying(false); }
   const tt = Math.min(t, tMax);
   const p = sampleAtTime(setup, tt, tMax);
   const d = diagramOf(p);
@@ -144,89 +145,148 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
-  const live = explain(setup, p);
-  const figureAlt = alt ?? `${d.text}`;
+  return {
+    setup, tMax, tt, p, d, playing, rate, err, showIndividual, showNetForce, reduced, live: explain(setup, p), figureAlt: alt ?? `${d.text}`,
+    change, setRate, setShowIndividual, setShowNetForce,
+    setRunLength: (v: number) => { setTMax(v); setT(0); setPlaying(false); },
+    togglePlay: () => { if (tt >= tMax) setT(0); setPlaying((x) => !x); },
+    stepBack: () => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); },
+    stepForward: () => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); },
+    resetTime: () => { setPlaying(false); setT(0); },
+    scrub: (v: number) => { setPlaying(false); setT(v); },
+  };
+};
+export type ForceCartModel = ReturnType<typeof useForceCart>;
 
+const BTN = 'rounded-lg border border-surface-border bg-surface-card text-slate-200';
+
+/** Editable setup: mass, starting velocity, surface, both pushes, how long they last. `stacked` is the Inspector layout. */
+export const ForceSetupFields: React.FC<{ m: ForceCartModel; stacked?: boolean }> = ({ m, stacked }) => {
+  const { setup, change } = m;
+  const row = stacked ? 'flex flex-col gap-2 items-start' : 'flex flex-wrap gap-3 items-center';
+  return (
+    <div className="space-y-2" data-testid="force-controls">
+      <div className={row}>
+        <Field id="mass" label="Cart mass" unit="kg" value={setup.massKg} step={1} onChange={(v) => change({ massKg: v })} />
+        <Field id="velocity" label="Starting velocity" unit="m/s" value={setup.startVelocity} step={1} onChange={(v) => change({ startVelocity: v })} />
+        <label className="flex items-center gap-2 text-xs text-slate-300">Surface
+          <select value={setup.surfaceId} onChange={(e) => change({ surfaceId: e.target.value })} aria-label="Surface under the cart" data-testid="surface-select" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
+            {SURFACES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className={row}>
+        <span className="text-xs font-bold" style={{ color: PHYS.force }}>Push A</span>
+        <Field id="forceA" label="Force A" unit="N" value={setup.forceA} step={1} onChange={(v) => change({ forceA: v })} />
+        <DirToggle label="A" value={setup.dirA} onChange={(dir) => change({ dirA: dir })} />
+      </div>
+      <div className={row}>
+        <span className="text-xs font-bold" style={{ color: PHYS.force }}>Push B</span>
+        <Field id="forceB" label="Force B" unit="N" value={setup.forceB} step={1} onChange={(v) => change({ forceB: v })} />
+        <DirToggle label="B" value={setup.dirB} onChange={(dir) => change({ dirB: dir })} />
+      </div>
+      <div className={row}>
+        <Field id="pulse" label="Pushes last for (0 = always)" unit="s" value={setup.pulseS ?? 0} step={1} onChange={(v) => change({ pulseS: v <= 0 ? undefined : Math.round(v / DT) * DT })} />
+      </div>
+      <p className="text-[11px] text-slate-400">Assumptions: a cart on a horizontal track (weight = normal force, g = 10 m/s²), right is positive, no air resistance. Friction uses the simple dry-friction model: {surfaceById(setup.surfaceId).note} Mass {LIMITS.minMass} to {LIMITS.maxMass} kg, forces up to {LIMITS.maxForce} N.</p>
+      {m.err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="force-error"><span aria-hidden>{'✗ '}</span>{m.err}</p>}
+    </div>
+  );
+};
+
+export const ForceToggles: React.FC<{ m: ForceCartModel; compact?: boolean }> = ({ m, compact }) => {
+  const h = compact ? 'min-h-[32px]' : 'min-h-[44px]';
+  return (
+    <div role="group" aria-label="Show forces" className="flex flex-wrap gap-2">
+      <button type="button" aria-pressed={m.showIndividual} data-toggle="individual" onClick={() => m.setShowIndividual((x) => !x)} className={`${h} px-3 rounded-lg border-2 text-xs font-bold text-slate-100`} style={{ borderColor: m.showIndividual ? PHYS.force : '#334155' }}>{m.showIndividual ? '✓ ' : ''}Show the individual forces</button>
+      <button type="button" aria-pressed={m.showNetForce} data-toggle="net" onClick={() => m.setShowNetForce((x) => !x)} className={`${h} px-3 rounded-lg border-2 text-xs font-bold text-slate-100`} style={{ borderColor: m.showNetForce ? PHYS.netForce : '#334155' }}>{m.showNetForce ? '✓ ' : ''}Show the net force</button>
+    </div>
+  );
+};
+
+/** Play, step, reset, replay speed, run length and the time slider. `compact` is the single-row viewport toolbar. */
+export const ForceTimeControls: React.FC<{ m: ForceCartModel; compact?: boolean }> = ({ m, compact }) => {
+  const { tt, tMax, playing, rate, reduced } = m;
+  const h = compact ? 'min-h-[32px] text-xs' : 'min-h-[44px] text-sm';
+  const sel = `${compact ? 'min-h-[32px] text-xs' : 'min-h-[44px]'} rounded-lg border border-surface-border bg-surface-lowest px-2 text-white`;
+  return (
+    <div role="group" aria-label="Time controls" className={`flex flex-wrap items-center gap-2 ${compact ? '' : 'rounded-xl border border-surface-border bg-surface-card/60 p-3'}`} data-testid="force-time">
+      {!compact && <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (fixed 0.01 s steps)</span>}
+      <button type="button" onClick={m.togglePlay} aria-pressed={playing} className={`${h} px-3 rounded-lg font-bold text-slate-950`} style={{ background: PHYS.time }} data-testid="force-play">{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</button>
+      <button type="button" onClick={m.stepBack} aria-label="Step back 1 second of simulated time" className={`${h} px-2 ${BTN}`}>{compact ? '−1 s' : 'Step −1 s'}</button>
+      <button type="button" onClick={m.stepForward} aria-label="Step forward 1 second of simulated time" className={`${h} px-2 ${BTN}`}>{compact ? '+1 s' : 'Step +1 s'}</button>
+      <button type="button" onClick={m.resetTime} className={`${h} px-2 rounded-lg border`} style={{ borderColor: PHYS.error, color: PHYS.error }} data-testid="force-reset">{compact ? 'Reset' : 'Reset to 0 s'}</button>
+      <label className="flex items-center gap-1 text-xs text-slate-300">{compact ? '' : 'Replay speed'}
+        <select value={rate} onChange={(e) => m.setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className={sel}><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
+      </label>
+      <label className="flex items-center gap-1 text-xs text-slate-300">{compact ? '' : 'Run length'}
+        <select value={tMax} onChange={(e) => m.setRunLength(Number(e.target.value))} aria-label="Length of the run in seconds" className={sel}><option value={10}>10 s</option><option value={20}>20 s</option><option value={30}>30 s</option></select>
+      </label>
+      <label className={`flex items-center gap-2 text-xs text-slate-300 grow ${compact ? 'min-w-[120px]' : 'min-w-[160px]'}`}>{compact ? '' : 'Time'}
+        <input type="range" min={0} max={tMax} step={0.1} value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className={`w-full ${compact ? 'min-h-[32px]' : 'min-h-[44px]'}`} />
+      </label>
+      {!compact && <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; the physics uses simulated time.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>}
+    </div>
+  );
+};
+
+export const ForceReadout: React.FC<{ m: ForceCartModel; className?: string }> = ({ m, className }) => {
+  const { p, setup } = m;
+  return (
+    <dl className={className ?? 'grid grid-cols-2 lg:grid-cols-4 gap-2'} data-testid="force-readout">
+      <Stat id="t" label="Simulated time" value={`${r2(p.t)} s`} color={PHYS.time} symbol={'⏱'} />
+      <Stat id="mass" label="Mass" value={`${r2(setup.massKg)} kg`} color="#e2e8f0" symbol={'■'} />
+      <Stat id="net" label="Net force" value={`${sg(p.net)} N`} color={PHYS.netForce} symbol={'→'} note="all horizontal forces added" />
+      <Stat id="a" label="Acceleration" value={`${sg(p.a)} m/s²`} color={PHYS.acceleration} symbol={'⇢'} note="net force ÷ mass" />
+      <Stat id="v" label="Velocity" value={`${sg(p.v)} m/s`} color={PHYS.velocity} symbol={'➤'} />
+      <Stat id="x" label="Position" value={`${sg(p.x)} m`} color={PHYS.position} symbol={'●'} />
+      <Stat id="friction" label="Friction" value={`${sg(p.friction)} N`} color={PHYS.friction} symbol={'↔'} note={p.frictionKind === 'static' ? 'static: matches the push' : p.frictionKind === 'kinetic' ? 'kinetic: sliding' : 'none'} />
+      <Stat id="push" label="Pushes A + B" value={`${sg(p.forceA + p.forceB)} N`} color={PHYS.force} symbol={'⇒'} />
+    </dl>
+  );
+};
+
+/** Momentum p = m v at the current time (a plain product of values the model already gives). */
+export const ForceMomentum: React.FC<{ m: ForceCartModel }> = ({ m }) => (
+  <dl className="grid grid-cols-2 gap-2 max-w-sm" data-testid="force-momentum">
+    <Stat id="momentum" label="Momentum" value={`${sg(m.setup.massKg * m.p.v)} kg·m/s`} color={PHYS.velocity} symbol={'p'} note="mass × velocity" />
+    <Stat id="impulse-rate" label="Net force" value={`${sg(m.p.net)} N`} color={PHYS.netForce} symbol={'F'} note="rate of change of momentum" />
+  </dl>
+);
+
+export const ForceLive: React.FC<{ m: ForceCartModel }> = ({ m }) => (
+  <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3" data-testid="force-live">{m.live}</div>
+);
+
+export const ForceDataTable: React.FC<{ m: ForceCartModel }> = ({ m }) => (
+  <div className="overflow-x-auto"><table className="w-full text-xs">
+    <caption className="sr-only">Position, velocity and net force of the cart at whole seconds</caption>
+    <thead><tr className="text-slate-300"><th scope="col" className="p-1 text-left">t (s)</th><th scope="col" className="p-1 text-left">x (m)</th><th scope="col" className="p-1 text-left">v (m/s)</th><th scope="col" className="p-1 text-left">net force (N)</th></tr></thead>
+    <tbody>{Array.from({ length: Math.min(m.tMax, 30) + 1 }, (_, i) => sampleAtTime(m.setup, i, m.tMax)).map((r) => <tr key={r.t} className="border-t border-surface-border font-mono"><td className="p-1">{r.t}</td><td className="p-1" style={{ color: PHYS.position }}>{sg(r.x)}</td><td className="p-1" style={{ color: PHYS.velocity }}>{sg(r.v)}</td><td className="p-1" style={{ color: PHYS.netForce }}>{sg(r.net)}</td></tr>)}</tbody>
+  </table></div>
+);
+
+/** The lesson/composite version: every piece stacked, exactly as before. */
+export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETUP, editable = true, showNet = true, startTime = 0, alt, resetToken, graphs = false }) => {
+  const m = useForceCart({ initial, showNet, startTime, resetToken, alt });
   return (
     <div className="space-y-3" data-visual="forceCart" data-testid="force-cart">
       {editable && (
-        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="force-controls">
+        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3">
           <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set up the cart</h3>
-          <div className="flex flex-wrap gap-3 items-center">
-            <Field id="mass" label="Cart mass" unit="kg" value={setup.massKg} step={1} onChange={(v) => change({ massKg: v })} />
-            <Field id="velocity" label="Starting velocity" unit="m/s" value={setup.startVelocity} step={1} onChange={(v) => change({ startVelocity: v })} />
-            <label className="flex items-center gap-2 text-xs text-slate-300">Surface
-              <select value={setup.surfaceId} onChange={(e) => change({ surfaceId: e.target.value })} aria-label="Surface under the cart" data-testid="surface-select" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
-                {SURFACES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
-            </label>
-          </div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <span className="text-xs font-bold" style={{ color: PHYS.force }}>Push A</span>
-            <Field id="forceA" label="Force A" unit="N" value={setup.forceA} step={1} onChange={(v) => change({ forceA: v })} />
-            <DirToggle label="A" value={setup.dirA} onChange={(dir) => change({ dirA: dir })} />
-          </div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <span className="text-xs font-bold" style={{ color: PHYS.force }}>Push B</span>
-            <Field id="forceB" label="Force B" unit="N" value={setup.forceB} step={1} onChange={(v) => change({ forceB: v })} />
-            <DirToggle label="B" value={setup.dirB} onChange={(dir) => change({ dirB: dir })} />
-          </div>
-          <div className="flex flex-wrap gap-3 items-center">
-            <Field id="pulse" label="Pushes last for (0 = always)" unit="s" value={setup.pulseS ?? 0} step={1} onChange={(v) => change({ pulseS: v <= 0 ? undefined : Math.round(v / DT) * DT })} />
-          </div>
-          <p className="text-[11px] text-slate-400">Assumptions: a cart on a horizontal track (weight = normal force, g = 10 m/s²), right is positive, no air resistance. Friction uses the simple dry-friction model: {surfaceById(setup.surfaceId).note} Mass {LIMITS.minMass} to {LIMITS.maxMass} kg, forces up to {LIMITS.maxForce} N.</p>
-          {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="force-error"><span aria-hidden>{'✗ '}</span>{err}</p>}
+          <ForceSetupFields m={m} />
         </div>
       )}
-
-      <Track setup={setup} tMax={tMax} t={tt} />
-
-      <div role="group" aria-label="Show forces" className="flex flex-wrap gap-2">
-        <button type="button" aria-pressed={showIndividual} data-toggle="individual" onClick={() => setShowIndividual((x) => !x)} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: showIndividual ? PHYS.force : '#334155' }}>{showIndividual ? '✓ ' : ''}Show the individual forces</button>
-        <button type="button" aria-pressed={showNetForce} data-toggle="net" onClick={() => setShowNetForce((x) => !x)} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: showNetForce ? PHYS.netForce : '#334155' }}>{showNetForce ? '✓ ' : ''}Show the net force</button>
-      </div>
-      <ForceFigure object="cart" arrows={d.arrows} net={d.net} showIndividual={showIndividual} showNet={showNetForce} alt={figureAlt} />
-
-      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="force-time">
-        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (fixed 0.01 s steps)</span>
-        <button type="button" onClick={() => { if (tt >= tMax) setT(0); setPlaying((x) => !x); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }} data-testid="force-play">{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">{'Step −1 s'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border text-sm" style={{ borderColor: PHYS.error, color: PHYS.error }} data-testid="force-reset">Reset to 0 s</button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
-          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Run length
-          <select value={tMax} onChange={(e) => { setTMax(Number(e.target.value)); setT(0); setPlaying(false); }} aria-label="Length of the run in seconds" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={10}>10 s</option><option value={20}>20 s</option><option value={30}>30 s</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={tMax} step={0.1} value={tt} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className="w-full min-h-[44px]" />
-        </label>
-        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; the physics uses simulated time.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
-      </div>
-
-      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="force-readout">
-        <Stat id="t" label="Simulated time" value={`${r2(p.t)} s`} color={PHYS.time} symbol={'⏱'} />
-        <Stat id="mass" label="Mass" value={`${r2(setup.massKg)} kg`} color="#e2e8f0" symbol={'■'} />
-        <Stat id="net" label="Net force" value={`${sg(p.net)} N`} color={PHYS.netForce} symbol={'→'} note="all horizontal forces added" />
-        <Stat id="a" label="Acceleration" value={`${sg(p.a)} m/s²`} color={PHYS.acceleration} symbol={'⇢'} note="net force ÷ mass" />
-        <Stat id="v" label="Velocity" value={`${sg(p.v)} m/s`} color={PHYS.velocity} symbol={'➤'} />
-        <Stat id="x" label="Position" value={`${sg(p.x)} m`} color={PHYS.position} symbol={'●'} />
-        <Stat id="friction" label="Friction" value={`${sg(p.friction)} N`} color={PHYS.friction} symbol={'↔'} note={p.frictionKind === 'static' ? 'static: matches the push' : p.frictionKind === 'kinetic' ? 'kinetic: sliding' : 'none'} />
-        <Stat id="push" label="Pushes A + B" value={`${sg(p.forceA + p.forceB)} N`} color={PHYS.force} symbol={'⇒'} />
-      </dl>
-
-      {graphs ? <ForceGraphs setup={setup} tMax={tMax} t={tt} /> : <VStrip setup={setup} tMax={tMax} t={tt} />}
-
-      <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3" data-testid="force-live">{live}</div>
-
+      <Track setup={m.setup} tMax={m.tMax} t={m.tt} />
+      <ForceToggles m={m} />
+      <ForceFigure object="cart" arrows={m.d.arrows} net={m.d.net} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} />
+      <ForceTimeControls m={m} />
+      <ForceReadout m={m} />
+      {graphs ? <ForceGraphs setup={m.setup} tMax={m.tMax} t={m.tt} /> : <VStrip setup={m.setup} tMax={m.tMax} t={m.tt} />}
+      <ForceLive m={m} />
       <details className="rounded-xl border border-surface-border bg-surface-card/50 p-3">
         <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-slate-200 font-medium">Motion history (text alternative to the strip)</summary>
-        <div className="overflow-x-auto"><table className="w-full text-xs mt-2">
-          <caption className="sr-only">Position, velocity and net force of the cart at whole seconds</caption>
-          <thead><tr className="text-slate-300"><th scope="col" className="p-1 text-left">t (s)</th><th scope="col" className="p-1 text-left">x (m)</th><th scope="col" className="p-1 text-left">v (m/s)</th><th scope="col" className="p-1 text-left">net force (N)</th></tr></thead>
-          <tbody>{Array.from({ length: Math.min(tMax, 30) + 1 }, (_, i) => sampleAtTime(setup, i, tMax)).map((r) => <tr key={r.t} className="border-t border-surface-border font-mono"><td className="p-1">{r.t}</td><td className="p-1" style={{ color: PHYS.position }}>{sg(r.x)}</td><td className="p-1" style={{ color: PHYS.velocity }}>{sg(r.v)}</td><td className="p-1" style={{ color: PHYS.netForce }}>{sg(r.net)}</td></tr>)}</tbody>
-        </table></div>
+        <div className="mt-2"><ForceDataTable m={m} /></div>
       </details>
     </div>
   );

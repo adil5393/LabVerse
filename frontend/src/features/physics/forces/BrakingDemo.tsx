@@ -15,27 +15,80 @@ import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
 
-const r2 = (n: number): string => { const r = Math.round(n * 100) / 100; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
+export const r2 = (n: number): string => { const r = Math.round(n * 100) / 100; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
 
-const Num: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
+export const NumField: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
   const [text, setText] = useState(String(value));
   const [last, setLast] = useState(value);
   if (last !== value) { setLast(value); setText(String(value)); }
   return (
-    <div className="flex items-center gap-1 text-xs text-slate-300">
-      <label className="flex items-center gap-1">{label}
-        <input value={text} data-field={id} inputMode="decimal" aria-label={`${label} in ${unit}`} onChange={(e) => { setText(e.target.value); const n = Number(e.target.value); if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n); }} className="w-16 min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white font-mono" /></label><span>{unit}</span>
-      <button type="button" aria-label={`Decrease ${label} by ${step}`} onClick={() => onChange(Math.round((value - step) * 100) / 100)} className="min-h-[44px] min-w-[44px] rounded-lg border border-surface-border bg-surface-card text-white">{'−'}</button>
-      <button type="button" aria-label={`Increase ${label} by ${step}`} onClick={() => onChange(Math.round((value + step) * 100) / 100)} className="min-h-[44px] min-w-[44px] rounded-lg border border-surface-border bg-surface-card text-white">+</button>
+    <div className="flex items-center justify-between gap-1 text-xs text-slate-300 bg-surface-lowest/70 border border-surface-border rounded-lg p-1.5">
+      <label className="flex items-center gap-1.5 font-medium text-slate-300">
+        <span>{label}</span>
+        <input
+          value={text}
+          data-field={id}
+          inputMode="decimal"
+          aria-label={`${label} in ${unit}`}
+          onChange={(e) => {
+            setText(e.target.value);
+            const n = Number(e.target.value);
+            if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n);
+          }}
+          className="w-16 min-h-[32px] rounded border border-surface-border bg-surface-lowest px-1.5 text-white font-mono text-xs focus:border-primary outline-none text-right"
+        />
+        <span className="text-[11px] text-slate-400 font-mono">{unit}</span>
+      </label>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Decrease ${label} by ${step}`}
+          onClick={() => onChange(Math.round((value - step) * 100) / 100)}
+          className="min-h-[32px] min-w-[32px] rounded border border-surface-border bg-surface-card hover:bg-surface-variant text-white text-xs flex items-center justify-center transition-colors"
+        >
+          {'−'}
+        </button>
+        <button
+          type="button"
+          aria-label={`Increase ${label} by ${step}`}
+          onClick={() => onChange(Math.round((value + step) * 100) / 100)}
+          className="min-h-[32px] min-w-[32px] rounded border border-surface-border bg-surface-card hover:bg-surface-variant text-white text-xs flex items-center justify-center transition-colors"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 };
 
-const W = 620, H = 150;
+export const W = 680, H = 150;
 
 export interface BrakingProps { initial?: BrakingSetup; editable?: boolean; alt?: string; resetToken?: number }
 
-export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAKING, editable = true, alt, resetToken }) => {
+export type BrakingStateResult = ReturnType<typeof brakingAt>;
+
+export interface UseBrakingDemoReturn {
+  setup: BrakingSetup;
+  t: number;
+  tt: number;
+  tMax: number;
+  playing: boolean;
+  rate: number;
+  err: string;
+  reduced: boolean;
+  s: BrakingStateResult;
+  arrows: Arrow[];
+  net: Arrow | null;
+  live: string;
+  change: (patch: Partial<BrakingSetup>) => void;
+  setPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  setT: React.Dispatch<React.SetStateAction<number>>;
+  setRate: React.Dispatch<React.SetStateAction<number>>;
+  reset: () => void;
+  jumpToEnd: () => void;
+}
+
+export function useBrakingDemo({ initial = DEFAULT_BRAKING, resetToken }: BrakingProps = {}): UseBrakingDemoReturn {
   const [setup, setSetup] = useState<BrakingSetup>(initial);
   const [prev, setPrev] = useState(initial);
   const [tok, setTok] = useState(resetToken);
@@ -74,15 +127,6 @@ export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAK
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
-  // scene: the camera follows the road; positions in metres, scaled to fit
-  const span = Math.max(10, setup.speed * (BRAKE_AT + 1.5) + 4);
-  const X = (m: number) => 30 + (m / span) * (W - 60);
-  const carW = 120;
-  const carX = X(s.vehicleX);
-  const seat = carX - carW * 0.5;
-  const pX = seat + (s.relative / GAP_M) * (carW * 0.35);
-  const tick = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60].filter((m) => m <= span);
-
   const arrows: Arrow[] = [];
   if (s.passengerForce !== 0) arrows.push({ id: 'belt', kind: 'applied', label: 'Seat belt', by: 'the belt', on: 'passenger', magnitude: Math.abs(s.passengerForce), direction: 'left', horizontal: s.passengerForce });
   arrows.push({ id: 'normal', kind: 'normal', label: 'Normal force', by: 'the seat', on: 'passenger', magnitude: setup.passengerMassKg * G, direction: 'up', horizontal: 0 });
@@ -94,67 +138,240 @@ export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAK
     : setup.restrained
       ? `The vehicle slows. The belt exerts a backward force of ${r2(setup.passengerMassKg * setup.decel)} N on the passenger, so the passenger slows with the vehicle (${r2(s.passengerV)} m/s) and does not move forward relative to the seat.`
       : `The vehicle slows to ${r2(s.vehicleV)} m/s. No horizontal force acts on the passenger, so their velocity relative to the road stays ${r2(s.passengerV)} m/s. They move ${r2(s.relative)} m forward relative to the vehicle: inertia, not a new forward force.${s.state === 'gap used up' ? ` The model ends here, after a gap of ${GAP_M} m, before any contact.` : ''}`;
-  const text = alt ?? `Sudden braking: vehicle at ${r2(setup.speed)} m/s brakes at ${r2(setup.decel)} m/s² from 1 s. Passenger ${setup.restrained ? 'wears a belt' : 'has no belt'}. ${live}`;
+
+  const reset = () => { setPlaying(false); setT(0); };
+  const jumpToEnd = () => { setPlaying(false); setT(tMax); };
+
+  return { setup, t, tt, tMax, playing, rate, err, reduced, s, arrows, net, live, change, setPlaying, setT, setRate, reset, jumpToEnd };
+}
+
+export const BrakingScene: React.FC<{ b: UseBrakingDemoReturn; alt?: string }> = ({ b, alt }) => {
+  const { setup, s } = b;
+  const span = Math.max(10, setup.speed * (BRAKE_AT + 1.5) + 4);
+  const leftPad = 135;
+  const rightPad = 35;
+  const roadW = W - leftPad - rightPad;
+  const X = (m: number) => leftPad + (m / span) * roadW;
+  const carW = 110;
+  const carX = X(s.vehicleX);
+  const seat = carX - carW * 0.5;
+  const pX = seat + (s.relative / GAP_M) * (carW * 0.35);
+  const tick = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60].filter((m) => m <= span);
+  const text = alt ?? `Sudden braking: vehicle at ${r2(setup.speed)} m/s brakes at ${r2(setup.decel)} m/s² from 1 s. Passenger ${setup.restrained ? 'wears a belt' : 'has no belt'}. ${b.live}`;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full h-auto rounded-xl bg-surface-lowest border border-surface-border" data-testid="braking-scene">
+      <line x1={15} y1={110} x2={W - 15} y2={110} stroke={PHYS.axis} strokeWidth={3} />
+      {tick.map((m) => (
+        <g key={m}>
+          <line x1={X(m)} y1={106} x2={X(m)} y2={116} stroke="#94a3b8" />
+          <text x={X(m)} y={130} textAnchor="middle" fontSize={10} fill="#94a3b8">{m}</text>
+        </g>
+      ))}
+      <text x={W - 20} y={144} textAnchor="end" fontSize={10} fill="#94a3b8">position on the road (m)</text>
+      {/* Car chassis - cleanly bounded so rear does not clip */}
+      <rect x={carX - carW} y={62} width={carW} height={44} rx={8} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
+      {/* Seat backrest */}
+      <rect x={seat - 10} y={70} width={6} height={20} fill="#475569" />
+      <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={10} fill={PHYS.position}>vehicle {r2(s.vehicleV)} m/s</text>
+      {/* Passenger */}
+      <circle cx={pX} cy={72} r={9} fill={PHYS.velocity} stroke="#0f172a" strokeWidth={2} />
+      <text x={pX} y={50} textAnchor="middle" fontSize={11} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>
+      {setup.restrained && <line x1={seat - 4} y1={80} x2={pX} y2={74} stroke={PHYS.force} strokeWidth={3} strokeDasharray="4 3" />}
+      <line x1={seat} y1={30} x2={seat} y2={36} stroke={PHYS.time} />
+      <text x={leftPad + 2} y={20} fontSize={10} fill={PHYS.time}>{s.state === 'cruising' ? 'cruising' : s.state}</text>
+    </svg>
+  );
+};
+
+export const BrakingSetupFields: React.FC<{ b: UseBrakingDemoReturn }> = ({ b }) => {
+  const { setup, change, err } = b;
+  return (
+    <div className="space-y-3" data-testid="braking-controls">
+      <div className="space-y-2">
+        <NumField id="speed" label="Speed" unit="m/s" value={setup.speed} step={5} onChange={(v) => change({ speed: v })} />
+        <NumField id="decel" label="Braking deceleration" unit="m/s²" value={setup.decel} step={1} onChange={(v) => change({ decel: v })} />
+        <NumField id="pmass" label="Passenger mass" unit="kg" value={setup.passengerMassKg} step={10} onChange={(v) => change({ passengerMassKg: v })} />
+        
+        <div className="space-y-1 pt-1">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Seat Belt Restraint</span>
+          <div role="group" aria-label="Seat belt" className="grid grid-cols-2 gap-1.5">
+            {[false, true].map((on) => (
+              <button
+                key={String(on)}
+                type="button"
+                aria-pressed={setup.restrained === on}
+                data-belt={on ? 'on' : 'off'}
+                onClick={() => change({ restrained: on })}
+                className={`min-h-[36px] px-2 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  setup.restrained === on
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+                    : 'border-surface-border bg-surface-lowest text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {setup.restrained === on && <span className="material-symbols-outlined text-[14px]">check</span>}
+                <span>{on ? 'Belt on' : 'No belt'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-slate-400 leading-relaxed bg-surface-lowest/50 p-2 rounded-lg border border-surface-border">
+        Simplified teaching model: vehicle braking from 1 s on slippery seat without seat friction. Ends before contact. Max speed {BRAKING_LIMITS.maxSpeed} m/s.
+      </p>
+
+      {err && (
+        <p role="alert" className="text-xs font-bold p-2 rounded bg-rose-500/10 border border-rose-500/20" style={{ color: PHYS.error }} data-testid="braking-error">
+          <span aria-hidden>{'✗ '}</span>{err}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export const BrakingTimeControls: React.FC<{ b: UseBrakingDemoReturn; compact?: boolean }> = ({ b, compact = false }) => {
+  const { tt, tMax, playing, setPlaying, setT, reset, jumpToEnd, rate, setRate, reduced } = b;
+  return (
+    <div role="group" aria-label="Time controls" className={`flex flex-wrap items-center gap-2 ${compact ? '' : 'rounded-xl border border-surface-border bg-surface-card/60 p-3'}`} data-testid="braking-time">
+      {!compact && <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (braking starts at 1 s)</span>}
+      <button
+        type="button"
+        onClick={() => { if (tt >= tMax) setT(0); setPlaying((x) => !x); }}
+        aria-pressed={playing}
+        className="min-h-[34px] px-3 rounded-lg font-bold text-xs text-slate-950 flex items-center gap-1 shadow-sm transition-transform active:scale-95"
+        style={{ background: PHYS.time }}
+        data-testid="braking-play"
+      >
+        <span className="material-symbols-outlined text-[16px]">{playing ? 'pause' : tt >= tMax ? 'replay' : 'play_arrow'}</span>
+        <span>{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt * 10) / 10 - 0.1)); }}
+        aria-label="Step back 0.1 s"
+        className="min-h-[34px] px-2.5 rounded-lg border border-surface-border bg-surface-card hover:bg-surface-variant text-slate-200 text-xs transition-colors"
+      >
+        {'−0.1s'}
+      </button>
+      <button
+        type="button"
+        onClick={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt * 10) / 10 + 0.1)); }}
+        aria-label="Step forward 0.1 s"
+        className="min-h-[34px] px-2.5 rounded-lg border border-surface-border bg-surface-card hover:bg-surface-variant text-slate-200 text-xs transition-colors"
+      >
+        {'+0.1s'}
+      </button>
+      <button
+        type="button"
+        onClick={reset}
+        className="min-h-[34px] px-2.5 rounded-lg border text-xs transition-colors"
+        style={{ borderColor: `${PHYS.error}66`, color: PHYS.error }}
+        data-testid="braking-reset"
+      >
+        Reset
+      </button>
+      <button
+        type="button"
+        onClick={jumpToEnd}
+        className="min-h-[34px] px-2.5 rounded-lg border border-surface-border bg-surface-card hover:bg-surface-variant text-slate-200 text-xs transition-colors"
+        data-testid="braking-end"
+      >
+        End
+      </button>
+      <label className="flex items-center gap-1.5 text-xs text-slate-300 ml-auto">
+        <span className="text-[11px] text-slate-400">Speed:</span>
+        <select
+          value={rate}
+          onChange={(e) => setRate(Number(e.target.value))}
+          aria-label="Replay speed on screen. This does not change the motion."
+          className="min-h-[32px] rounded-md border border-surface-border bg-surface-lowest px-1.5 text-white text-xs"
+        >
+          <option value={0.5}>0.5×</option>
+          <option value={1}>1×</option>
+          <option value={2}>2×</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-2 text-xs text-slate-300 w-full sm:w-auto grow min-w-[140px]">
+        <input
+          type="range"
+          min={0}
+          max={tMax}
+          step={0.05}
+          value={tt}
+          onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }}
+          aria-label="Simulated time"
+          aria-valuetext={`${r2(tt)} seconds`}
+          className="w-full accent-amber-400 cursor-pointer"
+        />
+      </label>
+      {!compact && (
+        <p className="basis-full text-[11px] text-slate-400">
+          Replay speed only changes how fast the picture plays.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}
+        </p>
+      )}
+    </div>
+  );
+};
+
+export const BrakingReadout: React.FC<{ b: UseBrakingDemoReturn; className?: string }> = ({ b, className = "grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2" }) => {
+  const { s } = b;
+  const metrics: [string, string, string, string][] = [
+    ['t', 'Simulated time', `${r2(s.t)} s`, PHYS.time],
+    ['vv', 'Vehicle velocity', `${r2(s.vehicleV)} m/s`, PHYS.position],
+    ['pv', 'Passenger velocity', `${r2(s.passengerV)} m/s`, PHYS.velocity],
+    ['rel', 'Forward of seat', `${r2(s.relative)} m`, PHYS.displacement],
+    ['force', 'Belt force on passenger', `${r2(s.passengerForce)} N`, PHYS.force],
+    ['state', 'Motion state', s.state, '#e2e8f0'],
+  ];
+
+  return (
+    <dl className={className} data-testid="braking-readout">
+      {metrics.map(([id, label, value, color]) => (
+        <div key={id} className="rounded-lg border border-surface-border bg-surface-card px-3 py-2 min-w-0" style={{ borderLeft: `4px solid ${color}` }}>
+          <dt className="text-[11px] text-slate-400 font-medium truncate">{label}</dt>
+          <dd data-readout={id} className="font-mono text-base font-bold leading-tight mt-0.5" style={{ color }}>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+};
+
+export const BrakingLiveStatus: React.FC<{ b: UseBrakingDemoReturn }> = ({ b }) => {
+  return (
+    <div role="status" aria-live="polite" className="text-sm text-slate-200 rounded-xl border border-surface-border bg-surface-card p-3 leading-relaxed space-y-2" data-testid="braking-live">
+      <div className="flex items-center gap-2 text-xs font-mono uppercase text-amber-400 font-semibold">
+        <span className="material-symbols-outlined text-[16px]">info</span>
+        <span>Newton's First Law (Inertia)</span>
+      </div>
+      <p>{b.live}</p>
+    </div>
+  );
+};
+
+export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAKING, editable = true, alt, resetToken }) => {
+  const b = useBrakingDemo({ initial, resetToken });
 
   return (
     <div className="space-y-3" data-visual="brakingDemo" data-testid="braking-demo">
       {editable && (
-        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="braking-controls">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set up the demonstration</h3>
-          <div className="flex flex-wrap gap-3 items-center">
-            <Num id="speed" label="Speed" unit="m/s" value={setup.speed} step={5} onChange={(v) => change({ speed: v })} />
-            <Num id="decel" label="Braking deceleration" unit="m/s²" value={setup.decel} step={1} onChange={(v) => change({ decel: v })} />
-            <Num id="pmass" label="Passenger mass" unit="kg" value={setup.passengerMassKg} step={10} onChange={(v) => change({ passengerMassKg: v })} />
-            <div role="group" aria-label="Seat belt" className="flex gap-1">
-              {[false, true].map((b) => <button key={String(b)} type="button" aria-pressed={setup.restrained === b} data-belt={b ? 'on' : 'off'} onClick={() => change({ restrained: b })} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: setup.restrained === b ? PHYS.force : '#334155' }}>{setup.restrained === b ? '✓ ' : ''}{b ? 'Belt on' : 'No belt'}</button>)}
-            </div>
-          </div>
-          <p className="text-[11px] text-slate-400">Simplified teaching model: a straight road, a vehicle braking at a constant rate from 1 s, a passenger on a slippery seat (no seat friction), and a belt that exerts exactly the backward force needed. It ends before any contact. It is not crash-safety data: real seats have friction, real belts stretch and real crash forces are far larger and vary. Speed up to {BRAKING_LIMITS.maxSpeed} m/s.</p>
-          {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="braking-error"><span aria-hidden>{'✗ '}</span>{err}</p>}
+        <div className="rounded-xl border border-surface-border bg-surface-card/60 p-3">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300 mb-2">Set up the demonstration</h3>
+          <BrakingSetupFields b={b} />
         </div>
       )}
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="braking-scene">
-        <line x1={20} y1={110} x2={W - 20} y2={110} stroke={PHYS.axis} strokeWidth={3} />
-        {tick.map((m) => <g key={m}><line x1={X(m)} y1={106} x2={X(m)} y2={116} stroke="#94a3b8" /><text x={X(m)} y={130} textAnchor="middle" fontSize={10} fill="#94a3b8">{m}</text></g>)}
-        <text x={W - 24} y={146} textAnchor="end" fontSize={10} fill="#94a3b8">position on the road (m)</text>
-        <rect x={carX - carW} y={62} width={carW} height={44} rx={8} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
-        <rect x={seat - 10} y={70} width={6} height={20} fill="#475569" />
-        <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={10} fill={PHYS.position}>vehicle {r2(s.vehicleV)} m/s</text>
-        <circle cx={pX} cy={72} r={9} fill={PHYS.velocity} stroke="#0f172a" strokeWidth={2} />
-        <text x={pX} y={50} textAnchor="middle" fontSize={11} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>
-        {setup.restrained && <line x1={seat - 4} y1={80} x2={pX} y2={74} stroke={PHYS.force} strokeWidth={3} strokeDasharray="4 3" />}
-        <line x1={seat} y1={30} x2={seat} y2={36} stroke={PHYS.time} />
-        <text x={X(0) + 2} y={20} fontSize={10} fill={PHYS.time}>{s.state === 'cruising' ? 'cruising' : s.state}</text>
-      </svg>
-      <ForceFigure object="passenger" arrows={arrows} net={net} showIndividual showNet alt={`Forces on the passenger: ${setup.restrained && s.passengerForce !== 0 ? `belt ${r2(Math.abs(s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(setup.passengerMassKg * G)} N each, vertical.`} />
-
-      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="braking-time">
-        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (braking starts at 1 s)</span>
-        <button type="button" onClick={() => { if (tt >= tMax) setT(0); setPlaying((x) => !x); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }} data-testid="braking-play">{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt * 10) / 10 - 0.1)); }} aria-label="Step back 0.1 s" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">{'Step −0.1 s'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt * 10) / 10 + 0.1)); }} aria-label="Step forward 0.1 s" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +0.1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border text-sm" style={{ borderColor: PHYS.error, color: PHYS.error }} data-testid="braking-reset">Reset to 0 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(tMax); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm" data-testid="braking-end">Jump to the end</button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
-          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={tMax} step={0.05} value={tt} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className="w-full min-h-[44px]" />
-        </label>
-        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
-      </div>
-
-      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="braking-readout">
-        {([
-          ['t', 'Simulated time', `${r2(s.t)} s`, PHYS.time], ['vv', 'Vehicle velocity', `${r2(s.vehicleV)} m/s`, PHYS.position], ['pv', 'Passenger velocity (road)', `${r2(s.passengerV)} m/s`, PHYS.velocity],
-          ['rel', 'Passenger forward of seat', `${r2(s.relative)} m`, PHYS.displacement], ['force', 'Horizontal force on passenger', `${r2(s.passengerForce)} N`, PHYS.force], ['state', 'State', s.state, '#e2e8f0'],
-        ] as [string, string, string, string][]).map(([id, label, value, color]) => (
-          <div key={id} className="rounded-lg border border-surface-border bg-surface-card px-3 py-2 min-w-0" style={{ borderLeft: `4px solid ${color}` }}>
-            <dt className="text-[11px] text-slate-300">{label}</dt><dd data-readout={id} className="font-mono text-lg font-bold leading-tight" style={{ color }}>{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3" data-testid="braking-live">{live}</div>
+      <BrakingScene b={b} alt={alt} />
+      <ForceFigure
+        object="passenger"
+        arrows={b.arrows}
+        net={b.net}
+        showIndividual
+        showNet
+        alt={`Forces on the passenger: ${b.setup.restrained && b.s.passengerForce !== 0 ? `belt ${r2(Math.abs(b.s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(b.setup.passengerMassKg * G)} N each, vertical.`}
+      />
+      <BrakingTimeControls b={b} />
+      <BrakingReadout b={b} className="grid grid-cols-2 lg:grid-cols-4 gap-2" />
+      <BrakingLiveStatus b={b} />
     </div>
   );
 };

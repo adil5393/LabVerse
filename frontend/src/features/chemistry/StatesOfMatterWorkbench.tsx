@@ -9,28 +9,71 @@
  */
 
 import React from 'react';
-import { ChemistryToolbar } from './ChemistryToolbar';
 import { SimulationControls } from './SimulationControls';
 import { ParticleChamber } from './ParticleChamber';
 import { ScientificInspector } from './ScientificInspector';
+import { useChemistryStore } from '../../store/useChemistryStore';
+import { SUBSTANCES } from '../../engine/chemistry/substances';
+import { WorkspaceShell } from '../workspace';
 
 export const StatesOfMatterWorkbench: React.FC = () => {
-  return (
-    <div className="flex flex-col h-screen w-screen bg-surface-lowest text-slate-100 overflow-hidden font-sans">
-      {/* 1. Header Toolbar */}
-      <ChemistryToolbar />
+  const { thermoState, substanceId, config } = useChemistryStore();
+  const currentSubstance = SUBSTANCES[substanceId];
 
-      {/* 2. Main Workbench 3-Column Layout */}
-      <div className="flex-1 flex flex-row overflow-hidden relative">
-        {/* Left Column: Simulation Controls */}
-        <SimulationControls />
+  const outlinerContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      <SimulationControls />
+    </div>
+  );
 
-        {/* Center Column: Particle Chamber Simulation Viewport */}
-        <ParticleChamber />
+  const viewportContent = (
+    <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+      <ParticleChamber />
+    </div>
+  );
 
-        {/* Right Column: Scientific Inspector & Dynamic Heating Curve */}
-        <ScientificInspector />
+  const inspectorContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      <ScientificInspector />
+    </div>
+  );
+
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-2 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">TEMPERATURE</span>
+          <span className="text-emerald-400 font-bold text-sm">
+            {Math.round(thermoState.temperatureK)} K ({Math.round(thermoState.temperatureK - 273.15)} &deg;C)
+          </span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">ACTIVE PHASE</span>
+          <span className="text-white font-bold text-sm uppercase">{thermoState.phase}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">SUBSTANCE</span>
+          <span className="text-white font-bold text-sm">{currentSubstance.name}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">PARTICLES</span>
+          <span className="text-white font-bold text-sm">{config.particleCount} active</span>
+        </div>
       </div>
     </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="states-of-matter"
+      labTitle="States of Matter Simulator"
+      outlinerTitle="Simulation Controls"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Thermodynamics Inspector"
+      inspector={inspectorContent}
+      analysisDockTitle="Phase Diagnostics & Heat Telemetry"
+      analysisDock={analysisDockContent}
+    />
   );
 };

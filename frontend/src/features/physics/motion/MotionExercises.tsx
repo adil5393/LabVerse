@@ -13,6 +13,7 @@ import { CircularMotionView } from './CircularMotion';
 import { GraphStudioView } from './MotionGraphs';
 import { MotionTrackView } from './MotionTrack';
 import { PHYS } from './physicsColors';
+import { ChapterWorkspaceNav } from '../../workspace';
 
 type Stage = 0 | 1 | 2 | 3;
 
@@ -77,12 +78,12 @@ export const MotionExercises: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="motion-exercises">
       <GlobalHeader />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
-          <Link to="/" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Subject Explorer</Link><span>/</span>
-          <Link to="/physics" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Physics</Link><span>/</span>
-          <Link to="/physics/motion" className="inline-flex items-center min-h-[44px] hover:text-sky-400">Describing Motion</Link><span>/</span>
-          <span className="text-sky-300 font-bold">NCERT Exercises</span>
-        </nav>
+        <ChapterWorkspaceNav
+          chapterId="motion"
+          currentPageTitle="NCERT Exercises"
+          currentMode="exercises"
+          showBackToLab={true}
+        />
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">NCERT Exercises: Chapter 4</h1>
           <p className="text-sm text-slate-300">The chapter ends with sixteen questions (“Revise, Reflect, Refine”). They are listed here with their textbook numbers. The summaries are in our own words; open the textbook for the exact wording. All {MOTION_EXERCISES.length} questions, with every part, have a step-by-step solution ({partsTotal} answers in all). Where a graph is only printed in the book, the values are read from the figure and are labelled as such.</p>

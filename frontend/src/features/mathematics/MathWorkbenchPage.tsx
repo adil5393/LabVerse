@@ -5,15 +5,35 @@
  * and Right Inspector & Educational Panel into a cohesive instrument.
  */
 
-import React, { useEffect } from 'react';
-import { MathToolbar } from './MathToolbar';
+import React, { useEffect, useMemo } from 'react';
 import { MathToolRail } from './MathToolRail';
 import { MathCanvas } from './MathCanvas';
 import { MathInspectorPanel } from './MathInspectorPanel';
 import { useMathStore } from '../../store/useMathStore';
+import { WorkspaceShell } from '../workspace';
 
 export const MathWorkbenchPage: React.FC = () => {
-  const { setTool, undo, redo, selectObject, deleteSelectedObject, toggleAxes } = useMathStore();
+  const {
+    activeTool,
+    objects,
+    objectOrder,
+    measurementOrder,
+    setTool,
+    undo,
+    redo,
+    selectObject,
+    deleteSelectedObject,
+    toggleAxes,
+  } = useMathStore();
+
+  const pointsCount = useMemo(
+    () => objectOrder.filter((id) => objects[id]?.kind === 'point').length,
+    [objects, objectOrder]
+  );
+  const segmentsCount = useMemo(
+    () => objectOrder.filter((id) => objects[id]?.kind === 'segment').length,
+    [objects, objectOrder]
+  );
 
   // Global Keyboard shortcut listener
   useEffect(() => {
@@ -92,24 +112,58 @@ export const MathWorkbenchPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setTool, undo, redo, selectObject, deleteSelectedObject, toggleAxes]);
 
-  return (
-    <div className="h-screen w-screen flex flex-col bg-background text-on-surface antialiased overflow-hidden select-none">
-      {/* 1. Top Compact Toolbar */}
-      <MathToolbar />
+  const outlinerContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      <MathToolRail />
+    </div>
+  );
 
-      {/* 2. Main Workbench Area */}
-      <div className="flex-1 flex flex-row overflow-hidden relative">
-        {/* Left: Tool Palette */}
-        <MathToolRail />
+  const viewportContent = (
+    <main className="flex-1 relative h-full overflow-hidden">
+      <MathCanvas />
+    </main>
+  );
 
-        {/* Center: Interactive Mathematical Canvas */}
-        <main className="flex-1 relative h-full overflow-hidden">
-          <MathCanvas />
-        </main>
+  const inspectorContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      <MathInspectorPanel />
+    </div>
+  );
 
-        {/* Right: Inspector and Educational Panel */}
-        <MathInspectorPanel />
+  const analysisDockContent = (
+    <div className="p-3 text-xs space-y-2 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">ACTIVE TOOL</span>
+          <span className="text-primary font-bold text-sm uppercase">{activeTool}</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">POINTS</span>
+          <span className="text-white font-bold text-sm">{pointsCount} placed</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">SEGMENTS</span>
+          <span className="text-white font-bold text-sm">{segmentsCount} drawn</span>
+        </div>
+        <div className="p-2 rounded bg-surface-card border border-surface-border">
+          <span className="text-outline text-[10px] block">MEASUREMENTS</span>
+          <span className="text-emerald-400 font-bold text-sm">{measurementOrder.length} active</span>
+        </div>
       </div>
     </div>
+  );
+
+  return (
+    <WorkspaceShell
+      chapterId="coordinate-geometry"
+      labTitle="Coordinate Geometry Workbench"
+      outlinerTitle="Geometry Tools"
+      outliner={outlinerContent}
+      viewport={viewportContent}
+      inspectorTitle="Properties & Proofs"
+      inspector={inspectorContent}
+      analysisDockTitle="Geometric Telemetry & Coordinates"
+      analysisDock={analysisDockContent}
+    />
   );
 };

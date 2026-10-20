@@ -1,142 +1,33 @@
 /**
  * Work Laboratory Page (/physics/work/lab):
- * Faithful implementation of the Stitch Blender-inspired Scientific Workstation (Workspace V2).
- * 5 Main Regions:
- * 1. Top Application Bar (Brand, Breadcrumbs, Mode Tabs: Learn / Experiment / Analyze / Exercises / Blackboard)
- * 2. Left Scene Outliner / Curriculum Tree (collapsible 260px desktop bay, mobile drawer)
- * 3. Central Simulation Viewport (CAD grid, coordinate axis, vector overlays, dynamic cart, transport dock)
- * 4. Right Properties Inspector (Forces, Object, Environment, Experiment, Advanced Properties)
- * 5. Bottom Analysis Editor (Bento metrics, force calculations table, F-s graph, data, telemetry status bar)
- * Plus: Functional Blackboard Workspace with chalk drawing tools, color swatches & PNG export.
+ * Full integration of the Blender-inspired scientific workstation (PHY-3A / Workspace V2.1).
+ * Features 5-region workstation shell:
+ * 1. Top Application Bar (modes: Learn, Experiment, Analyze, Exercises, Blackboard; beginner toggle)
+ * 2. Left Scene Outliner (hierarchical curriculum, entity selection, visibility and edit locks)
+ * 3. Centre Simulation Viewport (CAD grid, camera pan/zoom/fit, vector overlays, dynamic cart)
+ * 4. Right Properties Inspector (contextual properties, forces, object dynamics, environment, export data)
+ * 5. Bottom Analysis Editor (3 sizing modes, measurements bento, calculations table, F-s graph)
+ * 6. Functional Blackboard workspace with scientific chalk palette & split view
+ * 7. Mobile responsive layout with bottom sheet drawer and touch hit targets.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
-  WORK_EXPERIMENTS,
   workExperimentById,
   workRouteOutcome,
-  type WorkRoute,
 } from '../../../engine/physics/work/experiments';
 import { DEFAULT_WORK, type WorkSetup } from '../../../engine/physics/work/workModel';
-import { PHYS } from '../motion/physicsColors';
 import { WorkView } from './WorkView';
 import {
   WorkstationHeader,
   SceneOutliner,
-  BlackboardWorkspace,
   MobileInspectorSheet,
+  BlackboardWorkspace,
   type WorkspaceTab,
   type AnalysisTab,
+  type DockSizeMode,
 } from './components';
-
-const RoutePanel: React.FC<{ route: WorkRoute; onRun: (r: WorkRoute) => void }> = ({ route, onRun }) => {
-  const [choice, setChoice] = useState<number | null>(null);
-  const [checked, setChecked] = useState(false);
-  const [ran, setRan] = useState(false);
-  const out = workRouteOutcome(route);
-  const right = choice !== null && choice === out.holdsIndex;
-
-  return (
-    <section className="rounded-xl border border-outline-variant bg-surface-container p-4 space-y-4 shadow-sm" data-route={route.id}>
-      <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-secondary" />
-        <p className="text-sm text-slate-100 font-semibold font-mono">{route.label}</p>
-      </div>
-
-      <fieldset className="rounded-xl p-3.5 space-y-2.5 transition-colors border border-amber-400/40 bg-amber-400/5">
-        <legend className="px-2 text-xs font-mono uppercase tracking-wider font-bold text-amber-300">
-          {'★'} 1 · Predict
-        </legend>
-        <p className="text-sm text-slate-200">{route.prompt}</p>
-        <div role="radiogroup" aria-label="Your prediction" className="flex flex-wrap gap-2 pt-1">
-          {route.options.map((o, i) => (
-            <button
-              key={o.label}
-              type="button"
-              role="radio"
-              aria-checked={choice === i}
-              data-option={`${route.id}-${i}`}
-              onClick={() => {
-                setChoice(i);
-                setChecked(false);
-              }}
-              className={`min-h-[44px] px-3.5 py-2 rounded-xl border-2 text-xs font-medium text-left transition-all select-none ${
-                choice === i
-                  ? 'border-amber-400 bg-amber-400/15 text-white font-bold'
-                  : 'border-outline-variant bg-surface-container-high text-slate-300 hover:text-white'
-              }`}
-            >
-              {choice === i ? '● ' : '○ '}
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="rounded-xl p-3.5 space-y-3 border border-sky-400/40 bg-sky-400/5">
-        <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-sky-400">
-          {'▶'} 2 · Experiment
-        </h4>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              onRun(route);
-              setRan(true);
-            }}
-            className="min-h-[44px] px-4 rounded-xl font-bold text-xs bg-sky-400 text-slate-950 transition-all select-none shadow-sm hover:opacity-90 active:scale-[0.98]"
-            data-testid={`run-${route.id}`}
-          >
-            Set up this experiment in workstation
-          </button>
-          <button
-            type="button"
-            disabled={choice === null}
-            onClick={() => setChecked(true)}
-            className="min-h-[44px] px-4 rounded-xl font-bold text-xs bg-amber-400 text-slate-950 disabled:opacity-40 transition-all select-none shadow-sm hover:opacity-90 active:scale-[0.98]"
-            data-testid={`check-${route.id}`}
-          >
-            Check my prediction
-          </button>
-        </div>
-        {ran && (
-          <p className="text-xs text-slate-300 font-mono flex items-center gap-1.5 pt-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            The scene is set up in the viewport. Press Play or drag the scrub track to test.
-          </p>
-        )}
-      </div>
-
-      {checked && choice !== null && (
-        <div
-          role="status"
-          aria-live="polite"
-          data-testid="work-feedback"
-          className={`rounded-xl p-4 text-xs text-slate-100 space-y-2 border ${
-            right ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-rose-500/60 bg-rose-500/10'
-          }`}
-        >
-          <h4 className={`text-xs font-mono uppercase tracking-wider font-bold ${right ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {right ? '✓ 3 · Observe: matches the model' : '✗ 3 · Observe: differs from the model'}
-          </h4>
-          <p className="leading-relaxed">
-            <strong>Model result: </strong>
-            {route.explain(out.result)}
-          </p>
-          <h4 className="text-xs font-mono uppercase tracking-wider pt-1 font-bold text-slate-400">
-            4 · Explain
-          </h4>
-          <p className="leading-relaxed">
-            {right
-              ? route.options[choice].why
-              : `${route.options[choice].why} The model supports: "${route.options[out.holdsIndex].label}". ${route.options[out.holdsIndex].why}`}
-          </p>
-        </div>
-      )}
-    </section>
-  );
-};
 
 export const WorkLab: React.FC = () => {
   const [params, setParams] = useSearchParams();
@@ -148,11 +39,30 @@ export const WorkLab: React.FC = () => {
     key: 0,
   });
 
+  // Undo / Redo parameter history
+  const [undoHistory, setUndoHistory] = useState<WorkSetup[]>([]);
+  const [redoHistory, setRedoHistory] = useState<WorkSetup[]>([]);
+
   // Workspace Modes: 'experiment' | 'blackboard' | 'analyze' | 'learn' | 'exercises'
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('experiment');
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<AnalysisTab>('measurements');
-  const [analysisExpanded, setAnalysisExpanded] = useState(false);
+  const [dockMode, setDockMode] = useState<DockSizeMode>('balanced');
   const [beginnerMode, setBeginnerMode] = useState(false);
+
+  // Outliner interactive state
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({
+    cart: true,
+    force: true,
+    track: true,
+    caliper: true,
+  });
+  const [lockMap, setLockMap] = useState<Record<string, boolean>>({
+    cart: false,
+    force: false,
+    track: false,
+    caliper: false,
+  });
 
   // Panel collapse states
   const [outlinerCollapsed, setOutlinerCollapsed] = useState(false);
@@ -162,24 +72,65 @@ export const WorkLab: React.FC = () => {
   // Global transport playback state
   const [playing, setPlaying] = useState(false);
 
-  const selectExperiment = (id: string | null) => {
+  const selectExperiment = useCallback((id: string | null) => {
     const e = workExperimentById(id);
     setParams(id ? { experiment: id } : {});
     setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_WORK, key: l.key + 1 }));
-  };
+  }, [setParams]);
 
-  const handleTabChange = (tab: WorkspaceTab) => {
+  const handleSetupChange = useCallback((nextSetup: WorkSetup) => {
+    setUndoHistory((prev) => [...prev, load.setup]);
+    setRedoHistory([]);
+    setLoad((l) => ({ setup: nextSetup, key: l.key }));
+  }, [load.setup]);
+
+  const handleUndo = useCallback(() => {
+    if (undoHistory.length === 0) return;
+    const previous = undoHistory[undoHistory.length - 1];
+    setUndoHistory((prev) => prev.slice(0, -1));
+    setRedoHistory((prev) => [...prev, load.setup]);
+    setLoad((l) => ({ setup: previous, key: l.key + 1 }));
+  }, [undoHistory, load.setup]);
+
+  const handleRedo = useCallback(() => {
+    if (redoHistory.length === 0) return;
+    const next = redoHistory[redoHistory.length - 1];
+    setRedoHistory((prev) => prev.slice(0, -1));
+    setUndoHistory((prev) => [...prev, load.setup]);
+    setLoad((l) => ({ setup: next, key: l.key + 1 }));
+  }, [redoHistory, load.setup]);
+
+  const handleTabChange = useCallback((tab: WorkspaceTab) => {
     if (tab === 'exercises') {
       navigate('/physics/work/exercises');
       return;
     }
+    if (tab === 'learn') {
+      navigate('/physics/work');
+      return;
+    }
+
     setActiveTab(tab);
     if (tab === 'analyze') {
-      setAnalysisExpanded(true);
-    } else {
-      setAnalysisExpanded(false);
+      setDockMode('focus');
+    } else if (tab === 'experiment') {
+      if (dockMode === 'focus') setDockMode('balanced');
     }
-  };
+  }, [navigate, dockMode]);
+
+  const handleToggleVisibility = useCallback((id: string) => {
+    setVisibilityMap((prev) => ({
+      ...prev,
+      [id]: !(prev[id] ?? true),
+    }));
+  }, []);
+
+  const handleToggleLock = useCallback((id: string) => {
+    setLockMap((prev) => ({
+      ...prev,
+      [id]: !(prev[id] ?? false),
+    }));
+  }, []);
 
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -206,6 +157,10 @@ export const WorkLab: React.FC = () => {
         }}
         onTogglePlay={() => setPlaying((p) => !p)}
         playing={playing}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={undoHistory.length > 0}
+        canRedo={redoHistory.length > 0}
         onToggleFullscreen={handleToggleFullscreen}
         onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
       />
@@ -217,109 +172,6 @@ export const WorkLab: React.FC = () => {
           <BlackboardWorkspace
             onReturnToExperiment={() => setActiveTab('experiment')}
           />
-        ) : activeTab === 'learn' ? (
-          /* WORKSPACE MODE: LEARN / POE GUIDED INVESTIGATIONS */
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-surface-container-lowest max-w-5xl mx-auto space-y-6">
-            <header className="space-y-1 pb-3 border-b border-outline-variant">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider font-bold bg-primary/20 text-primary border border-primary/40">
-                  POE INVESTIGATION LAB
-                </span>
-                <span className="text-xs font-mono text-outline">Class 9 Physics Chapter 7</span>
-              </div>
-              <h2 className="text-2xl font-bold text-white tracking-tight">
-                Guided Empirical Investigations
-              </h2>
-              <p className="text-xs text-slate-300">
-                Predict the outcome first, load the parameters into the simulation workstation, observe the results, and understand the work principles.
-              </p>
-            </header>
-
-            {/* Experiment Selector Tabs */}
-            <div role="group" aria-label="Choose an investigation" className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                aria-pressed={!exp}
-                onClick={() => selectExperiment(null)}
-                className={`min-h-[44px] px-4 rounded-xl border-2 text-xs font-bold font-mono transition-all select-none ${
-                  !exp
-                    ? 'bg-surface-elevated text-white border-sky-400 shadow-sm'
-                    : 'bg-surface-card border-outline-variant text-slate-300 hover:text-white'
-                }`}
-              >
-                {!exp ? '✓ ' : ''}Free exploration
-              </button>
-              {WORK_EXPERIMENTS.map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  aria-pressed={exp?.id === x.id}
-                  data-experiment={x.id}
-                  onClick={() => selectExperiment(x.id)}
-                  className={`min-h-[44px] px-4 rounded-xl border-2 text-xs font-bold font-mono transition-all select-none ${
-                    exp?.id === x.id
-                      ? 'bg-surface-elevated text-white border-amber-400 shadow-sm'
-                      : 'bg-surface-card border-outline-variant text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {exp?.id === x.id ? '✓ ' : ''}
-                  {x.id}. {x.title}
-                </button>
-              ))}
-            </div>
-
-            {exp ? (
-              <div className="space-y-4" data-testid="work-experiment-panel">
-                <div
-                  className="rounded-xl border border-outline-variant bg-surface-card p-4 space-y-1 shadow-sm"
-                  style={{ borderLeft: `4px solid ${PHYS.time}` }}
-                >
-                  <h3 className="text-base font-bold text-white">
-                    Experiment {exp.id}: {exp.title}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {exp.goal} Predict first, set up the experiment, press Play, then compare.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  {exp.routes.map((r) => (
-                    <RoutePanel
-                      key={`${exp.id}-${r.id}`}
-                      route={r}
-                      onRun={(rr) => {
-                        setLoad((l) => ({ setup: rr.setup, key: l.key + 1 }));
-                        setActiveTab('experiment');
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <div
-                  className="text-xs text-slate-200 rounded-xl border p-4 space-y-1 shadow-sm"
-                  style={{ borderColor: `${PHYS.correct}80`, background: `${PHYS.correct}0D` }}
-                >
-                  <p>
-                    <strong style={{ color: PHYS.correct }}>{'✓ '}What to notice: </strong>
-                    {exp.lesson}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="p-8 rounded-xl border border-dashed border-outline-variant text-center space-y-2">
-                <p className="text-sm text-slate-300 font-mono">
-                  Pick an investigation above to follow structured Predict-Experiment-Observe-Explain steps.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('experiment')}
-                  className="px-4 py-2 rounded-xl bg-primary text-on-primary font-mono text-xs font-bold"
-                >
-                  Switch to Free Experiment Workstation
-                </button>
-              </div>
-            )}
-          </div>
         ) : (
           /* WORKSPACE MODE: EXPERIMENT & ANALYZE (Primary 5-Region Workstation) */
           <>
@@ -329,6 +181,14 @@ export const WorkLab: React.FC = () => {
                 <SceneOutliner
                   cartMassKg={load.setup.massKg}
                   trackLengthM={12}
+                  selectedObjectId={selectedObjectId}
+                  onSelectObject={setSelectedObjectId}
+                  visibilityMap={visibilityMap}
+                  onToggleVisibility={handleToggleVisibility}
+                  lockMap={lockMap}
+                  onToggleLock={handleToggleLock}
+                  activeExperimentId={exp?.id ?? null}
+                  onSelectExperiment={selectExperiment}
                   onToggleCollapse={() => setOutlinerCollapsed(true)}
                 />
               ) : (
@@ -358,10 +218,10 @@ export const WorkLab: React.FC = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('learn')}
-                    className="px-2 py-0.5 rounded bg-surface-container-high border border-outline-variant text-primary text-[11px] hover:text-white"
+                    onClick={() => selectExperiment(null)}
+                    className="px-2 py-0.5 rounded bg-surface-container-high border border-outline-variant text-outline hover:text-white text-[11px]"
                   >
-                    View POE Steps
+                    Clear Preset
                   </button>
                 </div>
               )}
@@ -374,8 +234,18 @@ export const WorkLab: React.FC = () => {
                 graph
                 activeAnalysisTab={activeAnalysisTab}
                 onAnalysisTabChange={setActiveAnalysisTab}
-                analysisExpanded={analysisExpanded}
-                onToggleAnalysisExpand={() => setAnalysisExpanded(!analysisExpanded)}
+                dockMode={dockMode}
+                onDockModeChange={setDockMode}
+                beginnerMode={beginnerMode}
+                selectedObjectId={selectedObjectId}
+                onSelectObject={setSelectedObjectId}
+                visibilityMap={visibilityMap}
+                lockMap={lockMap}
+                onSetupChange={handleSetupChange}
+                canUndo={undoHistory.length > 0}
+                canRedo={redoHistory.length > 0}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
               />
 
               {/* Mobile Floating Inspector CTA (390px reference) */}
@@ -402,6 +272,20 @@ export const WorkLab: React.FC = () => {
               onCloseMobile={() => setMobileDrawerOpen(false)}
               cartMassKg={load.setup.massKg}
               trackLengthM={12}
+              selectedObjectId={selectedObjectId}
+              onSelectObject={(id) => {
+                setSelectedObjectId(id);
+                setMobileDrawerOpen(false);
+              }}
+              visibilityMap={visibilityMap}
+              onToggleVisibility={handleToggleVisibility}
+              lockMap={lockMap}
+              onToggleLock={handleToggleLock}
+              activeExperimentId={exp?.id ?? null}
+              onSelectExperiment={(id) => {
+                selectExperiment(id);
+                setMobileDrawerOpen(false);
+              }}
             />
           </div>
           <div
@@ -418,7 +302,7 @@ export const WorkLab: React.FC = () => {
         setup={load.setup}
         result={workRouteOutcome(exp ? exp.routes[0] : { id: 'free', label: '', prompt: '', options: [], setup: load.setup, explain: () => '' }).result}
         onChange={(patch) => {
-          setLoad((l) => ({ setup: { ...l.setup, ...patch }, key: l.key + 1 }));
+          handleSetupChange({ ...load.setup, ...patch });
         }}
         showVertical={true}
         onShowVerticalChange={() => {}}

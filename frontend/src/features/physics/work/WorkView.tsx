@@ -1,12 +1,12 @@
 /**
- * WorkView: Blender-inspired Scientific Workstation (PHY-3A / Workspace V2).
- * Integrates SimulationViewport (CAD grid canvas, vector overlays, transport dock),
- * PropertiesInspector (grouped cards, direction rockers, vertical icon strip),
- * and AnalysisDock (measurements bento grid, calculations table, F-s graph, status bar).
+ * WorkView: Blender-inspired Scientific Workstation (PHY-3A / Workspace V2.1).
+ * Integrates SimulationViewport (CAD grid canvas, vector overlays, transport dock, camera navigation),
+ * PropertiesInspector (grouped cards, direction rockers, vertical icon strip, beginner mode),
+ * and AnalysisDock (3 resizing modes, measurements bento grid, calculations table, F-s graph, status bar).
  * Strictly preserves the kinematic work model and all test attributes.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   computeWork,
   describeWork,
@@ -25,6 +25,7 @@ import {
   PropertiesInspector,
   AnalysisDock,
   type AnalysisTab,
+  type DockSizeMode,
 } from './components';
 
 const DURATION_MS = 3000;
@@ -99,6 +100,18 @@ export interface WorkViewProps {
   onAnalysisTabChange?: (tab: AnalysisTab) => void;
   analysisExpanded?: boolean;
   onToggleAnalysisExpand?: () => void;
+  dockMode?: DockSizeMode;
+  onDockModeChange?: (mode: DockSizeMode) => void;
+  beginnerMode?: boolean;
+  selectedObjectId?: string | null;
+  onSelectObject?: (id: string | null) => void;
+  visibilityMap?: Record<string, boolean>;
+  lockMap?: Record<string, boolean>;
+  onSetupChange?: (setup: WorkSetup) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export const WorkView: React.FC<WorkViewProps> = ({
@@ -111,6 +124,14 @@ export const WorkView: React.FC<WorkViewProps> = ({
   onAnalysisTabChange,
   analysisExpanded,
   onToggleAnalysisExpand,
+  dockMode,
+  onDockModeChange,
+  beginnerMode = false,
+  selectedObjectId = null,
+  onSelectObject,
+  visibilityMap = { cart: true, force: true, track: true, caliper: true },
+  lockMap = {},
+  onSetupChange,
 }) => {
   const [setup, setSetup] = useState<WorkSetup>(initial);
   const [progress, setProgress] = useState(startProgress);
@@ -120,7 +141,7 @@ export const WorkView: React.FC<WorkViewProps> = ({
   const reduced = useReducedMotion();
   const r = computeWork(setup);
 
-  const change = (patch: Partial<WorkSetup>) => {
+  const change = useCallback((patch: Partial<WorkSetup>) => {
     const next = { ...setup, ...patch };
     const result = computeWork(next);
     if (!result.valid) {
@@ -130,7 +151,8 @@ export const WorkView: React.FC<WorkViewProps> = ({
     setErr('');
     setSetup(next);
     setPlaying(false);
-  };
+    if (onSetupChange) onSetupChange(next);
+  }, [setup, onSetupChange]);
 
   const ref = useRef(progress);
   useEffect(() => {
@@ -189,6 +211,10 @@ export const WorkView: React.FC<WorkViewProps> = ({
             setPlaying(false);
             setProgress(p);
           }}
+          selectedObjectId={selectedObjectId}
+          onSelectObject={onSelectObject}
+          showVectors={visibilityMap.force}
+          showCaliper={visibilityMap.caliper}
         />
 
         {/* Right Properties Inspector (Desktop) */}
@@ -201,6 +227,9 @@ export const WorkView: React.FC<WorkViewProps> = ({
               error={err}
               showVertical={showVertical}
               onShowVerticalChange={setShowVertical}
+              beginnerMode={beginnerMode}
+              selectedObjectId={selectedObjectId}
+              lockMap={lockMap}
             />
           </div>
         )}
@@ -216,6 +245,8 @@ export const WorkView: React.FC<WorkViewProps> = ({
         FsGraphComponent={FsGraph}
         activeTab={activeAnalysisTab}
         onTabChange={onAnalysisTabChange}
+        dockMode={dockMode}
+        onDockModeChange={onDockModeChange}
         expanded={analysisExpanded}
         onToggleExpand={onToggleAnalysisExpand}
       />

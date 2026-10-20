@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   fmt,
   fmtSigned,
@@ -7,6 +7,7 @@ import {
   type ForceKind,
   type WorkResult,
 } from '../../../../engine/physics/work/workModel';
+import { useViewportCamera } from './useViewportCamera';
 
 const W = 1000, H = 450;
 const COLOR: Record<ForceKind, string> = {
@@ -27,12 +28,17 @@ export interface SimulationViewportProps {
   onTogglePlay: () => void;
   onReset: () => void;
   onProgressChange: (p: number) => void;
+  selectedObjectId?: string | null;
+  onSelectObject?: (id: string | null) => void;
+  showVectors?: boolean;
+  onToggleVectors?: (val: boolean) => void;
+  showCaliper?: boolean;
 }
 
 /**
  * SimulationViewport: Blender-inspired central simulation canvas matching Stitch design.
- * Features CAD precision grid, floating HUDs, 2D physics vector overlays, dynamic cart assembly,
- * displacement calipers, in-canvas annotations, and docked bottom playback transport.
+ * Features CAD precision grid, real pan/zoom/fit viewport camera, 2D physics vector overlays,
+ * dynamic cart assembly with selection highlights, displacement calipers, and docked playback transport.
  */
 export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   result: r,
@@ -44,9 +50,38 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   onTogglePlay,
   onReset,
   onProgressChange,
+  selectedObjectId = null,
+  onSelectObject,
+  showVectors: controlledVectors,
+  onToggleVectors,
+  showCaliper = true,
 }) => {
   const [showGrid, setShowGrid] = useState(true);
-  const [vectorsOn, setVectorsOn] = useState(true);
+  const [internalVectors, setInternalVectors] = useState(true);
+  const vectorsOn = controlledVectors !== undefined ? controlledVectors : internalVectors;
+
+  const handleToggleVectors = (val: boolean) => {
+    if (onToggleVectors) onToggleVectors(val);
+    else setInternalVectors(val);
+  };
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const touchDistanceRef = useRef<number | null>(null);
+
+  const {
+    camera,
+    toolMode,
+    setToolMode,
+    zoomIn,
+    zoomOut,
+    resetCamera,
+    fitToView,
+    zoomAroundPoint,
+    startDrag,
+    updateDrag,
+    endDrag,
+    isDragging,
+  } = useViewportCamera();
 
   const horizontal = r.setup.axis === 'horizontal';
   const pos = workAtProgress(r, progress).position;
@@ -75,33 +110,192 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   const angle = ((r.setup.angleDeg % 360) + 360) % 360;
   const cosA = Math.cos((angle * Math.PI) / 180);
 
-  // Simulated telemetry
+  // Live scientific telemetry
   const simTime = (progress * 2.0).toFixed(2);
   const velNow = s !== 0 ? Math.sqrt(Math.max(0, (2 * Math.max(0, r.netWork) * progress) / r.setup.massKg)).toFixed(2) : '0.00';
   const accelNow = s !== 0 ? (r.netWork / (r.setup.massKg * Math.max(0.1, Math.abs(s)))).toFixed(2) : '0.00';
 
   const here = workAtProgress(r, progress);
 
+  // Handle Fit to View calculation based on physical geometry
+  const handleFit = useCallback(() => {
+    if (horizontal) {
+      const minX = Math.min(startX, endX, px(0));
+      const maxX = Math.max(startX, endX, px(TRACK_LENGTH));
+      fitToView(minX - 30, maxX + 30, ground - 140, ground + 50);
+    } else {
+      const minY = Math.min(startY, endY, vTop);
+      const maxY = Math.max(startY, endY, vBase);
+      fitToView(300, 500, minY - 30, maxY + 30);
+    }
+  }, [horizontal, startX, endX, startY, endY, fitToView]);
+
+  // Non-passive wheel listener to prevent page scrolling while zooming
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const factor = e.deltaY < 0 ? 1.15 : 0.85;
+      zoomAroundPoint(factor, e.clientX, e.clientY, rect);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [zoomAroundPoint]);
+
+  // Pointer drag panning
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Middle click (button 1) or pan tool active or space pressed
+    if (e.button === 1 || toolMode === 'pan' || e.buttons === 4) {
+      e.preventDefault();
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      startDrag(e.clientX, e.clientY);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      updateDrag(e.clientX, e.clientY);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore if not captured
+      }
+      endDrag();
+    }
+  };
+
+  // Touch pinch-to-zoom
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && containerRef.current) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (touchDistanceRef.current !== null) {
+        const factor = dist / touchDistanceRef.current;
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const rect = containerRef.current.getBoundingClientRect();
+        zoomAroundPoint(factor, midX, midY, rect);
+      }
+      touchDistanceRef.current = dist;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchDistanceRef.current = null;
+  };
+
+  const isCartSelected = selectedObjectId === 'cart' || selectedObjectId === 'CART_01';
+  const isForceSelected = selectedObjectId === 'force' || selectedObjectId === 'F_APP';
+  const isTrackSelected = selectedObjectId === 'track' || selectedObjectId === 'Linear_Track';
+  const isCaliperSelected = selectedObjectId === 'caliper' || selectedObjectId === 'DISP_01';
+
   return (
     <section className="flex-1 flex flex-col bg-surface-container-lowest relative overflow-hidden border-r border-outline-variant h-full select-none">
       {/* Viewport Canvas Arena */}
-      <div className={`flex-1 relative ${showGrid ? 'cad-grid' : ''} overflow-hidden flex flex-col justify-between`}>
+      <div
+        ref={containerRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`flex-1 relative ${showGrid ? 'cad-grid' : ''} overflow-hidden flex flex-col justify-between ${
+          toolMode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+        }`}
+      >
         {/* Floating Mini Viewport Toolbar (Top Left) */}
         <div className="absolute top-3 left-3 z-20 flex items-center space-x-1 bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md">
-          <button type="button" className="p-1 rounded bg-primary text-on-primary" title="Select Tool (Q)">
+          {/* Select Tool */}
+          <button
+            type="button"
+            onClick={() => setToolMode('select')}
+            className={`p-1 rounded transition-colors ${
+              toolMode === 'select'
+                ? 'bg-primary text-on-primary font-bold'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
+            }`}
+            title="Select Tool (Pointer mode)"
+            aria-pressed={toolMode === 'select'}
+          >
             <span className="material-symbols-outlined text-[16px]">arrow_selector_tool</span>
           </button>
-          <button type="button" className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant" title="Pan (H)">
+
+          {/* Pan Tool */}
+          <button
+            type="button"
+            onClick={() => setToolMode(toolMode === 'pan' ? 'select' : 'pan')}
+            className={`p-1 rounded transition-colors ${
+              toolMode === 'pan'
+                ? 'bg-primary text-on-primary font-bold'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
+            }`}
+            title="Pan Tool (Click and drag to pan viewport)"
+            aria-pressed={toolMode === 'pan'}
+          >
             <span className="material-symbols-outlined text-[16px]">pan_tool</span>
           </button>
-          <button type="button" className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant" title="Reset Camera">
+
+          {/* Fit to View */}
+          <button
+            type="button"
+            onClick={handleFit}
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            title="Fit to View (Frame active experiment geometry)"
+          >
+            <span className="material-symbols-outlined text-[16px]">aspect_ratio</span>
+          </button>
+
+          {/* Reset Camera */}
+          <button
+            type="button"
+            onClick={resetCamera}
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            title="Reset Camera (100% Zoom, Centered)"
+          >
             <span className="material-symbols-outlined text-[16px]">center_focus_strong</span>
           </button>
+
+          {/* Zoom In (+) */}
+          <button
+            type="button"
+            onClick={zoomIn}
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            title="Zoom In"
+          >
+            <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+          </button>
+
+          {/* Zoom Out (-) */}
+          <button
+            type="button"
+            onClick={zoomOut}
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+            title="Zoom Out"
+          >
+            <span className="material-symbols-outlined text-[16px]">zoom_out</span>
+          </button>
+
+          <span className="font-mono text-[10px] text-outline px-1">
+            {Math.round(camera.zoom * 100)}%
+          </span>
+
           <div className="h-4 w-px bg-outline-variant mx-1" />
+
           {/* Vectors Toggle Pill */}
           <button
             type="button"
-            onClick={() => setVectorsOn(!vectorsOn)}
+            onClick={() => handleToggleVectors(!vectorsOn)}
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center space-x-1 transition-colors ${
               vectorsOn ? 'bg-surface-variant text-primary border border-primary/40' : 'text-on-surface-variant hover:bg-surface-variant'
             }`}
@@ -109,6 +303,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             <span className="material-symbols-outlined text-[12px]">navigation</span>
             <span>Vectors: {vectorsOn ? 'ON' : 'OFF'}</span>
           </button>
+
+          {/* Grid Toggle */}
           <button
             type="button"
             onClick={() => setShowGrid(!showGrid)}
@@ -118,6 +314,8 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           >
             Grid
           </button>
+
+          {/* Show Weight & Normal Forces Toggle */}
           <button
             type="button"
             onClick={() => onShowVerticalChange(!showVertical)}
@@ -129,15 +327,19 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           </button>
         </div>
 
-        {/* Floating Viewport Coordinate / Scale HUD (Top Right) */}
+        {/* Floating Viewport Telemetry HUD (Top Right - Genuine Physical Model Data) */}
         <div className="absolute top-3 right-3 z-20 bg-surface-container/85 border border-outline-variant px-2.5 py-1 rounded text-right font-mono text-[11px] text-on-surface-variant shadow-sm backdrop-blur">
-          <div className="text-[10px] uppercase text-outline">Cam: {horizontal ? 'Orthographic 1D-X' : 'Vertical Rail 1D-Y'}</div>
+          <div className="text-[10px] uppercase text-outline">
+            Cam: {horizontal ? 'Orthographic 1D-X' : 'Vertical Rail 1D-Y'} • {Math.round(camera.zoom * 100)}%
+          </div>
           <div className="text-on-surface font-semibold">Scale: 100 px : 1.5 m</div>
-          <div className="text-tertiary text-[10px]">FPS: 60.0 • DT: 0.016s</div>
+          <div className="text-tertiary text-[10px]">
+            Model: Kinematic Work • v: {velNow} m/s
+          </div>
         </div>
 
-        {/* 2D Physics Vector Field & Track SVG Rendering */}
-        <div className="w-full h-full relative flex items-center justify-center p-2 sm:p-4">
+        {/* 2D Physics Vector Field & Track SVG Rendering with Camera Transform */}
+        <div className="w-full h-full relative flex items-center justify-center p-2 sm:p-4 overflow-hidden">
           <svg
             viewBox={`0 0 ${W} ${H}`}
             preserveAspectRatio="xMidYMid meet"
@@ -164,213 +366,269 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               </pattern>
             </defs>
 
-            {/* WORKBENCH REFERENCE TRACK */}
-            {horizontal ? (
-              <g>
-                {/* Support Bench / Ground Plane */}
-                <rect fill="#181c24" height="20" stroke="#424754" strokeWidth="1.5" width="860" x="70" y={ground} />
-                <rect fill="url(#hatch)" height="15" stroke="#31353e" strokeWidth="1" width="860" x="70" y={ground + 20} />
-                <line stroke="#8c909f" strokeLinecap="round" strokeWidth="3" x1="70" x2="930" y1={ground} y2={ground} />
-
-                {/* Major Meter Ticks [0, 2, 4, 6, 8, 10, 12] */}
-                {[0, 2, 4, 6, 8, 10, 12].map((m) => (
-                  <g key={m}>
-                    <line stroke="#dfe2ee" strokeWidth={m === 0 || m === 12 ? 2.5 : 1.5} x1={px(m)} x2={px(m)} y1={ground - 5} y2={ground + 10} />
-                    <text fill="#8c909f" fontFamily="JetBrains Mono" fontSize={11} textAnchor="middle" x={px(m)} y={ground + 24}>
-                      {m}.0 m
-                    </text>
-                  </g>
-                ))}
-              </g>
-            ) : (
-              <g>
-                {/* Vertical Rail */}
-                <line stroke="#8c909f" strokeLinecap="round" strokeWidth="6" x1="380" x2="380" y1={vBase + 20} y2={vTop - 20} />
-                {[0, 2, 4, 6, 8, 10, 12].map((m) => (
-                  <g key={m}>
-                    <line stroke="#dfe2ee" strokeWidth={2} x1="372" x2="388" y1={py(m)} y2={py(m)} />
-                    <text fill="#8c909f" fontFamily="JetBrains Mono" fontSize={11} textAnchor="end" x="364" y={py(m) + 4}>
-                      {m}.0 m
-                    </text>
-                  </g>
-                ))}
-              </g>
-            )}
-
-            {/* START & END GUIDELINES */}
-            {s !== 0 && (
-              <g data-testid="start-end-markers">
-                {horizontal ? (
-                  <>
-                    <line opacity="0.6" stroke="#4d8eff" strokeDasharray="4,4" strokeWidth="1.5" x1={startX} x2={startX} y1={ground - 130} y2={ground} />
-                    <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} textAnchor={startX < endX ? 'end' : 'start'} x={startX < endX ? startX - 8 : startX + 8} y={ground - 120}>
-                      start {fmt(startPos)} m
-                    </text>
-                    <line opacity="0.7" stroke="#4edea3" strokeDasharray="4,4" strokeWidth="1.5" x1={endX} x2={endX} y1={ground - 130} y2={ground} />
-                    <text fill="#4edea3" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} textAnchor={startX < endX ? 'start' : 'end'} x={startX < endX ? endX + 8 : endX - 8} y={ground - 120}>
-                      end {fmt(endPos)} m
-                    </text>
-                  </>
-                ) : (
-                  <>
-                    <line opacity="0.6" stroke="#4d8eff" strokeDasharray="4,4" strokeWidth="1.5" x1="320" x2="480" y1={startY} y2={startY} />
-                    <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} x="490" y={startY + 4}>
-                      start {fmt(startPos)} m
-                    </text>
-                    <line opacity="0.7" stroke="#4edea3" strokeDasharray="4,4" strokeWidth="1.5" x1="320" x2="480" y1={endY} y2={endY} />
-                    <text fill="#4edea3" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} x="490" y={endY + 4}>
-                      end {fmt(endPos)} m
-                    </text>
-                  </>
-                )}
-              </g>
-            )}
-
-            {/* DISPLACEMENT CALIPER BRACKET */}
-            {s !== 0 && (
-              <g data-testid="displacement-arrow">
-                {horizontal ? (
-                  <>
-                    <path
-                      d={`M ${startX} ${ground - 90} L ${startX} ${ground - 100} L ${(startX + endX) / 2} ${ground - 100} L ${(startX + endX) / 2} ${ground - 106} L ${(startX + endX) / 2} ${ground - 100} L ${endX} ${ground - 100} L ${endX} ${ground - 90}`}
+            {/* MASTER CAMERA TRANSFORM GROUP */}
+            <g transform={`translate(${camera.panX}, ${camera.panY}) scale(${camera.zoom})`} style={{ transformOrigin: '500px 225px' }}>
+              {/* WORKBENCH REFERENCE TRACK */}
+              {horizontal ? (
+                <g
+                  onClick={() => onSelectObject && onSelectObject('track')}
+                  className="cursor-pointer"
+                >
+                  {/* Track selection outline */}
+                  {isTrackSelected && (
+                    <rect
                       fill="none"
-                      stroke="#6ffbbe"
+                      height="40"
+                      stroke="#00d4ff"
                       strokeWidth="2"
+                      strokeDasharray="4,4"
+                      width="870"
+                      x="65"
+                      y={ground - 5}
+                      rx="4"
                     />
-                    <g transform={`translate(${(startX + endX) / 2}, ${ground - 116})`}>
-                      <rect fill="#0a0e16" height="22" rx="4" stroke="#4edea3" strokeWidth="1.2" width="220" x="-110" y="-13" />
-                      <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={11} fontWeight={700} textAnchor="middle" x="0" y="2">
-                        displacement s = {fmtSigned(s)} m
+                  )}
+                  {/* Support Bench / Ground Plane */}
+                  <rect fill="#181c24" height="20" stroke="#424754" strokeWidth="1.5" width="860" x="70" y={ground} />
+                  <rect fill="url(#hatch)" height="15" stroke="#31353e" strokeWidth="1" width="860" x="70" y={ground + 20} />
+                  <line stroke="#8c909f" strokeLinecap="round" strokeWidth="3" x1="70" x2="930" y1={ground} y2={ground} />
+
+                  {/* Major Meter Ticks [0, 2, 4, 6, 8, 10, 12] */}
+                  {[0, 2, 4, 6, 8, 10, 12].map((m) => (
+                    <g key={m}>
+                      <line stroke="#dfe2ee" strokeWidth={m === 0 || m === 12 ? 2.5 : 1.5} x1={px(m)} x2={px(m)} y1={ground - 5} y2={ground + 10} />
+                      <text fill="#8c909f" fontFamily="JetBrains Mono" fontSize={11} textAnchor="middle" x={px(m)} y={ground + 24}>
+                        {m}.0 m
                       </text>
                     </g>
-                  </>
-                ) : (
-                  <>
-                    <path
-                      d={`M 460 ${startY} L 470 ${startY} L 470 ${(startY + endY) / 2} L 476 ${(startY + endY) / 2} L 470 ${(startY + endY) / 2} L 470 ${endY} L 460 ${endY}`}
-                      fill="none"
-                      stroke="#6ffbbe"
-                      strokeWidth="2"
-                    />
-                    <g transform={`translate(550, ${(startY + endY) / 2})`}>
-                      <rect fill="#0a0e16" height="22" rx="4" stroke="#4edea3" strokeWidth="1.2" width="140" x="-70" y="-11" />
-                      <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={11} fontWeight={700} textAnchor="middle" x="0" y="4">
-                        s = {fmtSigned(s)} m
+                  ))}
+                </g>
+              ) : (
+                <g
+                  onClick={() => onSelectObject && onSelectObject('track')}
+                  className="cursor-pointer"
+                >
+                  {/* Vertical Rail */}
+                  <line stroke="#8c909f" strokeLinecap="round" strokeWidth="6" x1="380" x2="380" y1={vBase + 20} y2={vTop - 20} />
+                  {[0, 2, 4, 6, 8, 10, 12].map((m) => (
+                    <g key={m}>
+                      <line stroke="#dfe2ee" strokeWidth={2} x1="372" x2="388" y1={py(m)} y2={py(m)} />
+                      <text fill="#8c909f" fontFamily="JetBrains Mono" fontSize={11} textAnchor="end" x="364" y={py(m) + 4}>
+                        {m}.0 m
                       </text>
                     </g>
-                  </>
-                )}
-              </g>
-            )}
+                  ))}
+                </g>
+              )}
 
-            {/* DYNAMIC CART ASSEMBLY (CART_01) */}
-            <g id="cart-assembly" transform={`translate(${cartX - 55}, ${cartY - 15})`}>
-              {/* Chassis Body */}
-              <rect fill="#262a33" height="42" rx="4" stroke="#424754" strokeWidth="2" width="110" x="0" y="0" />
-              <rect fill="#1c2028" height="12" rx="2" stroke="#31353e" strokeWidth="1" width="100" x="5" y="4" />
-              <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={9} fontWeight={600} textAnchor="middle" x="55" y="13">
-                CART_01 ({fmt(r.setup.massKg)} kg)
-              </text>
-              <rect fill="#181c24" height="14" rx="1.5" stroke="#424754" width="22" x="10" y="20" />
-              <circle cx="21" cy="27" fill="#ffb95a" r="3" />
-              <text fill="#c2c6d6" fontFamily="JetBrains Mono" fontSize={8} x="36" y="30">
-                ACCEL_SENS_X
-              </text>
-              {/* Wheel Bearings */}
-              <circle cx="20" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
-              <circle cx="20" cy="46" fill="#adc6ff" r="2.5" />
-              <circle cx="90" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
-              <circle cx="90" cy="46" fill="#adc6ff" r="2.5" />
-              {/* Center of Mass Indicator */}
-              <circle cx="55" cy="21" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
-              <path d="M 50.5 21 A 4.5 4.5 0 0 0 55 25.5 L 55 21 Z" fill="#4d8eff" />
-              <path d="M 55 16.5 A 4.5 4.5 0 0 0 50.5 21 L 55 21 Z" fill="#0a0e16" />
-            </g>
+              {/* START & END GUIDELINES */}
+              {s !== 0 && (
+                <g data-testid="start-end-markers">
+                  {horizontal ? (
+                    <>
+                      <line opacity="0.6" stroke="#4d8eff" strokeDasharray="4,4" strokeWidth="1.5" x1={startX} x2={startX} y1={ground - 130} y2={ground} />
+                      <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} textAnchor={startX < endX ? 'end' : 'start'} x={startX < endX ? startX - 8 : startX + 8} y={ground - 120}>
+                        start {fmt(startPos)} m
+                      </text>
+                      <line opacity="0.7" stroke="#4edea3" strokeDasharray="4,4" strokeWidth="1.5" x1={endX} x2={endX} y1={ground - 130} y2={ground} />
+                      <text fill="#4edea3" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} textAnchor={startX < endX ? 'start' : 'end'} x={startX < endX ? endX + 8 : endX - 8} y={ground - 120}>
+                        end {fmt(endPos)} m
+                      </text>
+                    </>
+                  ) : (
+                    <>
+                      <line opacity="0.6" stroke="#4d8eff" strokeDasharray="4,4" strokeWidth="1.5" x1="320" x2="480" y1={startY} y2={startY} />
+                      <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} x="490" y={startY + 4}>
+                        start {fmt(startPos)} m
+                      </text>
+                      <line opacity="0.7" stroke="#4edea3" strokeDasharray="4,4" strokeWidth="1.5" x1="320" x2="480" y1={endY} y2={endY} />
+                      <text fill="#4edea3" fontFamily="JetBrains Mono" fontSize={11} fontWeight={600} x="490" y={endY + 4}>
+                        end {fmt(endPos)} m
+                      </text>
+                    </>
+                  )}
+                </g>
+              )}
 
-            {/* FORCE VECTORS ANCHORED AT CENTER OF MASS */}
-            {vectorsOn &&
-              r.forces
-                .filter((f) => f.magnitude > 0)
-                .map((f) => {
-                  if (!showVertical && (f.id === 'weight' || f.id === 'normal')) return null;
-
-                  const biggest = Math.max(1, ...r.forces.map((x) => x.magnitude));
-                  const k = 90 / biggest;
-                  const L = Math.max(25, Math.min(130, f.magnitude * k));
-                  const ux = f.fx / f.magnitude;
-                  const uy = -f.fy / f.magnitude; // screen Y down
-
-                  const comX = cartX;
-                  const comY = cartY + 6;
-                  const x2 = comX + ux * L;
-                  const y2 = comY + uy * L;
-
-                  const markerMap: Record<ForceKind, string> = {
-                    applied: 'url(#arrow-violet)',
-                    friction: 'url(#arrow-coral)',
-                    weight: 'url(#arrow-amber)',
-                    normal: 'url(#arrow-green)',
-                  };
-
-                  const labelX = x2 + (ux > 0.3 ? 12 : ux < -0.3 ? -12 : 0);
-                  const labelY = y2 + (uy > 0.3 ? 16 : uy < -0.3 ? -10 : 4);
-
-                  return (
-                    <g key={f.id} data-arrow={f.id} data-magnitude={f.magnitude} data-work={f.work}>
-                      <line
-                        x1={comX}
-                        y1={comY}
-                        x2={x2}
-                        y2={y2}
-                        stroke={COLOR[f.id]}
-                        strokeWidth={f.id === 'applied' ? 3.5 : 2.5}
-                        markerEnd={markerMap[f.id]}
+              {/* DISPLACEMENT CALIPER BRACKET */}
+              {s !== 0 && showCaliper && (
+                <g
+                  data-testid="displacement-arrow"
+                  onClick={() => onSelectObject && onSelectObject('caliper')}
+                  className="cursor-pointer"
+                >
+                  {horizontal ? (
+                    <>
+                      <path
+                        d={`M ${startX} ${ground - 90} L ${startX} ${ground - 100} L ${(startX + endX) / 2} ${ground - 100} L ${(startX + endX) / 2} ${ground - 106} L ${(startX + endX) / 2} ${ground - 100} L ${endX} ${ground - 100} L ${endX} ${ground - 90}`}
+                        fill="none"
+                        stroke={isCaliperSelected ? '#00d4ff' : '#6ffbbe'}
+                        strokeWidth={isCaliperSelected ? '2.5' : '2'}
                       />
-                      <g transform={`translate(${labelX}, ${labelY})`}>
-                        <rect
-                          fill="#0f131b"
-                          height="20"
-                          rx="3"
-                          stroke={COLOR[f.id]}
-                          strokeWidth="1"
-                          width={f.label.length * 7 + 60}
-                          x={ux < -0.3 ? -(f.label.length * 7 + 60) : 0}
-                          y="-10"
-                        />
-                        <text
-                          fill={COLOR[f.id]}
-                          fontFamily="JetBrains Mono"
-                          fontSize="11"
-                          fontWeight="700"
-                          x={ux < -0.3 ? -((f.label.length * 7 + 60) / 2) : (f.label.length * 7 + 60) / 2}
-                          y="4"
-                          textAnchor="middle"
-                        >
-                          {TAG[f.id]} = {fmt(f.magnitude)} N
+                      <g transform={`translate(${(startX + endX) / 2}, ${ground - 116})`}>
+                        <rect fill="#0a0e16" height="22" rx="4" stroke={isCaliperSelected ? '#00d4ff' : '#4edea3'} strokeWidth="1.2" width="220" x="-110" y="-13" />
+                        <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={11} fontWeight={700} textAnchor="middle" x="0" y="2">
+                          displacement s = {fmtSigned(s)} m
                         </text>
                       </g>
-                    </g>
-                  );
-                })}
+                    </>
+                  ) : (
+                    <>
+                      <path
+                        d={`M 460 ${startY} L 470 ${startY} L 470 ${(startY + endY) / 2} L 476 ${(startY + endY) / 2} L 470 ${(startY + endY) / 2} L 470 ${endY} L 460 ${endY}`}
+                        fill="none"
+                        stroke={isCaliperSelected ? '#00d4ff' : '#6ffbbe'}
+                        strokeWidth={isCaliperSelected ? '2.5' : '2'}
+                      />
+                      <g transform={`translate(550, ${(startY + endY) / 2})`}>
+                        <rect fill="#0a0e16" height="22" rx="4" stroke={isCaliperSelected ? '#00d4ff' : '#4edea3'} strokeWidth="1.2" width="140" x="-70" y="-11" />
+                        <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={11} fontWeight={700} textAnchor="middle" x="0" y="4">
+                          s = {fmtSigned(s)} m
+                        </text>
+                      </g>
+                    </>
+                  )}
+                </g>
+              )}
 
-            {/* Net Force Indicator Vector (dashed) */}
-            {vectorsOn && r.appliedWork !== 0 && (
-              <g transform={`translate(${cartX}, ${cartY + 36})`}>
-                <line
-                  markerEnd="url(#arrow-green)"
-                  stroke="#6ffbbe"
-                  strokeDasharray="3,3"
-                  strokeWidth="1.5"
-                  x1="0"
-                  x2={Math.min(70, Math.max(-70, r.applied.alongAxis * 2))}
-                  y1="0"
-                  y2="0"
-                />
-                <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={10} textAnchor="middle" x={r.applied.alongAxis > 0 ? 35 : -35} y="-5">
-                  ΣF = {fmtSigned(r.applied.alongAxis)} N
+              {/* DYNAMIC CART ASSEMBLY (CART_01) */}
+              <g
+                id="cart-assembly"
+                transform={`translate(${cartX - 55}, ${cartY - 15})`}
+                onClick={() => onSelectObject && onSelectObject('cart')}
+                className="cursor-pointer"
+              >
+                {/* Selection Halo */}
+                {isCartSelected && (
+                  <rect
+                    fill="none"
+                    height="54"
+                    rx="6"
+                    stroke="#00d4ff"
+                    strokeWidth="2"
+                    strokeDasharray="4,4"
+                    width="122"
+                    x="-6"
+                    y="-6"
+                    className="animate-pulse"
+                  />
+                )}
+                {/* Chassis Body */}
+                <rect fill="#262a33" height="42" rx="4" stroke={isCartSelected ? '#00d4ff' : '#424754'} strokeWidth="2" width="110" x="0" y="0" />
+                <rect fill="#1c2028" height="12" rx="2" stroke="#31353e" strokeWidth="1" width="100" x="5" y="4" />
+                <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={9} fontWeight={600} textAnchor="middle" x="55" y="13">
+                  CART_01 ({fmt(r.setup.massKg)} kg)
                 </text>
+                <rect fill="#181c24" height="14" rx="1.5" stroke="#424754" width="22" x="10" y="20" />
+                <circle cx="21" cy="27" fill="#ffb95a" r="3" />
+                <text fill="#c2c6d6" fontFamily="JetBrains Mono" fontSize={8} x="36" y="30">
+                  ACCEL_SENS_X
+                </text>
+                {/* Wheel Bearings */}
+                <circle cx="20" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
+                <circle cx="20" cy="46" fill="#adc6ff" r="2.5" />
+                <circle cx="90" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
+                <circle cx="90" cy="46" fill="#adc6ff" r="2.5" />
+                {/* Center of Mass Indicator */}
+                <circle cx="55" cy="21" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
+                <path d="M 50.5 21 A 4.5 4.5 0 0 0 55 25.5 L 55 21 Z" fill="#4d8eff" />
+                <path d="M 55 16.5 A 4.5 4.5 0 0 0 50.5 21 L 55 21 Z" fill="#0a0e16" />
               </g>
-            )}
+
+              {/* FORCE VECTORS ANCHORED AT CENTER OF MASS */}
+              {vectorsOn &&
+                r.forces
+                  .filter((f) => f.magnitude > 0)
+                  .map((f) => {
+                    if (!showVertical && (f.id === 'weight' || f.id === 'normal')) return null;
+
+                    const biggest = Math.max(1, ...r.forces.map((x) => x.magnitude));
+                    const k = 90 / biggest;
+                    const L = Math.max(25, Math.min(130, f.magnitude * k));
+                    const ux = f.fx / f.magnitude;
+                    const uy = -f.fy / f.magnitude; // screen Y down
+
+                    const comX = cartX;
+                    const comY = cartY + 6;
+                    const x2 = comX + ux * L;
+                    const y2 = comY + uy * L;
+
+                    const markerMap: Record<ForceKind, string> = {
+                      applied: 'url(#arrow-violet)',
+                      friction: 'url(#arrow-coral)',
+                      weight: 'url(#arrow-amber)',
+                      normal: 'url(#arrow-green)',
+                    };
+
+                    const labelX = x2 + (ux > 0.3 ? 12 : ux < -0.3 ? -12 : 0);
+                    const labelY = y2 + (uy > 0.3 ? 16 : uy < -0.3 ? -10 : 4);
+
+                    const isThisForceSelected = isForceSelected && f.id === 'applied';
+
+                    return (
+                      <g
+                        key={f.id}
+                        data-arrow={f.id}
+                        data-magnitude={f.magnitude}
+                        data-work={f.work}
+                        onClick={() => onSelectObject && onSelectObject(f.id === 'applied' ? 'force' : f.id)}
+                        className="cursor-pointer"
+                      >
+                        <line
+                          x1={comX}
+                          y1={comY}
+                          x2={x2}
+                          y2={y2}
+                          stroke={isThisForceSelected ? '#00d4ff' : COLOR[f.id]}
+                          strokeWidth={isThisForceSelected ? 4.5 : f.id === 'applied' ? 3.5 : 2.5}
+                          markerEnd={markerMap[f.id]}
+                        />
+                        <g transform={`translate(${labelX}, ${labelY})`}>
+                          <rect
+                            fill="#0f131b"
+                            height="20"
+                            rx="3"
+                            stroke={isThisForceSelected ? '#00d4ff' : COLOR[f.id]}
+                            strokeWidth={isThisForceSelected ? 1.5 : 1}
+                            width={f.label.length * 7 + 60}
+                            x={ux < -0.3 ? -(f.label.length * 7 + 60) : 0}
+                            y="-10"
+                          />
+                          <text
+                            fill={isThisForceSelected ? '#00d4ff' : COLOR[f.id]}
+                            fontFamily="JetBrains Mono"
+                            fontSize="11"
+                            fontWeight="700"
+                            x={ux < -0.3 ? -((f.label.length * 7 + 60) / 2) : (f.label.length * 7 + 60) / 2}
+                            y="4"
+                            textAnchor="middle"
+                          >
+                            {TAG[f.id]} = {fmt(f.magnitude)} N
+                          </text>
+                        </g>
+                      </g>
+                    );
+                  })}
+
+              {/* Net Force Indicator Vector (dashed) */}
+              {vectorsOn && r.appliedWork !== 0 && (
+                <g transform={`translate(${cartX}, ${cartY + 36})`}>
+                  <line
+                    markerEnd="url(#arrow-green)"
+                    stroke="#6ffbbe"
+                    strokeDasharray="3,3"
+                    strokeWidth="1.5"
+                    x1="0"
+                    x2={Math.min(70, Math.max(-70, r.applied.alongAxis * 2))}
+                    y1="0"
+                    y2="0"
+                  />
+                  <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={10} textAnchor="middle" x={r.applied.alongAxis > 0 ? 35 : -35} y="-5">
+                    ΣF = {fmtSigned(r.applied.alongAxis)} N
+                  </text>
+                </g>
+              )}
+            </g>
           </svg>
         </div>
 
@@ -384,7 +642,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
         </div>
       </div>
 
-      {/* Docked Bottom Transport / Playback Strip (Stitch design reference) */}
+      {/* Docked Bottom Transport / Playback Strip */}
       <div className="h-12 bg-surface-container border-t border-outline-variant px-3 sm:px-4 flex items-center justify-between z-30 select-none">
         {/* Playback action buttons */}
         <div className="flex items-center space-x-1.5" role="group" aria-label="Playback Controls">
@@ -453,7 +711,7 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           </span>
         </div>
 
-        {/* Telemetry Telemetry Readouts */}
+        {/* Live Model Telemetry Readouts */}
         <div className="hidden lg:flex items-center space-x-4 border-l border-outline-variant pl-4">
           <div className="flex flex-col">
             <span className="font-mono text-[9px] uppercase text-outline">Velocity (v)</span>

@@ -2,8 +2,9 @@ export { WorkstationHeader, type WorkstationHeaderProps, type WorkspaceTab } fro
 export { SceneOutliner, type SceneOutlinerProps } from './SceneOutliner';
 export { SimulationViewport, type SimulationViewportProps } from './SimulationViewport';
 export { PropertiesInspector, type PropertiesInspectorProps } from './PropertiesInspector';
-export { AnalysisDock, type AnalysisDockProps, type AnalysisTab } from './AnalysisDock';
+export { AnalysisDock, type AnalysisDockProps, type AnalysisTab, type DockSizeMode } from './AnalysisDock';
 export { BlackboardWorkspace, type BlackboardWorkspaceProps } from './BlackboardWorkspace';
+export { useViewportCamera, DEFAULT_CAMERA, MIN_ZOOM, MAX_ZOOM, type ViewportCamera } from './useViewportCamera';
 export { MobileInspectorSheet, type MobileInspectorSheetProps } from './MobileInspectorSheet';
 export { ParameterControl, type ParameterControlProps } from './ParameterControl';
 export { DirectionControl, type DirectionControlProps } from './DirectionControl';

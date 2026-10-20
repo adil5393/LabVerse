@@ -6,21 +6,83 @@ export interface SceneOutlinerProps {
   onToggleCollapse?: () => void;
   cartMassKg?: number;
   trackLengthM?: number;
+  selectedObjectId?: string | null;
+  onSelectObject?: (id: string | null) => void;
+  visibilityMap?: Record<string, boolean>;
+  onToggleVisibility?: (id: string) => void;
+  lockMap?: Record<string, boolean>;
+  onToggleLock?: (id: string) => void;
+  activeExperimentId?: string | null;
+  onSelectExperiment?: (id: string | null) => void;
+}
+
+interface SceneItem {
+  id: string;
+  name: string;
+  category: string;
+  icon: string;
+  badge: string;
 }
 
 /**
  * SceneOutliner: Blender Outliner-inspired tree view panel.
- * Displays hierarchical curriculum navigation, active lab objects, and scene telemetry.
+ * Displays hierarchical curriculum navigation, active lab objects,
+ * interactive object selection, visibility toggles, and edit locks.
  */
 export const SceneOutliner: React.FC<SceneOutlinerProps> = ({
   onCloseMobile,
   onToggleCollapse,
   cartMassKg = 5.0,
   trackLengthM = 12,
+  selectedObjectId = null,
+  onSelectObject,
+  visibilityMap = { cart: true, force: true, track: true, caliper: true },
+  onToggleVisibility,
+  lockMap = { cart: false, force: false, track: false, caliper: false },
+  onToggleLock,
+  activeExperimentId = null,
+  onSelectExperiment,
 }) => {
   const [filter, setFilter] = useState('');
   const [physicsExpanded, setPhysicsExpanded] = useState(true);
   const [ch7Expanded, setCh7Expanded] = useState(true);
+
+  const sceneObjects: SceneItem[] = [
+    {
+      id: 'cart',
+      name: 'CART_01',
+      category: 'Object / Dynamics',
+      icon: 'deployed_code',
+      badge: `m=${cartMassKg.toFixed(1)}kg`,
+    },
+    {
+      id: 'force',
+      name: 'F_APP',
+      category: 'Vector / Force',
+      icon: 'trending_up',
+      badge: 'Applied Force',
+    },
+    {
+      id: 'track',
+      name: 'Linear_Track',
+      category: 'Environment / Surface',
+      icon: 'straighten',
+      badge: `${trackLengthM}m Track`,
+    },
+    {
+      id: 'caliper',
+      name: 'DISP_01',
+      category: 'Measurement / Vector',
+      icon: 'space_dashboard',
+      badge: 'Displacement',
+    },
+  ];
+
+  const filteredObjects = sceneObjects.filter(
+    (obj) =>
+      obj.name.toLowerCase().includes(filter.toLowerCase()) ||
+      obj.category.toLowerCase().includes(filter.toLowerCase())
+  );
 
   return (
     <aside className="w-[260px] flex-shrink-0 bg-surface-container-low border-r border-outline-variant flex flex-col justify-between z-30 select-none h-full">
@@ -51,15 +113,7 @@ export const SceneOutliner: React.FC<SceneOutlinerProps> = ({
               >
                 <span className="material-symbols-outlined text-[15px]">chevron_left</span>
               </button>
-            ) : (
-              <button
-                type="button"
-                className="p-0.5 rounded text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors"
-                title="Filter Scene"
-              >
-                <span className="material-symbols-outlined text-[14px]">filter_alt</span>
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -70,9 +124,18 @@ export const SceneOutliner: React.FC<SceneOutlinerProps> = ({
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter lab objects..."
-            className="bg-transparent border-0 p-0 text-[11px] font-mono text-on-surface placeholder:text-outline focus:ring-0 w-full"
+            placeholder="Filter lab objects & units..."
+            className="bg-transparent border-0 p-0 text-[11px] font-mono text-on-surface placeholder:text-outline focus:ring-0 w-full focus:outline-none"
           />
+          {filter && (
+            <button
+              type="button"
+              onClick={() => setFilter('')}
+              className="text-outline hover:text-white"
+            >
+              <span className="material-symbols-outlined text-[12px]">close</span>
+            </button>
+          )}
         </div>
 
         {/* Tree View List */}
@@ -136,115 +199,166 @@ export const SceneOutliner: React.FC<SceneOutlinerProps> = ({
 
               {ch7Expanded && (
                 <div className="space-y-0.5">
-                  {/* 7.1 ACTIVE SELECTION */}
-                  <div className="pl-9 pr-3 py-1 flex items-center justify-between bg-primary-container/20 border-l-2 border-primary text-primary font-semibold">
+                  {/* 7.1 FREE EXPLORATION */}
+                  <div
+                    onClick={() => onSelectExperiment?.(null)}
+                    className={`pl-9 pr-3 py-1 flex items-center justify-between cursor-pointer transition-colors ${
+                      !activeExperimentId
+                        ? 'bg-primary-container/20 border-l-2 border-primary text-primary font-semibold'
+                        : 'text-on-surface-variant hover:bg-surface-container hover:text-white'
+                    }`}
+                  >
                     <div className="flex items-center space-x-1.5 truncate">
                       <span className="material-symbols-outlined text-[13px] text-primary">science</span>
-                      <span className="truncate text-[11px]">7.1 Work Laboratory</span>
+                      <span className="truncate text-[11px]">7.1 Work Free Lab</span>
                     </div>
-                    <div className="flex items-center space-x-1 text-primary">
-                      <span className="material-symbols-outlined text-[13px]">visibility</span>
-                    </div>
+                    <span className="material-symbols-outlined text-[13px] text-primary">
+                      {!activeExperimentId ? 'check_circle' : 'visibility'}
+                    </span>
                   </div>
 
-                  {/* 7.2 Work-Energy */}
-                  <Link
-                    to="/physics/work/lab?experiment=B"
-                    className="pl-9 pr-3 py-0.5 flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-white transition-colors"
+                  {/* 7.2 Exp A */}
+                  <div
+                    onClick={() => onSelectExperiment?.('A')}
+                    className={`pl-9 pr-3 py-0.5 flex items-center justify-between cursor-pointer transition-colors ${
+                      activeExperimentId === 'A'
+                        ? 'bg-primary-container/20 border-l-2 border-primary text-primary font-semibold'
+                        : 'text-on-surface-variant hover:bg-surface-container hover:text-white'
+                    }`}
                   >
                     <div className="flex items-center space-x-1.5 truncate">
                       <span className="material-symbols-outlined text-[13px] text-outline">circle</span>
-                      <span className="truncate text-[11px]">7.2 Work-Energy Lab</span>
+                      <span className="truncate text-[11px]">Exp A: Force & Direction</span>
                     </div>
                     <span className="material-symbols-outlined text-[13px] text-outline opacity-60">visibility</span>
-                  </Link>
+                  </div>
 
-                  {/* 7.3 Energy Conservation */}
-                  <Link
-                    to="/physics/work/lab?experiment=C"
-                    className="pl-9 pr-3 py-0.5 flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-white transition-colors"
+                  {/* 7.3 Exp B */}
+                  <div
+                    onClick={() => onSelectExperiment?.('B')}
+                    className={`pl-9 pr-3 py-0.5 flex items-center justify-between cursor-pointer transition-colors ${
+                      activeExperimentId === 'B'
+                        ? 'bg-primary-container/20 border-l-2 border-primary text-primary font-semibold'
+                        : 'text-on-surface-variant hover:bg-surface-container hover:text-white'
+                    }`}
                   >
                     <div className="flex items-center space-x-1.5 truncate">
                       <span className="material-symbols-outlined text-[13px] text-outline">circle</span>
-                      <span className="truncate text-[11px]">7.3 Energy Conservation</span>
+                      <span className="truncate text-[11px]">Exp B: Friction & Braking</span>
                     </div>
                     <span className="material-symbols-outlined text-[13px] text-outline opacity-60">visibility</span>
-                  </Link>
+                  </div>
 
-                  {/* 7.4 Power */}
-                  <Link
-                    to="/physics/work/lab?experiment=D"
-                    className="pl-9 pr-3 py-0.5 flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-white transition-colors"
+                  {/* 7.4 Exp C */}
+                  <div
+                    onClick={() => onSelectExperiment?.('C')}
+                    className={`pl-9 pr-3 py-0.5 flex items-center justify-between cursor-pointer transition-colors ${
+                      activeExperimentId === 'C'
+                        ? 'bg-primary-container/20 border-l-2 border-primary text-primary font-semibold'
+                        : 'text-on-surface-variant hover:bg-surface-container hover:text-white'
+                    }`}
                   >
                     <div className="flex items-center space-x-1.5 truncate">
                       <span className="material-symbols-outlined text-[13px] text-outline">circle</span>
-                      <span className="truncate text-[11px]">7.4 Power Laboratory</span>
+                      <span className="truncate text-[11px]">Exp C: Zero Work</span>
                     </div>
                     <span className="material-symbols-outlined text-[13px] text-outline opacity-60">visibility</span>
-                  </Link>
+                  </div>
 
-                  {/* 7.5 Simple Machines */}
-                  <Link
-                    to="/physics/work/lab?experiment=E"
-                    className="pl-9 pr-3 py-0.5 flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-white transition-colors"
+                  {/* 7.5 Exp D */}
+                  <div
+                    onClick={() => onSelectExperiment?.('D')}
+                    className={`pl-9 pr-3 py-0.5 flex items-center justify-between cursor-pointer transition-colors ${
+                      activeExperimentId === 'D'
+                        ? 'bg-primary-container/20 border-l-2 border-primary text-primary font-semibold'
+                        : 'text-on-surface-variant hover:bg-surface-container hover:text-white'
+                    }`}
                   >
                     <div className="flex items-center space-x-1.5 truncate">
                       <span className="material-symbols-outlined text-[13px] text-outline">circle</span>
-                      <span className="truncate text-[11px]">7.5 Simple Machines</span>
+                      <span className="truncate text-[11px]">Exp D: Lifting Against Gravity</span>
                     </div>
                     <span className="material-symbols-outlined text-[13px] text-outline opacity-60">visibility</span>
-                  </Link>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Upcoming Subjects Header */}
-          <div className="mt-3 px-3 py-1 border-t border-outline-variant/40 flex items-center justify-between text-outline">
-            <span className="text-[9px] uppercase tracking-wider font-semibold">Other Subjects</span>
-          </div>
-
-          {/* Mathematics */}
-          <Link
-            to="/mathematics"
-            className="px-3 py-0.5 flex items-center justify-between text-on-surface-variant hover:bg-surface-container hover:text-white transition-colors"
-          >
-            <div className="flex items-center space-x-1">
-              <span className="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
-              <span className="material-symbols-outlined text-[14px] text-outline">calculate</span>
-              <span className="text-[12px]">Mathematics</span>
-            </div>
-            <span className="text-[10px] text-outline">3 Ch</span>
-          </Link>
-
-          {/* Active Scene Objects */}
+          {/* ACTIVE SCENE OBJECTS SECTION */}
           <div className="mt-3 px-3 py-1 border-t border-outline-variant/40 flex items-center justify-between text-outline">
             <span className="text-[9px] uppercase tracking-wider font-semibold">Active Scene Objects</span>
+            <span className="text-[9px] font-mono text-outline">{filteredObjects.length} Entities</span>
           </div>
 
-          <div className="pl-4 pr-3 py-1 flex items-center justify-between text-on-surface-variant">
-            <div className="flex items-center space-x-1.5">
-              <span className="material-symbols-outlined text-[14px] text-primary">deployed_code</span>
-              <span className="text-[11px] font-semibold text-white">CART_01</span>
-            </div>
-            <span className="text-[9px] px-1.5 py-0.5 bg-surface-variant rounded text-on-surface-variant font-mono">
-              m={cartMassKg.toFixed(1)}kg
-            </span>
-          </div>
+          <div className="space-y-0.5">
+            {filteredObjects.map((obj) => {
+              const isSelected = selectedObjectId === obj.id;
+              const isVisible = visibilityMap[obj.id] ?? true;
+              const isLocked = lockMap[obj.id] ?? false;
 
-          <div className="pl-4 pr-3 py-1 flex items-center justify-between text-on-surface-variant">
-            <div className="flex items-center space-x-1.5">
-              <span className="material-symbols-outlined text-[14px] text-outline">straighten</span>
-              <span className="text-[11px] text-slate-300">Linear_Track</span>
-            </div>
-            <span className="text-[9px] px-1.5 py-0.5 bg-surface-variant rounded text-on-surface-variant font-mono">
-              {trackLengthM}m
-            </span>
+              return (
+                <div
+                  key={obj.id}
+                  onClick={() => onSelectObject?.(isSelected ? null : obj.id)}
+                  className={`pl-4 pr-2 py-1 flex items-center justify-between cursor-pointer group transition-colors ${
+                    isSelected
+                      ? 'bg-primary-container/25 border-l-2 border-primary text-primary'
+                      : 'text-on-surface-variant hover:bg-surface-container hover:text-white'
+                  }`}
+                  title={`Click to select ${obj.name}`}
+                >
+                  <div className="flex items-center space-x-1.5 truncate">
+                    <span className={`material-symbols-outlined text-[14px] ${isSelected ? 'text-primary' : 'text-outline'}`}>
+                      {obj.icon}
+                    </span>
+                    <span className={`text-[11px] truncate ${isSelected ? 'font-bold text-white' : ''}`}>
+                      {obj.name}
+                    </span>
+                  </div>
+
+                  {/* Actions: Visibility & Lock */}
+                  <div className="flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleVisibility?.(obj.id);
+                      }}
+                      className={`p-0.5 rounded hover:text-white transition-colors ${
+                        isVisible ? 'text-outline' : 'text-rose-400'
+                      }`}
+                      title={isVisible ? 'Hide from viewport' : 'Show in viewport'}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {isVisible ? 'visibility' : 'visibility_off'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleLock?.(obj.id);
+                      }}
+                      className={`p-0.5 rounded hover:text-white transition-colors ${
+                        isLocked ? 'text-amber-400' : 'text-outline opacity-40 group-hover:opacity-100'
+                      }`}
+                      title={isLocked ? 'Locked (editing disabled)' : 'Unlock to edit'}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {isLocked ? 'lock' : 'lock_open'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Outliner Footer with CTA and Diagnostics */}
+      {/* Outliner Footer with NCERT Chapter Exercises link and Diagnostics */}
       <div className="p-3 border-t border-outline-variant bg-surface-container">
         <Link
           to="/physics/work/exercises"
@@ -258,10 +372,7 @@ export const SceneOutliner: React.FC<SceneOutlinerProps> = ({
             <span className="material-symbols-outlined text-[12px] text-emerald-400">tune</span>
             <span>Diagnostics: OK</span>
           </span>
-          <span className="flex items-center space-x-1">
-            <span className="material-symbols-outlined text-[12px] text-sky-400">terminal</span>
-            <span>CLI ready</span>
-          </span>
+          <span className="text-outline">PHY-3A</span>
         </div>
       </div>
     </aside>

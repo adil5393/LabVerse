@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 export type WorkspaceTab = 'learn' | 'experiment' | 'analyze' | 'exercises' | 'blackboard';
@@ -43,6 +43,28 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
   chapterTitle = 'Ch. 7 Work, Energy & Machines',
   labTitle = 'Work Laboratory',
 }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const handleFullscreenClick = () => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+    } else {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
   return (
     <header className="flex justify-between items-center w-full px-3 sm:px-4 h-10 border-b border-outline-variant bg-surface-container shrink-0 z-50 select-none">
       {/* Left: Brand + Breadcrumb Navigation */}
@@ -84,14 +106,16 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
 
       {/* Center: Workspace Mode Tabs & Beginner/Advanced Toggle */}
       <div className="flex items-center space-x-2 sm:space-x-3 h-full">
-        <div className="flex items-center space-x-0.5 sm:space-x-1 h-full pt-0.5">
+        <div className="flex items-center space-x-0.5 sm:space-x-1 h-full pt-0.5" role="tablist" aria-label="Workstation modes">
           {/* Learn Tab */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'learn'}
             onClick={() => onTabChange('learn')}
             className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
               activeTab === 'learn'
-                ? 'border-b-2 border-primary text-primary bg-surface-variant/40'
+                ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
             }`}
           >
@@ -101,6 +125,8 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           {/* ACTIVE Experiment Tab */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'experiment'}
             onClick={() => onTabChange('experiment')}
             className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
               activeTab === 'experiment'
@@ -117,6 +143,8 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           {/* Analyze Tab */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'analyze'}
             onClick={() => onTabChange('analyze')}
             className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
               activeTab === 'analyze'
@@ -133,10 +161,12 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           {/* Exercises Tab */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'exercises'}
             onClick={() => onTabChange('exercises')}
             className={`hidden md:flex px-2 sm:px-3 h-full items-center text-xs font-medium transition-colors ${
               activeTab === 'exercises'
-                ? 'border-b-2 border-primary text-primary bg-surface-variant/40'
+                ? 'border-b-2 border-primary text-primary bg-surface-variant/40 font-semibold'
                 : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
             }`}
           >
@@ -146,6 +176,8 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           {/* Blackboard Tab */}
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'blackboard'}
             onClick={() => onTabChange('blackboard')}
             className={`px-2 sm:px-3 h-full flex items-center text-xs font-medium transition-colors ${
               activeTab === 'blackboard'
@@ -158,13 +190,14 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           </button>
         </div>
 
-        {/* Mode Toggle Pill */}
-        <div className="hidden lg:flex items-center bg-surface-container-lowest border border-outline-variant rounded p-0.5 font-mono text-[10px]">
+        {/* Mode Toggle Pill (Beginner vs Advanced) */}
+        <div className="hidden lg:flex items-center bg-surface-container-lowest border border-outline-variant rounded p-0.5 font-mono text-[10px]" role="group" aria-label="Workstation detail level">
           <button
             type="button"
             onClick={() => onToggleBeginnerMode(true)}
+            aria-pressed={beginnerMode}
             className={`px-2 py-0.5 rounded transition-colors ${
-              beginnerMode ? 'bg-surface-container-high text-primary font-semibold' : 'text-on-surface-variant hover:text-on-surface'
+              beginnerMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
             Beginner
@@ -172,6 +205,7 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
           <button
             type="button"
             onClick={() => onToggleBeginnerMode(false)}
+            aria-pressed={!beginnerMode}
             className={`px-2 py-0.5 rounded transition-colors ${
               !beginnerMode ? 'bg-primary text-on-primary font-semibold shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
             }`}
@@ -189,8 +223,8 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-40"
-            title="Undo (Ctrl+Z)"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            title="Undo parameter change (Ctrl+Z)"
           >
             <span className="material-symbols-outlined text-[16px]">undo</span>
           </button>
@@ -198,8 +232,8 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
             type="button"
             onClick={onRedo}
             disabled={!canRedo}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-40"
-            title="Redo (Ctrl+Y)"
+            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            title="Redo parameter change (Ctrl+Y)"
           >
             <span className="material-symbols-outlined text-[16px]">redo</span>
           </button>
@@ -233,11 +267,13 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
         <div className="hidden md:flex items-center space-x-0.5 pl-1">
           <button
             type="button"
-            onClick={onToggleFullscreen}
+            onClick={handleFullscreenClick}
             className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
-            title="Toggle Fullscreen"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           >
-            <span className="material-symbols-outlined text-[16px]">fullscreen</span>
+            <span className="material-symbols-outlined text-[16px]">
+              {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+            </span>
           </button>
           <Link
             to="/physics/work/exercises"

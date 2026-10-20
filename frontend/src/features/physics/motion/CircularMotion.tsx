@@ -39,7 +39,8 @@ const Field: React.FC<{ id: string; label: string; unit: string; value: number; 
 
 export interface CircularMotionProps { radiusM?: number; periodS?: number; spin?: Spin; editable?: boolean; startTime?: number; alt?: string }
 
-export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10, periodS = 12, spin = 'counterclockwise', editable = true, startTime = 0, alt }) => {
+/** All state and actions of one circular-motion run; the lab slots and the lesson composite read the same instance. */
+export const useCircularMotion = ({ radiusM = 10, periodS = 12, spin = 'counterclockwise', startTime = 0 }: Pick<CircularMotionProps, 'radiusM' | 'periodS' | 'spin' | 'startTime'> = {}) => {
   const [setup, setSetup] = useState<CircleSetup>({ radiusM, periodS, spin });
   const [t, setT] = useState(startTime);
   const [playing, setPlaying] = useState(false);
@@ -77,6 +78,20 @@ export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
+  const togglePlay = () => { if (tt >= tMax) setT(0); setPlaying((p) => !p); };
+  const stepBack = () => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); };
+  const stepForward = () => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); };
+  const rewind = () => { setPlaying(false); setT(0); };
+  const scrub = (v: number) => { setPlaying(false); setT(v); };
+  const jumpTo = (v: number) => { setPlaying(false); setT(Math.min(tMax, v)); };
+  return { setup, setSetup, t, setT, tt, tMax, s, playing, setPlaying, rate, setRate, err, setErr, reduced, change, togglePlay, stepBack, stepForward, rewind, scrub, jumpTo };
+};
+export type CircularMotionModel = ReturnType<typeof useCircularMotion>;
+
+/** The picture: the circle with the arc, the chord, the velocity and the towards-the-centre arrow, and its legend. */
+export const CircleScene: React.FC<{ c: CircularMotionModel; alt?: string; hidden?: Record<string, boolean> }> = ({ c, alt, hidden = {} }) => {
+  const { setup, s } = c;
+  const show = (id: string) => !hidden[id];
   const k = R_PX / setup.radiusM;
   const P = (x: number, y: number) => ({ px: C0 + x * k, py: C0 - y * k });
   const start = P(setup.radiusM, 0), now = P(s.x, s.y);
@@ -92,10 +107,63 @@ export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10
   const aTip = { px: now.px + toC.x * 34, py: now.py - toC.y * 34 };
   const head = (fx: number, fy: number, tx: number, ty: number) => { const a = Math.atan2(ty - fy, tx - fx); return `M${tx},${ty} L${tx - 9 * Math.cos(a - 0.4)},${ty - 9 * Math.sin(a - 0.4)} L${tx - 9 * Math.cos(a + 0.4)},${ty - 9 * Math.sin(a + 0.4)} Z`; };
   const text = alt ?? describeCircle(setup, s);
+  return (
+    <>
+      <p className="sr-only">{text}</p>
+      <svg viewBox={`0 0 ${S} ${S}`} role="img" aria-label={text} className="w-full max-w-[420px] mx-auto rounded-xl bg-surface-lowest border border-surface-border block">
+        <circle cx={C0} cy={C0} r={R_PX} fill="none" stroke={PHYS.axis} strokeWidth={1.5} strokeDasharray="4 4" />
+        <circle cx={C0} cy={C0} r={3} fill={PHYS.origin} /><text x={C0 + 6} y={C0 + 14} fontSize={10} fill={PHYS.origin}>centre</text>
+        {show('arc') && arcPath && <path d={arcPath} fill="none" stroke={PHYS.distance} strokeWidth={4} />}
+        {show('displacement') && <path d={`M${start.px},${start.py} L${now.px},${now.py}`} stroke={PHYS.displacement} strokeWidth={2.5} />}
+        {show('displacement') && s.displacement > 0.01 * setup.radiusM && <path d={head(start.px, start.py, now.px, now.py)} fill={PHYS.displacement} />}
+        <circle cx={start.px} cy={start.py} r={5} fill="none" stroke={PHYS.position} strokeWidth={2} /><text x={start.px + 8} y={start.py - 8} fontSize={10} fill={PHYS.position}>start</text>
+        {show('acceleration') && <g><g stroke={PHYS.acceleration} strokeDasharray="4 3" strokeWidth={2}><line x1={now.px} y1={now.py} x2={aTip.px} y2={aTip.py} /></g>
+        <path d={head(now.px, now.py, aTip.px, aTip.py)} fill={PHYS.acceleration} /></g>}
+        {show('velocity') && <g><line x1={now.px} y1={now.py} x2={tip.px} y2={tip.py} stroke={PHYS.velocity} strokeWidth={3} />
+        <path d={head(now.px, now.py, tip.px, tip.py)} fill={PHYS.velocity} /></g>}
+        <circle cx={now.px} cy={now.py} r={8} fill={PHYS.position} stroke="#0f172a" strokeWidth={2} />
+      </svg>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] justify-center" aria-label="Legend">
+        <li style={{ color: PHYS.velocity }}>{'━▶'} velocity (tangent to the circle)</li>
+        <li style={{ color: PHYS.distance }}>{'━'} arc travelled (distance)</li>
+        <li style={{ color: PHYS.displacement }}>{'━▶'} displacement (straight chord from the start)</li>
+        <li style={{ color: PHYS.acceleration }}>{'┈▶'} towards the centre (conceptual)</li>
+      </ul>
+
+    </>
+  );
+};
+
+/** The numbers: the readout cards and the live sentence. */
+export const CircleReadout: React.FC<{ c: CircularMotionModel }> = ({ c }) => {
+  const { setup, s } = c;
+  return (
+    <div className="space-y-3">
+      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="circle-readout">
+        <Stat id="t" label="Simulated time" value={`${r2(s.t)} s`} color={PHYS.time} symbol={'⏱'} />
+        <Stat id="turns" label="Turns completed" value={r2(s.revolutions)} color="#e2e8f0" symbol={'↻'} />
+        <Stat id="position" label="Position (x, y)" value={`(${r2(s.x)}, ${r2(s.y)}) m`} color={PHYS.position} symbol={'●'} note="from the centre" />
+        <Stat id="speed" label="Speed" value={`${r2(s.speed)} m/s`} color={PHYS.speed} symbol={'⚡'} note="2πr ÷ T: never changes" />
+        <Stat id="direction" label="Direction of velocity" value={`${r2(s.velocityAngleDeg, 0)}° from +x`} color={PHYS.velocity} symbol={'➤'} note="keeps changing" />
+        <Stat id="distance" label="Distance (arc length)" value={`${r2(s.distance)} m`} color={PHYS.distance} symbol={'↔'} note="along the circle, always grows" />
+        <Stat id="displacement" label="Displacement (chord)" value={`${r2(s.displacement)} m`} color={PHYS.displacement} symbol={'→'} note="straight line from the start" />
+        <Stat id="avg" label="Average speed · average velocity" value={s.averageSpeed === null ? '—' : `${r2(s.averageSpeed)} · ${r2(s.averageVelocity ?? 0)} m/s`} color={PHYS.velocity} symbol={'➤'} note="distance ÷ t · displacement ÷ t" />
+      </dl>
+
+      <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" data-testid="circle-live">
+        <p>At t = {r2(s.t)} s the object is at ({r2(s.x)}, {r2(s.y)}) m. Its speed is {r2(s.speed)} m/s, the same as at every other time, but its velocity points {r2(s.velocityAngleDeg, 0)}° from the +x axis and keeps turning. It has travelled {r2(s.distance)} m along the circle; its displacement from the start is {r2(s.displacement)} m in a straight line.</p>
+        <p className="text-xs text-slate-300">{s.t > 0 && s.displacement < 1e-6 * setup.radiusM + 1e-9 ? 'The object is back at its starting point: the displacement and the average velocity are zero, while the distance is a whole number of circumferences.' : 'The velocity changes direction all the time even though its size is constant. A changing velocity means an acceleration, which for motion in a circle points towards the centre (shown as a dashed arrow; its size is not needed in Class 9).'}</p>
+      </div>
+    </div>
+  );
+};
+
+export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10, periodS = 12, spin = 'counterclockwise', editable = true, startTime = 0, alt }) => {
+  const c = useCircularMotion({ radiusM, periodS, spin, startTime });
+  const { setup, setT, tt, tMax, playing, setPlaying, rate, setRate, err, reduced, change } = c;
 
   return (
     <div className="space-y-3" data-visual="circularMotion" data-testid="circular-motion">
-      <p className="sr-only">{text}</p>
       {editable && (
         <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="circle-controls">
           <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set the motion</h3>
@@ -111,25 +179,7 @@ export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10
         </div>
       )}
 
-      <svg viewBox={`0 0 ${S} ${S}`} role="img" aria-label={text} className="w-full max-w-[420px] mx-auto rounded-xl bg-surface-lowest border border-surface-border block">
-        <circle cx={C0} cy={C0} r={R_PX} fill="none" stroke={PHYS.axis} strokeWidth={1.5} strokeDasharray="4 4" />
-        <circle cx={C0} cy={C0} r={3} fill={PHYS.origin} /><text x={C0 + 6} y={C0 + 14} fontSize={10} fill={PHYS.origin}>centre</text>
-        {arcPath && <path d={arcPath} fill="none" stroke={PHYS.distance} strokeWidth={4} />}
-        <path d={`M${start.px},${start.py} L${now.px},${now.py}`} stroke={PHYS.displacement} strokeWidth={2.5} />
-        {s.displacement > 0.01 * setup.radiusM && <path d={head(start.px, start.py, now.px, now.py)} fill={PHYS.displacement} />}
-        <circle cx={start.px} cy={start.py} r={5} fill="none" stroke={PHYS.position} strokeWidth={2} /><text x={start.px + 8} y={start.py - 8} fontSize={10} fill={PHYS.position}>start</text>
-        <g stroke={PHYS.acceleration} strokeDasharray="4 3" strokeWidth={2}><line x1={now.px} y1={now.py} x2={aTip.px} y2={aTip.py} /></g>
-        <path d={head(now.px, now.py, aTip.px, aTip.py)} fill={PHYS.acceleration} />
-        <line x1={now.px} y1={now.py} x2={tip.px} y2={tip.py} stroke={PHYS.velocity} strokeWidth={3} />
-        <path d={head(now.px, now.py, tip.px, tip.py)} fill={PHYS.velocity} />
-        <circle cx={now.px} cy={now.py} r={8} fill={PHYS.position} stroke="#0f172a" strokeWidth={2} />
-      </svg>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] justify-center" aria-label="Legend">
-        <li style={{ color: PHYS.velocity }}>{'━▶'} velocity (tangent to the circle)</li>
-        <li style={{ color: PHYS.distance }}>{'━'} arc travelled (distance)</li>
-        <li style={{ color: PHYS.displacement }}>{'━▶'} displacement (straight chord from the start)</li>
-        <li style={{ color: PHYS.acceleration }}>{'┈▶'} towards the centre (conceptual)</li>
-      </ul>
+      <CircleScene c={c} alt={alt} />
 
       <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="circle-time">
         <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (up to three turns)</span>
@@ -148,21 +198,7 @@ export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10
         <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; it does not change the speed of the object.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
       </div>
 
-      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="circle-readout">
-        <Stat id="t" label="Simulated time" value={`${r2(s.t)} s`} color={PHYS.time} symbol={'⏱'} />
-        <Stat id="turns" label="Turns completed" value={r2(s.revolutions)} color="#e2e8f0" symbol={'↻'} />
-        <Stat id="position" label="Position (x, y)" value={`(${r2(s.x)}, ${r2(s.y)}) m`} color={PHYS.position} symbol={'●'} note="from the centre" />
-        <Stat id="speed" label="Speed" value={`${r2(s.speed)} m/s`} color={PHYS.speed} symbol={'⚡'} note="2πr ÷ T: never changes" />
-        <Stat id="direction" label="Direction of velocity" value={`${r2(s.velocityAngleDeg, 0)}° from +x`} color={PHYS.velocity} symbol={'➤'} note="keeps changing" />
-        <Stat id="distance" label="Distance (arc length)" value={`${r2(s.distance)} m`} color={PHYS.distance} symbol={'↔'} note="along the circle, always grows" />
-        <Stat id="displacement" label="Displacement (chord)" value={`${r2(s.displacement)} m`} color={PHYS.displacement} symbol={'→'} note="straight line from the start" />
-        <Stat id="avg" label="Average speed · average velocity" value={s.averageSpeed === null ? '—' : `${r2(s.averageSpeed)} · ${r2(s.averageVelocity ?? 0)} m/s`} color={PHYS.velocity} symbol={'➤'} note="distance ÷ t · displacement ÷ t" />
-      </dl>
-
-      <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3 space-y-1" data-testid="circle-live">
-        <p>At t = {r2(s.t)} s the object is at ({r2(s.x)}, {r2(s.y)}) m. Its speed is {r2(s.speed)} m/s, the same as at every other time, but its velocity points {r2(s.velocityAngleDeg, 0)}° from the +x axis and keeps turning. It has travelled {r2(s.distance)} m along the circle; its displacement from the start is {r2(s.displacement)} m in a straight line.</p>
-        <p className="text-xs text-slate-300">{s.t > 0 && s.displacement < 1e-6 * setup.radiusM + 1e-9 ? 'The object is back at its starting point: the displacement and the average velocity are zero, while the distance is a whole number of circumferences.' : 'The velocity changes direction all the time even though its size is constant. A changing velocity means an acceleration, which for motion in a circle points towards the centre (shown as a dashed arrow; its size is not needed in Class 9).'}</p>
-      </div>
+      <CircleReadout c={c} />
     </div>
   );
 };

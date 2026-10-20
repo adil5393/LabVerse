@@ -55,11 +55,22 @@ export const DirToggle: React.FC<{ label: string; value: Dir; onChange: (d: Dir)
 
 const TRACK_W = 620, TRACK_H = 110;
 
-export const Track: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ setup, tMax, t }) => {
+/**
+ * `fixedSpan` (metres) keeps the picture at one scale however the setup is edited: the window is `fixedSpan` wide and moves in
+ * half-window steps to keep the cart in view. Without it the window is fitted to the whole run (the lesson pictures).
+ */
+export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?: number }> = ({ setup, tMax, t, fixedSpan }) => {
   const all = useMemo(() => simulate(setup, tMax), [setup, tMax]);
   let lo = Math.min(...all.map((p) => p.x), 0), hi = Math.max(...all.map((p) => p.x), 0);
-  if (hi - lo < 4) { lo -= 2; hi += 2; }
-  const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  if (fixedSpan) {
+    const now = sampleAtTime(setup, t, tMax).x;
+    const page = fixedSpan / 2;
+    lo = Math.floor((now - fixedSpan * 0.1) / page) * page;
+    hi = lo + fixedSpan;
+  } else {
+    if (hi - lo < 4) { lo -= 2; hi += 2; }
+    const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  }
   const X = (x: number) => 30 + ((x - lo) / (hi - lo)) * (TRACK_W - 60);
   const step = [1, 2, 5, 10, 20, 50, 100, 200].find((s) => (hi - lo) / s <= 8) ?? 500;
   const ticks: number[] = [];

@@ -31,20 +31,25 @@ export interface ForceFigureProps {
   listing?: boolean;
   /** Size the drawing to its container (the lab viewport) instead of to the page width. */
   fill?: boolean;
+  /**
+   * Pixels per newton, fixed. Without it the largest arrow is always drawn 190 px long (good for a lesson picture), which
+   * makes every arrow change size whenever any force is edited; the laboratory passes a fixed scale instead.
+   */
+  fixedScale?: number;
 }
 
-export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, showIndividual, showNet, alt, listing = true, fill = false }) => {
+export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, showIndividual, showNet, alt, listing = true, fill = false, fixedScale }) => {
   const horizontals = arrows.filter((a) => a.direction === 'left' || a.direction === 'right');
   const verticals = arrows.filter((a) => a.direction === 'up' || a.direction === 'down');
   const maxMag = Math.max(1e-9, ...horizontals.map((a) => a.magnitude), net?.magnitude ?? 0);
-  const k = 190 / maxMag; // pixels per newton for the horizontal arrows (largest = 190 px)
-  const len = (m: number) => Math.max(14, m * k);
+  const k = fixedScale ?? 190 / maxMag; // pixels per newton for the horizontal arrows (largest = 190 px unless the scale is fixed)
+  const len = (m: number) => (fixedScale ? Math.min(250, Math.max(14, m * k)) : Math.max(14, m * k));
   const top = GROUND - BH;
   const rowY = (i: number) => top - 22 - i * 26;
   const rows = horizontals.filter((a) => a.kind === 'applied');
   const fric = horizontals.filter((a) => a.kind === 'friction');
   const vMax = Math.max(1e-9, ...verticals.map((a) => a.magnitude));
-  const vlen = (m: number) => 22 + (m / vMax) * 28;
+  const vlen = (m: number) => 22 + (fixedScale ? Math.min(1, m / 500) : m / vMax) * 28;
   const netY = showIndividual ? rowY(rows.length) - 4 : rowY(0);
 
   const hArrow = (a: Arrow, y: number, width = 4) => {

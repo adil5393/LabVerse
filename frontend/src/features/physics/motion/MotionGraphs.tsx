@@ -176,7 +176,11 @@ const NumField: React.FC<{ label: string; unit: string; value: number; step: num
 export interface PresetLike { id: string; title: string; profile: Profile }
 export interface GraphStudioProps { scenarioId?: string; profile?: Profile; editable?: boolean; graphs?: GraphKind[]; withPrediction?: boolean; alt?: string; presets?: PresetLike[]; equations?: boolean; shade?: ShadeRegion[] }
 
-export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt, presets, equations = false, shade }) => {
+/**
+ * All state and actions of one graph studio. The lab slots (scene, transport, Inspector, dock) and the lesson composite all
+ * read the same instance, exactly like `useMotionTrack` does for the motion track.
+ */
+export const useGraphStudio = ({ scenarioId, profile: given, graphs = ['xt', 'vt', 'at'], withPrediction = false, presets }: Pick<GraphStudioProps, 'scenarioId' | 'profile' | 'graphs' | 'withPrediction' | 'presets'>) => {
   const sc = scenarioById(scenarioId);
   const base = given ?? sc?.profile ?? SCENARIOS[1].profile;
   const [profile, setProfile] = useState<Profile>(base);
@@ -229,9 +233,26 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
   const [checked, setChecked] = useState(false);
   const pred = withPrediction && sc && !given ? sc.predict : null;
 
+  /** Load a whole preset or scenario: a new profile, back to 0 s, a clean prediction. */
+  const loadProfile = (next: Profile) => { setProfile(next); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); };
+  const togglePlay = () => { if (tClamped >= T) setT(0); setPlaying((p) => !p); };
+  const stepBack = () => { setPlaying(false); setT(Math.max(0, Math.ceil(tClamped) - 1)); };
+  const stepForward = () => { setPlaying(false); setT(Math.min(T, Math.floor(tClamped) + 1)); };
+  const rewind = () => { setPlaying(false); setT(0); };
+  const scrub = (v: number) => { setPlaying(false); setT(v); };
+
+  return {
+    profile, setProfile, T, t, setT, playing, setPlaying, rate, setRate, err, setErr, reduced, tClamped, s, area, aAvg, seg, single, list, edit, where, kind,
+    choice, setChoice, checked, setChecked, pred, loadProfile, togglePlay, stepBack, stepForward, rewind, scrub, graphs,
+  };
+};
+export type GraphStudioModel = ReturnType<typeof useGraphStudio>;
+
+/** The prediction question (before the student plays the motion). */
+export const GraphPrediction: React.FC<{ g: GraphStudioModel }> = ({ g }) => {
+  const { pred, choice, setChoice, checked, setChecked } = g;
   return (
-    <div className="space-y-3" data-visual="motionGraphs" data-testid="graph-studio">
-      <p className="sr-only">{alt ?? describeProfile(profile, 'Motion Graph Studio.')}</p>
+    <>
       {pred && (
         <fieldset className="rounded-xl p-3 space-y-2" style={{ border: `1px solid ${PHYS.prediction}66`, background: `${PHYS.prediction}0D` }} data-testid="graph-prediction">
           <legend className="px-1 text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.prediction }}>★ Prediction (before you play it)</legend>
@@ -248,46 +269,31 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
         </fieldset>
       )}
 
-      {editable && (
-        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-controls">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set the motion (each graph is drawn from these four numbers)</h3>
-          {list && <div role="group" aria-label="Choose a scenario" className="flex flex-wrap gap-2">
-            {list.map((x) => <button key={x.id} type="button" data-scenario={x.id} aria-pressed={x.profile === profile} onClick={() => { setProfile(x.profile); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold" style={{ borderColor: profile === x.profile ? PHYS.velocity : '#334155', color: '#e2e8f0' }}>{profile === x.profile ? '✓ ' : ''}{x.title}</button>)}
-          </div>}
-          {single ? <div className="flex flex-wrap gap-3">
-            <NumField id="x0" label="Start position" unit="m" value={profile.x0} step={5} onChange={(v) => edit({ x0: v })} />
-            <NumField id="v0" label="Start velocity" unit="m/s" value={profile.v0} step={1} onChange={(v) => edit({ v0: v })} />
-            <NumField id="a" label="Acceleration" unit="m/s²" value={seg.a} step={0.5} onChange={(v) => edit({ a: v })} />
-            <NumField id="d" label="Duration" unit="s" value={seg.durationS} step={1} onChange={(v) => edit({ d: v })} />
-          </div> : <p className="text-xs text-slate-300">This motion has two stages with different accelerations, so it is set by choosing the scenario. Pick another scenario to edit the four numbers.</p>}
-          <p className="text-[11px] text-slate-400">Allowed: start velocity within ±{LIMITS.maxV} m/s, acceleration within ±{LIMITS.maxA} m/s², duration up to {LIMITS.maxT} s. Only a constant acceleration is offered, because then the graphs follow exactly from v = u + at and x = x₀ + ut + ½at².</p>
-          {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="graph-error"><span aria-hidden>✗ </span>{err}</p>}
-        </div>
-      )}
+    </>
+  );
+};
 
-      <TrackStrip profile={profile} t={tClamped} />
+/** The picture: the track strip and the graphs, all on one time cursor. `kinds` picks which graphs to draw. */
+export const GraphScene: React.FC<{ g: GraphStudioModel; kinds?: GraphKind[]; shade?: ShadeRegion[]; showTrack?: boolean }> = ({ g, kinds, shade, showTrack = true }) => {
+  const { profile, tClamped, setPlaying, setT } = g;
+  const graphs = kinds ?? g.graphs;
+  return (
+    <>
+      {showTrack && <TrackStrip profile={profile} t={tClamped} />}
 
       <div className="grid gap-3 md:grid-cols-2">
         {graphs.map((k) => <Graph key={k} spec={SPECS[k]} profile={profile} t={tClamped} shade={shade} onSeek={(v) => { setPlaying(false); setT(v); }} />)}
       </div>
 
-      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-time">
-        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>⏱ Simulated time: click a graph, press its arrow keys, use the slider or the buttons</span>
-        <button type="button" onClick={() => { if (tClamped >= T) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : tClamped >= T ? 'Replay' : 'Play'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tClamped) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step −1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(T, Math.floor(tClamped) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Back to 0 s</button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
-          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={T} step={0.1} value={tClamped} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${fmt(tClamped)} seconds`} className="w-full min-h-[44px]" />
-        </label>
-        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays. The values at a given simulated time never change.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
-      </div>
+    </>
+  );
+};
 
-      {equations && <EquationPanel profile={profile} t={tClamped} />}
-
+/** The numbers: the readout cards, the live sentence and the table of values. */
+export const GraphReadout: React.FC<{ g: GraphStudioModel }> = ({ g }) => {
+  const { profile, T, s, area, aAvg, where, kind } = g;
+  return (
+    <div className="space-y-3">
       <dl className="grid grid-cols-2 lg:grid-cols-4 gap-2" data-testid="graph-readout">
         <Stat id="t" label="Simulated time" value={`${fmt(s.t)} s`} color={PHYS.time} symbol="⏱" />
         <Stat id="x" label="Position" value={`${fmtSign(s.x)} m`} color={PHYS.position} symbol="●" note="height of the x–t graph" />
@@ -313,6 +319,56 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
           <tbody>{Array.from({ length: Math.floor(T) + 1 }, (_, i) => stateAt(profile, i)).concat(T % 1 ? [stateAt(profile, T)] : []).map((r) => <tr key={r.t} className="border-t border-surface-border font-mono"><td className="p-1">{fmt(r.t)}</td><td className="p-1" style={{ color: PHYS.position }}>{fmtSign(r.x)}</td><td className="p-1" style={{ color: PHYS.velocity }}>{fmtSign(r.v)}</td><td className="p-1" style={{ color: PHYS.acceleration }}>{fmtSign(r.a)}</td></tr>)}</tbody>
         </table></div>
       </details>
+    </div>
+  );
+};
+
+export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt, presets, equations = false, shade }) => {
+  const g = useGraphStudio({ scenarioId, profile: given, graphs, withPrediction, presets });
+  const { profile, setProfile, T, setT, playing, setPlaying, rate, setRate, err, reduced, tClamped, seg, single, list, edit, setErr, setChoice, setChecked } = g;
+
+  return (
+    <div className="space-y-3" data-visual="motionGraphs" data-testid="graph-studio">
+      <p className="sr-only">{alt ?? describeProfile(profile, 'Motion Graph Studio.')}</p>
+      <GraphPrediction g={g} />
+
+      {editable && (
+        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-controls">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set the motion (each graph is drawn from these four numbers)</h3>
+          {list && <div role="group" aria-label="Choose a scenario" className="flex flex-wrap gap-2">
+            {list.map((x) => <button key={x.id} type="button" data-scenario={x.id} aria-pressed={x.profile === profile} onClick={() => { setProfile(x.profile); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold" style={{ borderColor: profile === x.profile ? PHYS.velocity : '#334155', color: '#e2e8f0' }}>{profile === x.profile ? '✓ ' : ''}{x.title}</button>)}
+          </div>}
+          {single ? <div className="flex flex-wrap gap-3">
+            <NumField id="x0" label="Start position" unit="m" value={profile.x0} step={5} onChange={(v) => edit({ x0: v })} />
+            <NumField id="v0" label="Start velocity" unit="m/s" value={profile.v0} step={1} onChange={(v) => edit({ v0: v })} />
+            <NumField id="a" label="Acceleration" unit="m/s²" value={seg.a} step={0.5} onChange={(v) => edit({ a: v })} />
+            <NumField id="d" label="Duration" unit="s" value={seg.durationS} step={1} onChange={(v) => edit({ d: v })} />
+          </div> : <p className="text-xs text-slate-300">This motion has two stages with different accelerations, so it is set by choosing the scenario. Pick another scenario to edit the four numbers.</p>}
+          <p className="text-[11px] text-slate-400">Allowed: start velocity within ±{LIMITS.maxV} m/s, acceleration within ±{LIMITS.maxA} m/s², duration up to {LIMITS.maxT} s. Only a constant acceleration is offered, because then the graphs follow exactly from v = u + at and x = x₀ + ut + ½at².</p>
+          {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="graph-error"><span aria-hidden>✗ </span>{err}</p>}
+        </div>
+      )}
+
+      <GraphScene g={g} shade={shade} />
+
+      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-time">
+        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>⏱ Simulated time: click a graph, press its arrow keys, use the slider or the buttons</span>
+        <button type="button" onClick={() => { if (tClamped >= T) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : tClamped >= T ? 'Replay' : 'Play'}</button>
+        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tClamped) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step −1 s</button>
+        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(T, Math.floor(tClamped) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
+        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Back to 0 s</button>
+        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
+          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
+          <input type="range" min={0} max={T} step={0.1} value={tClamped} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${fmt(tClamped)} seconds`} className="w-full min-h-[44px]" />
+        </label>
+        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays. The values at a given simulated time never change.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
+      </div>
+
+      {equations && <EquationPanel profile={profile} t={tClamped} />}
+
+      <GraphReadout g={g} />
     </div>
   );
 };

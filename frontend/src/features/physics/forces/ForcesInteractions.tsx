@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PAIR_EXPERIMENTS, TB_EXPERIMENTS, tbExperimentById, tbOutcome, type TbExperiment, type TbRoute } from '../../../engine/physics/forces/twoBodyExperiments';
 import { DEFAULT_TWO_BODY, type TwoBodySetup } from '../../../engine/physics/forces/twoBody';
-import { PairIdentifyView, TwoBodyView } from './TwoBody';
+import { PairIdentifyView } from './TwoBody';
 import { PHYS } from '../motion/physicsColors';
 
 const RoutePanel: React.FC<{ route: TbRoute; onRun: (s: TwoBodySetup) => void }> = ({ route, onRun }) => {
@@ -71,7 +71,17 @@ const ComparePredict: React.FC = () => {
   );
 };
 
-import { WorkspaceShell } from '../../workspace';
+import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useModelHistory, useSceneState, type DockTab, type SceneObject } from '../../workspace';
+import { LabButton, LabInspectorSection, LabParameterField, LabSegmentedControl, LabSelect } from '../../workspace/controls';
+import { TwoBodyReadout, TwoBodyScene, useTwoBody } from './TwoBody';
+
+const ICON = (name: string) => <span className="material-symbols-outlined text-[15px]">{name}</span>;
+const t1 = (n: number) => String(Math.round(n * 10) / 10);
+const TB_OBJECTS: SceneObject[] = [
+  { id: 'A', name: 'CART_A', category: 'Object / Dynamics', icon: 'directions_car' },
+  { id: 'B', name: 'CART_B', category: 'Object / Dynamics', icon: 'directions_car' },
+  { id: 'link', name: 'STRING', category: 'Constraint / Link', icon: 'link' },
+];
 
 export const ForcesInteractions: React.FC = () => {
   const [params, setParams] = useSearchParams();
@@ -80,151 +90,130 @@ export const ForcesInteractions: React.FC = () => {
   const pairExp = PAIR_EXPERIMENTS.find((e) => e.id === id);
   const tow: TwoBodySetup = { mode: 'tow', massA: 2, massB: 3, force: 10, uA: 0, uB: 0, durationS: 3 };
   const [load, setLoad] = useState<{ setup: TwoBodySetup; key: number }>({ setup: tb ? tb.routes[0].setup : params.get('arrangement') === 'tow' ? tow : DEFAULT_TWO_BODY, key: 0 });
-  const select = (x: string | null) => { const e = tbExperimentById(x); setParams(x ? { experiment: x } : {}); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_TWO_BODY, key: l.key + 1 })); };
-  const all = [...TB_EXPERIMENTS.map((e) => ({ id: e.id, title: e.title })), ...PAIR_EXPERIMENTS.map((e) => ({ id: e.id, title: e.title }))];
+  const m = useTwoBody({ initial: load.setup, resetToken: load.key });
+  const scene = useSceneState(TB_OBJECTS.map((o) => o.id));
+  const [beginnerMode, setBeginnerMode] = useState(false);
+  const hist = useModelHistory<TwoBodySetup>(m.setup, (full) => m.change(full));
+  const edit = (patch: Partial<TwoBodySetup>) => { hist.record(); m.change(patch); };
+  const select = (x: string | null) => { const e = tbExperimentById(x); setParams(x ? { experiment: x } : {}); hist.clear(); setLoad((l) => ({ setup: e ? e.routes[0].setup : DEFAULT_TWO_BODY, key: l.key + 1 })); };
+  const all = [...TB_EXPERIMENTS.map((e) => ({ id: e.id, title: e.title, goal: e.goal })), ...PAIR_EXPERIMENTS.map((e) => ({ id: e.id, title: e.title, goal: e.goal }))];
+  const sel = (k: string) => scene.selectedId === k;
+  const s = m.setup;
+  const spaceless = Boolean(pairExp);
 
-  // Outliner: Investigation Selector
   const outlinerContent = (
-    <div className="p-3 space-y-3 text-xs font-sans">
-      <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
-        <span className="text-[11px] font-mono text-primary font-bold">{all.length} Total</span>
-      </div>
-      <div role="group" aria-label="Choose an investigation" className="flex flex-col gap-1.5">
-        <button
-          type="button"
-          aria-pressed={!id}
-          onClick={() => select(null)}
-          className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-            !id
-              ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
-              : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">{!id ? 'check_circle' : 'science'}</span>
-            <span>Free Exploration</span>
-          </div>
-        </button>
-        {all.map((x) => (
-          <button
-            key={x.id}
-            type="button"
-            aria-pressed={id === x.id}
-            data-experiment={x.id}
-            onClick={() => select(x.id)}
-            className={`min-h-[38px] w-full text-left px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-              id === x.id
-                ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
-                : 'bg-surface-card border-surface-border text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">{x.id}. {x.title}</span>
-              {id === x.id && <span className="material-symbols-outlined text-sm text-primary">check</span>}
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
+    <LabOutliner
+      investigations={all}
+      activeInvestigationId={id}
+      onSelectInvestigation={select}
+      objects={spaceless ? [] : TB_OBJECTS.filter((o) => o.id !== 'link' || s.mode === 'tow')}
+      selectedId={scene.selectedId}
+      onSelect={scene.select}
+      visibility={scene.visibility}
+      onToggleVisibility={scene.toggleVisibility}
+      lockMap={scene.lockMap}
+      onToggleLock={scene.toggleLock}
+    />
   );
 
-  // Inspector: Third law principles
   const inspectorContent = (
-    <div className="p-3 space-y-4 text-xs font-sans">
-      <div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Newton&apos;s Third Law</span>
-        <div className="mt-2 space-y-2 font-mono text-slate-300">
-          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
-            <p className="font-bold text-white mb-1">Action &amp; Reaction</p>
-            <p>F<sub>A on B</sub> = &minus;F<sub>B on A</sub></p>
-          </div>
-          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]">
-            <p className="font-bold text-white mb-1">Two Different Bodies</p>
-            <p className="text-[10px] leading-relaxed">
-              Action and reaction forces never act on the same object, so they never cancel each other out.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {tb && (
-        <div className="pt-2 border-t border-outline-variant space-y-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigation {tb.id}</span>
-          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
-            <h4 className="font-bold text-white text-xs">{tb.title}</h4>
-            <p className="text-[11px] text-slate-300 leading-relaxed">{tb.goal}</p>
-            <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300">
-              <strong>Notice:</strong> {tb.lesson}
-            </div>
-          </div>
-        </div>
+    <div className="p-3 space-y-3 text-xs font-sans" data-testid="two-body-controls">
+      {!pairExp && (
+        <>
+          <LabInspectorSection title="Arrangement" icon={ICON('compare_arrows')} locked={scene.isLocked('link')}>
+            <LabSegmentedControl<'push' | 'tow'> size="sm" columns={2} ariaLabel="Arrangement" disabled={scene.isLocked('link')} value={s.mode} onChange={(mode) => edit({ mode, uA: 0, uB: 0 })}
+              options={[{ value: 'push', label: 'Push apart' }, { value: 'tow', label: 'String' }]} />
+            <LabParameterField id="force" label={s.mode === 'push' ? 'Interaction force' : 'Pull on A'} symbol="F" unit="N" compact step={1} min={0} max={1000} value={s.force} disabled={scene.isLocked('link')} onChange={(v) => edit({ force: v })} />
+            <LabParameterField id="duration" label="Lasts" symbol="t" unit="s" compact step={0.5} min={0.5} max={10} value={s.durationS} disabled={scene.isLocked('link')} onChange={(v) => edit({ durationS: v })} />
+          </LabInspectorSection>
+          <LabInspectorSection title="Object · CART_A" icon={ICON('directions_car')} selected={sel('A')} locked={scene.isLocked('A')}>
+            <LabParameterField id="massA" label="Mass of A" symbol="mₐ" unit="kg" compact step={1} min={0.1} max={100} value={s.massA} disabled={scene.isLocked('A')} onChange={(v) => edit({ massA: v })} />
+            {!beginnerMode && <LabParameterField id="uA" label="Start velocity of A" symbol="uₐ" unit="m/s" compact step={1} min={-20} max={20} value={s.uA} disabled={scene.isLocked('A')} onChange={(v) => edit(s.mode === 'tow' ? { uA: v, uB: v } : { uA: v })} />}
+          </LabInspectorSection>
+          <LabInspectorSection title="Object · CART_B" icon={ICON('directions_car')} selected={sel('B')} locked={scene.isLocked('B')}>
+            <LabParameterField id="massB" label="Mass of B" symbol="m_b" unit="kg" compact step={1} min={0.1} max={100} value={s.massB} disabled={scene.isLocked('B')} onChange={(v) => edit({ massB: v })} />
+            {!beginnerMode && <LabParameterField id="uB" label="Start velocity of B" symbol="u_b" unit="m/s" compact step={1} min={-20} max={20} value={s.uB} disabled={scene.isLocked('B')} onChange={(v) => edit(s.mode === 'tow' ? { uA: v, uB: v } : { uB: v })} />}
+          </LabInspectorSection>
+          {m.err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="two-body-error"><span aria-hidden>{'✗ '}</span>{m.err}</p>}
+          <p className="text-[11px] text-slate-400">A frictionless horizontal track, right positive. The two interaction forces are always equal and opposite and act on different carts.</p>
+        </>
       )}
-
-      {pairExp && (
-        <div className="pt-2 border-t border-outline-variant space-y-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Pair Study {pairExp.id}</span>
-          <div className="p-2.5 rounded bg-surface-card border border-surface-border space-y-1.5">
-            <h4 className="font-bold text-white text-xs">{pairExp.title}</h4>
-            <p className="text-[11px] text-slate-300 leading-relaxed">{pairExp.goal}</p>
-          </div>
+      <LabInspectorSection title="Newton's third law" icon={ICON('balance')}>
+        <div className="space-y-2 font-mono text-slate-300">
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]"><p className="font-bold text-white mb-1">Action &amp; reaction</p><p>F<sub>A on B</sub> = &minus;F<sub>B on A</sub></p></div>
+          <div className="p-2 rounded bg-surface-card border border-surface-border text-[11px]"><p className="font-bold text-white mb-1">Two different bodies</p><p className="text-[10px] leading-relaxed">Action and reaction forces never act on the same object, so they never cancel each other out.</p></div>
         </div>
+      </LabInspectorSection>
+      {tb && (
+        <LabInspectorSection title={`Investigation ${tb.id}: ${tb.title}`} icon={ICON('school')}>
+          <p className="text-[11px] text-slate-300 leading-relaxed">{tb.goal}</p>
+          <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-[11px] text-emerald-300"><strong>Notice:</strong> {tb.lesson}</div>
+        </LabInspectorSection>
+      )}
+      {pairExp && (
+        <LabInspectorSection title={`Pair study ${pairExp.id}: ${pairExp.title}`} icon={ICON('school')}>
+          <p className="text-[11px] text-slate-300 leading-relaxed">{pairExp.goal}</p>
+        </LabInspectorSection>
       )}
     </div>
   );
 
-  // Viewport: Simulation / Interaction Canvas
+  const transport = !pairExp ? (
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" role="group" aria-label="Time controls" data-testid="two-body-time">
+      <LabButton type="button" size="sm" variant="primary" onClick={m.togglePlay} aria-pressed={m.playing} className="font-semibold" icon={ICON(m.playing ? 'pause' : m.tt >= m.tMax ? 'replay' : 'play_arrow')}>{m.playing ? 'Pause' : m.tt >= m.tMax ? 'Replay' : 'Play'}</LabButton>
+      <LabButton type="button" size="sm" onClick={m.stepBack} aria-label="Step back 1 second of simulated time" icon={ICON('skip_previous')}>−1 s</LabButton>
+      <LabButton type="button" size="sm" onClick={m.stepForward} aria-label="Step forward 1 second of simulated time" icon={ICON('skip_next')}>+1 s</LabButton>
+      <LabButton type="button" size="sm" onClick={m.rewind} icon={ICON('restart_alt')}>Back to 0 s</LabButton>
+      <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[160px] grow max-w-md">Time
+        <input type="range" min={0} max={m.tMax} step={0.05} value={m.tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${t1(m.tt)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
+        <span className="font-mono text-[11px] w-20 text-right">{t1(m.tt)} / {t1(m.tMax)} s</span>
+      </label>
+      {!beginnerMode && <LabSelect compact aria-label="Replay speed on screen. This does not change the motion." value={m.rate} onChange={(e) => m.setRate(Number(e.target.value))} options={[{ value: 0.25, label: '0.25×' }, { value: 0.5, label: '0.5×' }, { value: 1, label: '1×' }, { value: 2, label: '2×' }]} />}
+    </div>
+  ) : undefined;
+
   const viewportContent = (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 space-y-4" data-chapter="forces-interactions">
-      <div className="bg-surface-card rounded-2xl border border-surface-border p-4 shadow-inner">
-        {!pairExp && <TwoBodyView key={`${tb?.id ?? 'free'}-${load.key}`} initial={load.setup} editable />}
+    <ViewportFrame toolbar={transport} footnote={pairExp ? 'Look at the forces on each object and check that third-law pairs act on two different objects.' : 'Two idealised carts on a frictionless track. Each cart has its own free-body diagram.'}>
+      <div className="w-full max-h-full overflow-y-auto space-y-3 px-1" data-no-pan data-chapter="forces-interactions">
+        {!pairExp && (
+          <div data-visual="twoBody" data-testid="two-body" className="space-y-3">
+            <TwoBodyScene m={m} hidden={{ A: !scene.isVisible('A'), B: !scene.isVisible('B'), link: !scene.isVisible('link') }} />
+          </div>
+        )}
         {pairExp && id === 'S' && <ComparePredict />}
         {pairExp && id !== 'S' && <PairIdentifyView key={pairExp.id} scenarioId={pairExp.scenarios[0]} />}
       </div>
+    </ViewportFrame>
+  );
+
+  const investigation = tb ? (
+    <div className="space-y-3" data-testid="tb-experiment-panel">
+      <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+        <span className="text-primary font-bold">Experiment {tb.id}: {tb.title}</span>
+        <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
+      </div>
+      {tb.routes.map((r) => <RoutePanel key={`${tb.id}-${r.id}`} route={r} onRun={(setup) => { hist.clear(); setLoad((l) => ({ setup, key: l.key + 1 })); }} />)}
+      <p className="text-xs text-slate-400">Model results for idealised carts on a frictionless track; equal mutual forces with accelerations inversely proportional to masses.</p>
+    </div>
+  ) : pairExp ? (
+    <div className="space-y-2" data-testid="pair-experiment-panel">
+      <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
+        <span className="text-primary font-bold">Experiment {pairExp.id}: {pairExp.title}</span>
+        <span className="text-outline">Free-body diagram analysis</span>
+      </div>
+      <p className="text-slate-300 text-xs">Look at the forces on each object, verify that third-law pairs are equal in magnitude, opposite in direction, and act on separate entities.</p>
+    </div>
+  ) : (
+    <div className="text-xs space-y-1 text-slate-300">
+      <p className="font-mono">Free Exploration: two interacting carts on a frictionless horizontal track.</p>
+      <p className="text-outline">Choose an investigation in the Explorer to test predictions against Newton&apos;s third law.</p>
     </div>
   );
 
-  // Analysis Dock: POE investigations
-  const analysisDockContent = (
-    <div className="p-3 text-xs space-y-3 font-sans">
-      {tb && (
-        <div className="space-y-3" data-testid="tb-experiment-panel">
-          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
-            <span className="text-primary font-bold">Experiment {tb.id}: {tb.title}</span>
-            <span className="text-outline">Predict &rarr; Experiment &rarr; Observe &rarr; Explain</span>
-          </div>
-          {tb.routes.map((r) => <RoutePanel key={`${tb.id}-${r.id}`} route={r} onRun={(s) => setLoad((l) => ({ setup: s, key: l.key + 1 }))} />)}
-          <p className="text-xs text-slate-400">
-            Model results for idealised carts on a frictionless track; equal mutual forces with accelerations inversely proportional to masses.
-          </p>
-        </div>
-      )}
-
-      {pairExp && (
-        <div className="space-y-2" data-testid="pair-experiment-panel">
-          <div className="flex items-center justify-between text-xs font-mono pb-2 border-b border-outline-variant">
-            <span className="text-primary font-bold">Experiment {pairExp.id}: {pairExp.title}</span>
-            <span className="text-outline">Free-Body Diagram Analysis</span>
-          </div>
-          <p className="text-slate-300 text-xs">
-            Look at the forces on each object, verify that third-law pairs are equal in magnitude, opposite in direction, and act on separate entities.
-          </p>
-        </div>
-      )}
-
-      {!id && (
-        <div className="flex flex-col items-center justify-center py-6 text-on-surface-variant space-y-1">
-          <span className="material-symbols-outlined text-3xl text-outline">compare_arrows</span>
-          <p className="font-mono text-xs text-slate-300">
-            Free Exploration Mode: Two interacting carts on a frictionless horizontal track.
-          </p>
-          <p className="text-[11px] text-outline">
-            Choose an investigation in the left Explorer to test predictions against Newton&apos;s Third Law.
-          </p>
-        </div>
-      )}
-    </div>
-  );
+  const tabs: DockTab[] = [
+    ...(!pairExp ? [{ id: 'measurements', label: 'Measurements', content: <TwoBodyReadout m={m} /> }] : []),
+    { id: 'investigation', label: id ? `Investigation ${id}` : 'Investigation', content: investigation },
+  ];
 
   return (
     <WorkspaceShell
@@ -235,8 +224,16 @@ export const ForcesInteractions: React.FC = () => {
       viewport={viewportContent}
       inspectorTitle="Interaction Inspector"
       inspector={inspectorContent}
-      analysisDockTitle="Analysis & POE"
-      analysisDock={analysisDockContent}
+      analysisDock={<DockTabs key={id ?? 'free'} tabs={tabs} initial={id ? 'investigation' : 'measurements'} />}
+      playing={!pairExp ? m.playing : undefined}
+      onTogglePlay={!pairExp ? m.togglePlay : undefined}
+      onReset={!pairExp ? m.rewind : undefined}
+      onUndo={!pairExp ? hist.undo : undefined}
+      onRedo={!pairExp ? hist.redo : undefined}
+      canUndo={hist.canUndo}
+      canRedo={hist.canRedo}
+      beginnerMode={beginnerMode}
+      onToggleBeginnerMode={setBeginnerMode}
     />
   );
 };

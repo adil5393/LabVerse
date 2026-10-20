@@ -20,6 +20,10 @@ export interface LabOutlinerProps {
   activeInvestigationId?: string | null;
   onSelectInvestigation?: (id: string | null) => void;
   freeLabel?: string;
+  /** Heading of the preset list ('Investigations' by default; a lab of scenarios can name them). */
+  investigationsTitle?: string;
+  /** Show the Free Exploration entry first (default). Labs whose presets are always one of a list turn it off. */
+  showFree?: boolean;
   objects: SceneObject[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
@@ -43,6 +47,8 @@ export const LabOutliner: React.FC<LabOutlinerProps> = ({
   activeInvestigationId = null,
   onSelectInvestigation,
   freeLabel = 'Free Exploration',
+  investigationsTitle = 'Investigations',
+  showFree = true,
   objects,
   selectedId,
   onSelect,
@@ -55,16 +61,18 @@ export const LabOutliner: React.FC<LabOutlinerProps> = ({
     {onSelectInvestigation && (
       <div>
         <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">Investigations</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">{investigationsTitle}</span>
           <span className="text-[11px] font-mono text-primary font-bold">{investigations.length} Total</span>
         </div>
         <div role="group" aria-label="Choose an investigation" className="flex flex-col gap-1.5 mt-2">
+          {showFree && (
           <button type="button" aria-pressed={!activeInvestigationId} onClick={() => onSelectInvestigation(null)} className={`${rowBase} min-h-[38px] ${!activeInvestigationId ? on : off}`}>
             <span className="flex items-center gap-2">
               <span className="material-symbols-outlined text-sm">{!activeInvestigationId ? 'check_circle' : 'science'}</span>
               <span>{freeLabel}</span>
             </span>
           </button>
+          )}
           {investigations.map((x) => (
             <button key={x.id} type="button" aria-pressed={activeInvestigationId === x.id} data-experiment={x.id} onClick={() => onSelectInvestigation(x.id)} className={`${rowBase} min-h-[38px] ${activeInvestigationId === x.id ? on : off}`}>
               <span className="flex items-center justify-between">

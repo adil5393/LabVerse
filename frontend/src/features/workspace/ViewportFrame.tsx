@@ -1,10 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { LabToolbarDivider } from './controls/LabToolbar';
 
 export interface ViewportFrameProps {
-  /** Direct-manipulation and playback tools that belong to the experiment (rendered in a compact strip above the scene). */
+  /** The experiment's own controls (transport, move buttons, toggles). They sit in the docked strip along the bottom of the viewport. */
   toolbar?: React.ReactNode;
-  /** One short line under the scene (units, assumptions). */
+  /** One short line under the transport strip (units, assumptions). */
   footnote?: React.ReactNode;
   children: React.ReactNode;
   testId?: string;
@@ -17,10 +16,15 @@ export interface ViewportFrameProps {
 const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 3;
 
+const toolBtn = 'p-1 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95';
+const idle = 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant';
+const on = 'bg-primary text-on-primary font-bold';
+
 /**
- * ViewportFrame: the dominant experiment region of the workstation. It gives the scene ALL the available space (the scene
- * scales to fit, never scrolls), keeps a compact unified toolbar attached to it (camera navigation on top-left, experiment
- * transport adjacent), and offers zoom, fit, pan and select modes matching the Work Laboratory design reference.
+ * ViewportFrame: the dominant experiment region of the workstation, laid out like the Work Laboratory so every lab feels the
+ * same: a floating camera toolbar over the top-left of the scene (select, pan, zoom, fit, grid and vector toggles), the scene
+ * using all the remaining space (it scales to fit, never scrolls), and a docked transport strip along the bottom that holds the
+ * experiment's own controls (play, step, reset, timeline, move buttons).
  */
 export const ViewportFrame: React.FC<ViewportFrameProps> = ({
   toolbar,
@@ -68,168 +72,79 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col" data-testid={testId}>
-      {/* Unified Viewport Workstation Toolbar */}
-      <div
-        className="shrink-0 flex flex-wrap items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 border-b border-outline-variant bg-surface-container-low"
-        data-testid="viewport-toolbar"
-      >
-        {/* 1. Viewport Camera & Interaction Tools (Grouped Top-Left) */}
+      <div className="flex-1 min-h-0 relative overflow-hidden bg-surface-lowest">
+        {/* The scene. Panning is handled here only, so the floating toolbar below never starts a pan. */}
         <div
-          className="flex items-center gap-1 shrink-0 bg-surface-container/80 border border-outline-variant/60 rounded-lg p-0.5"
+          className="absolute inset-0 touch-none select-none"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={end}
+          onPointerCancel={end}
+          style={{
+            cursor: toolMode === 'pan' ? (isDragging ? 'grabbing' : 'grab') : zoom !== 1 ? (isDragging ? 'grabbing' : 'grab') : undefined,
+          }}
+        >
+          <div
+            className="absolute inset-0 p-2 pt-12 flex items-center justify-center"
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: 'center',
+              transition: drag.current ? 'none' : 'transform 120ms',
+            }}
+          >
+            {children}
+          </div>
+        </div>
+
+        {/* Floating viewport toolbar (top-left), the same as the Work Laboratory's */}
+        <div
+          className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1 max-w-[calc(100%-1.5rem)] bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md"
           role="group"
           aria-label="Viewport camera"
+          data-testid="viewport-toolbar"
         >
-          {/* Select Tool */}
-          <button
-            type="button"
-            onClick={() => setToolMode('select')}
-            className={`min-h-[28px] min-w-[28px] h-7 w-7 p-1 rounded-md flex items-center justify-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95 ${
-              toolMode === 'select'
-                ? 'bg-primary text-slate-950 font-bold shadow-sm'
-                : 'text-on-surface-variant hover:text-white hover:bg-surface-variant'
-            }`}
-            title="Select Tool (Click to select & position objects)"
-            aria-label="Select tool"
-            aria-pressed={toolMode === 'select'}
-            data-testid="viewport-select"
-          >
+          <button type="button" onClick={() => setToolMode('select')} className={`${toolBtn} ${toolMode === 'select' ? on : idle}`} title="Select Tool (Click to select, drag to position)" aria-label="Select tool" aria-pressed={toolMode === 'select'} data-testid="viewport-select">
             <span className="material-symbols-outlined text-[16px]">arrow_selector_tool</span>
           </button>
-
-          {/* Pan Tool */}
-          <button
-            type="button"
-            onClick={() => setToolMode((m) => (m === 'pan' ? 'select' : 'pan'))}
-            className={`min-h-[28px] min-w-[28px] h-7 w-7 p-1 rounded-md flex items-center justify-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95 ${
-              toolMode === 'pan'
-                ? 'bg-primary text-slate-950 font-bold shadow-sm'
-                : 'text-on-surface-variant hover:text-white hover:bg-surface-variant'
-            }`}
-            title="Pan Tool (Click and drag to pan viewport)"
-            aria-label="Pan tool"
-            aria-pressed={toolMode === 'pan'}
-            data-testid="viewport-pan"
-          >
+          <button type="button" onClick={() => setToolMode((m) => (m === 'pan' ? 'select' : 'pan'))} className={`${toolBtn} ${toolMode === 'pan' ? on : idle}`} title="Pan Tool (Click and drag to pan viewport)" aria-label="Pan tool" aria-pressed={toolMode === 'pan'} data-testid="viewport-pan">
             <span className="material-symbols-outlined text-[16px]">pan_tool</span>
           </button>
-
-          {/* Zoom In */}
-          <button
-            type="button"
-            onClick={zoomIn}
-            className="min-h-[28px] min-w-[28px] h-7 w-7 p-1 rounded-md flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-variant transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95"
-            title="Zoom In"
-            aria-label="Zoom in"
-            data-testid="viewport-zoom-in"
-          >
+          <button type="button" onClick={fit} className={`${toolBtn} ${idle}`} title="Fit scene to viewport" aria-label="Fit scene to viewport" data-testid="viewport-fit">
+            <span className="material-symbols-outlined text-[16px]">aspect_ratio</span>
+          </button>
+          <button type="button" onClick={zoomIn} className={`${toolBtn} ${idle}`} title="Zoom In" aria-label="Zoom in" data-testid="viewport-zoom-in">
             <span className="material-symbols-outlined text-[16px]">zoom_in</span>
           </button>
-
-          {/* Zoom Out */}
-          <button
-            type="button"
-            onClick={zoomOut}
-            className="min-h-[28px] min-w-[28px] h-7 w-7 p-1 rounded-md flex items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-variant transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95"
-            title="Zoom Out"
-            aria-label="Zoom out"
-            data-testid="viewport-zoom-out"
-          >
+          <button type="button" onClick={zoomOut} className={`${toolBtn} ${idle}`} title="Zoom Out" aria-label="Zoom out" data-testid="viewport-zoom-out">
             <span className="material-symbols-outlined text-[16px]">zoom_out</span>
           </button>
-
-          {/* Zoom Level Indicator */}
-          <span
-            className="font-mono text-[10px] text-outline px-1 min-w-[34px] text-center select-none"
-            data-testid="viewport-zoom"
-          >
+          <span className="font-mono text-[10px] text-outline px-1 min-w-[34px] text-center select-none" data-testid="viewport-zoom">
             {Math.round(zoom * 100)}%
           </span>
-
-          {/* Fit to Scene */}
-          <button
-            type="button"
-            onClick={fit}
-            className="min-h-[28px] px-2 py-0.5 rounded-md flex items-center gap-1 text-on-surface-variant hover:text-white hover:bg-surface-variant text-xs font-mono transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 active:scale-95"
-            title="Fit scene to viewport"
-            aria-label="Fit scene to viewport"
-            data-testid="viewport-fit"
-          >
-            <span className="material-symbols-outlined text-[15px]">aspect_ratio</span>
-            <span className="text-[11px] font-semibold">Fit</span>
-          </button>
-
-          {/* Optional Grid Toggle */}
-          {onToggleGrid && (
-            <button
-              type="button"
-              onClick={onToggleGrid}
-              className={`min-h-[28px] px-2 py-0.5 rounded-md text-[10px] font-mono transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
-                showGrid
-                  ? 'bg-surface-variant text-primary font-semibold'
-                  : 'text-on-surface-variant hover:bg-surface-variant'
-              }`}
-              title="Toggle Background Grid"
-              aria-label="Toggle Grid"
-              data-testid="viewport-grid-toggle"
-            >
-              Grid
-            </button>
-          )}
-
-          {/* Optional Vectors Toggle */}
+          {(onToggleVectors || onToggleGrid) && <div className="h-4 w-px bg-outline-variant mx-1" />}
           {onToggleVectors && (
-            <button
-              type="button"
-              onClick={onToggleVectors}
-              className={`min-h-[28px] px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
-                showVectors
-                  ? 'bg-surface-variant text-primary border border-primary/40'
-                  : 'text-on-surface-variant hover:bg-surface-variant'
-              }`}
-              title="Toggle Motion Vectors"
-              aria-label="Toggle Vectors"
-              data-testid="viewport-vectors-toggle"
-            >
-              <span className="material-symbols-outlined text-[13px]">navigation</span>
+            <button type="button" onClick={onToggleVectors} className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center gap-1 transition-colors ${showVectors ? 'bg-surface-variant text-primary border border-primary/40' : idle}`} title="Toggle Motion Vectors" aria-label="Toggle Vectors" data-testid="viewport-vectors-toggle">
+              <span className="material-symbols-outlined text-[12px]">navigation</span>
               <span>Vectors: {showVectors ? 'ON' : 'OFF'}</span>
             </button>
           )}
+          {onToggleGrid && (
+            <button type="button" onClick={onToggleGrid} className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${showGrid ? 'bg-surface-variant text-primary' : idle}`} title="Toggle Background Grid" aria-label="Toggle Grid" data-testid="viewport-grid-toggle">
+              Grid
+            </button>
+          )}
         </div>
-
-        {/* Vertical Divider between Camera Tools and Experiment Actions */}
-        {toolbar && (
-          <LabToolbarDivider vertical className="hidden xs:block" />
-        )}
-
-        {/* 2. Experiment Actions / Motion Controls (Adjacent, starting from left) */}
-        {toolbar && (
-          <div className="flex flex-wrap items-center gap-1.5 min-w-0" data-testid="viewport-experiment-tools">
-            {toolbar}
-          </div>
-        )}
       </div>
 
-      <div
-        className="flex-1 min-h-0 relative overflow-hidden bg-surface-lowest touch-none select-none"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={end}
-        onPointerCancel={end}
-        style={{
-          cursor: toolMode === 'pan' ? (isDragging ? 'grabbing' : 'grab') : zoom !== 1 ? (isDragging ? 'grabbing' : 'grab') : undefined,
-        }}
-      >
+      {/* Docked transport strip (bottom), the same place as the Work Laboratory's playback bar */}
+      {toolbar && (
         <div
-          className="absolute inset-0 p-2 flex items-center justify-center"
-          style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: 'center',
-            transition: drag.current ? 'none' : 'transform 120ms',
-          }}
+          className="shrink-0 min-h-12 bg-surface-container border-t border-outline-variant px-3 py-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 z-30 select-none"
+          data-testid="viewport-experiment-tools"
         >
-          {children}
+          {toolbar}
         </div>
-      </div>
+      )}
 
       {footnote && (
         <div className="shrink-0 px-3 py-1 border-t border-outline-variant text-[10px] text-outline bg-surface-container-low">

@@ -388,6 +388,7 @@ export const ForcesLab: React.FC = () => {
             object="passenger"
             arrows={b.arrows.filter((a) => a.id !== 'belt' || scene.isVisible('restraint'))}
             net={b.net}
+            fixedScale={2}
             showIndividual
             showNet
             alt={`Forces on the passenger: ${b.setup.restrained && b.s.passengerForce !== 0 ? `belt ${r2(Math.abs(b.s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(b.setup.passengerMassKg * G)} N each, vertical.`}
@@ -400,8 +401,8 @@ export const ForcesLab: React.FC = () => {
   ) : (
     <ViewportFrame toolbar={<><ForceToggles m={m} compact /><ForceTimeControls m={m} compact /></>} footnote={<>Simulated time t = {r2(m.tt)} s · right is positive · arrow lengths scale with the force</>}>
       <div className="w-full h-full min-h-0 flex flex-col gap-2" data-visual="forceCart" data-testid="force-cart">
-        <div className="shrink-0" data-no-pan>{scene.isVisible('cart') ? <Track setup={m.setup} tMax={m.tMax} t={m.tt} /> : null}</div>
-        <div className="flex-1 min-h-0" data-no-pan><ForceFigure object="cart" arrows={m.d.arrows.filter((a) => !(a.id === 'A' && !scene.isVisible('pushA')) && !(a.id === 'B' && !scene.isVisible('pushB')) && !(a.id === 'friction' && !scene.isVisible('surface')))} net={m.d.net} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} listing={false} fill /></div>
+        <div className="shrink-0" data-no-pan>{scene.isVisible('cart') ? <Track setup={m.setup} tMax={m.tMax} t={m.tt} fixedSpan={60} /> : null}</div>
+        <div className="flex-1 min-h-0" data-no-pan><ForceFigure object="cart" arrows={m.d.arrows.filter((a) => !(a.id === 'A' && !scene.isVisible('pushA')) && !(a.id === 'B' && !scene.isVisible('pushB')) && !(a.id === 'friction' && !scene.isVisible('surface')))} net={m.d.net} fixedScale={2} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} listing={false} fill /></div>
       </div>
     </ViewportFrame>
   );

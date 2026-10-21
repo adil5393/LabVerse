@@ -89,3 +89,19 @@ docker compose -f docker-compose.dev.yml up --build   # hot reload: Vite on :517
 - `backend/Dockerfile` is built from the repository root (the solver is the `backend` package) and runs as a non-root user with a `/health` check.
 - The app calls the relative URL `/api/solve`, so no CORS or host configuration is needed in either mode. Set `VITE_API_PROXY` to point the dev server at a different solver.
 - Backend tests: `pip install -r backend/requirements-dev.txt && pytest backend/tests`.
+
+---
+
+## Sign-in
+
+Every page except `/login` needs a session. For now the credentials are compared as plain text with two values in `frontend/.env` (copy `frontend/.env.example`):
+
+```
+VITE_AUTH_USERNAME=labverse
+VITE_AUTH_PASSWORD=Lab@2026!
+```
+
+- `.env` is git-ignored. Change both values, then restart `npm run dev` or rebuild (`docker compose build`): Vite bakes `VITE_*` values into the browser bundle at build time, so they are **readable by anyone who can load the site**. This is a placeholder gate, not security; a backend check should replace it.
+- "Remember this device" keeps the session for 30 days; otherwise it ends with the browser tab. Changing the user name in `.env` signs everyone out.
+- Under `npm run dev` the store starts signed in (a development shortcut); sign out from the header to see the login screen. Production builds always start at `/login`.
+- The Docker build reads `frontend/.env` from the build context.

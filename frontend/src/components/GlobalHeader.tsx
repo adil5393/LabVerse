@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LABVERSE_SUBJECTS, type SubjectDefinition } from '../types/subjectRegistry';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface GlobalHeaderProps {
   onOpenGuide?: () => void;
@@ -9,6 +10,8 @@ interface GlobalHeaderProps {
 
 export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onOpenGuide, onImportLab }) => {
   const location = useLocation();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isCurrent = (subject: SubjectDefinition) => {
@@ -41,7 +44,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onOpenGuide, onImpor
           {/* Clean, strict "No login required" tag */}
           <div className="hidden xl:flex items-center gap-2 pl-4 border-l border-surface-border/70 text-xs font-medium text-slate-300">
             <span className="inline-flex w-2 h-2 rounded-full bg-tertiary ring-4 ring-tertiary/20"></span>
-            <span>No login required • Auto-saved to browser</span>
+            <span>Signed in{user ? ` as ${user}` : ''} • Auto-saved to browser</span>
           </div>
         </div>
 
@@ -87,6 +90,16 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onOpenGuide, onImpor
 
         {/* Utility Actions & Mobile Menu Toggle */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 min-h-[36px] rounded-lg bg-surface-card hover:bg-surface-elevated text-slate-200 border border-surface-border text-xs font-medium transition-all"
+            title={user ? `Signed in as ${user}` : 'Sign out'}
+            data-testid="signout"
+          >
+            <span className="material-symbols-outlined text-[17px] text-primary">logout</span>
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
           {onImportLab && (
             <button
               onClick={onImportLab}

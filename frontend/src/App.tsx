@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SubjectExplorer } from './features/explorer/SubjectExplorer';
+import { LoginPage } from './features/auth/LoginPage';
+import { RequireAuth } from './features/auth/RequireAuth';
 
 // Lazy-loaded Subject & Chapter Modules
 const ElectricityLab = lazy(() =>
@@ -188,6 +190,9 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
+          {/* Sign-in is the only public page; every other route needs a session. */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<RequireAuth />}>
           {/* Route 1: Subject Explorer */}
           <Route path="/" element={<SubjectExplorer />} />
 
@@ -273,6 +278,7 @@ export const App: React.FC = () => {
 
           {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
         </Routes>
       </Suspense>
     </BrowserRouter>

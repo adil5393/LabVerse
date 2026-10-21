@@ -426,7 +426,7 @@ export const SubjectExplorer: React.FC = () => {
             <div>
               <h4 className="text-xs sm:text-sm font-semibold text-white">Zero Authentication</h4>
               <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">
-                No login, no passwords, and zero tracking. Starts instantly in your browser.
+                Your work is saved in this browser, with no tracking. Sign out from the header when you are done.
               </p>
             </div>
           </div>

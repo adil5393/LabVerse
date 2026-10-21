@@ -162,14 +162,14 @@ export const PFP_PROP: Prerequisite = {
 export const PFP_FMA: Prerequisite = {
   id: 'pfp-fma',
   title: 'Using F = ma for one object',
-  why: 'The third law tells you the forces on two objects; Newton\'s second law then gives each object its own acceleration. You need to use F = ma for one object at a time.',
+  why: 'Newton\'s third law describes interaction pairs between two objects, but Newton\'s second law (a = F_net ÷ m) applies to each object separately. To find an object\'s acceleration, you must account only for the forces acting ON that specific object and divide by its own mass.',
   connection: 'Chapter 6, lesson 6: Newton\'s second law (/physics/forces/learn/pf-l6)',
   refresher: [
     {
       id: 'pfp-fm-step', title: 'Find the net force on ONE object, then divide by its own mass',
       paragraphs: [
-        'For one object, add the forces that act ON that object (with signs) to get the net force, then a = F ÷ m using the mass of that object. For a 2 kg cart with a 6 N net force, a = 6 ÷ 2 = 3 m/s².',
-        'Always use the mass and the forces of the same object. A force exerted by that object on something else is not part of its net force.',
+        'To find the acceleration of an object, calculate the net horizontal force acting ON that object (adding forces with their directional signs), then apply a = F ÷ m using that object\'s own mass. For example, a 2 kg cart experiencing a 6 N net force accelerates at a = 6 ÷ 2 = 3 m/s².',
+        'Always isolate one object at a time: use its mass and only the forces acting ON it. A force exerted BY that object onto another body belongs to the other body\'s force diagram, never its own.',
       ],
       misconception: { wrong: 'To find the acceleration of a cart, add all the forces in the picture, including the ones the cart exerts.', right: 'Add only the forces acting ON the cart. Forces the cart exerts on other objects belong to those objects.' },
     },

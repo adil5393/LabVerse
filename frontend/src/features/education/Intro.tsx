@@ -64,41 +64,47 @@ export const ChapterIntroduction: React.FC<{ chapter: EduChapter }> = ({ chapter
 export const UnitIntroduction: React.FC<{ unit: EduUnit }> = ({ unit }) => (
   <section
     aria-label={`About unit ${unit.number}`}
-    className="rounded-2xl border border-surface-border bg-surface-lowest/90 p-4 space-y-3"
+    className="space-y-3.5 min-w-0 w-full"
   >
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
+    {/* Unit Header */}
+    <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold shrink-0">
           Unit {unit.number}
         </span>
-        <h3 className="text-base sm:text-lg font-black text-white">{unit.title}</h3>
+        <h3 className="text-base sm:text-xl font-black text-white tracking-tight truncate">{unit.title}</h3>
       </div>
+      <span className="text-xs font-mono text-slate-400 shrink-0">
+        {unit.lessonIds.length} {unit.lessonIds.length === 1 ? 'lesson' : 'lessons'}
+      </span>
     </div>
 
-    <div className="p-3 rounded-xl bg-surface-card border border-surface-border/70 text-xs sm:text-sm text-slate-200 space-y-1">
-      <span className="font-bold text-cyan-300 text-xs font-mono uppercase flex items-center gap-1">
-        <span className="material-symbols-outlined text-[15px]">lightbulb</span>
+    {/* Central Idea: Distinct Level 3 Surface with Accent */}
+    <div className="p-3.5 sm:p-4 rounded-2xl bg-surface-lowest/95 border border-surface-border/70 border-l-4 border-l-cyan-400 text-xs sm:text-sm text-slate-200 space-y-1.5 shadow-xs min-w-0">
+      <span className="font-bold text-cyan-300 text-xs font-mono uppercase tracking-wide flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-[16px]">lightbulb</span>
         Central Idea
       </span>
-      <p className="text-slate-200 leading-relaxed">{unit.centralIdea}</p>
+      <p className="text-slate-200 leading-relaxed font-sans break-words">{unit.centralIdea}</p>
     </div>
 
-    <details className="rounded-xl border border-surface-border bg-surface-card/40 overflow-hidden">
-      <summary className="cursor-pointer min-h-[44px] px-3.5 py-2 flex items-center justify-between text-xs font-mono text-slate-300 hover:text-white transition-colors">
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[16px] text-amber-400">menu_book</span>
-          Vocabulary & Concepts ({unit.vocabulary.length} terms)
+    {/* Vocabulary & Concepts: Subordinate Collapsible Support */}
+    <details className="rounded-xl border border-surface-border/50 bg-surface-lowest/50 overflow-hidden group">
+      <summary className="cursor-pointer min-h-[42px] px-3.5 py-2 flex items-center justify-between text-xs font-mono text-slate-300 hover:text-white transition-colors select-none">
+        <span className="flex items-center gap-1.5 font-medium min-w-0">
+          <span className="material-symbols-outlined text-[16px] text-amber-400/90 shrink-0">menu_book</span>
+          <span className="truncate">Vocabulary &amp; Concepts ({unit.vocabulary.length} terms)</span>
         </span>
-        <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+        <span className="material-symbols-outlined text-[16px] text-slate-400 group-open:rotate-180 transition-colors shrink-0">expand_more</span>
       </summary>
-      <div className="p-3.5 border-t border-surface-border space-y-3">
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+      <div className="p-3.5 border-t border-surface-border/50 space-y-3 bg-surface-lowest/70 min-w-0">
+        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed break-words">
           <strong className="text-white font-mono">Connection: </strong>
           {unit.connection}
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 min-w-0">
           <List title="You will discover" items={unit.discover} icon="psychology" />
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0">
             <h4 className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
               <span className="material-symbols-outlined text-[15px]">dictionary</span>
               Words to know
@@ -107,10 +113,10 @@ export const UnitIntroduction: React.FC<{ unit: EduUnit }> = ({ unit }) => (
               {unit.vocabulary.map((v) => (
                 <div
                   key={v.term}
-                  className="p-1.5 rounded-lg bg-surface-lowest/90 border border-surface-border/50"
+                  className="p-2 rounded-lg bg-surface-card/60 border border-surface-border/50 min-w-0"
                 >
                   <dt className="inline font-bold text-cyan-300 font-mono">{v.term}</dt>
-                  <dd className="inline text-slate-300">: {v.meaning}</dd>
+                  <dd className="inline text-slate-300 break-words">: {v.meaning}</dd>
                 </div>
               ))}
             </dl>

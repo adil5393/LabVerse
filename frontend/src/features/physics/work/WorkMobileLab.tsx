@@ -171,8 +171,52 @@ export const WorkMobileLab: React.FC<WorkMobileLabProps> = ({
   );
 
   const toolbarSlot = (
-    <div className="w-full p-2.5">
+    <div className="w-full">
       <MobileLabToolbar
+        toggles={[
+          {
+            id: 'vertical-forces',
+            label: 'Weight & Normal',
+            active: showVertical,
+            onToggle: () => onShowVerticalChange(!showVertical),
+            activeColor: PHYS.vertical,
+          },
+        ]}
+        secondaryRow={
+          <div className="grid grid-cols-3 gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => setParamsOpen(true)}
+              className="min-h-[38px] px-2 rounded-lg border border-outline-variant bg-surface-container flex items-center justify-center gap-1 text-[11px] text-slate-300 active:bg-surface-variant touch-manipulation min-w-0"
+              data-testid="mobile-work-force-chip"
+            >
+              <span className="text-slate-400 shrink-0">F:</span>
+              <span className="font-semibold text-primary truncate" style={{ color: PHYS.force }}>
+                {setup.forceN}N
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setParamsOpen(true)}
+              className="min-h-[38px] px-2 rounded-lg border border-outline-variant bg-surface-container flex items-center justify-center gap-1 text-[11px] text-slate-300 active:bg-surface-variant touch-manipulation min-w-0"
+              data-testid="mobile-work-mass-chip"
+            >
+              <span className="text-slate-400 shrink-0">m:</span>
+              <span className="font-semibold text-amber-300 truncate">{setup.massKg}kg</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setParamsOpen(true)}
+              className="min-h-[38px] px-2 rounded-lg border border-primary/50 bg-primary/15 text-primary text-xs font-bold flex items-center justify-center gap-1 active:bg-primary/25 touch-manipulation shadow-sm min-w-0"
+              data-testid="open-params-button"
+            >
+              <span className="material-symbols-outlined text-[16px]">tune</span>
+              <span>Params</span>
+            </button>
+          </div>
+        }
         statusText={`m: ${setup.massKg}kg · F: ${setup.forceN}N · s: ${setup.displacement}m · W: ${fmt(r.netWork)}J`}
         onOpenParameters={() => setParamsOpen(true)}
         parameterButtonLabel="Work Parameters"
@@ -187,7 +231,7 @@ export const WorkMobileLab: React.FC<WorkMobileLabProps> = ({
       title="Work Model Properties"
       subtitle={expTitle ? `Investigation: ${expTitle}` : 'Cart Under Constant Applied Force'}
     >
-      <div className="space-y-3 p-1">
+      <div className="w-full px-0.5">
         <PropertiesInspector
           setup={setup}
           result={r}
@@ -199,6 +243,7 @@ export const WorkMobileLab: React.FC<WorkMobileLabProps> = ({
           onShowVerticalChange={onShowVerticalChange}
           selectedObjectId={selectedObjectId}
           lockMap={lockMap}
+          compact={true}
         />
       </div>
     </MobileLabParameterSheet>

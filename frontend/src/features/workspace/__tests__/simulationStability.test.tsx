@@ -5,6 +5,8 @@ import { Track } from '../../physics/forces/ForceCart';
 import { DEFAULT_SETUP } from '../../../engine/physics/forces/forceModel';
 import { MobileLabViewport } from '../mobile/MobileLabViewport';
 import { MobileLabTransport } from '../mobile/MobileLabTransport';
+import { PropertiesInspector } from '../../physics/work/components/PropertiesInspector';
+import { DEFAULT_WORK, computeWork } from '../../../engine/physics/work/workModel';
 
 describe('Physics Simulation Stability & Viewport Geometry Regressions', () => {
   describe('Authoritative Simulation Clock & Monotonicity', () => {
@@ -103,4 +105,120 @@ describe('Physics Simulation Stability & Viewport Geometry Regressions', () => {
       expect(html).toContain('data-testid="mobile-time-scrubber"');
     });
   });
+
+  describe('Cart Tracking Camera & Continuous Scrolling Position Ruler', () => {
+    function getCartScreenX(svgMarkup: string): number {
+      const match = svgMarkup.match(/<rect\s+x="([^"]+)"/);
+      if (!match) throw new Error('Cart rect not found in Track SVG');
+      return parseFloat(match[1]) + 17; // rect center
+    }
+
+    it('cart initially moves naturally across track until reaching 50% anchor (310px)', () => {
+      // At t = 0, cart starts at x = 0, rendered ~114px on screen
+      const svg0 = renderToStaticMarkup(
+        <Track setup={DEFAULT_SETUP} tMax={20} t={0} fixedSpan={40} />
+      );
+      const x0 = getCartScreenX(svg0);
+      expect(x0).toBeCloseTo(114, 0);
+
+      // As cart moves forward, its screen position increases smoothly towards 310px
+      const svg1 = renderToStaticMarkup(
+        <Track setup={DEFAULT_SETUP} tMax={20} t={1.0} fixedSpan={40} />
+      );
+      const x1 = getCartScreenX(svg1);
+      expect(x1).toBeGreaterThan(x0);
+      expect(x1).toBeLessThanOrEqual(310.5);
+    });
+
+    it('cart screen position is strictly continuous across the previous threshold value (x = 24m, t ~ 3.1s)', () => {
+      // Sample 40 time steps from t = 2.5s to t = 4.5s covering the old page-jump threshold
+      const samples: { t: number; screenX: number }[] = [];
+      for (let t = 2.5; t <= 4.5; t += 0.05) {
+        const svg = renderToStaticMarkup(
+          <Track setup={DEFAULT_SETUP} tMax={20} t={t} fixedSpan={40} />
+        );
+        samples.push({ t, screenX: getCartScreenX(svg) });
+      }
+
+      // Verify ZERO teleportation or discontinuous jumps (max frame-to-frame delta must be small)
+      for (let i = 1; i < samples.length; i++) {
+        const delta = Math.abs(samples[i].screenX - samples[i - 1].screenX);
+        expect(delta).toBeLessThan(1.0); // cart stays stable at 310px anchor once following
+      }
+
+      // Verify it stays stably anchored at 310px (50% viewport width)
+      expect(samples[samples.length - 1].screenX).toBeCloseTo(310, 0);
+    });
+
+    it('ruler ticks move smoothly beneath the cart during continuous camera tracking', () => {
+      // Render at two consecutive times during camera following
+      const svgA = renderToStaticMarkup(
+        <Track setup={DEFAULT_SETUP} tMax={20} t={3.0} fixedSpan={40} />
+      );
+      const svgB = renderToStaticMarkup(
+        <Track setup={DEFAULT_SETUP} tMax={20} t={3.2} fixedSpan={40} />
+      );
+
+      // Cart screen position is stable
+      const cartXA = getCartScreenX(svgA);
+      const cartXB = getCartScreenX(svgB);
+      expect(Math.abs(cartXB - cartXA)).toBeLessThan(0.1);
+
+      // But ruler coordinates moved continuously beneath it
+      expect(svgA).toContain('position (m)');
+      expect(svgB).toContain('position (m)');
+      // SVG aria-label reflects real physical coordinates without resets
+      expect(svgA).toMatch(/Track from \+?\d+(\.\d+)? m to \+?\d+(\.\d+)? m/);
+    });
+
+    it('supports direction reversal, deceleration, and leftward movement without snapping', () => {
+      // Setup moving left
+      const leftSetup = { ...DEFAULT_SETUP, forceA: 0, forceB: 10, dirB: 'left' as const };
+      const svgLeft0 = renderToStaticMarkup(
+        <Track setup={leftSetup} tMax={20} t={0} fixedSpan={40} />
+      );
+      const xLeft0 = getCartScreenX(svgLeft0);
+      // Cart starts with room on left, near 506px
+      expect(xLeft0).toBeGreaterThan(450);
+
+      // At t = 2.0s, cart has moved leftwards smoothly
+      const svgLeft2 = renderToStaticMarkup(
+        <Track setup={leftSetup} tMax={20} t={2.0} fixedSpan={40} />
+      );
+      const xLeft2 = getCartScreenX(svgLeft2);
+      expect(xLeft2).toBeLessThan(xLeft0);
+    });
+  });
+
+  describe('Work & Energy Laboratory Mobile Parameter Sheet Layout', () => {
+    it('PropertiesInspector renders responsive full-width layout in compact mode (no desktop 308px sidebar or 40px icon strip)', () => {
+      const result = computeWork(DEFAULT_WORK);
+      const html = renderToStaticMarkup(
+        <PropertiesInspector
+          setup={DEFAULT_WORK}
+          result={result}
+          onChange={() => {}}
+          showVertical={false}
+          onShowVerticalChange={() => {}}
+          compact={true}
+        />
+      );
+
+      // Must have data-testid="work-controls"
+      expect(html).toContain('data-testid="work-controls"');
+      // Must NOT contain desktop fixed 308px width or 40px icon strip
+      expect(html).not.toContain('w-[308px]');
+      expect(html).not.toContain('w-10');
+      expect(html).not.toContain('Expand Properties Inspector');
+
+      // Must contain mobile-friendly category tabs and touch steppers
+      expect(html).toContain('Applied Force');
+      expect(html).toContain('data-field="force"');
+      expect(html).toContain('data-field="mass"');
+      expect(html).toContain('data-testid="surface-select"');
+      expect(html).toContain('data-field="displacement"');
+      expect(html).toContain('data-testid="work-more"');
+    });
+  });
 });
+

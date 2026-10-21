@@ -97,52 +97,84 @@ export const PropositionsLearnSection: React.FC = () => {
           <ChapterIntroduction chapter={ch} />
           <ChapterPrerequisites chapter={ch} />
 
+        <div className="space-y-8 sm:space-y-10 min-w-0 w-full">
           {ch.units.map((u) => (
-            <div key={u.id} className="space-y-3" data-learn-unit={u.id}>
+            <section
+              key={u.id}
+              data-learn-unit={u.id}
+              className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-[#131923] to-[#0f131c] p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
+            >
               <UnitIntroduction unit={u} />
-              <details className="rounded-xl border border-surface-border bg-surface-card/60 px-4 py-2 overflow-hidden">
-                <summary className="cursor-pointer min-h-[44px] flex items-center justify-between text-xs sm:text-sm text-slate-200 font-medium hover:text-white transition-colors">
-                  <span className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px] text-primary">psychology</span>
-                    Before Unit {u.number}: ideas this unit uses (optional)
+
+              {/* Optional Preparation: Subordinate drawer */}
+              {u.prerequisiteIds && u.prerequisiteIds.length > 0 && (
+                <details className="rounded-xl border border-surface-border/50 bg-surface-lowest/50 px-3.5 sm:px-4 py-2 overflow-hidden group">
+                  <summary className="cursor-pointer min-h-[42px] flex items-center justify-between text-xs sm:text-sm text-slate-300 font-medium hover:text-white transition-colors select-none">
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="material-symbols-outlined text-[16px] text-purple-400/90 shrink-0">psychology</span>
+                      <span className="truncate">Before Unit {u.number}: ideas this unit uses</span>
+                      <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider shrink-0 bg-surface-lowest px-1.5 py-0.5 rounded border border-surface-border/40">optional</span>
+                    </span>
+                    <span className="material-symbols-outlined text-[16px] text-slate-400 group-open:rotate-180 transition-colors shrink-0">expand_more</span>
+                  </summary>
+                  <div className="pt-3 pb-1 border-t border-surface-border/50 min-w-0">
+                    <UnitPrerequisites chapter={ch} unitId={u.id} />
+                  </div>
+                </details>
+              )}
+
+              {/* Active Lesson Cards Section: Primary visual emphasis */}
+              <div className="space-y-3 pt-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-mono uppercase tracking-wider text-purple-400 font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                    Lessons in Unit {u.number}
+                  </h4>
+                  <span className="text-xs font-mono text-slate-400">
+                    {u.lessonIds.filter((id) => records[id] && (lessonStatus(ch.lessons[id], records[id]) === 'completed' || lessonStatus(ch.lessons[id], records[id]) === 'mastered')).length} of {u.lessonIds.length} done
                   </span>
-                  <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
-                </summary>
-                <div className="pt-3 pb-1 border-t border-surface-border/60"><UnitPrerequisites chapter={ch} unitId={u.id} /></div>
-              </details>
-              <ol className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
-                {u.lessonIds.map((id) => {
-                  const l = ch.lessons[id];
-                  const st = lessonStatus(l, records[id]);
-                  return (
-                    <li key={id}>
-                      <Link
-                        to={ch.routes.learn(id)}
-                        data-learn-link={id}
-                        className="block min-h-[68px] rounded-2xl border border-surface-border/80 bg-surface-card hover:bg-surface-card/80 hover:border-purple-400/60 active:scale-[0.99] p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5">
-                            <span className="px-1.5 py-0.5 rounded bg-surface-lowest text-[10px] text-purple-400 border border-purple-500/20 font-bold">
-                              L{l.number}
+                </div>
+
+                <ol className="grid gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-3 min-w-0 w-full">
+                  {u.lessonIds.map((id) => {
+                    const l = ch.lessons[id];
+                    const st = lessonStatus(l, records[id]);
+                    return (
+                      <li key={id} className="min-w-0 w-full">
+                        <Link
+                          to={ch.routes.learn(id)}
+                          data-learn-link={id}
+                          className="block min-w-0 w-full min-h-[72px] rounded-2xl border border-surface-border bg-[#18202e] hover:bg-[#1e2738] hover:border-purple-400/60 active:scale-[0.99] p-3.5 sm:p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5 min-w-0 shrink">
+                              <span className="px-1.5 py-0.5 rounded bg-surface-lowest text-[10px] text-purple-400 border border-purple-500/20 font-bold shrink-0">
+                                L{l.number}
+                              </span>
+                              <span className="truncate">Lesson {l.number}</span>
                             </span>
-                            Lesson {l.number}
-                          </span>
-                          <span data-status={st} className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${TONE[st]}`}>
-                            <span className="text-[10px]">{st === 'completed' || st === 'mastered' ? '✓' : st === 'in_progress' ? '▶' : '○'}</span>
-                            {STATUS_LABEL[st]}
-                          </span>
-                        </div>
-                        <div className="font-bold text-white group-hover:text-purple-300 transition-colors text-sm sm:text-base leading-snug">
-                          {l.title}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
+                            <span
+                              data-status={st}
+                              className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold flex items-center gap-1 shrink-0 ${TONE[st]}`}
+                            >
+                              <span className="text-[10px]">
+                                {st === 'completed' || st === 'mastered' ? '✓' : st === 'in_progress' ? '▶' : '○'}
+                              </span>
+                              <span>{STATUS_LABEL[st]}</span>
+                            </span>
+                          </div>
+                          <div className="font-bold text-white group-hover:text-purple-300 transition-colors text-sm sm:text-base leading-snug break-words">
+                            {l.title}
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            </section>
           ))}
+        </div>
         </section>
       </JudgeProvider>
     </VisualRegistryProvider>

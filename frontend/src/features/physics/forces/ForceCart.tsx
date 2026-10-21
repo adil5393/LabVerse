@@ -56,17 +56,65 @@ export const DirToggle: React.FC<{ label: string; value: Dir; onChange: (d: Dir)
 const TRACK_W = 620, TRACK_H = 110;
 
 /**
- * `fixedSpan` (metres) keeps the picture at one scale however the setup is edited: the window is `fixedSpan` wide and moves in
- * half-window steps to keep the cart in view. Without it the window is fitted to the whole run (the lesson pictures).
+ * Continuous camera-following track visualization:
+ * - Cart initially moves naturally across the track towards the 50% viewport anchor.
+ * - Once reaching the anchor, the camera follows continuously: screenX = (worldX - cameraX) * scale + viewportAnchor.
+ * - The ruler ticks and world move smoothly beneath the cart with zero threshold jumping or teleportation.
  */
 export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?: number; compact?: boolean }> = ({ setup, tMax, t, fixedSpan, compact = false }) => {
   const all = useMemo(() => simulate(setup, tMax), [setup, tMax]);
+
+  const cameraXs = useMemo(() => {
+    if (!fixedSpan) return null;
+    const n = all.length;
+    if (n === 0) return null;
+    const out = new Float64Array(n);
+    const x0 = all[0].x;
+
+    // Detect initial motion direction
+    let initDir = Math.sign(all[0].v);
+    if (initDir === 0) {
+      for (let k = 1; k < Math.min(n, 30); k++) {
+        const dx = all[k].x - x0;
+        if (Math.abs(dx) > 1e-4) {
+          initDir = Math.sign(dx);
+          break;
+        }
+      }
+    }
+    if (initDir === 0) initDir = 1;
+
+    // Initial camera position gives cart ~15% margin on start side so it moves towards the 50% anchor
+    let cam = initDir > 0 ? x0 + fixedSpan * 0.35 : x0 - fixedSpan * 0.35;
+    out[0] = cam;
+
+    for (let i = 1; i < n; i++) {
+      const x = all[i].x;
+      if (initDir > 0) {
+        if (x > cam) {
+          cam = x;
+        } else if (x < cam - fixedSpan * 0.35) {
+          cam = x + fixedSpan * 0.35;
+        }
+      } else {
+        if (x < cam) {
+          cam = x;
+        } else if (x > cam + fixedSpan * 0.35) {
+          cam = x - fixedSpan * 0.35;
+        }
+      }
+      out[i] = cam;
+    }
+    return out;
+  }, [all, fixedSpan]);
+
+  const currentIdx = Math.min(all.length - 1, Math.max(0, Math.round(t / DT)));
+  const cameraX = cameraXs ? cameraXs[currentIdx] : null;
+
   let lo = Math.min(...all.map((p) => p.x), 0), hi = Math.max(...all.map((p) => p.x), 0);
-  if (fixedSpan) {
-    const now = sampleAtTime(setup, t, tMax).x;
-    const page = fixedSpan / 2;
-    lo = Math.floor((now - fixedSpan * 0.1) / page) * page;
-    hi = lo + fixedSpan;
+  if (fixedSpan && cameraX !== null) {
+    lo = cameraX - fixedSpan / 2;
+    hi = cameraX + fixedSpan / 2;
   } else {
     if (hi - lo < 4) { lo -= 2; hi += 2; }
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
@@ -80,7 +128,7 @@ export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?
   return (
     <svg viewBox={compact ? '20 12 580 95' : `0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
       <line x1={20} y1={70} x2={TRACK_W - 20} y2={70} stroke={surface.muK === 0 ? '#38bdf8' : PHYS.axis} strokeWidth={4} strokeDasharray={surface.muK === 0 ? '2 6' : '0'} />
-      {ticks.map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
+      {ticks.filter((v) => X(v) >= 20 && X(v) <= TRACK_W - 20).map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
       <text x={TRACK_W - 24} y={106} textAnchor="end" fontSize={10} fill="#94a3b8">position (m) · surface: {surface.label}</text>
       <rect x={X(p.x) - 17} y={40} width={34} height={26} rx={4} fill={PHYS.position} stroke="#0f172a" strokeWidth={2} />
       <circle cx={X(p.x) - 9} cy={70} r={4} fill="#0f172a" /><circle cx={X(p.x) + 9} cy={70} r={4} fill="#0f172a" />

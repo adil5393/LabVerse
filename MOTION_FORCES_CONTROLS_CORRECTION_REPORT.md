@@ -178,5 +178,40 @@ npm run lint (oxlint)
 
 ## 7. Remaining Limitations & Recommendations
 
-1. **Browser Subagent Offline Environment:** Automated browser subagent screenshot capture via Playwright failed because the offline execution sandbox blocks Playwright from downloading external driver binaries (`playwright-1.57.0-win32_x64.zip`). Structural layout assertions and responsive container profiles were verified via comprehensive DOM rendering tests and static asset analysis.
-2. **Global Work & Sound Alignment:** Chapters 5 (Sound) and 7 (Work & Energy) continue using their established layouts and were intentionally untouched per strict task scope. Future iterations may adopt this full-width pattern for complex machine experiments.
+1. **Browser Subagent Offline Environment:** Automated browser subagent screenshot capture via Playwright failed because the offline execution sandbox blocks Playwright from downloading external driver binaries (`playwright-1.57.0-win32_x64.zip` from azureedge.net). Structural layout assertions, DOM rendering, keyboard/ARIA compliance, and interactive toggle state transitions were verified via comprehensive unit and DOM test suites (`collapsibleSetup.test.tsx` and `motionForcesLayout.test.tsx`).
+2. **Global Work & Sound Alignment:** Chapters 5 (Sound) and 7 (Work & Energy) continue using their established layouts and were intentionally untouched per strict task scope.
+
+---
+
+## 8. Collapsible Experiment Setup Refinement
+
+Following the corrective redesign baseline, an additional focused refinement was implemented to place experiment setup controls into an accessible, compact collapsible section positioned directly alongside the simulation playback controls:
+
+### 8.1 Required Layout Hierarchy
+Across all Chapter 4 (Motion) and Chapter 6 (Forces) lesson simulations, the presentation strictly adheres to the preferred sequential order:
+1. **Concise Concept Explanation:** Typography constrained to `max-w-3xl` for high readability.
+2. **Simulation Viewport:** Primary visual focus (`Track`, `ForceFigure`, `MotionScene`, `TwoBodyScene`, `BrakingScene`, `CircleScene`, `GraphScene`).
+3. **Playback Controls Toolbar:** `Play/Pause`, `Reset`, and tactile `Setup` toggle button in the primary action row.
+4. **Collapsible Setup Panel:** Inline expansion below playback controls (`id="{sim}-setup-panel"`, `hidden={!setupOpen}`), collapsed by default on initial experiment load.
+5. **Measurements, Graphs, and Observations:** Telemetry readouts, strip charts, timeline plots, and live status immediately visible beneath the collapsed controls without excessive scrolling.
+
+### 8.2 Setup Behavior & Accessibility
+- **Default State:** Collapsed on initial experiment load (`const [setupOpen, setSetupOpen] = useState(false)`).
+- **Setup Toggle Button:** Clearly labeled "Setup", styled with an accent icon and a dynamic chevron that indicates expanded/collapsed state (`expand_more` with 180° rotation).
+- **ARIA Integration:** Explicit `aria-expanded={setupOpen}` and `aria-controls="{sim}-setup-panel"` attributes for full screen-reader accessibility.
+- **Simulation Invariance:** Opening or closing Setup never alters, restarts, or resets running simulation time or physics state.
+- **Persistent State:** Parameter modifications retain established reset/recompute semantics and do not automatically close the Setup panel.
+- **Context Awareness:** The Setup button and collapsible container only render when the simulation exposes configurable parameters (`editable === true`). Non-editable and locked demonstration views do not render empty setup panels.
+
+### 8.3 Mobile & Desktop Responsiveness
+- **Mobile (320–430 px):** The playback controls bar maintains minimum 44px touch targets (`min-h-[44px]`). Play, Reset, and Setup comfortably fit side-by-side on the top row without horizontal overflow. When expanded, parameters expand inline beneath the transport without clipping, overlaying, or shrinking the viewport canvas.
+- **Desktop (768–1920 px):** Utilizes full available width for the apparatus canvas while keeping Setup easily accessible in one click without dominating the lesson.
+
+### 8.4 Verification Results
+- **TypeScript:** `npx tsc -b` exited with code 0 (0 errors).
+- **Vitest:** 97 test files passed, 1,778 tests passed with 0 failures:
+  - `src/features/workspace/__tests__/collapsibleSetup.test.tsx` (3 interactive DOM tests passed)
+  - `src/features/workspace/__tests__/motionForcesLayout.test.tsx` (11 tests passed)
+- **Production Build:** `npm run build` completed in 10.78s with 0 errors.
+- **Linter:** `npm run lint` (oxlint) exited with 0 errors.
+

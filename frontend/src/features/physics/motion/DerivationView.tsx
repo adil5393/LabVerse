@@ -11,6 +11,10 @@ import { DERIVATIONS, DERIVATION_CASES, derivationById, motionOf, signedPieces, 
 import { fmt, fmtSign, series, totalTime, type Profile } from '../../../engine/physics/motion/profile';
 import { QuestionView } from '../../education/QuestionView';
 import { PHYS } from './physicsColors';
+import { Nar } from '../../narration/NarrationRegion';
+import { NarrationPlayer } from '../../narration/NarrationPlayer';
+import { DerivationNarration } from '../../narration/DerivationNarration';
+import { dnid } from '../../../engine/narration/derivationSegments';
 
 const W = 520, H = 230, ML = 46, MR = 16, MT = 16, MB = 34;
 
@@ -71,14 +75,15 @@ export const DerivationView: React.FC<{ id?: string; alt?: string }> = ({ id = '
   };
 
   return (
+    <DerivationNarration d={d} index={i} gated={gated}>
     <div className="space-y-3" data-visual="derivation" data-testid="derivation" data-derivation={d.id}>
       <div role="group" aria-label="Choose a derivation" className="flex flex-wrap gap-2">
         {DERIVATIONS.map((x) => <button key={x.id} type="button" data-derivation-tab={x.id} aria-pressed={x.id === d.id} onClick={() => choose(x.id)} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: x.id === d.id ? PHYS.prediction : '#334155' }}>{x.id === d.id ? '✓ ' : ''}{x.id}. {x.equation} <span className="text-slate-400">(Eq. {x.textbookNumber})</span></button>)}
       </div>
-      <h3 className="text-lg font-bold text-white">{d.title}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2"><Nar as="h3" id={dnid.title} className="text-lg font-bold text-white">{d.title}</Nar><NarrationPlayer label="this derivation" /></div>
       <div className="rounded-xl border p-3 text-xs text-slate-200 space-y-1" style={{ borderColor: `${PHYS.displacement}66` }} data-testid="derivation-assumptions">
         <strong style={{ color: PHYS.displacement }}>Assumptions</strong>
-        <ul className="list-disc pl-5">{d.assumptions.map((a) => <li key={a}>{a}</li>)}</ul>
+        <ul className="list-disc pl-5">{d.assumptions.map((a, ai) => <Nar as="li" key={a} id={dnid.assume(ai)}>{a}</Nar>)}</ul>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
         <label className="flex items-center gap-2">Case for the figure
@@ -92,16 +97,16 @@ export const DerivationView: React.FC<{ id?: string; alt?: string }> = ({ id = '
 
       <div tabIndex={0} onKeyDown={onKey} role="group" aria-label={`Derivation step ${i + 1} of ${d.steps.length}`} className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" data-testid="derivation-step" data-step={step.id}>
         <div className="text-[11px] font-mono text-slate-400">Step {i + 1} of {d.steps.length}</div>
-        <h4 className="text-sm font-bold text-white">{step.title}</h4>
+        <Nar as="h4" id={dnid.stepTitle} className="text-sm font-bold text-white">{step.title}</Nar>
         {gated && step.check ? (
           <div className="space-y-2" data-testid="derivation-gate">
-            <p className="text-xs" style={{ color: PHYS.prediction }}>{'★'} Supply the missing reasoning first. The mathematics of this step appears after your answer.</p>
+            <Nar id={dnid.gate} className="text-xs" style={{ color: PHYS.prediction }}>{'★'} Supply the missing reasoning first. The mathematics of this step appears after your answer.</Nar>
             <QuestionView question={step.check} onSubmit={(ev) => { if (ev.correct) setSolved((s) => ({ ...s, [`${d.id}-${step.id}`]: true })); }} />
           </div>
         ) : (
           <>
-            <div className="rounded-lg bg-surface-lowest p-2 font-mono text-sm text-white space-y-1" data-testid="derivation-math">{step.math.map((l) => <div key={l}>{l}</div>)}</div>
-            <p className="text-xs text-slate-200"><strong>Why this is valid: </strong>{step.why}</p>
+            <div className="rounded-lg bg-surface-lowest p-2 font-mono text-sm text-white space-y-1" data-testid="derivation-math">{step.math.map((l, mi) => <Nar as="div" key={l} id={dnid.math(mi)}>{l}</Nar>)}</div>
+            <Nar id={dnid.why} className="text-xs text-slate-200"><strong>Why this is valid: </strong>{step.why}</Nar>
             {skipDivision && <p className="text-xs" style={{ color: PHYS.error }}>This case has a = 0, so this step (which divides by a) does not apply. Open the last step of Derivation C for a = 0.</p>}
             {rel && (
               <p className="text-xs rounded-lg p-2 border" style={{ borderColor: `${PHYS.correct}66`, color: '#e2e8f0' }} data-testid="derivation-numbers">
@@ -120,10 +125,11 @@ export const DerivationView: React.FC<{ id?: string; alt?: string }> = ({ id = '
       {last && !gated && (
         <div className="rounded-xl border p-3 space-y-1" style={{ borderColor: `${PHYS.correct}80` }} data-testid="derivation-summary">
           <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.correct }}>{'✓'} Derivation in brief (for revision)</h4>
-          {d.summary.map((l) => <div key={l} className="font-mono text-sm text-white">{l}</div>)}
+          {d.summary.map((l, si) => <Nar as="div" key={l} id={dnid.summary(si)} className="font-mono text-sm text-white">{l}</Nar>)}
         </div>
       )}
     </div>
+    </DerivationNarration>
   );
 };
 

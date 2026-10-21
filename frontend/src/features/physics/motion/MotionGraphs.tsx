@@ -334,14 +334,62 @@ export const GraphReadout: React.FC<{ g: GraphStudioModel }> = ({ g }) => {
 export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profile: given, editable = false, graphs = ['xt', 'vt', 'at'], withPrediction = false, alt, presets, equations = false, shade }) => {
   const g = useGraphStudio({ scenarioId, profile: given, graphs, withPrediction, presets });
   const { profile, setProfile, T, setT, playing, setPlaying, rate, setRate, err, reduced, tClamped, seg, single, list, edit, setErr, setChoice, setChecked } = g;
+  const [setupOpen, setSetupOpen] = useState(false);
 
   return (
     <div className="space-y-3" data-visual="motionGraphs" data-testid="graph-studio">
       <p className="sr-only">{alt ?? describeProfile(profile, 'Motion Graph Studio.')}</p>
       <GraphPrediction g={g} />
 
+      {/* 1. Simulation Viewport */}
+      <GraphScene g={g} shade={shade} />
+
+      {/* 2. Playback Controls with Setup Toggle */}
+      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-time">
+        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>⏱ Simulated time: click a graph, press its arrow keys, use the slider or the buttons</span>
+        <button type="button" onClick={() => { if (tClamped >= T) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : tClamped >= T ? 'Replay' : 'Play'}</button>
+        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tClamped) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step −1 s</button>
+        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(T, Math.floor(tClamped) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
+        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Back to 0 s</button>
+        {editable && (
+          <button
+            type="button"
+            onClick={() => setSetupOpen((o) => !o)}
+            aria-expanded={setupOpen}
+            aria-controls="graph-setup-panel"
+            data-testid="graph-setup-toggle"
+            className="min-h-[44px] px-3.5 rounded-lg border border-surface-border bg-surface-lowest hover:bg-surface-card text-slate-200 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors select-none"
+          >
+            <span className="material-symbols-outlined text-base text-sky-400 select-none" aria-hidden>
+              tune
+            </span>
+            <span>Setup</span>
+            <span
+              className="material-symbols-outlined text-sm text-slate-400 transition-transform duration-200 select-none"
+              style={{ transform: setupOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              aria-hidden
+            >
+              expand_more
+            </span>
+          </button>
+        )}
+        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
+          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
+          <input type="range" min={0} max={T} step="any" value={tClamped} onChange={(e) => g.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${fmt(tClamped)} seconds`} className="w-full min-h-[44px]" />
+        </label>
+        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays. The values at a given simulated time never change.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
+      </div>
+
+      {/* 3. Collapsible Setup Panel (when editable) */}
       {editable && (
-        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-controls">
+        <div
+          id="graph-setup-panel"
+          hidden={!setupOpen}
+          className={!setupOpen ? 'hidden' : 'space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3 transition-all duration-200'}
+          data-testid="graph-controls"
+        >
           <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set the motion (each graph is drawn from these four numbers)</h3>
           {list && <div role="group" aria-label="Choose a scenario" className="flex flex-wrap gap-2">
             {list.map((x) => <button key={x.id} type="button" data-scenario={x.id} aria-pressed={x.profile === profile} onClick={() => { setProfile(x.profile); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold" style={{ borderColor: profile === x.profile ? PHYS.velocity : '#334155', color: '#e2e8f0' }}>{profile === x.profile ? '✓ ' : ''}{x.title}</button>)}
@@ -357,25 +405,8 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
         </div>
       )}
 
-      <GraphScene g={g} shade={shade} />
-
-      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="graph-time">
-        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>⏱ Simulated time: click a graph, press its arrow keys, use the slider or the buttons</span>
-        <button type="button" onClick={() => { if (tClamped >= T) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : tClamped >= T ? 'Replay' : 'Play'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tClamped) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step −1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(T, Math.floor(tClamped) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Back to 0 s</button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
-          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={T} step="any" value={tClamped} onChange={(e) => g.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${fmt(tClamped)} seconds`} className="w-full min-h-[44px]" />
-        </label>
-        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays. The values at a given simulated time never change.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
-      </div>
-
+      {/* 4. Equations and Measurements */}
       {equations && <EquationPanel profile={profile} t={tClamped} />}
-
       <GraphReadout g={g} />
     </div>
   );

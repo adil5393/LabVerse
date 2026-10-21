@@ -14,22 +14,39 @@ import { netArrow, type Arrow } from '../../../engine/physics/forces/forceDiagra
 import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
+import { useViewportProfile } from '../shared/viewportProfiles';
+import {
+  ParameterControl,
+  ExperimentSetupGroup,
+  ModelAssumptions,
+  SimulationPlaybackControls,
+} from '../shared/controls';
 
 const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : `${n > 0 ? '+' : '−'}${tbFmt(Math.abs(n))}`);
 
-const Num: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
-  const [text, setText] = useState(String(value));
-  const [last, setLast] = useState(value);
-  if (last !== value) { setLast(value); setText(String(value)); }
-  return (
-    <div className="flex items-center gap-1 text-xs text-slate-300">
-      <label className="flex items-center gap-1">{label}
-        <input value={text} data-field={id} inputMode="decimal" aria-label={`${label} in ${unit}`} onChange={(e) => { setText(e.target.value); const n = Number(e.target.value.replace('−', '-')); if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n); }} className="w-16 min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white font-mono" /></label><span>{unit}</span>
-      <button type="button" aria-label={`Decrease ${label} by ${step}`} onClick={() => onChange(Math.round((value - step) * 1000) / 1000)} className="min-h-[44px] min-w-[44px] rounded-lg border border-surface-border bg-surface-card text-white">{'−'}</button>
-      <button type="button" aria-label={`Increase ${label} by ${step}`} onClick={() => onChange(Math.round((value + step) * 1000) / 1000)} className="min-h-[44px] min-w-[44px] rounded-lg border border-surface-border bg-surface-card text-white">+</button>
-    </div>
-  );
-};
+const Num: React.FC<{
+  id: string;
+  label: string;
+  unit: string;
+  value: number;
+  step: number;
+  min?: number;
+  max?: number;
+  symbol?: string;
+  onChange: (v: number) => void;
+}> = ({ id, label, unit, value, step, min, max, symbol, onChange }) => (
+  <ParameterControl
+    id={id}
+    label={label}
+    unit={unit}
+    value={value}
+    step={step}
+    min={min}
+    max={max}
+    symbol={symbol}
+    onChange={onChange}
+  />
+);
 
 const arrow = (id: string, label: string, by: string, on: string, value: number, kind: Arrow['kind'] = 'applied'): Arrow | null =>
   Math.abs(value) < 1e-12 ? null : { id, kind, label, by, on, magnitude: Math.abs(value), direction: value > 0 ? 'right' : 'left', horizontal: value };
@@ -104,6 +121,10 @@ export type TwoBodyModel = ReturnType<typeof useTwoBody>;
 export const TwoBodyScene: React.FC<{ m: TwoBodyModel; alt?: string; hidden?: Record<string, boolean> }> = ({ m, alt, hidden = {} }) => {
   const { setup, p, hist, showNet, setShowNet } = m;
   const show = (id: string) => !hidden[id];
+  const trackRef = useRef<SVGSVGElement | null>(null);
+  const profile = useViewportProfile(trackRef);
+  const isMobile = profile.isMobile;
+
   // track scale
   const xs = hist.flatMap((h) => [h.xA, h.xB]);
   let lo = Math.min(...xs, START_A), hi = Math.max(...xs, START_B);
@@ -121,17 +142,21 @@ export const TwoBodyScene: React.FC<{ m: TwoBodyModel; alt?: string; hidden?: Re
   const live = explainTwoBody(setup, p);
   const text = alt ?? `Two carts. ${live}`;
 
+  const cW = isMobile ? 42 : 32;
+  const cH = isMobile ? 28 : 24;
+  const cY = isMobile ? 54 : 58;
+
   return (
     <>
-      <svg viewBox={`0 0 ${TW} ${TH}`} role="img" aria-label={text} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="two-body-track">
+      <svg ref={trackRef} viewBox={`0 0 ${TW} ${TH}`} role="img" aria-label={text} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="two-body-track">
         <line x1={20} y1={86} x2={TW - 20} y2={86} stroke={PHYS.axis} strokeWidth={3} />
-        {ticks.map((v) => <g key={v}><line x1={X(v)} y1={82} x2={X(v)} y2={92} stroke="#94a3b8" /><text x={X(v)} y={106} textAnchor="middle" fontSize={9} fill="#94a3b8">{v}</text></g>)}
-        {show('link') && setup.mode === 'tow' && <line x1={X(p.xA) + 16} y1={72} x2={X(p.xB) - 16} y2={72} stroke={PHYS.force} strokeWidth={2} strokeDasharray="3 3" />}
+        {ticks.map((v) => <g key={v}><line x1={X(v)} y1={82} x2={X(v)} y2={92} stroke="#94a3b8" /><text x={X(v)} y={106} textAnchor="middle" fontSize={isMobile ? 10 : 9} fill="#94a3b8">{v}</text></g>)}
+        {show('link') && setup.mode === 'tow' && <line x1={X(p.xA) + cW / 2} y1={72} x2={X(p.xB) - cW / 2} y2={72} stroke={PHYS.force} strokeWidth={2} strokeDasharray="3 3" />}
         {([['A', p.xA, PHYS.position, p.fOnAByB, p.external], ['B', p.xB, PHYS.displacement, p.fOnBByA, 0]] as [string, number, string, number, number][]).filter(([n]) => show(n)).map(([n, x, col, f]) => (
           <g key={n}>
-            <rect x={X(x) - 16} y={58} width={32} height={24} rx={4} fill={col} stroke="#0f172a" strokeWidth={2} />
-            <text x={X(x)} y={74} textAnchor="middle" fontSize={12} fontWeight={800} fill="#0f172a">{n}</text>
-            {Math.abs(f) > 1e-12 && (<g><line x1={X(x)} y1={48} x2={X(x) + Math.sign(f) * A_ARROW(f)} y2={48} stroke={PHYS.force} strokeWidth={3} /><polygon points={`${X(x) + Math.sign(f) * A_ARROW(f)},48 ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},43 ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},53`} fill={PHYS.force} /><text x={X(x) + Math.sign(f) * A_ARROW(f) / 2} y={40} textAnchor="middle" fontSize={9} fontWeight={700} fill={PHYS.force}>{n === 'A' ? 'by B on A' : 'by A on B'} {tbFmt(Math.abs(f))} N</text></g>)}
+            <rect x={X(x) - cW / 2} y={cY} width={cW} height={cH} rx={4} fill={col} stroke="#0f172a" strokeWidth={2} />
+            <text x={X(x)} y={cY + cH / 2 + 5} textAnchor="middle" fontSize={isMobile ? 13 : 12} fontWeight={800} fill="#0f172a">{n}</text>
+            {Math.abs(f) > 1e-12 && (<g><line x1={X(x)} y1={cY - 8} x2={X(x) + Math.sign(f) * A_ARROW(f)} y2={cY - 8} stroke={PHYS.force} strokeWidth={3} /><polygon points={`${X(x) + Math.sign(f) * A_ARROW(f)},${cY - 8} ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},${cY - 13} ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},${cY - 3}`} fill={PHYS.force} /><text x={X(x) + Math.sign(f) * A_ARROW(f) / 2} y={cY - 16} textAnchor="middle" fontSize={isMobile ? 11 : 9} fontWeight={700} fill={PHYS.force}>{n === 'A' ? 'by B on A' : 'by A on B'} {tbFmt(Math.abs(f))} N</text></g>)}
           </g>
         ))}
         <text x={TW - 24} y={118} textAnchor="end" fontSize={9} fill="#94a3b8">position (m)</text>
@@ -199,50 +224,99 @@ export const TwoBodyReadout: React.FC<{ m: TwoBodyModel }> = ({ m }) => {
 export const TwoBodyView: React.FC<TwoBodyProps> = ({ initial = DEFAULT_TWO_BODY, editable = true, alt, resetToken }) => {
   const m = useTwoBody({ initial, resetToken });
   const { setup, setT, tt, tMax, playing, setPlaying, rate, setRate, err, reduced, change } = m;
+  const [setupOpen, setSetupOpen] = useState(false);
 
   return (
-    <div className="space-y-3" data-visual="twoBody" data-testid="two-body">
+    <div className="space-y-4" data-visual="twoBody" data-testid="two-body">
+      {/* 1. Simulation Viewport Scene & Playback */}
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-surface-border bg-gradient-to-b from-surface-card/60 to-surface-card/30 p-2 sm:p-3 overflow-hidden shadow-xs space-y-2.5">
+          <TwoBodyScene m={m} alt={alt} />
+        </div>
+        <SimulationPlaybackControls
+          time={tt}
+          maxTime={tMax}
+          playing={playing}
+          rate={rate}
+          reducedMotion={reduced}
+          onTogglePlay={() => { if (tt >= tMax) setT(0); setPlaying((x) => !x); }}
+          onStepBack={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); }}
+          onStepForward={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); }}
+          onReset={() => { setPlaying(false); setT(0); }}
+          onScrub={(v) => m.scrub(Number(v))}
+          onRateChange={(r) => setRate(r)}
+          testId="two-body-time"
+          playTestId="two-body-play"
+          resetTestId="two-body-reset"
+          setupToggle={editable ? {
+            open: setupOpen,
+            onToggle: () => setSetupOpen((o) => !o),
+            panelId: 'two-body-setup-panel',
+            testId: 'two-body-setup-toggle',
+          } : undefined}
+        />
+      </div>
+
+      {/* 2. Interactive Collapsible Setup Controls (when editable) */}
       {editable && (
-        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="two-body-controls">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">{setup.mode === 'push' ? 'Two carts pushing apart' : 'Two boxes joined by a string'}</h3>
-          <div className="flex flex-wrap gap-3 items-center">
-            <Num id="massA" label="Mass of A" unit="kg" value={setup.massA} step={1} onChange={(v) => change({ massA: v })} />
-            <Num id="massB" label="Mass of B" unit="kg" value={setup.massB} step={1} onChange={(v) => change({ massB: v })} />
-            <Num id="force" label={setup.mode === 'push' ? 'Interaction force' : 'Pull on A'} unit="N" value={setup.force} step={1} onChange={(v) => change({ force: v })} />
-            <Num id="duration" label="Lasts" unit="s" value={setup.durationS} step={0.5} onChange={(v) => change({ durationS: v })} />
-          </div>
-          <details className="rounded-lg border border-surface-border px-3 py-1" data-testid="two-body-advanced">
+        <div
+          id="two-body-setup-panel"
+          hidden={!setupOpen}
+          className={!setupOpen ? 'hidden' : 'space-y-3 pt-1 transition-all duration-200'}
+          data-testid="two-body-controls"
+        >
+          <ExperimentSetupGroup
+            title={setup.mode === 'push' ? 'Two Carts Pushing Apart' : 'Two Boxes Joined by String'}
+            icon="compare_arrows"
+            columns={2}
+          >
+            <Num id="massA" label="Mass of A" unit="kg" symbol="m_A" value={setup.massA} step={1} min={TB_LIMITS.minMass} max={TB_LIMITS.maxMass} onChange={(v) => change({ massA: v })} />
+            <Num id="massB" label="Mass of B" unit="kg" symbol="m_B" value={setup.massB} step={1} min={TB_LIMITS.minMass} max={TB_LIMITS.maxMass} onChange={(v) => change({ massB: v })} />
+            <Num id="force" label={setup.mode === 'push' ? 'Interaction force' : 'Pull on A'} unit="N" symbol="F" value={setup.force} step={1} min={0} max={TB_LIMITS.maxForce} onChange={(v) => change({ force: v })} />
+            <Num id="duration" label="Pushes last for" unit="s" symbol="Δt" value={setup.durationS} step={0.5} min={0.1} max={5} onChange={(v) => change({ durationS: v })} />
+          </ExperimentSetupGroup>
+
+          <details className="rounded-xl border border-surface-border bg-surface-card/50 px-3 py-1" data-testid="two-body-advanced">
             <summary className="cursor-pointer min-h-[44px] flex items-center text-xs text-slate-200 font-medium">More settings: starting velocities and arrangement</summary>
-            <div className="flex flex-wrap gap-3 items-center py-2">
-              <Num id="uA" label="Start velocity of A" unit="m/s" value={setup.uA} step={1} onChange={(v) => change(setup.mode === 'tow' ? { uA: v, uB: v } : { uA: v })} />
-              <Num id="uB" label="Start velocity of B" unit="m/s" value={setup.uB} step={1} onChange={(v) => change(setup.mode === 'tow' ? { uA: v, uB: v } : { uB: v })} />
-              <div role="group" aria-label="Arrangement" className="flex gap-1">
-                {(['push', 'tow'] as const).map((m) => <button key={m} type="button" aria-pressed={setup.mode === m} data-mode={m} onClick={() => change({ mode: m, uA: 0, uB: 0 })} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: setup.mode === m ? PHYS.force : '#334155' }}>{setup.mode === m ? '✓ ' : ''}{m === 'push' ? 'Push apart' : 'Joined by a string'}</button>)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+              <Num id="uA" label="Start velocity of A" unit="m/s" symbol="u_A" value={setup.uA} step={1} onChange={(v) => change(setup.mode === 'tow' ? { uA: v, uB: v } : { uA: v })} />
+              <Num id="uB" label="Start velocity of B" unit="m/s" symbol="u_B" value={setup.uB} step={1} onChange={(v) => change(setup.mode === 'tow' ? { uA: v, uB: v } : { uB: v })} />
+              <div role="group" aria-label="Arrangement" className="col-span-full flex gap-2">
+                {(['push', 'tow'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={setup.mode === m}
+                    data-mode={m}
+                    onClick={() => change({ mode: m, uA: 0, uB: 0 })}
+                    className="min-h-[44px] px-3.5 rounded-lg border-2 text-xs font-bold text-slate-100 transition-colors"
+                    style={{ borderColor: setup.mode === m ? PHYS.force : '#334155' }}
+                  >
+                    {setup.mode === m ? '✓ ' : ''}{m === 'push' ? 'Push apart' : 'Joined by a string'}
+                  </button>
+                ))}
               </div>
             </div>
           </details>
-          <p className="text-[11px] text-slate-400">A frictionless horizontal track, right positive. The two interaction forces are always equal and opposite and act on different carts. The model does not simulate collisions, rebounds or deformation; masses {TB_LIMITS.minMass} to {TB_LIMITS.maxMass} kg, force up to {TB_LIMITS.maxForce} N.</p>
-          {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="two-body-error"><span aria-hidden>{'✗ '}</span>{err}</p>}
+
+          <ModelAssumptions
+            summary="Idealized two-body interaction model on a frictionless track."
+            assumptions={[
+              'Frictionless horizontal track with right as the positive direction (+x).',
+              'Action-reaction pair: Forces on A and B are equal in magnitude and opposite in direction.',
+              'Does not simulate collisions, rebounds, or inelastic deformation.',
+            ]}
+            limits={{
+              massRange: [TB_LIMITS.minMass, TB_LIMITS.maxMass],
+              forceRange: [0, TB_LIMITS.maxForce],
+            }}
+          />
+
+          {err && <p role="alert" className="text-xs font-bold text-red-400 p-2 rounded-lg bg-red-950/30 border border-red-500/40" data-testid="two-body-error"><span aria-hidden>{'✗ '}</span>{err}</p>}
         </div>
       )}
 
-      <TwoBodyScene m={m} alt={alt} />
-
-      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="two-body-time">
-        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (fixed 0.01 s steps)</span>
-        <button type="button" onClick={() => { if (tt >= tMax) setT(0); setPlaying((x) => !x); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }} data-testid="two-body-play">{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">{'Step −1 s'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border text-sm" style={{ borderColor: PHYS.error, color: PHYS.error }} data-testid="two-body-reset">Reset to 0 s</button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
-          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={tMax} step="any" value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${tbFmt(tt)} seconds`} className="w-full min-h-[44px]" />
-        </label>
-        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
-      </div>
-
+      {/* 3. Measurements, Graphs, and Observations */}
       <TwoBodyReadout m={m} />
     </div>
   );

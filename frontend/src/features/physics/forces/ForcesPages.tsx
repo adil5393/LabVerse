@@ -1,12 +1,13 @@
 /**
  * Chapter 6 hub (/physics/forces), lesson page and NCERT Exercises page (PHY-2A). The hub lists the four established
- * destinations; Chapter Practice and the later units are marked Upcoming and are not links.
+ * destinations: Learn, Free Laboratory, NCERT Exercises and Chapter Practice; only the closing Journey Beyond activities are marked Upcoming and are not links.
  */
 
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { FORCES_CHAPTER } from '../../../engine/physics/forces/learn/content';
+import { FORCE_PRACTICE_ITEMS } from '../../../engine/physics/forces/practice';
 import { FORCES_MAP, FORCES_TEXTBOOK, forcesCoverageCounts } from '../../../engine/physics/forces/curriculum';
 import { FORCE_EXERCISES, solvedForceExerciseNumbers, type ForceExercise, type Illustration } from '../../../engine/physics/forces/exercises';
 import { lessonStatus, STATUS_LABEL } from '../../../engine/education/progress';
@@ -122,7 +123,7 @@ const ForcesLearnSection: React.FC = () => {
                 data-learn-unit={u.id}
                 className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-[#131923] to-[#0f131c] p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
               >
-                <UnitIntroduction unit={u} />
+                <UnitIntroduction unit={u} narrate />
 
                 {/* Optional Preparation: Subordinate drawer */}
                 {u.prerequisiteIds && u.prerequisiteIds.length > 0 && (
@@ -198,7 +199,7 @@ const ForcesLearnSection: React.FC = () => {
 
         <div className="rounded-2xl border border-dashed border-surface-border p-4 space-y-1" data-testid="forces-upcoming-units">
           <h3 className="text-sm font-black text-slate-300">Upcoming units</h3>
-          <p className="text-xs text-slate-400">All of Sections 6.1 to 6.7 are available; only the closing &ldquo;Journey Beyond&rdquo; activities are upcoming. They are not available yet.</p>
+          <p className="text-xs text-slate-400">All of Sections 6.1 to 6.7 are available; only the closing &ldquo;Journey Beyond&rdquo; activities are upcoming.</p>
         </div>
       </section>
     </VisualRegistryProvider>
@@ -262,15 +263,15 @@ export const ForcesHub: React.FC = () => {
             <Link to="/physics/forces/exercises" data-destination="exercises" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the exercises</Link>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-surface-border/80 bg-surface-card/40 p-5 space-y-3 flex flex-col justify-between opacity-80" aria-disabled="true" data-destination="practice">
+          <div className="rounded-2xl border border-emerald-500/40 bg-surface-card p-5 space-y-3 flex flex-col justify-between" data-testid="forces-practice-card">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-slate-400">task_alt</span>
-                <h2 className="text-lg font-black text-slate-300">Chapter Practice</h2>
+                <span className="material-symbols-outlined text-[18px] text-emerald-400">task_alt</span>
+                <h2 className="text-lg font-black text-white">Chapter Practice</h2>
               </div>
-              <p className="text-xs text-slate-400">Upcoming chapter-wide challenge. Each lesson already contains its own practice.</p>
+              <p className="text-xs text-slate-300">{FORCE_PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order.</p>
             </div>
-            <span className="min-h-[46px] inline-flex items-center justify-center rounded-xl border border-surface-border text-slate-400 font-bold text-sm">Upcoming</span>
+            <Link to="/physics/forces/practice" data-destination="practice" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open Chapter Practice</Link>
           </div>
         </section>
 

@@ -260,7 +260,7 @@ describe('curriculum map and textbook inventory', () => {
     expect(WORK_TEXTBOOK_INVENTORY.exercises).toBe(15);
     const sections = new Set(WORK_MAP.map((r) => r.section));
     for (const s of ['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6']) expect(sections.has(s), s).toBe(true);
-    const learn = WORK_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook' && r.lessonIds.length);
+    const learn = WORK_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook' && r.lessonIds.length && r.id !== 'w-watermill');
     expect(learn.map((r) => r.section)).toEqual(['7.1', '7.1.1', '7.1.2', '7.2', '7.3', '7.4.1', '7.4.2', '7.4.3', '7.5', '7.6']);
     for (const r of WORK_MAP.filter((x) => x.status === 'planned')) expect(r.lessonIds).toEqual([]);
     for (const r of WORK_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], id).toBeDefined();

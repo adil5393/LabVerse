@@ -92,7 +92,7 @@ describe('textbook coverage: examples, activities and Pause and Ponder items map
     const textbook = WORK_MAP.filter((r) => r.kind === 'textbook');
     // The only textbook items without an interactive lesson are the closing activities, which are suggested home or external activities
     const notLearn = textbook.filter((r) => r.status !== 'learn').map((r) => r.id);
-    expect(notLearn.sort()).toEqual(['w-bridge', 'w-quest'].sort());
+    expect(notLearn.sort()).toEqual(['w-glance', 'w-quest'].sort());
     for (const id of notLearn) expect(WORK_MAP.find((r) => r.id === id)!.status).toBe('planned');
     for (const r of WORK_MAP.filter((x) => x.kind === 'enrichment')) expect(r.section, r.id).toBe('enrichment');
     // all lessons are claimed by the map

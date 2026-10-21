@@ -26,6 +26,7 @@ import { DerivationVisual } from './DerivationView';
 import { MotionGraphsVisual } from './MotionGraphs';
 import { PHYS, QUANTITY, type PhysQuantity } from './physicsColors';
 import { LabButton, LabMeasurement, LabSelect, LabSlider } from '../../workspace/controls';
+import { ExperimentSetupGroup, ModelAssumptions } from '../shared/controls';
 
 const W = 600, H = 230, PAD = 28, TRACK_Y = 110;
 const C = { track: PHYS.axis, origin: PHYS.origin, route: PHYS.distance, obj: PHYS.position, text: '#e2e8f0', disp: PHYS.displacement, time: PHYS.time };
@@ -521,23 +522,79 @@ export const MotionPlaybackControls: React.FC<{ m: MotionTrackModel; compact?: b
   );
 };
 
-/** The lesson/composite version: every piece stacked, exactly as before. */
+/** The lesson/composite version: Viewport and move buttons first, then live telemetry, and compact settings below. */
 export const MotionTrackView: React.FC<ViewProps> = ({ range, start, moves, durations, editable, show, stepM, playback, alt, onPath }) => {
   const m = useMotionTrack({ range, start, moves, durations, editable, show, stepM, onPath });
+  const [setupOpen, setSetupOpen] = useState(false);
+
   return (
-    <div className="space-y-3" data-visual="motionTrack" data-testid="motion-track">
-      <MotionScene m={m} alt={alt} />
+    <div className="space-y-4" data-visual="motionTrack" data-testid="motion-track">
+      {/* 1. Track Scene & Direct Move Actions */}
+      <div className="rounded-2xl border border-surface-border bg-gradient-to-b from-surface-card/60 to-surface-card/30 p-2 sm:p-3 overflow-hidden shadow-xs space-y-2.5">
+        <MotionScene m={m} alt={alt} />
+        {editable && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-2 border-t border-surface-border/50">
+            <div className="flex flex-wrap items-center gap-2">
+              <MotionMoveButtons m={m} />
+              <button
+                type="button"
+                onClick={() => setSetupOpen((o) => !o)}
+                aria-expanded={setupOpen}
+                aria-controls="motion-setup-panel"
+                data-testid="motion-setup-toggle"
+                className="min-h-[44px] px-3.5 rounded-xl border border-surface-border bg-surface-lowest hover:bg-surface-card text-slate-200 font-semibold flex items-center justify-center gap-1.5 transition-colors select-none text-sm"
+              >
+                <span className="material-symbols-outlined text-base text-sky-400 select-none" aria-hidden>
+                  tune
+                </span>
+                <span>Setup</span>
+                <span
+                  className="material-symbols-outlined text-sm text-slate-400 transition-transform duration-200 select-none"
+                  style={{ transform: setupOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                  aria-hidden
+                >
+                  expand_more
+                </span>
+              </button>
+            </div>
+            <div className="text-xs font-mono text-slate-400">
+              Step: <strong className="text-white">{m.step} m</strong> ({m.moveS} s)
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Collapsible Setup Panel (when editable) */}
+      {editable && (
+        <div
+          id="motion-setup-panel"
+          hidden={!setupOpen}
+          className={!setupOpen ? 'hidden' : 'space-y-3 pt-1 transition-all duration-200'}
+          data-testid="motion-controls"
+        >
+          <ExperimentSetupGroup
+            title="Track Settings & Precision Moves"
+            icon="tune"
+            columns={1}
+          >
+            <MotionParameterFields m={m} />
+          </ExperimentSetupGroup>
+
+          <ModelAssumptions
+            summary="Idealized one-dimensional motion model on a calibrated linear scale."
+            assumptions={[
+              'One-dimensional straight-line motion: Right is positive (+x) and left is negative (−x).',
+              'Exact position model: Each move takes simulated time without measurement error or friction loss.',
+              'Displacement is the straight-line vector from start to current position, independent of the path taken.',
+            ]}
+          />
+        </div>
+      )}
+
+      {/* 3. Measurements and Live Observations */}
       <MotionLive m={m} />
       <MotionReadout m={m} />
       {m.path.legs.length > 0 && <MotionHistory m={m} />}
-      {editable && (
-        <div className="space-y-3 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="motion-controls">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Controls</h3>
-          <div className="space-y-2"><span className="text-[11px] font-mono text-slate-400 block">1 · Move (each move takes {m.moveS} s of simulated time)</span><MotionMoveButtons m={m} /></div>
-          <div className="space-y-2"><span className="text-[11px] font-mono text-slate-400 block">2 · Settings, go to an exact position, undo and reset</span><MotionParameterFields m={m} /></div>
-          <p className="text-[11px] text-slate-400">Each move takes {m.moveS} s of <strong>simulated</strong> time. Positions are exact in this model; a real experiment would use a measuring tape and a stopwatch and would have measurement error.</p>
-        </div>
-      )}
       <MotionMessage m={m} />
       {playback && <MotionPlaybackControls m={m} />}
     </div>

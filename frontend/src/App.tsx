@@ -116,6 +116,11 @@ const EquationLab = lazy(() =>
 const CircularLab = lazy(() =>
   import('./features/physics/motion/MotionLabs').then((m) => ({ default: m.CircularLab }))
 );
+const SoundHub = lazy(() => import('./features/physics/sound/SoundPages').then((m) => ({ default: m.SoundHub })));
+const SoundLearnPage = lazy(() => import('./features/physics/sound/SoundPages').then((m) => ({ default: m.SoundLearnPage })));
+const SoundExercises = lazy(() => import('./features/physics/sound/SoundPages').then((m) => ({ default: m.SoundExercises })));
+const VibrationLabPage = lazy(() => import('./features/physics/sound/SoundPages').then((m) => ({ default: m.VibrationLabPage })));
+const WaveLabPage = lazy(() => import('./features/physics/sound/SoundPages').then((m) => ({ default: m.WaveLabPage })));
 const MotionPractice = lazy(() =>
   import('./features/physics/motion/MotionPractice').then((m) => ({ default: m.MotionPractice }))
 );
@@ -127,6 +132,9 @@ const ForcesHub = lazy(() =>
 );
 const ForcesLearnPage = lazy(() =>
   import('./features/physics/forces/ForcesPages').then((m) => ({ default: m.ForcesLearnPage }))
+);
+const ForcesPractice = lazy(() =>
+  import('./features/physics/forces/ForcesPractice').then((m) => ({ default: m.ForcesPractice }))
 );
 const ForcesExercises = lazy(() =>
   import('./features/physics/forces/ForcesPages').then((m) => ({ default: m.ForcesExercises }))
@@ -209,6 +217,12 @@ export const App: React.FC = () => {
           <Route path="/physics/forces/derivations" element={<ForcesDerivation />} />
           <Route path="/physics/forces/interactions" element={<ForcesInteractions />} />
           <Route path="/physics/forces/exercises" element={<ForcesExercises />} />
+          <Route path="/physics/forces/practice" element={<ForcesPractice />} />
+          <Route path="/physics/sound" element={<SoundHub />} />
+          <Route path="/physics/sound/vibration" element={<VibrationLabPage />} />
+          <Route path="/physics/sound/wave" element={<WaveLabPage />} />
+          <Route path="/physics/sound/exercises" element={<SoundExercises />} />
+          <Route path="/physics/sound/learn/:lessonId" element={<SoundLearnPage />} />
           <Route path="/physics/forces/learn/:lessonId" element={<ForcesLearnPage />} />
           <Route path="/physics/work" element={<WorkHub />} />
           <Route path="/physics/work/lab" element={<WorkLab />} />

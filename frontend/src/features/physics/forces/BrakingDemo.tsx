@@ -14,52 +14,38 @@ import { netArrow } from '../../../engine/physics/forces/forceDiagram';
 import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
+import { useViewportProfile } from '../shared/viewportProfiles';
+import {
+  ParameterControl,
+  ExperimentSetupGroup,
+  ModelAssumptions,
+} from '../shared/controls';
 
 export const r2 = (n: number): string => { const r = Math.round(n * 100) / 100; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
 
-export const NumField: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
-  const [text, setText] = useState(String(value));
-  const [last, setLast] = useState(value);
-  if (last !== value) { setLast(value); setText(String(value)); }
-  return (
-    <div className="flex items-center justify-between gap-1 text-xs text-slate-300 bg-surface-lowest/70 border border-surface-border rounded-lg p-1.5">
-      <label className="flex items-center gap-1.5 font-medium text-slate-300">
-        <span>{label}</span>
-        <input
-          value={text}
-          data-field={id}
-          inputMode="decimal"
-          aria-label={`${label} in ${unit}`}
-          onChange={(e) => {
-            setText(e.target.value);
-            const n = Number(e.target.value);
-            if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n);
-          }}
-          className="w-16 min-h-[32px] rounded border border-surface-border bg-surface-lowest px-1.5 text-white font-mono text-xs focus:border-primary outline-none text-right"
-        />
-        <span className="text-[11px] text-slate-400 font-mono">{unit}</span>
-      </label>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label={`Decrease ${label} by ${step}`}
-          onClick={() => onChange(Math.round((value - step) * 100) / 100)}
-          className="min-h-[32px] min-w-[32px] rounded border border-surface-border bg-surface-card hover:bg-surface-variant text-white text-xs flex items-center justify-center transition-colors"
-        >
-          {'−'}
-        </button>
-        <button
-          type="button"
-          aria-label={`Increase ${label} by ${step}`}
-          onClick={() => onChange(Math.round((value + step) * 100) / 100)}
-          className="min-h-[32px] min-w-[32px] rounded border border-surface-border bg-surface-card hover:bg-surface-variant text-white text-xs flex items-center justify-center transition-colors"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
-};
+export const NumField: React.FC<{
+  id: string;
+  label: string;
+  unit: string;
+  value: number;
+  step: number;
+  min?: number;
+  max?: number;
+  symbol?: string;
+  onChange: (v: number) => void;
+}> = ({ id, label, unit, value, step, min, max, symbol, onChange }) => (
+  <ParameterControl
+    id={id}
+    label={label}
+    unit={unit}
+    value={value}
+    step={step}
+    min={min}
+    max={max}
+    symbol={symbol}
+    onChange={onChange}
+  />
+);
 
 export const W = 680, H = 150;
 
@@ -157,6 +143,10 @@ export function useBrakingDemo({ initial = DEFAULT_BRAKING, resetToken }: Brakin
 
 export const BrakingScene: React.FC<{ b: UseBrakingDemoReturn; alt?: string }> = ({ b, alt }) => {
   const { setup, s } = b;
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const profile = useViewportProfile(svgRef);
+  const isMobile = profile.isMobile;
+
   const span = Math.max(10, setup.speed * (BRAKE_AT + 1.5) + 4);
   const leftPad = 135;
   const rightPad = 35;
@@ -170,26 +160,26 @@ export const BrakingScene: React.FC<{ b: UseBrakingDemoReturn; alt?: string }> =
   const text = alt ?? `Sudden braking: vehicle at ${r2(setup.speed)} m/s brakes at ${r2(setup.decel)} m/s² from 1 s. Passenger ${setup.restrained ? 'wears a belt' : 'has no belt'}. ${b.live}`;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full h-auto rounded-xl bg-surface-lowest border border-surface-border" data-testid="braking-scene">
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full h-auto rounded-xl bg-surface-lowest border border-surface-border" data-testid="braking-scene">
       <line x1={15} y1={110} x2={W - 15} y2={110} stroke={PHYS.axis} strokeWidth={3} />
       {tick.map((m) => (
         <g key={m}>
           <line x1={X(m)} y1={106} x2={X(m)} y2={116} stroke="#94a3b8" />
-          <text x={X(m)} y={130} textAnchor="middle" fontSize={10} fill="#94a3b8">{m}</text>
+          <text x={X(m)} y={130} textAnchor="middle" fontSize={isMobile ? 11 : 10} fill="#94a3b8">{m}</text>
         </g>
       ))}
-      <text x={W - 20} y={144} textAnchor="end" fontSize={10} fill="#94a3b8">position on the road (m)</text>
+      <text x={W - 20} y={144} textAnchor="end" fontSize={isMobile ? 11 : 10} fill="#94a3b8">position on the road (m)</text>
       {/* Car chassis - cleanly bounded so rear does not clip */}
       <rect x={carX - carW} y={62} width={carW} height={44} rx={8} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
       {/* Seat backrest */}
       <rect x={seat - 10} y={70} width={6} height={20} fill="#475569" />
-      <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={10} fill={PHYS.position}>vehicle {r2(s.vehicleV)} m/s</text>
+      <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={isMobile ? 11 : 10} fill={PHYS.position}>vehicle {r2(s.vehicleV)} m/s</text>
       {/* Passenger */}
-      <circle cx={pX} cy={72} r={9} fill={PHYS.velocity} stroke="#0f172a" strokeWidth={2} />
-      <text x={pX} y={50} textAnchor="middle" fontSize={11} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>
-      {setup.restrained && <line x1={seat - 4} y1={80} x2={pX} y2={74} stroke={PHYS.force} strokeWidth={3} strokeDasharray="4 3" />}
+      <circle cx={pX} cy={72} r={isMobile ? 12 : 9} fill={PHYS.velocity} stroke="#0f172a" strokeWidth={2} />
+      <text x={pX} y={isMobile ? 48 : 50} textAnchor="middle" fontSize={isMobile ? 12 : 11} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>
+      {setup.restrained && <line x1={seat - 4} y1={80} x2={pX} y2={74} stroke={PHYS.force} strokeWidth={isMobile ? 4 : 3} strokeDasharray="4 3" />}
       <line x1={seat} y1={30} x2={seat} y2={36} stroke={PHYS.time} />
-      <text x={leftPad + 2} y={20} fontSize={10} fill={PHYS.time}>{s.state === 'cruising' ? 'cruising' : s.state}</text>
+      <text x={leftPad + 2} y={20} fontSize={isMobile ? 11 : 10} fill={PHYS.time}>{s.state === 'cruising' ? 'cruising' : s.state}</text>
     </svg>
   );
 };
@@ -198,13 +188,23 @@ export const BrakingSetupFields: React.FC<{ b: UseBrakingDemoReturn }> = ({ b })
   const { setup, change, err } = b;
   return (
     <div className="space-y-3" data-testid="braking-controls">
-      <div className="space-y-2">
-        <NumField id="speed" label="Speed" unit="m/s" value={setup.speed} step={5} onChange={(v) => change({ speed: v })} />
-        <NumField id="decel" label="Braking deceleration" unit="m/s²" value={setup.decel} step={1} onChange={(v) => change({ decel: v })} />
-        <NumField id="pmass" label="Passenger mass" unit="kg" value={setup.passengerMassKg} step={10} onChange={(v) => change({ passengerMassKg: v })} />
+      <ExperimentSetupGroup
+        title="Vehicle & Passenger Setup"
+        icon="directions_car"
+        description="Initial cruising velocity and passenger physical inertia parameters."
+        columns={1}
+      >
+        <NumField id="speed" label="Speed" unit="m/s" symbol="v" value={setup.speed} step={5} min={0} max={BRAKING_LIMITS.maxSpeed} onChange={(v) => change({ speed: v })} />
+        <NumField id="decel" label="Braking deceleration" unit="m/s²" symbol="a" value={setup.decel} step={1} min={BRAKING_LIMITS.minDecel} max={BRAKING_LIMITS.maxDecel} onChange={(v) => change({ decel: v })} />
+        <NumField id="pmass" label="Passenger mass" unit="kg" symbol="m" value={setup.passengerMassKg} step={10} min={BRAKING_LIMITS.minMass} max={BRAKING_LIMITS.maxMass} onChange={(v) => change({ passengerMassKg: v })} />
         
-        <div className="space-y-1 pt-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Seat Belt Restraint</span>
+        <div className="space-y-1.5 pt-1">
+          <label className="font-semibold text-xs text-slate-200 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-sm text-emerald-400 select-none" aria-hidden>
+              airline_seat_recline_normal
+            </span>
+            <span>Seat Belt Restraint</span>
+          </label>
           <div role="group" aria-label="Seat belt" className="grid grid-cols-2 gap-1.5">
             {[false, true].map((on) => (
               <button
@@ -213,9 +213,9 @@ export const BrakingSetupFields: React.FC<{ b: UseBrakingDemoReturn }> = ({ b })
                 aria-pressed={setup.restrained === on}
                 data-belt={on ? 'on' : 'off'}
                 onClick={() => change({ restrained: on })}
-                className={`min-h-[36px] px-2 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                className={`min-h-[44px] px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors select-none ${
                   setup.restrained === on
-                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+                    ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300'
                     : 'border-surface-border bg-surface-lowest text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -225,14 +225,23 @@ export const BrakingSetupFields: React.FC<{ b: UseBrakingDemoReturn }> = ({ b })
             ))}
           </div>
         </div>
-      </div>
+      </ExperimentSetupGroup>
 
-      <p className="text-[11px] text-slate-400 leading-relaxed bg-surface-lowest/50 p-2 rounded-lg border border-surface-border">
-        Simplified teaching model: vehicle braking from 1 s on slippery seat without seat friction. Ends before contact. Max speed {BRAKING_LIMITS.maxSpeed} m/s.
-      </p>
+      <ModelAssumptions
+        summary="Simplified inertia teaching model of vehicle braking."
+        assumptions={[
+          'Vehicle cruises at constant speed, then brakes uniformly starting at t = 1 s.',
+          'Passenger moves on slippery seat without seat friction; belt exerts backward force if engaged.',
+          'Demonstration ends safely before any contact or collision.',
+        ]}
+        limits={{
+          velocityRange: [0, BRAKING_LIMITS.maxSpeed],
+          massRange: [BRAKING_LIMITS.minMass, BRAKING_LIMITS.maxMass],
+        }}
+      />
 
       {err && (
-        <p role="alert" className="text-xs font-bold p-2 rounded bg-rose-500/10 border border-rose-500/20" style={{ color: PHYS.error }} data-testid="braking-error">
+        <p role="alert" className="text-xs font-bold p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400" data-testid="braking-error">
           <span aria-hidden>{'✗ '}</span>{err}
         </p>
       )}
@@ -240,7 +249,17 @@ export const BrakingSetupFields: React.FC<{ b: UseBrakingDemoReturn }> = ({ b })
   );
 };
 
-export const BrakingTimeControls: React.FC<{ b: UseBrakingDemoReturn; compact?: boolean }> = ({ b, compact = false }) => {
+export const BrakingTimeControls: React.FC<{
+  b: UseBrakingDemoReturn;
+  compact?: boolean;
+  setupToggle?: {
+    open: boolean;
+    onToggle: () => void;
+    panelId: string;
+    label?: string;
+    testId?: string;
+  };
+}> = ({ b, compact = false, setupToggle }) => {
   const { tt, tMax, playing, setPlaying, setT, reset, jumpToEnd, rate, setRate, reduced } = b;
   return (
     <div role="group" aria-label="Time controls" className={`flex flex-wrap items-center gap-2 ${compact ? '' : 'rounded-xl border border-surface-border bg-surface-card/60 p-3'}`} data-testid="braking-time">
@@ -289,6 +308,28 @@ export const BrakingTimeControls: React.FC<{ b: UseBrakingDemoReturn; compact?: 
       >
         End
       </button>
+      {setupToggle && (
+        <button
+          type="button"
+          onClick={setupToggle.onToggle}
+          aria-expanded={setupToggle.open}
+          aria-controls={setupToggle.panelId}
+          data-testid={setupToggle.testId ?? 'braking-setup-toggle'}
+          className="min-h-[34px] px-2.5 rounded-lg border border-surface-border bg-surface-lowest hover:bg-surface-card text-slate-200 font-semibold flex items-center justify-center gap-1 transition-colors select-none text-xs"
+        >
+          <span className="material-symbols-outlined text-[15px] text-sky-400 select-none" aria-hidden>
+            tune
+          </span>
+          <span>{setupToggle.label ?? 'Setup'}</span>
+          <span
+            className="material-symbols-outlined text-xs text-slate-400 transition-transform duration-200 select-none"
+            style={{ transform: setupToggle.open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            aria-hidden
+          >
+            expand_more
+          </span>
+        </button>
+      )}
       <label className="flex items-center gap-1.5 text-xs text-slate-300 ml-auto">
         <span className="text-[11px] text-slate-400">Speed:</span>
         <select
@@ -361,25 +402,46 @@ export const BrakingLiveStatus: React.FC<{ b: UseBrakingDemoReturn }> = ({ b }) 
 
 export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAKING, editable = true, alt, resetToken }) => {
   const b = useBrakingDemo({ initial, resetToken });
+  const [setupOpen, setSetupOpen] = useState(false);
 
   return (
-    <div className="space-y-3" data-visual="brakingDemo" data-testid="braking-demo">
+    <div className="space-y-4" data-visual="brakingDemo" data-testid="braking-demo">
+      {/* 1. Primary Simulation Viewport Surface */}
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-surface-border bg-gradient-to-b from-surface-card/60 to-surface-card/30 p-2 sm:p-3 overflow-hidden shadow-xs space-y-2.5">
+          <BrakingScene b={b} alt={alt} />
+          <ForceFigure
+            object="passenger"
+            arrows={b.arrows}
+            net={b.net}
+            showIndividual
+            showNet
+            alt={`Forces on the passenger: ${b.setup.restrained && b.s.passengerForce !== 0 ? `belt ${r2(Math.abs(b.s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(b.setup.passengerMassKg * G)} N each, vertical.`}
+          />
+        </div>
+        <BrakingTimeControls
+          b={b}
+          setupToggle={editable ? {
+            open: setupOpen,
+            onToggle: () => setSetupOpen((o) => !o),
+            panelId: 'braking-setup-panel',
+            testId: 'braking-setup-toggle',
+          } : undefined}
+        />
+      </div>
+
+      {/* 2. Interactive Collapsible Setup Controls (when editable) */}
       {editable && (
-        <div className="rounded-xl border border-surface-border bg-surface-card/60 p-3">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300 mb-2">Set up the demonstration</h3>
+        <div
+          id="braking-setup-panel"
+          hidden={!setupOpen}
+          className={!setupOpen ? 'hidden' : 'space-y-2 pt-1 transition-all duration-200'}
+        >
           <BrakingSetupFields b={b} />
         </div>
       )}
-      <BrakingScene b={b} alt={alt} />
-      <ForceFigure
-        object="passenger"
-        arrows={b.arrows}
-        net={b.net}
-        showIndividual
-        showNet
-        alt={`Forces on the passenger: ${b.setup.restrained && b.s.passengerForce !== 0 ? `belt ${r2(Math.abs(b.s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(b.setup.passengerMassKg * G)} N each, vertical.`}
-      />
-      <BrakingTimeControls b={b} />
+
+      {/* 3. Measurements, Graphs, and Observations */}
       <BrakingReadout b={b} className="grid grid-cols-2 lg:grid-cols-4 gap-2" />
       <BrakingLiveStatus b={b} />
     </div>

@@ -15,6 +15,7 @@ import { ConceptExplainer, GuidedPractice, IndependentPractice, LearningReflecti
 import { PrerequisiteCard, findLessonStep, findRefresher } from './Prerequisites';
 import { JudgeProvider } from './judges';
 import { VisualRegistryProvider, type VisualRegistry } from './visuals';
+import { NarrationEnabledProvider } from '../narration/NarrationRegion';
 
 type Stage = 'understand' | 'worked' | 'guided' | 'independent' | 'reflect';
 const STAGES: { id: Stage; label: string; icon: string }[] = [
@@ -92,6 +93,7 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
 
   return (
     <VisualRegistryProvider value={registry}>
+      <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
       <JudgeProvider value={judges}>
       <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid" data-lesson={lesson.id}>
         <GlobalHeader />
@@ -250,6 +252,7 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
         </main>
       </div>
       </JudgeProvider>
+      </NarrationEnabledProvider>
     </VisualRegistryProvider>
   );
 };

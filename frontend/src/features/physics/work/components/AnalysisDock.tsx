@@ -8,6 +8,8 @@ import {
 } from '../../../../engine/physics/work/workModel';
 import { PHYS } from '../../motion/physicsColors';
 
+import { useViewportProfile } from '../../shared/viewportProfiles';
+
 export type AnalysisTab = 'measurements' | 'calculations' | 'graphs' | 'data' | 'explanation';
 export type DockSizeMode = 'compact' | 'balanced' | 'focus';
 
@@ -62,7 +64,9 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
   const [internalTab, setInternalTab] = useState<AnalysisTab>('measurements');
   const activeTab = controlledTab ?? internalTab;
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const profile = useViewportProfile(sectionRef);
+  const isMobile = profile.isMobile;
   const [internalMode, setInternalMode] = useState<DockSizeMode>(expanded ? 'focus' : (isMobile ? 'compact' : 'balanced'));
   const currentMode = controlledMode ?? (expanded ? 'focus' : internalMode);
 
@@ -142,6 +146,7 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
 
   return (
     <section
+      ref={sectionRef}
       style={{ height: `${effectiveHeight}px` }}
       className="flex-shrink-0 bg-surface-container-low border-t border-outline-variant flex flex-col z-40 select-none relative transition-[height] duration-75"
       data-testid="work-readout"
@@ -319,7 +324,7 @@ export const AnalysisDock: React.FC<AnalysisDockProps> = ({
         /* BALANCED & FOCUS TAB PANELS */
         <div className="flex-1 p-2 sm:p-2.5 overflow-y-auto">
           {/* TAB 1: MEASUREMENTS (Stitch Bento Cards) */}
-          <div className={activeTab === 'measurements' ? 'grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 h-full items-stretch' : 'hidden'}>
+          <div className={activeTab === 'measurements' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 h-full items-stretch' : 'hidden'}>
             {/* Metric Card 1: Applied Work */}
             <div className="border border-outline-variant rounded bg-surface-container-lowest p-2.5 flex flex-col justify-between shadow-xs">
               <div className="flex items-center justify-between border-b border-outline-variant/60 pb-1">

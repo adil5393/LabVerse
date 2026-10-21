@@ -11,6 +11,10 @@ import { momentumHistory } from '../../../engine/physics/forces/secondLaw';
 import { QuestionView } from '../../education/QuestionView';
 import { PlotView } from './ForceGraphs';
 import { PHYS } from '../motion/physicsColors';
+import { Nar } from '../../narration/NarrationRegion';
+import { NarrationPlayer } from '../../narration/NarrationPlayer';
+import { DerivationNarration } from '../../narration/DerivationNarration';
+import { dnid } from '../../../engine/narration/derivationSegments';
 
 const r2 = (n: number): string => { const r = Math.round(n * 100) / 100; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
 const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : `${n > 0 ? '+' : '−'}${r2(Math.abs(n))}`);
@@ -40,15 +44,16 @@ export const SecondLawDerivationView: React.FC<{ id?: string; alt?: string }> = 
   const aMax = Math.max(1, Math.abs(ctx.a) * 2.4);
 
   return (
+    <DerivationNarration d={d} index={i} gated={gated}>
     <div className="space-y-3" data-visual="secondLawDerivation" data-testid="sl-derivation" data-derivation={d.id}>
       <div role="group" aria-label="Choose a derivation" className="flex flex-wrap gap-2">
         {SECOND_LAW_DERIVATIONS.map((x) => <button key={x.id} type="button" data-derivation-tab={x.id} aria-pressed={x.id === d.id} onClick={() => { setWhich(x.id); setI(0); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: x.id === d.id ? PHYS.prediction : '#334155' }}>{x.id === d.id ? '✓ ' : ''}{x.id}. {x.id === 'A' ? 'From the cart experiments' : 'From momentum (enrichment)'}</button>)}
       </div>
-      <h3 className="text-lg font-bold text-white">{d.title}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2"><Nar as="h3" id={dnid.title} className="text-lg font-bold text-white">{d.title}</Nar><NarrationPlayer label="this derivation" /></div>
       <p className="text-[11px] text-slate-400" data-testid="sl-source">Source: {d.source}</p>
       <div className="rounded-xl border p-3 text-xs text-slate-200 space-y-1" style={{ borderColor: `${PHYS.displacement}66` }} data-testid="derivation-assumptions">
         <strong style={{ color: PHYS.displacement }}>Assumptions</strong>
-        <ul className="list-disc pl-5">{d.assumptions.map((a) => <li key={a}>{a}</li>)}</ul>
+        <ul className="list-disc pl-5">{d.assumptions.map((a, ai) => <Nar as="li" key={a} id={dnid.assume(ai)}>{a}</Nar>)}</ul>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
         <label className="flex flex-wrap items-center gap-2 max-w-full min-w-0">Case for the figure
@@ -83,16 +88,16 @@ export const SecondLawDerivationView: React.FC<{ id?: string; alt?: string }> = 
 
       <div tabIndex={0} onKeyDown={onKey} role="group" aria-label={`Derivation step ${i + 1} of ${d.steps.length}`} className="rounded-xl border border-surface-border bg-surface-card p-3 space-y-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" data-testid="derivation-step" data-step={step.id}>
         <div className="text-[11px] font-mono text-slate-400">Step {i + 1} of {d.steps.length}</div>
-        <h4 className="text-sm font-bold text-white">{step.title}</h4>
+        <Nar as="h4" id={dnid.stepTitle} className="text-sm font-bold text-white">{step.title}</Nar>
         {gated && step.check ? (
           <div className="space-y-2" data-testid="derivation-gate">
-            <p className="text-xs" style={{ color: PHYS.prediction }}>{'★'} Supply the missing reasoning first. The mathematics of this step appears after your answer.</p>
+            <Nar id={dnid.gate} className="text-xs" style={{ color: PHYS.prediction }}>{'★'} Supply the missing reasoning first. The mathematics of this step appears after your answer.</Nar>
             <QuestionView question={step.check} onSubmit={(ev) => { if (ev.correct) setSolved((s) => ({ ...s, [`${d.id}-${step.id}`]: true })); }} />
           </div>
         ) : (
           <>
-            <div className="rounded-lg bg-surface-lowest p-2 font-mono text-xs sm:text-sm text-white space-y-1 overflow-x-auto break-words" data-testid="derivation-math">{step.math.map((l) => <div key={l}>{l}</div>)}</div>
-            <p className="text-xs text-slate-200"><strong>Why this is valid: </strong>{step.why}</p>
+            <div className="rounded-lg bg-surface-lowest p-2 font-mono text-xs sm:text-sm text-white space-y-1 overflow-x-auto break-words" data-testid="derivation-math">{step.math.map((l, mi) => <Nar as="div" key={l} id={dnid.math(mi)}>{l}</Nar>)}</div>
+            <Nar id={dnid.why} className="text-xs text-slate-200"><strong>Why this is valid: </strong>{step.why}</Nar>
             {rel && (
               <p className="text-xs rounded-lg p-2 border" style={{ borderColor: `${PHYS.correct}66`, color: '#e2e8f0' }} data-testid="derivation-numbers">
                 <strong style={{ color: PHYS.correct }}>{Math.abs(rel.lhs - rel.rhs) < 1e-9 ? '✓ ' : '✗ '}Numerical check for this case: </strong>{rel.label}: {r2(rel.lhs)} and {r2(rel.rhs)}. Numbers for one case illustrate a step; the argument is what supports it for every case.
@@ -110,10 +115,11 @@ export const SecondLawDerivationView: React.FC<{ id?: string; alt?: string }> = 
       {last && !gated && (
         <div className="rounded-xl border p-3 space-y-1" style={{ borderColor: `${PHYS.correct}80` }} data-testid="derivation-summary">
           <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.correct }}>{'✓'} Derivation in brief (for revision)</h4>
-          {d.summary.map((l) => <div key={l} className="font-mono text-sm text-white">{l}</div>)}
+          {d.summary.map((l, si) => <Nar as="div" key={l} id={dnid.summary(si)} className="font-mono text-sm text-white">{l}</Nar>)}
         </div>
       )}
     </div>
+    </DerivationNarration>
   );
 };
 

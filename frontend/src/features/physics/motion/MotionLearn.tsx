@@ -103,7 +103,7 @@ export const MotionLearnSection: React.FC = () => {
                 data-learn-unit={u.id}
                 className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-[#131923] to-[#0f131c] p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
               >
-                <UnitIntroduction unit={u} />
+                <UnitIntroduction unit={u} narrate />
 
                 {/* Optional Preparation: Subordinate drawer */}
                 {u.prerequisiteIds && u.prerequisiteIds.length > 0 && (

@@ -1,5 +1,10 @@
 import React from 'react';
 import type { EduChapter, EduUnit } from '../../engine/education/types';
+import { chapterIntroSegments, unitIntroSegments } from '../../engine/narration/segments';
+import { Nar, NarrationEnabledProvider, NarrationRegion } from '../narration/NarrationRegion';
+import { NarrationPlayer } from '../narration/NarrationPlayer';
+import type { NarrationSegment } from '../../engine/narration/controller';
+
 
 const List: React.FC<{ title: string; items: string[]; icon?: string }> = ({ title, items, icon }) => (
   <div className="space-y-1.5">
@@ -19,6 +24,8 @@ const List: React.FC<{ title: string; items: string[]; icon?: string }> = ({ tit
 );
 
 export const ChapterIntroduction: React.FC<{ chapter: EduChapter }> = ({ chapter }) => (
+  <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
+  <NarrationRegion segments={chapterIntroSegments(chapter)} resetKey={chapter.id}>
   <section
     aria-label="About this chapter"
     className="rounded-2xl border border-surface-border bg-gradient-to-br from-surface-card via-surface-card/90 to-surface-lowest p-4 md:p-6 space-y-4 shadow-sm"
@@ -31,9 +38,10 @@ export const ChapterIntroduction: React.FC<{ chapter: EduChapter }> = ({ chapter
         <span className="text-[10px] font-mono uppercase font-bold tracking-wider text-amber-400/90 block">
           Chapter Overview
         </span>
-        <p className="text-xs sm:text-sm md:text-base text-slate-200 leading-relaxed font-sans">
+        <Nar id={`${chapter.id}:purpose`} className="text-xs sm:text-sm md:text-base text-slate-200 leading-relaxed font-sans">
           {chapter.purpose}
-        </p>
+        </Nar>
+        <NarrationPlayer label="the chapter overview" />
       </div>
     </div>
 
@@ -59,9 +67,16 @@ export const ChapterIntroduction: React.FC<{ chapter: EduChapter }> = ({ chapter
       {chapter.ncertNote}
     </p>
   </section>
+  </NarrationRegion>
+  </NarrationEnabledProvider>
 );
 
-export const UnitIntroduction: React.FC<{ unit: EduUnit }> = ({ unit }) => (
+const unitSegments = (unit: EduUnit): NarrationSegment[] => unitIntroSegments(unit);
+
+/** `physics` switches narration on for the unit overview; other subjects keep their pages unchanged until they adopt it. */
+export const UnitIntroduction: React.FC<{ unit: EduUnit; narrate?: boolean }> = ({ unit, narrate = false }) => (
+  <NarrationEnabledProvider enabled={narrate}>
+  <NarrationRegion segments={unitSegments(unit)} resetKey={unit.id}>
   <section
     aria-label={`About unit ${unit.number}`}
     className="space-y-3.5 min-w-0 w-full"
@@ -72,7 +87,7 @@ export const UnitIntroduction: React.FC<{ unit: EduUnit }> = ({ unit }) => (
         <span className="text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold shrink-0">
           Unit {unit.number}
         </span>
-        <h3 className="text-base sm:text-xl font-black text-white tracking-tight truncate">{unit.title}</h3>
+        <Nar as="h3" id={`${unit.id}:title`} className="text-base sm:text-xl font-black text-white tracking-tight truncate">{unit.title}</Nar>
       </div>
       <span className="text-xs font-mono text-slate-400 shrink-0">
         {unit.lessonIds.length} {unit.lessonIds.length === 1 ? 'lesson' : 'lessons'}
@@ -85,7 +100,8 @@ export const UnitIntroduction: React.FC<{ unit: EduUnit }> = ({ unit }) => (
         <span className="material-symbols-outlined text-[16px]">lightbulb</span>
         Central Idea
       </span>
-      <p className="text-slate-200 leading-relaxed font-sans break-words">{unit.centralIdea}</p>
+      <Nar id={`${unit.id}:idea`} className="text-slate-200 leading-relaxed font-sans break-words">{unit.centralIdea}</Nar>
+      <NarrationPlayer label="the unit overview" />
     </div>
 
     {/* Vocabulary & Concepts: Subordinate Collapsible Support */}
@@ -125,4 +141,6 @@ export const UnitIntroduction: React.FC<{ unit: EduUnit }> = ({ unit }) => (
       </div>
     </details>
   </section>
+  </NarrationRegion>
+  </NarrationEnabledProvider>
 );

@@ -8,7 +8,8 @@ import {
   type WorkResult,
   type WorkSetup,
 } from '../../../../engine/physics/work/workModel';
-import { useViewportCamera, clientToViewBox, viewBoxToApparatus } from './useViewportCamera';
+import { useViewportCamera, clientToViewBox, viewBoxToApparatus, DEFAULT_CAMERA, type ViewportCamera } from './useViewportCamera';
+import { useViewportProfile } from '../../shared/viewportProfiles';
 
 const W = 1000, H = 450;
 /** Matches the 3 s playback in WorkView. */
@@ -79,6 +80,11 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const touchDistanceRef = useRef<number | null>(null);
+  const userInteractedCameraRef = useRef(false);
+
+  const profile = useViewportProfile(containerRef);
+  const isMobile = profile.isMobile;
+  const [showMobileTools, setShowMobileTools] = useState(false);
 
   // Direct-manipulation state. `select` targets are click-only (no drag) and select `selectId`.
   type DragTarget = 'none' | 'cart' | 'caliper' | 'force' | 'select';
@@ -88,11 +94,11 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
 
   const {
     camera,
+    setCamera,
     toolMode,
     setToolMode,
     zoomIn,
     zoomOut,
-    resetCamera,
     fitToView,
     zoomAroundViewPoint,
     startDrag,
@@ -124,6 +130,27 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   const cartX = horizontal ? px(pos) : 380;
   const cartY = horizontal ? ground - 40 : py(pos) - 20;
 
+  // Authoritative mobile framing profiles:
+  // In vertical mode (e.g. lifting the wheat bag), apparatus is at x=380.
+  // Centering on screen center (x=500) requires panX = (500 - 380) * 1.35 = 162.
+  const mobileVerticalCamera: ViewportCamera = { zoom: 1.35, panX: 162, panY: -20 };
+  const mobileHorizontalCamera: ViewportCamera = { zoom: 1.15, panX: 0, panY: 0 };
+  const defaultCam = isMobile
+    ? (horizontal ? mobileHorizontalCamera : mobileVerticalCamera)
+    : DEFAULT_CAMERA;
+
+  // Auto-frame for mobile profile when initialized or when profile/axis transitions
+  useEffect(() => {
+    if (!userInteractedCameraRef.current) {
+      setCamera(defaultCam);
+    }
+  }, [isMobile, horizontal, setCamera]);
+
+  const handleResetCamera = useCallback(() => {
+    userInteractedCameraRef.current = false;
+    setCamera(defaultCam);
+  }, [defaultCam, setCamera]);
+
   // Applied force angle
   const angle = ((r.setup.angleDeg % 360) + 360) % 360;
   const cosA = Math.cos((angle * Math.PI) / 180);
@@ -137,16 +164,21 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
 
   // Handle Fit to View calculation based on physical geometry
   const handleFit = useCallback(() => {
+    userInteractedCameraRef.current = true;
     if (horizontal) {
       const minX = Math.min(startX, endX, px(0));
       const maxX = Math.max(startX, endX, px(TRACK_LENGTH));
       fitToView(minX - 30, maxX + 30, ground - 140, ground + 50);
     } else {
-      const minY = Math.min(startY, endY, vTop);
-      const maxY = Math.max(startY, endY, vBase);
-      fitToView(300, 500, minY - 30, maxY + 30);
+      if (isMobile) {
+        fitToView(280, 480, Math.min(startY, endY) - 50, Math.max(startY, endY) + 50);
+      } else {
+        const minY = Math.min(startY, endY, vTop);
+        const maxY = Math.max(startY, endY, vBase);
+        fitToView(300, 500, minY - 30, maxY + 30);
+      }
     }
-  }, [horizontal, startX, endX, startY, endY, fitToView]);
+  }, [horizontal, startX, endX, startY, endY, fitToView, isMobile]);
 
   // Non-passive wheel listener for smooth pointer-centred zoom (uses the SVG's real screen transform).
   useEffect(() => {
@@ -295,124 +327,266 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
           toolMode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
         }`}
       >
-        {/* Floating Mini Viewport Toolbar (Top Left) */}
-        <div className="absolute top-3 left-3 z-20 flex items-center space-x-1 max-w-[calc(100%-1.5rem)] overflow-x-auto no-scrollbar bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md">
-          {/* Select Tool */}
-          <button
-            type="button"
-            onClick={() => setToolMode('select')}
-            className={`p-1 rounded transition-colors ${
-              toolMode === 'select'
-                ? 'bg-primary text-on-primary font-bold'
-                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
-            }`}
-            title="Select Tool (Click to select, drag to position)"
-            aria-pressed={toolMode === 'select'}
-          >
-            <span className="material-symbols-outlined text-[16px]">arrow_selector_tool</span>
-          </button>
+        {/* Viewport Toolbar: Desktop (expanded CAD toolbar) vs Mobile (touch-friendly compact bar) */}
+        {!isMobile ? (
+          <div className="absolute top-3 left-3 z-20 flex items-center space-x-1 max-w-[calc(100%-1.5rem)] overflow-x-auto no-scrollbar bg-surface-container/90 backdrop-blur border border-outline-variant p-1 rounded shadow-md">
+            {/* Select Tool */}
+            <button
+              type="button"
+              onClick={() => setToolMode('select')}
+              className={`p-1 rounded transition-colors ${
+                toolMode === 'select'
+                  ? 'bg-primary text-on-primary font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
+              }`}
+              title="Select Tool (Click to select, drag to position)"
+              aria-pressed={toolMode === 'select'}
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_selector_tool</span>
+            </button>
 
-          {/* Pan Tool */}
-          <button
-            type="button"
-            onClick={() => setToolMode(toolMode === 'pan' ? 'select' : 'pan')}
-            className={`p-1 rounded transition-colors ${
-              toolMode === 'pan'
-                ? 'bg-primary text-on-primary font-bold'
-                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
-            }`}
-            title="Pan Tool (Click and drag to pan viewport)"
-            aria-pressed={toolMode === 'pan'}
-          >
-            <span className="material-symbols-outlined text-[16px]">pan_tool</span>
-          </button>
+            {/* Pan Tool */}
+            <button
+              type="button"
+              onClick={() => setToolMode(toolMode === 'pan' ? 'select' : 'pan')}
+              className={`p-1 rounded transition-colors ${
+                toolMode === 'pan'
+                  ? 'bg-primary text-on-primary font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'
+              }`}
+              title="Pan Tool (Click and drag to pan viewport)"
+              aria-pressed={toolMode === 'pan'}
+            >
+              <span className="material-symbols-outlined text-[16px]">pan_tool</span>
+            </button>
 
-          {/* Fit to Scene */}
-          <button
-            type="button"
-            onClick={handleFit}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
-            title="Fit to Scene (Frame active experiment apparatus)"
-            aria-label="Fit to Scene"
-          >
-            <span className="material-symbols-outlined text-[16px]">aspect_ratio</span>
-          </button>
+            {/* Fit to Scene */}
+            <button
+              type="button"
+              onClick={handleFit}
+              className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+              title="Fit to Scene (Frame active experiment apparatus)"
+              aria-label="Fit to Scene"
+            >
+              <span className="material-symbols-outlined text-[16px]">aspect_ratio</span>
+            </button>
 
-          {/* Reset Camera */}
-          <button
-            type="button"
-            onClick={resetCamera}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
-            title="Reset Camera (100% Zoom, Centered)"
-            aria-label="Reset Camera"
-          >
-            <span className="material-symbols-outlined text-[16px]">center_focus_strong</span>
-          </button>
+            {/* Reset Camera */}
+            <button
+              type="button"
+              onClick={handleResetCamera}
+              className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors"
+              title="Reset Camera (100% Zoom, Centered)"
+              aria-label="Reset Camera"
+            >
+              <span className="material-symbols-outlined text-[16px]">center_focus_strong</span>
+            </button>
 
-          {/* Zoom In (+) */}
-          <button
-            type="button"
-            onClick={zoomIn}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors active:scale-95"
-            title="Zoom In"
-            aria-label="Zoom In"
-          >
-            <span className="material-symbols-outlined text-[16px]">zoom_in</span>
-          </button>
+            {/* Zoom In (+) */}
+            <button
+              type="button"
+              onClick={() => { userInteractedCameraRef.current = true; zoomIn(); }}
+              className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors active:scale-95"
+              title="Zoom In"
+              aria-label="Zoom In"
+            >
+              <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+            </button>
 
-          {/* Zoom Out (-) */}
-          <button
-            type="button"
-            onClick={zoomOut}
-            className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors active:scale-95"
-            title="Zoom Out"
-            aria-label="Zoom Out"
-          >
-            <span className="material-symbols-outlined text-[16px]">zoom_out</span>
-          </button>
+            {/* Zoom Out (-) */}
+            <button
+              type="button"
+              onClick={() => { userInteractedCameraRef.current = true; zoomOut(); }}
+              className="p-1 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant transition-colors active:scale-95"
+              title="Zoom Out"
+              aria-label="Zoom Out"
+            >
+              <span className="material-symbols-outlined text-[16px]">zoom_out</span>
+            </button>
 
-          <span className="font-mono text-[10px] text-outline px-1">
-            {Math.round(camera.zoom * 100)}%
-          </span>
+            <span className="font-mono text-[10px] text-outline px-1">
+              {Math.round(camera.zoom * 100)}%
+            </span>
 
-          <div className="h-4 w-px bg-outline-variant mx-1" />
+            <div className="h-4 w-px bg-outline-variant mx-1" />
 
-          {/* Vectors Toggle Pill */}
-          <button
-            type="button"
-            onClick={() => handleToggleVectors(!vectorsOn)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center space-x-1 transition-colors shrink-0 ${
-              vectorsOn ? 'bg-surface-variant text-primary border border-primary/40' : 'text-on-surface-variant hover:bg-surface-variant'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[12px]">navigation</span>
-            <span className="hidden sm:inline">Vectors: {vectorsOn ? 'ON' : 'OFF'}</span>
-            <span className="sm:hidden">Vec</span>
-          </button>
+            {/* Vectors Toggle Pill */}
+            <button
+              type="button"
+              onClick={() => handleToggleVectors(!vectorsOn)}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold flex items-center space-x-1 transition-colors shrink-0 ${
+                vectorsOn ? 'bg-surface-variant text-primary border border-primary/40' : 'text-on-surface-variant hover:bg-surface-variant'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[12px]">navigation</span>
+              <span className="hidden sm:inline">Vectors: {vectorsOn ? 'ON' : 'OFF'}</span>
+              <span className="sm:hidden">Vec</span>
+            </button>
 
-          {/* Grid Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowGrid(!showGrid)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${
-              showGrid ? 'bg-surface-variant text-primary' : 'text-on-surface-variant hover:bg-surface-variant'
-            }`}
-          >
-            Grid
-          </button>
+            {/* Grid Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowGrid(!showGrid)}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${
+                showGrid ? 'bg-surface-variant text-primary' : 'text-on-surface-variant hover:bg-surface-variant'
+              }`}
+            >
+              Grid
+            </button>
 
-          {/* Show Weight & Normal Forces Toggle */}
-          <button
-            type="button"
-            onClick={() => onShowVerticalChange(!showVertical)}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${
-              showVertical ? 'bg-surface-variant text-secondary' : 'text-on-surface-variant hover:bg-surface-variant'
-            }`}
-          >
-            <span className="hidden sm:inline">{showVertical ? 'W & N: ON' : 'W & N: OFF'}</span>
-            <span className="sm:hidden">W&N</span>
-          </button>
-        </div>
+            {/* Show Weight & Normal Forces Toggle */}
+            <button
+              type="button"
+              onClick={() => onShowVerticalChange(!showVertical)}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors shrink-0 ${
+                showVertical ? 'bg-surface-variant text-secondary' : 'text-on-surface-variant hover:bg-surface-variant'
+              }`}
+            >
+              <span className="hidden sm:inline">{showVertical ? 'W & N: ON' : 'W & N: OFF'}</span>
+              <span className="sm:hidden">W&N</span>
+            </button>
+          </div>
+        ) : (
+          /* Mobile Viewport Profile Toolbar: Touch-friendly & Non-intrusive */
+          <>
+            <div className="absolute top-2 left-2 z-20 flex items-center space-x-1 bg-surface-container/95 backdrop-blur border border-outline-variant p-1 rounded-lg shadow-md">
+              {/* Fit to Scene */}
+              <button
+                type="button"
+                onClick={handleFit}
+                className="h-9 w-9 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant flex items-center justify-center transition-colors"
+                title="Fit to Scene (Frame apparatus)"
+                aria-label="Fit to Scene"
+              >
+                <span className="material-symbols-outlined text-[18px]">aspect_ratio</span>
+              </button>
+
+              {/* Reset Camera */}
+              <button
+                type="button"
+                onClick={handleResetCamera}
+                className="h-9 w-9 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-variant flex items-center justify-center transition-colors"
+                title="Reset Camera Framing"
+                aria-label="Reset Camera"
+              >
+                <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
+              </button>
+
+              {/* Vectors Toggle Pill */}
+              <button
+                type="button"
+                onClick={() => handleToggleVectors(!vectorsOn)}
+                className={`h-9 px-2.5 rounded font-mono text-xs font-semibold flex items-center space-x-1 transition-colors ${
+                  vectorsOn ? 'bg-surface-variant text-primary border border-primary/50' : 'text-on-surface-variant hover:bg-surface-variant'
+                }`}
+                aria-label={`Toggle vectors: currently ${vectorsOn ? 'ON' : 'OFF'}`}
+              >
+                <span className="material-symbols-outlined text-[14px]">navigation</span>
+                <span>{vectorsOn ? 'Vec: ON' : 'Vec: OFF'}</span>
+              </button>
+
+              {/* More Tools Trigger */}
+              <button
+                type="button"
+                onClick={() => setShowMobileTools(!showMobileTools)}
+                className={`h-9 w-9 rounded flex items-center justify-center transition-colors ${
+                  showMobileTools ? 'bg-primary text-on-primary font-bold' : 'text-on-surface-variant hover:bg-surface-variant'
+                }`}
+                title="Simulation Tools"
+                aria-label="Simulation Tools"
+                aria-expanded={showMobileTools}
+              >
+                <span className="material-symbols-outlined text-[18px]">tune</span>
+              </button>
+            </div>
+
+            {/* Mobile Viewport Secondary Tools Popover */}
+            {showMobileTools && (
+              <div className="absolute top-14 left-2 z-30 bg-surface-container border border-outline-variant p-2.5 rounded-xl shadow-xl backdrop-blur space-y-2.5 min-w-[210px]">
+                <div className="flex items-center justify-between border-b border-outline-variant pb-1.5">
+                  <span className="font-mono text-xs text-outline font-semibold uppercase">Viewport Controls</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileTools(false)}
+                    className="text-on-surface-variant hover:text-on-surface p-1"
+                    aria-label="Close tools"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+
+                {/* Select vs Pan */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setToolMode('select'); setShowMobileTools(false); }}
+                    className={`min-h-[38px] px-2 rounded-lg text-xs font-mono flex items-center justify-center space-x-1 ${
+                      toolMode === 'select' ? 'bg-primary text-on-primary font-bold' : 'bg-surface-container-high text-on-surface-variant'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">arrow_selector_tool</span>
+                    <span>Select</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setToolMode('pan'); setShowMobileTools(false); }}
+                    className={`min-h-[38px] px-2 rounded-lg text-xs font-mono flex items-center justify-center space-x-1 ${
+                      toolMode === 'pan' ? 'bg-primary text-on-primary font-bold' : 'bg-surface-container-high text-on-surface-variant'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">pan_tool</span>
+                    <span>Pan</span>
+                  </button>
+                </div>
+
+                {/* Zoom Controls */}
+                <div className="flex items-center justify-between bg-surface-container-high rounded-lg p-1 px-2">
+                  <button
+                    type="button"
+                    onClick={() => { userInteractedCameraRef.current = true; zoomOut(); }}
+                    className="min-h-[34px] min-w-[34px] flex items-center justify-center rounded text-on-surface-variant hover:text-on-surface active:scale-95"
+                    title="Zoom Out"
+                    aria-label="Zoom Out"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">zoom_out</span>
+                  </button>
+                  <span className="font-mono text-xs text-on-surface font-semibold">
+                    {Math.round(camera.zoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { userInteractedCameraRef.current = true; zoomIn(); }}
+                    className="min-h-[34px] min-w-[34px] flex items-center justify-center rounded text-on-surface-variant hover:text-on-surface active:scale-95"
+                    title="Zoom In"
+                    aria-label="Zoom In"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">zoom_in</span>
+                  </button>
+                </div>
+
+                {/* Toggles */}
+                <div className="space-y-1 pt-1 border-t border-outline-variant/60">
+                  <button
+                    type="button"
+                    onClick={() => setShowGrid(!showGrid)}
+                    className="w-full min-h-[34px] px-2 rounded text-left font-mono text-xs flex items-center justify-between text-on-surface-variant hover:bg-surface-variant"
+                  >
+                    <span>CAD Grid</span>
+                    <span className="font-bold">{showGrid ? 'ON' : 'OFF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onShowVerticalChange(!showVertical)}
+                    className="w-full min-h-[34px] px-2 rounded text-left font-mono text-xs flex items-center justify-between text-on-surface-variant hover:bg-surface-variant"
+                  >
+                    <span>Weight & Normal</span>
+                    <span className="font-bold">{showVertical ? 'ON' : 'OFF'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Floating Viewport Telemetry HUD (Desktop only - hidden on mobile to avoid viewport clutter) */}
         <div className="hidden sm:block absolute top-3 right-3 z-20 bg-surface-container/85 border border-outline-variant px-2.5 py-1 rounded text-right font-mono text-[11px] text-on-surface-variant shadow-sm backdrop-blur">
@@ -563,14 +737,18 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                   ) : (
                     <>
                       <path
-                        d={`M 460 ${startY} L 470 ${startY} L 470 ${(startY + endY) / 2} L 476 ${(startY + endY) / 2} L 470 ${(startY + endY) / 2} L 470 ${endY} L 460 ${endY}`}
+                        d={
+                          isMobile
+                            ? `M 422 ${startY} L 430 ${startY} L 430 ${(startY + endY) / 2} L 436 ${(startY + endY) / 2} L 430 ${(startY + endY) / 2} L 430 ${endY} L 422 ${endY}`
+                            : `M 460 ${startY} L 470 ${startY} L 470 ${(startY + endY) / 2} L 476 ${(startY + endY) / 2} L 470 ${(startY + endY) / 2} L 470 ${endY} L 460 ${endY}`
+                        }
                         fill="none"
                         stroke={isCaliperSelected ? '#00d4ff' : '#6ffbbe'}
                         strokeWidth={isCaliperSelected ? '2.5' : '2'}
                       />
-                      <g transform={`translate(550, ${(startY + endY) / 2})`}>
-                        <rect fill="#0a0e16" height="22" rx="4" stroke={isCaliperSelected ? '#00d4ff' : '#4edea3'} strokeWidth="1.2" width="140" x="-70" y="-11" />
-                        <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={11} fontWeight={700} textAnchor="middle" x="0" y="4">
+                      <g transform={`translate(${isMobile ? 485 : 550}, ${(startY + endY) / 2})`}>
+                        <rect fill="#0a0e16" height={isMobile ? 24 : 22} rx="4" stroke={isCaliperSelected ? '#00d4ff' : '#4edea3'} strokeWidth="1.2" width={isMobile ? 120 : 140} x={isMobile ? -60 : -70} y={isMobile ? -12 : -11} />
+                        <text fill="#6ffbbe" fontFamily="JetBrains Mono" fontSize={isMobile ? 12 : 11} fontWeight={700} textAnchor="middle" x="0" y="4">
                           s = {fmtSigned(s)} m
                         </text>
                       </g>
@@ -579,48 +757,131 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                 </g>
               )}
 
-              {/* DYNAMIC CART ASSEMBLY (CART_01 - Manipulable x_0) */}
+              {/* DYNAMIC SIMULATION OBJECT ASSEMBLY (Manipulable x_0) */}
               {showCart && <g
                 id="cart-assembly"
                 transform={`translate(${cartX - 55}, ${cartY - 15})`}
                 onPointerDown={(e) => beginObjectDrag(e, 'cart', 'cart')}
                 className={`${horizontal ? 'cursor-ew-resize' : 'cursor-ns-resize'} group`}
               >
-                {/* Selection Halo */}
-                {isCartSelected && (
-                  <rect
-                    fill="none"
-                    height="54"
-                    rx="6"
-                    stroke="#00d4ff"
-                    strokeWidth="2"
-                    strokeDasharray="4,4"
-                    width="122"
-                    x="-6"
-                    y="-6"
-                    className="animate-pulse"
-                  />
+                {!isMobile ? (
+                  /* DESKTOP VIEWPORT PROFILE: Exact preserved CAD Cart */
+                  <>
+                    {/* Selection Halo */}
+                    {isCartSelected && (
+                      <rect
+                        fill="none"
+                        height="54"
+                        rx="6"
+                        stroke="#00d4ff"
+                        strokeWidth="2"
+                        strokeDasharray="4,4"
+                        width="122"
+                        x="-6"
+                        y="-6"
+                        className="animate-pulse"
+                      />
+                    )}
+                    {/* Chassis Body */}
+                    <rect fill="#262a33" height="42" rx="4" stroke={isCartSelected ? '#00d4ff' : '#424754'} strokeWidth="2" width="110" x="0" y="0" />
+                    <rect fill="#1c2028" height="12" rx="2" stroke="#31353e" strokeWidth="1" width="100" x="5" y="4" />
+                    <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={9} fontWeight={600} textAnchor="middle" x="55" y="13">
+                      CART_01 ({fmt(r.setup.massKg)} kg)
+                    </text>
+                    <rect fill="#181c24" height="14" rx="1.5" stroke="#424754" width="22" x="10" y="20" />
+                    <circle cx="21" cy="27" fill="#ffb95a" r="3" />
+                    <text fill="#c2c6d6" fontFamily="JetBrains Mono" fontSize={8} x="36" y="30">
+                      ACCEL_SENS_X
+                    </text>
+                    {/* Wheel Bearings */}
+                    <circle cx="20" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
+                    <circle cx="20" cy="46" fill="#adc6ff" r="2.5" />
+                    <circle cx="90" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
+                    <circle cx="90" cy="46" fill="#adc6ff" r="2.5" />
+                    {/* Center of Mass Indicator */}
+                    <circle cx="55" cy="21" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
+                    <path d="M 50.5 21 A 4.5 4.5 0 0 0 55 25.5 L 55 21 Z" fill="#4d8eff" />
+                    <path d="M 55 16.5 A 4.5 4.5 0 0 0 50.5 21 L 55 21 Z" fill="#0a0e16" />
+                  </>
+                ) : !horizontal ? (
+                  /* MOBILE VERTICAL PROFILE: Lifting Bag of Wheat/Grain (Work Lesson 1 Idea 2) */
+                  <>
+                    {/* Selection Halo */}
+                    {isCartSelected && (
+                      <rect
+                        fill="none"
+                        height="74"
+                        rx="8"
+                        stroke="#00d4ff"
+                        strokeWidth="2"
+                        strokeDasharray="4,4"
+                        width="96"
+                        x="7"
+                        y="-16"
+                        className="animate-pulse"
+                      />
+                    )}
+                    {/* Grain / Wheat Bag body */}
+                    <path
+                      d="M 32 -5 C 38 -15 72 -15 78 -5 C 88 5 95 24 92 44 C 90 53 78 57 55 57 C 32 57 20 53 18 44 C 15 24 22 5 32 -5 Z"
+                      fill="#8d6e63"
+                      stroke={isCartSelected ? '#00d4ff' : '#5d4037'}
+                      strokeWidth="2.5"
+                    />
+                    {/* Neck tie & rope */}
+                    <ellipse cx="55" cy="-2" rx="18" ry="4" fill="#d4a373" stroke="#b08968" strokeWidth="1.5" />
+                    <path d="M 46 0 C 44 8 40 12 38 15 M 51 1 C 52 9 54 13 57 16" stroke="#e9c46a" strokeWidth="2" strokeLinecap="round" />
+                    {/* Stitching / burlap texture */}
+                    <path d="M 28 42 C 40 48 70 48 82 42" fill="none" stroke="#6d4c41" strokeWidth="1.5" strokeDasharray="3 3" />
+                    {/* Mass badge */}
+                    <rect fill="#1e293b" height="22" rx="4" stroke="#d4a373" strokeWidth="1.2" width="80" x="15" y="10" />
+                    <text fill="#ffffff" fontFamily="JetBrains Mono" fontSize={11} fontWeight={700} textAnchor="middle" x="55" y="25">
+                      {fmt(r.setup.massKg)} kg Bag
+                    </text>
+                    {/* Center of Mass Indicator at (55, 37) */}
+                    <circle cx="55" cy="37" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
+                    <path d="M 50.5 37 A 4.5 4.5 0 0 0 55 41.5 L 55 37 Z" fill="#4d8eff" />
+                    <path d="M 55 32.5 A 4.5 4.5 0 0 0 50.5 37 L 55 37 Z" fill="#0a0e16" />
+                    {/* Mobile touch hit area */}
+                    <rect fill="transparent" height="80" width="100" x="5" y="-18" />
+                  </>
+                ) : (
+                  /* MOBILE HORIZONTAL PROFILE: Clear, High-Contrast Cart with Large Fonts */
+                  <>
+                    {/* Selection Halo */}
+                    {isCartSelected && (
+                      <rect
+                        fill="none"
+                        height="58"
+                        rx="6"
+                        stroke="#00d4ff"
+                        strokeWidth="2"
+                        strokeDasharray="4,4"
+                        width="122"
+                        x="-6"
+                        y="-6"
+                        className="animate-pulse"
+                      />
+                    )}
+                    {/* Chassis Body */}
+                    <rect fill="#262a33" height="42" rx="4" stroke={isCartSelected ? '#00d4ff' : '#424754'} strokeWidth="2" width="110" x="0" y="0" />
+                    <rect fill="#1c2028" height="18" rx="3" stroke="#31353e" strokeWidth="1" width="100" x="5" y="4" />
+                    <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={12} fontWeight={700} textAnchor="middle" x="55" y="17">
+                      CART · {fmt(r.setup.massKg)} kg
+                    </text>
+                    {/* Wheel Bearings */}
+                    <circle cx="20" cy="46" fill="#31353e" r="8" stroke="#dfe2ee" strokeWidth="2" />
+                    <circle cx="20" cy="46" fill="#adc6ff" r="3" />
+                    <circle cx="90" cy="46" fill="#31353e" r="8" stroke="#dfe2ee" strokeWidth="2" />
+                    <circle cx="90" cy="46" fill="#adc6ff" r="3" />
+                    {/* Center of Mass Indicator */}
+                    <circle cx="55" cy="28" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
+                    <path d="M 50.5 28 A 4.5 4.5 0 0 0 55 32.5 L 55 28 Z" fill="#4d8eff" />
+                    <path d="M 55 23.5 A 4.5 4.5 0 0 0 50.5 28 L 55 28 Z" fill="#0a0e16" />
+                    {/* Mobile touch hit area */}
+                    <rect fill="transparent" height="60" width="120" x="-5" y="-5" />
+                  </>
                 )}
-                {/* Chassis Body */}
-                <rect fill="#262a33" height="42" rx="4" stroke={isCartSelected ? '#00d4ff' : '#424754'} strokeWidth="2" width="110" x="0" y="0" />
-                <rect fill="#1c2028" height="12" rx="2" stroke="#31353e" strokeWidth="1" width="100" x="5" y="4" />
-                <text fill="#adc6ff" fontFamily="JetBrains Mono" fontSize={9} fontWeight={600} textAnchor="middle" x="55" y="13">
-                  CART_01 ({fmt(r.setup.massKg)} kg)
-                </text>
-                <rect fill="#181c24" height="14" rx="1.5" stroke="#424754" width="22" x="10" y="20" />
-                <circle cx="21" cy="27" fill="#ffb95a" r="3" />
-                <text fill="#c2c6d6" fontFamily="JetBrains Mono" fontSize={8} x="36" y="30">
-                  ACCEL_SENS_X
-                </text>
-                {/* Wheel Bearings */}
-                <circle cx="20" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
-                <circle cx="20" cy="46" fill="#adc6ff" r="2.5" />
-                <circle cx="90" cy="46" fill="#31353e" r="7" stroke="#dfe2ee" strokeWidth="2" />
-                <circle cx="90" cy="46" fill="#adc6ff" r="2.5" />
-                {/* Center of Mass Indicator */}
-                <circle cx="55" cy="21" fill="#dfe2ee" r="4.5" stroke="#0a0e16" strokeWidth="1.5" />
-                <path d="M 50.5 21 A 4.5 4.5 0 0 0 55 25.5 L 55 21 Z" fill="#4d8eff" />
-                <path d="M 55 16.5 A 4.5 4.5 0 0 0 50.5 21 L 55 21 Z" fill="#0a0e16" />
               </g>}
 
               {/* FORCE VECTORS ANCHORED AT CENTER OF MASS (Manipulable F_APP) */}
@@ -667,33 +928,33 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
                         className="cursor-pointer"
                       >
                         {/* Wide invisible hit area so thin arrows are easy to grab */}
-                        <line x1={comX} y1={comY} x2={x2} y2={y2} stroke="transparent" strokeWidth={18} />
+                        <line x1={comX} y1={comY} x2={x2} y2={y2} stroke="transparent" strokeWidth={isMobile ? 32 : 18} />
                         <line
                           x1={comX}
                           y1={comY}
                           x2={x2}
                           y2={y2}
                           stroke={isThisForceSelected ? '#00d4ff' : COLOR[f.id]}
-                          strokeWidth={isThisForceSelected ? 4.5 : f.id === 'applied' ? 3.5 : 2.5}
+                          strokeWidth={isThisForceSelected ? (isMobile ? 5.5 : 4.5) : f.id === 'applied' ? (isMobile ? 4 : 3.5) : (isMobile ? 3.5 : 2.5)}
                           markerEnd={markerMap[f.id]}
                         />
                         <g transform={`translate(${labelX}, ${labelY})`}>
                           <rect
                             fill="#0f131b"
-                            height="20"
-                            rx="3"
+                            height={isMobile ? 24 : 20}
+                            rx={isMobile ? 4 : 3}
                             stroke={isThisForceSelected ? '#00d4ff' : COLOR[f.id]}
                             strokeWidth={isThisForceSelected ? 1.5 : 1}
-                            width={f.label.length * 7 + 60}
-                            x={ux < -0.3 ? -(f.label.length * 7 + 60) : 0}
-                            y="-10"
+                            width={f.label.length * (isMobile ? 8 : 7) + 64}
+                            x={ux < -0.3 ? -(f.label.length * (isMobile ? 8 : 7) + 64) : 0}
+                            y={isMobile ? -12 : -10}
                           />
                           <text
                             fill={isThisForceSelected ? '#00d4ff' : COLOR[f.id]}
                             fontFamily="JetBrains Mono"
-                            fontSize="11"
+                            fontSize={isMobile ? '12' : '11'}
                             fontWeight="700"
-                            x={ux < -0.3 ? -((f.label.length * 7 + 60) / 2) : (f.label.length * 7 + 60) / 2}
+                            x={ux < -0.3 ? -((f.label.length * (isMobile ? 8 : 7) + 64) / 2) : (f.label.length * (isMobile ? 8 : 7) + 64) / 2}
                             y="4"
                             textAnchor="middle"
                           >
@@ -737,21 +998,21 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
       </div>
 
       {/* Docked Bottom Transport / Playback Strip */}
-      <div className="h-11 sm:h-12 bg-surface-container border-t border-outline-variant px-2 sm:px-4 flex items-center justify-between z-30 select-none overflow-x-auto no-scrollbar">
+      <div className="h-12 bg-surface-container border-t border-outline-variant px-2.5 sm:px-4 flex items-center justify-between z-30 select-none overflow-x-auto no-scrollbar">
         {/* Playback action buttons */}
-        <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0" role="group" aria-label="Playback Controls">
+        <div className="flex items-center space-x-1.5 sm:space-x-1.5 shrink-0" role="group" aria-label="Playback Controls">
           <button
             type="button"
             onClick={onTogglePlay}
             disabled={!r.valid || s === 0}
             data-testid="work-play"
-            className={`h-7 sm:h-8 px-2.5 sm:px-3.5 rounded font-mono text-xs font-semibold flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm active:translate-y-px disabled:opacity-40 disabled:pointer-events-none shrink-0 ${
+            className={`h-9 sm:h-8 px-3 sm:px-3.5 rounded-lg sm:rounded font-mono text-xs font-semibold flex items-center space-x-1 sm:space-x-1.5 transition-all shadow-sm active:translate-y-px disabled:opacity-40 disabled:pointer-events-none shrink-0 ${
               playing
                 ? 'bg-amber-400 text-slate-950 hover:bg-amber-300'
                 : 'bg-primary text-on-primary hover:bg-primary-light'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
+            <span className="material-symbols-outlined text-[17px] sm:text-[18px]">
               {playing ? 'pause' : progress >= 1 ? 'replay' : 'play_arrow'}
             </span>
             <span>{playing ? 'Pause' : progress >= 1 ? 'Replay' : 'Play'}</span>
@@ -763,10 +1024,10 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
               const next = Math.min(1, progress + 0.05);
               onProgressChange(next);
             }}
-            className="h-7 sm:h-8 px-1.5 sm:px-2 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded font-mono text-[10px] sm:text-[11px] flex items-center space-x-0.5 sm:space-x-1 transition-colors shrink-0"
+            className="h-9 sm:h-8 px-2 sm:px-2 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded-lg sm:rounded font-mono text-[11px] flex items-center space-x-1 transition-colors shrink-0"
             title="Step Forward +0.05s"
           >
-            <span className="material-symbols-outlined text-[14px] sm:text-[15px]">step</span>
+            <span className="material-symbols-outlined text-[15px]">step</span>
             <span>+0.05</span>
           </button>
 
@@ -774,10 +1035,10 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
             type="button"
             onClick={onReset}
             data-testid="work-reset"
-            className="h-7 w-7 sm:h-8 sm:w-8 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded flex items-center justify-center transition-colors shrink-0"
+            className="h-9 w-9 sm:h-8 sm:w-8 bg-surface-container-high border border-outline-variant text-on-surface-variant hover:text-on-surface rounded-lg sm:rounded flex items-center justify-center transition-colors shrink-0"
             title="Reset to Start"
           >
-            <span className="material-symbols-outlined text-[15px] sm:text-[16px]">restart_alt</span>
+            <span className="material-symbols-outlined text-[16px]">restart_alt</span>
           </button>
         </div>
 

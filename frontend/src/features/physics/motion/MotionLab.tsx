@@ -22,6 +22,7 @@ import { speedVelocityLines, wholeTrip, pathFromRoute } from '../../../engine/ph
 import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useSceneState, type DockTab, type SceneObject } from '../../workspace';
 import { LabButton, LabInspectorSection, LabParameterField, LabToolbarDivider } from '../../workspace/controls';
 import { MotionMobileLab } from './MotionMobileLab';
+import { ModelAssumptions } from '../shared/controls';
 
 const RatePrediction: React.FC<{
   e: MotionExperiment;
@@ -387,6 +388,15 @@ export const MotionLab: React.FC = () => {
         <MotionParameterFields m={m} stacked />
         <MotionMessage m={m} />
       </LabInspectorSection>
+
+      <ModelAssumptions
+        summary="One-dimensional motion along a straight track reference frame."
+        assumptions={[
+          'Reference origin O is fixed at 0 m.',
+          'Right is the positive coordinate direction (+x) and Left is negative (−x).',
+          'Simulated time advances in discrete, deterministic intervals without measurement error.',
+        ]}
+      />
 
       <div className="pt-1">
         <LabButton

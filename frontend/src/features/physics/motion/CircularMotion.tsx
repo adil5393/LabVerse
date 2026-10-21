@@ -10,6 +10,11 @@ import { tickClock } from '../../../engine/physics/motion/kinematics';
 import { circleStateAt, CIRCLE_LIMITS, describeCircle, validateCircle, type CircleSetup, type Spin } from '../../../engine/physics/motion/circular';
 import { PHYS } from './physicsColors';
 import { useReducedMotion } from './useReducedMotion';
+import {
+  ParameterControl,
+  ExperimentSetupGroup,
+  ModelAssumptions,
+} from '../shared/controls';
 
 const r2 = (n: number, p = 2): string => { const r = Math.round(n * 10 ** p) / 10 ** p; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
 const S = 300, C0 = S / 2, R_PX = 110;
@@ -22,20 +27,31 @@ const Stat: React.FC<{ id: string; label: string; value: string; color: string; 
   </div>
 );
 
-const Field: React.FC<{ id: string; label: string; unit: string; value: number; step: number; onChange: (v: number) => void }> = ({ id, label, unit, value, step, onChange }) => {
-  const [text, setText] = useState(String(value));
-  const [last, setLast] = useState(value);
-  if (last !== value) { setLast(value); setText(String(value)); }
-  return (
-    <div className="flex items-center gap-1 text-xs text-slate-300">
-      <label className="flex items-center gap-1">{label}
-        <input value={text} data-field={id} inputMode="decimal" aria-label={`${label} in ${unit}`} onChange={(e) => { setText(e.target.value); const n = Number(e.target.value); if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n); }}
-          className="w-20 min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white font-mono" /></label><span>{unit}</span>
-      <button type="button" aria-label={`Decrease ${label} by ${step}`} onClick={() => onChange(Math.round((value - step) * 100) / 100)} className="min-h-[44px] min-w-[44px] rounded-lg border border-surface-border bg-surface-card text-white">{'−'}</button>
-      <button type="button" aria-label={`Increase ${label} by ${step}`} onClick={() => onChange(Math.round((value + step) * 100) / 100)} className="min-h-[44px] min-w-[44px] rounded-lg border border-surface-border bg-surface-card text-white">+</button>
-    </div>
-  );
-};
+const Field: React.FC<{
+  id: string;
+  label: string;
+  unit: string;
+  value: number;
+  step: number;
+  min?: number;
+  max?: number;
+  showSlider?: boolean;
+  symbol?: string;
+  onChange: (v: number) => void;
+}> = ({ id, label, unit, value, step, min, max, showSlider, symbol, onChange }) => (
+  <ParameterControl
+    id={id}
+    label={label}
+    unit={unit}
+    value={value}
+    step={step}
+    min={min}
+    max={max}
+    showSlider={showSlider}
+    symbol={symbol}
+    onChange={onChange}
+  />
+);
 
 export interface CircularMotionProps { radiusM?: number; periodS?: number; spin?: Spin; editable?: boolean; startTime?: number; alt?: string }
 
@@ -170,43 +186,142 @@ export const CircleReadout: React.FC<{ c: CircularMotionModel }> = ({ c }) => {
 export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10, periodS = 12, spin = 'counterclockwise', editable = true, startTime = 0, alt }) => {
   const c = useCircularMotion({ radiusM, periodS, spin, startTime });
   const { setup, setT, tt, tMax, playing, setPlaying, rate, setRate, err, reduced, change } = c;
+  const [setupOpen, setSetupOpen] = useState(false);
 
   return (
-    <div className="space-y-3" data-visual="circularMotion" data-testid="circular-motion">
+    <div className="space-y-4" data-visual="circularMotion" data-testid="circular-motion">
+      {/* 1. Primary Simulation Viewport Surface */}
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-surface-border bg-gradient-to-b from-surface-card/60 to-surface-card/30 p-2 sm:p-3 overflow-hidden shadow-xs space-y-2.5">
+          <CircleScene c={c} alt={alt} />
+        </div>
+
+        <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="circle-time">
+          <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (up to three turns)</span>
+          <button type="button" onClick={() => { if (tt >= tMax) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</button>
+          <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">{'Step −1 s'}</button>
+          <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
+          <button type="button" onClick={() => { setPlaying(false); setT(setup.periodS / 2 > tMax ? tMax : setup.periodS / 2); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm" data-testid="jump-half">Half a turn</button>
+          <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, setup.periodS)); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm" data-testid="jump-full">One full turn</button>
+          <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Back to 0 s</button>
+          {editable && (
+            <button
+              type="button"
+              onClick={() => setSetupOpen((o) => !o)}
+              aria-expanded={setupOpen}
+              aria-controls="circular-setup-panel"
+              data-testid="circle-setup-toggle"
+              className="min-h-[44px] px-3.5 rounded-lg border border-surface-border bg-surface-lowest hover:bg-surface-card text-slate-200 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors select-none"
+            >
+              <span className="material-symbols-outlined text-base text-sky-400 select-none" aria-hidden>
+                tune
+              </span>
+              <span>Setup</span>
+              <span
+                className="material-symbols-outlined text-sm text-slate-400 transition-transform duration-200 select-none"
+                style={{ transform: setupOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                aria-hidden
+              >
+                expand_more
+              </span>
+            </button>
+          )}
+          <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
+            <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
+            <input type="range" min={0} max={tMax} step="any" value={tt} onChange={(e) => c.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className="w-full min-h-[44px]" />
+          </label>
+          <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; it does not change the speed of the object.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
+        </div>
+      </div>
+
+      {/* 2. Interactive Collapsible Setup Controls (when editable) */}
       {editable && (
-        <div className="space-y-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="circle-controls">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">Set the motion</h3>
-          <div className="flex flex-wrap gap-3 items-center">
-            <Field id="radius" label="Radius" unit="m" value={setup.radiusM} step={1} onChange={(v) => change({ radiusM: v })} />
-            <Field id="period" label="Period (time for one turn)" unit="s" value={setup.periodS} step={1} onChange={(v) => change({ periodS: v })} />
-            <div role="group" aria-label="Direction of motion" className="flex gap-2">
-              {(['counterclockwise', 'clockwise'] as Spin[]).map((d) => <button key={d} type="button" aria-pressed={setup.spin === d} data-spin={d} onClick={() => change({ spin: d })} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: setup.spin === d ? PHYS.velocity : '#334155' }}>{setup.spin === d ? '✓ ' : ''}{d === 'counterclockwise' ? '↺ Counter-clockwise' : '↻ Clockwise'}</button>)}
+        <div
+          id="circular-setup-panel"
+          hidden={!setupOpen}
+          className={!setupOpen ? 'hidden' : 'space-y-3 pt-1 transition-all duration-200'}
+          data-testid="circle-controls"
+        >
+          <ExperimentSetupGroup
+            title="Uniform Circular Motion Setup"
+            icon="change_circle"
+            columns={2}
+          >
+            <Field
+              id="radius"
+              label="Circle radius"
+              unit="m"
+              symbol="r"
+              value={setup.radiusM}
+              step={1}
+              min={CIRCLE_LIMITS.minR}
+              max={CIRCLE_LIMITS.maxR}
+              onChange={(v) => change({ radiusM: v })}
+            />
+            <Field
+              id="period"
+              label="Period (time for 1 revolution)"
+              unit="s"
+              symbol="T"
+              value={setup.periodS}
+              step={1}
+              min={CIRCLE_LIMITS.minT}
+              max={CIRCLE_LIMITS.maxT}
+              onChange={(v) => change({ periodS: v })}
+            />
+            <div className="col-span-full space-y-1.5 pt-1">
+              <label className="font-semibold text-xs text-slate-200 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-cyan-400 select-none" aria-hidden>
+                  rotate_right
+                </span>
+                <span>Rotation Direction</span>
+              </label>
+              <div role="group" aria-label="Direction of motion" className="grid grid-cols-2 gap-2">
+                {(['counterclockwise', 'clockwise'] as Spin[]).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={setup.spin === d}
+                    data-spin={d}
+                    onClick={() => change({ spin: d })}
+                    className={`min-h-[44px] px-3.5 rounded-xl border-2 text-xs font-bold transition-all select-none flex items-center justify-center gap-2 ${
+                      setup.spin === d
+                        ? 'bg-surface-elevated text-white border-cyan-400 shadow-sm'
+                        : 'border-surface-border bg-surface-lowest text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {setup.spin === d && <span className="text-[10px] text-emerald-400 select-none">✓</span>}
+                    <span>{d === 'counterclockwise' ? '↺ Counter-clockwise' : '↻ Clockwise'}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <p className="text-[11px] text-slate-400">Radius {CIRCLE_LIMITS.minR} to {CIRCLE_LIMITS.maxR} m; period {CIRCLE_LIMITS.minT} to {CIRCLE_LIMITS.maxT} s. The speed is 2πr ÷ T (the circumference divided by the period) and does not change; the model has a constant speed by definition of uniform circular motion.</p>
-          {err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="circle-error"><span aria-hidden>{'✗ '}</span>{err}</p>}
+          </ExperimentSetupGroup>
+
+          <ModelAssumptions
+            summary="Idealized uniform circular motion model with constant speed."
+            assumptions={[
+              'Constant tangential speed: v = 2πr / T throughout the entire orbit.',
+              'Direction of velocity changes continuously tangent to the circular trajectory.',
+              'Centripetal acceleration points towards the centre of the circle.',
+            ]}
+            limits={{
+              massRange: undefined,
+              timeRange: [CIRCLE_LIMITS.minT, CIRCLE_LIMITS.maxT],
+            }}
+          />
+
+          {err && (
+            <p role="alert" className="text-xs font-bold p-2.5 rounded-lg bg-red-950/30 border border-red-500/40 text-red-400" data-testid="circle-error">
+              <span aria-hidden>{'✗ '}</span>{err}
+            </p>
+          )}
         </div>
       )}
 
-      <CircleScene c={c} alt={alt} />
-
-      <div role="group" aria-label="Time controls" className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-card/60 p-3" data-testid="circle-time">
-        <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (up to three turns)</span>
-        <button type="button" onClick={() => { if (tt >= tMax) setT(0); setPlaying((p) => !p); }} aria-pressed={playing} className="min-h-[44px] px-4 rounded-lg font-bold text-sm text-slate-950" style={{ background: PHYS.time }}>{playing ? 'Pause' : tt >= tMax ? 'Replay' : 'Play'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); }} aria-label="Step back 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">{'Step −1 s'}</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); }} aria-label="Step forward 1 second of simulated time" className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Step +1 s</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(setup.periodS / 2 > tMax ? tMax : setup.periodS / 2); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm" data-testid="jump-half">Half a turn</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(Math.min(tMax, setup.periodS)); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm" data-testid="jump-full">One full turn</button>
-        <button type="button" onClick={() => { setPlaying(false); setT(0); }} className="min-h-[44px] px-3 rounded-lg border border-surface-border bg-surface-card text-slate-200 text-sm">Back to 0 s</button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">Replay speed
-          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={tMax} step="any" value={tt} onChange={(e) => c.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className="w-full min-h-[44px]" />
-        </label>
-        <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; it does not change the speed of the object.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
-      </div>
-
+      {/* 3. Measurements and Live Observations */}
       <CircleReadout c={c} />
     </div>
   );

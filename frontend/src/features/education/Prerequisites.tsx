@@ -4,6 +4,7 @@ import { readinessLabel } from '../../engine/education/progress';
 import type { AnswerInput, EduChapter, Prerequisite, Question } from '../../engine/education/types';
 import { useEducationStore } from '../../store/useEducationStore';
 import { ConceptExplainer } from './LessonParts';
+import { NarrationEnabledProvider } from '../narration/NarrationRegion';
 import { QuestionView } from './QuestionView';
 
 /** Find the prerequisite owning a refresher step id (or the prerequisite id itself). */
@@ -347,6 +348,7 @@ export const PrerequisiteSet: React.FC<{
 };
 
 export const ChapterPrerequisites: React.FC<{ chapter: EduChapter }> = ({ chapter }) => (
+  <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
   <div className="rounded-3xl border border-surface-border/80 bg-surface-lowest/70 p-4 sm:p-5 md:p-6 min-w-0 w-full overflow-hidden shadow-xs" data-testid="chapter-prerequisites">
     <PrerequisiteSet
       chapter={chapter}
@@ -355,17 +357,20 @@ export const ChapterPrerequisites: React.FC<{ chapter: EduChapter }> = ({ chapte
       intro="A few ideas this chapter builds on. Check what you already know, or skip. You can always begin the lessons or open the laboratory right away."
     />
   </div>
+  </NarrationEnabledProvider>
 );
 
 export const UnitPrerequisites: React.FC<{ chapter: EduChapter; unitId: string }> = ({ chapter, unitId }) => {
   const unit = chapter.units.find((u) => u.id === unitId);
   if (!unit) return null;
   return (
-    <PrerequisiteSet
-      chapter={chapter}
-      ids={unit.prerequisiteIds}
-      heading={`Before Unit ${unit.number}`}
-      intro="Ideas this unit uses. These are suggestions, not gates."
-    />
+    <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
+      <PrerequisiteSet
+        chapter={chapter}
+        ids={unit.prerequisiteIds}
+        heading={`Before Unit ${unit.number}`}
+        intro="Ideas this unit uses. These are suggestions, not gates."
+      />
+    </NarrationEnabledProvider>
   );
 };

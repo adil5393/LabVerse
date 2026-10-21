@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { credentialsConfigured, useAuthStore } from '../../store/useAuthStore';
 
 const ICON = (name: string, cls = '') => <span className={`material-symbols-outlined text-[18px] ${cls}`}>{name}</span>;
@@ -55,8 +55,6 @@ export const LoginPage: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -65,12 +63,12 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const configured = credentialsConfigured();
 
-  if (user) return <Navigate to={from} replace />;
+  if (user) return <Navigate to="/" replace />;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!configured) { setError('Sign-in is not configured: set VITE_AUTH_USERNAME and VITE_AUTH_PASSWORD in frontend/.env and rebuild.'); return; }
-    if (login(username.trim(), password, remember)) navigate(from, { replace: true });
+    if (login(username.trim(), password, remember)) navigate('/', { replace: true });
     else setError('The user name or password was not recognised.');
   };
 

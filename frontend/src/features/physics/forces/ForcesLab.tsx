@@ -44,6 +44,7 @@ import { SecondLawDerivationView } from './SecondLawDerivation';
 import { DockTabs, LabOutliner, ViewportFrame, WorkspaceShell, useModelHistory, useSceneState, useUndoShortcuts, type DockTab, type SceneObject } from '../../workspace';
 import { ForcesMobileLab } from './ForcesMobileLab';
 import { LabInspectorSection, LabParameterField, LabSegmentedControl, LabSelect } from '../../workspace/controls';
+import { NetForceSummary, ModelAssumptions } from '../shared/controls';
 
 const RoutePanel: React.FC<{ route: ForceRoute; onRun: (r: ForceRoute) => void }> = ({
   route,
@@ -334,6 +335,18 @@ export const ForcesLab: React.FC = () => {
           <LabInspectorSection title="Constraint · SEAT_BELT" icon={ICON('airline_seat_recline_normal')} selected={sel('restraint')} locked={lk('restraint')}>
             <LabSegmentedControl<'off' | 'on'> size="sm" columns={2} ariaLabel="Seat belt" disabled={lk('restraint')} value={b.setup.restrained ? 'on' : 'off'} onChange={(v) => bEdit({ restrained: v === 'on' })} options={[{ value: 'off', label: 'No belt' }, { value: 'on', label: 'Belt on' }]} />
           </LabInspectorSection>
+          <ModelAssumptions
+            summary="Idealized vehicle and passenger inertia demonstration model."
+            assumptions={[
+              'Vehicle decelerates uniformly upon braking; passenger continues forward by inertia until restrained.',
+              'Seat belt exerts backward restraining force to decelerate passenger with the car.',
+              'Demonstration ends safely before collision with the dashboard.',
+            ]}
+            limits={{
+              velocityRange: [0, BRAKING_LIMITS.maxSpeed],
+              massRange: [BRAKING_LIMITS.minMass, BRAKING_LIMITS.maxMass],
+            }}
+          />
           {b.err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }}><span aria-hidden>{'✗ '}</span>{b.err}</p>}
         </div>
       ) : (
@@ -359,7 +372,22 @@ export const ForcesLab: React.FC = () => {
               <LabParameterField id="pulse" label="Pushes last for (0 = always)" symbol="t" unit="s" compact step={1} min={0} max={30} value={cs.pulseS ?? 0} onChange={(v) => edit({ pulseS: v <= 0 ? undefined : Math.round(v / 0.01) * 0.01 })} />
             </LabInspectorSection>
           )}
-          <p className="text-[11px] text-slate-400">Assumptions: a cart on a horizontal track (weight = normal force, g = 10 m/s²), right is positive, no air resistance. Mass {LIMITS.minMass} to {LIMITS.maxMass} kg; forces up to {LIMITS.maxForce} N.</p>
+          <NetForceSummary setup={cs} sample={m.p} compact />
+          <ModelAssumptions
+            summary="Idealized cart on a horizontal track with dry friction model."
+            assumptions={[
+              'Horizontal track: Weight balanced by normal force (W = N = mg, g = 10 m/s²).',
+              'Right is positive direction (+x).',
+              'No air resistance.',
+              `Friction model: ${surfaceById(cs.surfaceId).note}`,
+            ]}
+            limits={{
+              massRange: [LIMITS.minMass, LIMITS.maxMass],
+              forceRange: [0, LIMITS.maxForce],
+              velocityRange: [-LIMITS.maxVelocity, LIMITS.maxVelocity],
+              timeRange: [0, 30],
+            }}
+          />
           {m.err && <p role="alert" className="text-xs font-bold" style={{ color: PHYS.error }} data-testid="force-error"><span aria-hidden>{'✗ '}</span>{m.err}</p>}
         </div>
       )}

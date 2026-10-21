@@ -10,6 +10,7 @@ import { MOTION_MAP, MOTION_TEXTBOOK, motionCoverageCounts } from '../../../engi
 import { solvedExerciseNumbers, MOTION_EXERCISES } from '../../../engine/physics/motion/exercises';
 import { PRACTICE_ITEMS } from '../../../engine/physics/motion/practice';
 import { MotionLearnSection } from './MotionLearn';
+import { physicsChapterSummaries } from '../../../engine/physics/chapterSummary';
 
 const Crumb: React.FC<{ last: string; middle?: { to: string; label: string } }> = ({ last, middle }) => (
   <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
@@ -19,7 +20,9 @@ const Crumb: React.FC<{ last: string; middle?: { to: string; label: string } }> 
   </nav>
 );
 
-export const PhysicsHub: React.FC = () => (
+export const PhysicsHub: React.FC = () => {
+  const sum = Object.fromEntries(physicsChapterSummaries().map((x) => [x.id, x.line]));
+  return (
   <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="physics-hub">
     <GlobalHeader />
     <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
@@ -32,17 +35,22 @@ export const PhysicsHub: React.FC = () => (
         <Link to="/physics/motion" data-chapter-card="motion" className="block rounded-2xl border border-sky-500/40 bg-surface-card hover:border-sky-400 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Class 9 · Chapter 4</span>
           <h2 className="text-xl font-black text-white">Describing Motion Around Us</h2>
-          <p className="text-sm text-slate-300">Position, distance, displacement, speed and velocity, with a motion laboratory. Acceleration, graphs, equations of motion and circular motion, with four laboratories.</p>
+          <p className="text-sm text-slate-300">Position, displacement, speed and velocity, acceleration, graphs, equations of motion and circular motion, with four laboratories. {sum.motion}</p>
         </Link>
         <Link to="/physics/forces" data-chapter-card="forces" className="block rounded-2xl border border-indigo-400/40 bg-surface-card hover:border-indigo-300 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-300 font-bold">Class 9 · Chapter 6</span>
           <h2 className="text-xl font-black text-white">How Forces Affect Motion</h2>
-          <p className="text-sm text-slate-300">What a force is, balanced and unbalanced forces, friction, Newton&apos;s first law and inertia, with a Force Laboratory. Newton&apos;s second law and momentum are included; the third law is upcoming.</p>
+          <p className="text-sm text-slate-300">Forces, friction and Newton&apos;s three laws, with a Force Laboratory and momentum. {sum.forces}</p>
         </Link>
         <Link to="/physics/work" data-chapter-card="work" className="block rounded-2xl border border-amber-400/40 bg-surface-card hover:border-amber-300 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-amber-300 font-bold">Class 9 · Chapter 7</span>
           <h2 className="text-xl font-black text-white">Work, Energy, and Simple Machines</h2>
-          <p className="text-sm text-slate-300">Start with work: force times displacement, the joule, and positive, negative and zero work, with a Work Laboratory. Energy, power and simple machines are upcoming.</p>
+          <p className="text-sm text-slate-300">Work, energy, power and simple machines, with five laboratories. {sum.work}</p>
+        </Link>
+        <Link to="/physics/sound" data-chapter-card="sound" className="block rounded-2xl border border-teal-400/40 bg-surface-card hover:border-teal-300 p-5 space-y-2 min-h-[120px]">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-teal-300 font-bold">Class 9 · Chapter 10</span>
+          <h2 className="text-xl font-black text-white">Sound Waves</h2>
+          <p className="text-sm text-slate-300">Vibration, how sound travels, compressions and rarefactions, with a Vibration Laboratory and a Wave Laboratory. {sum.sound}</p>
         </Link>
         <Link to="/physics/electricity" data-chapter-card="electricity" className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-5 space-y-2 min-h-[120px]">
           <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Laboratory</span>
@@ -52,7 +60,8 @@ export const PhysicsHub: React.FC = () => (
       </div>
     </main>
   </div>
-);
+  );
+};
 
 export const MotionHub: React.FC = () => {
   const solved = solvedExerciseNumbers().length;

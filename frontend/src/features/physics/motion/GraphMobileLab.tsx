@@ -79,7 +79,7 @@ export const GraphMobileLab: React.FC<GraphMobileLabProps> = ({
   // 1. Simulation & Graph Viewport Slot
   const viewportSlot = (
     <MobileLabViewport
-      className="h-[38vh] min-h-[220px] max-h-[300px]"
+      className="h-[44vh] min-h-[295px] max-h-[410px] flex flex-col"
       telemetry={
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/90 backdrop-blur border border-outline-variant text-[11px] font-mono shadow-sm">
           <span className="text-slate-400">x:</span>
@@ -128,8 +128,8 @@ export const GraphMobileLab: React.FC<GraphMobileLabProps> = ({
           </div>
         )}
 
-        {/* The Selected Graph Scene */}
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+        {/* The Selected Graph Scene - adapts cleanly to container height with touch scrolling */}
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar touch-pan-y pb-2">
           <GraphScene g={g} kinds={[activeGraph]} showTrack={true} />
         </div>
       </div>

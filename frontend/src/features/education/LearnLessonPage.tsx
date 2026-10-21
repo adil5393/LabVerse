@@ -102,27 +102,43 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
             <span className="text-amber-400 font-bold">Lesson {lesson.number}</span>
           </nav>
 
-          <header className="space-y-2">
+          <header className="rounded-2xl border border-surface-border/80 bg-gradient-to-br from-surface-card via-surface-card to-surface-lowest p-5 space-y-3 shadow-xs">
             <div className="flex flex-wrap items-center gap-2">
-              {unit && <span className="text-[11px] font-mono px-2.5 py-1 rounded-full border border-amber-500/30 text-amber-300">Unit {unit.number}: {unit.title}</span>}
-              <span data-testid="lesson-status" data-status={status} className="text-[11px] font-mono px-2.5 py-1 rounded-full border border-surface-border text-slate-200">{STATUS_LABEL[status]}</span>
+              {unit && (
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary font-bold">
+                  Unit {unit.number}: {unit.title}
+                </span>
+              )}
+              <span
+                data-testid="lesson-status"
+                data-status={status}
+                className="text-[11px] font-mono px-2.5 py-1 rounded-full border border-surface-border bg-surface-lowest text-slate-200 font-semibold"
+              >
+                {STATUS_LABEL[status]}
+              </span>
             </div>
-            <h1 className="text-2xl md:text-4xl font-black text-white">Lesson {lesson.number}: {lesson.title}</h1>
-            <p className="text-sm md:text-base text-slate-300 max-w-3xl"><strong className="text-white">By the end you can: </strong>{lesson.objective}</p>
+            <h1 className="text-2xl md:text-3xl font-black text-white">Lesson {lesson.number}: {lesson.title}</h1>
+            <p className="text-xs sm:text-sm md:text-base text-slate-300 max-w-3xl leading-relaxed">
+              <strong className="text-white font-mono">Learning Objective: </strong>{lesson.objective}
+            </p>
           </header>
 
           {lesson.prerequisiteIds.length > 0 && (
             <details className="rounded-xl border border-surface-border bg-surface-card px-4 py-3" data-testid="lesson-prereqs">
-              <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-slate-200 font-medium">
-                Ideas this lesson uses: {lesson.prerequisiteIds.map((id) => chapter.prerequisites[id]?.title).filter(Boolean).join(' · ')}{lesson.prerequisiteIds.some((id) => readiness[id]?.status === 'needs_review') ? ' (review suggested)' : ''}
+              <summary className="cursor-pointer min-h-[44px] flex items-center justify-between text-xs sm:text-sm text-slate-200 font-medium hover:text-white transition-colors">
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-amber-400">psychology</span>
+                  Ideas this lesson uses: {lesson.prerequisiteIds.map((id) => chapter.prerequisites[id]?.title).filter(Boolean).join(' · ')}{lesson.prerequisiteIds.some((id) => readiness[id]?.status === 'needs_review') ? ' (review suggested)' : ''}
+                </span>
+                <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
               </summary>
-              <div className="grid gap-3 mt-3 lg:grid-cols-2">
+              <div className="grid gap-3 mt-3 pt-3 border-t border-surface-border/60 lg:grid-cols-2">
                 {lesson.prerequisiteIds.map((id) => chapter.prerequisites[id] && <PrerequisiteCard key={id} prereq={chapter.prerequisites[id]} />)}
               </div>
             </details>
           )}
 
-          <nav aria-label="Lesson stages" className="flex gap-2 overflow-x-auto pb-1">
+          <nav aria-label="Lesson stages" className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {STAGES.map((s) => (
               <button
                 key={s.id}
@@ -130,9 +146,14 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
                 aria-current={stage === s.id ? 'step' : undefined}
                 data-stage={s.id}
                 onClick={() => setStage(s.id)}
-                className={`shrink-0 min-h-[48px] px-4 rounded-xl border text-sm font-medium flex items-center gap-1.5 ${stage === s.id ? 'border-amber-400 bg-amber-500/15 text-white' : 'border-surface-border text-slate-300 hover:border-slate-400'}`}
+                className={`shrink-0 min-h-[48px] px-4 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors touch-manipulation ${
+                  stage === s.id
+                    ? 'border-primary bg-primary/15 text-white shadow-xs font-bold'
+                    : 'border-surface-border bg-surface-card text-slate-300 hover:text-white hover:border-slate-400'
+                }`}
               >
-                <span className="material-symbols-outlined text-[18px]" aria-hidden>{s.icon}</span>{s.label}
+                <span className="material-symbols-outlined text-[18px]" aria-hidden>{s.icon}</span>
+                <span>{s.label}</span>
               </button>
             ))}
           </nav>

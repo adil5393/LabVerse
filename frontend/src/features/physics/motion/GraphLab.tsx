@@ -130,7 +130,7 @@ export const GraphLab: React.FC<GraphLabProps> = ({ labTitle, outlinerTitle, ins
 
   const viewportContent = (
     <ViewportFrame toolbar={transport} footnote="Model graphs of an idealised constant-acceleration motion. Click a graph or use the slider to move the time cursor; the replay speed only changes how fast the picture plays.">
-      <div className="w-full max-h-full overflow-y-auto space-y-3 px-1" data-no-pan data-chapter="motion-graphs" data-visual="motionGraphs">
+      <div className="w-full min-h-full flex flex-col justify-start sm:justify-center py-2 sm:py-3 space-y-2.5 sm:space-y-3 px-1 sm:px-2 touch-pan-y" data-no-pan data-chapter="motion-graphs" data-visual="motionGraphs">
         {scene.isVisible('body') || shownKinds.length > 0 ? <GraphScene g={g} kinds={shownKinds} showTrack={scene.isVisible('body')} /> : <p className="text-xs text-slate-400 text-center py-8">Every object is hidden. Use the eye icons in the Explorer to show them.</p>}
       </div>
     </ViewportFrame>

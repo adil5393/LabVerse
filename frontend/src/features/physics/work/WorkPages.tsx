@@ -30,8 +30,12 @@ export const WorkLearnPage: React.FC = () => {
 };
 
 const TONE: Record<LearningStatus, string> = {
-  not_started: 'border-surface-border text-slate-400', in_progress: 'border-cyan-500/40 text-cyan-300', completed: 'border-emerald-500/40 text-emerald-300',
-  demonstrated: 'border-violet-500/40 text-violet-300', mastered: 'border-emerald-400 text-emerald-200 bg-emerald-500/10', needs_review: 'border-amber-500/40 text-amber-300',
+  not_started: 'border-surface-border text-slate-400 bg-surface-lowest/50',
+  in_progress: 'border-amber-500/50 text-amber-300 bg-amber-500/10 shadow-xs',
+  completed: 'border-emerald-500/50 text-emerald-300 bg-emerald-500/10 shadow-xs',
+  demonstrated: 'border-violet-500/50 text-violet-300 bg-violet-500/10 shadow-xs',
+  mastered: 'border-emerald-400 text-emerald-200 bg-emerald-500/15 font-bold shadow-xs',
+  needs_review: 'border-amber-500/50 text-amber-300 bg-amber-500/10 shadow-xs',
 };
 
 const WorkLearnSection: React.FC = () => {
@@ -40,41 +44,126 @@ const WorkLearnSection: React.FC = () => {
   const all = ch.units.flatMap((u) => u.lessonIds.map((id) => ch.lessons[id]));
   const next = all.find((l) => { const st = lessonStatus(l, records[l.id]); return st !== 'completed' && st !== 'mastered'; }) ?? all[0];
   const started = all.some((l) => lessonStatus(l, records[l.id]) !== 'not_started');
+  const doneCount = all.filter((l) => { const st = lessonStatus(l, records[l.id]); return st === 'completed' || st === 'mastered'; }).length;
+  const percentDone = Math.round((doneCount / Math.max(all.length, 1)) * 100);
+
   return (
     <VisualRegistryProvider value={WORK_VISUALS}>
       <section id="learn" aria-label="Learn" className="space-y-6" data-testid="work-learn-section">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-black text-white">Learn: Work, energy, power and machines</h2>
-            <p className="text-sm text-slate-300 max-w-3xl">When does a force really do work in physics, and how does work change energy, and why is the mechanical energy conserved? Why is the kinetic energy one half the mass times the speed squared, and the potential energy mgh? Short explanations, a scene you can change, worked examples and problems of your own. You can skip any prerequisite refresher and still start any lesson.</p>
+        {/* Hero Guided Learning Banner */}
+        <div className="rounded-3xl border-2 border-amber-500/50 bg-gradient-to-br from-amber-950/40 via-surface-card to-surface-lowest p-5 md:p-6 space-y-4 shadow-lg shadow-amber-950/20 relative overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px]">school</span>
+              Guided Learning Path · Class 9 Physics
+            </span>
+            <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+              {percentDone}% Complete
+            </span>
           </div>
-          <Link data-testid="work-start-learning" to={ch.routes.learn(next.id)} className="min-h-[48px] px-5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm inline-flex items-center">{started ? `Continue Learn: Lesson ${next.number}` : 'Start Learn: Lesson 1'}</Link>
+
+          <div className="space-y-1">
+            <h2 className="text-2xl md:text-3xl font-black text-white">Learn: Work, energy, power and machines</h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
+              When does a force really do work in physics, and how does work change energy, and why is mechanical energy conserved? Why is kinetic energy &frac12;mv&sup2; and potential energy mgh? Interactive scenes, derivations, worked examples and challenges.
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-1.5 pt-1">
+            <div className="w-full h-2 rounded-full bg-surface-lowest border border-surface-border overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-300 rounded-full"
+                style={{ width: `${Math.max(4, percentDone)}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+              <span>{doneCount} of {all.length} lessons completed</span>
+              <span className="text-amber-300">Next: Lesson {next.number} ({next.title})</span>
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <Link
+              data-testid="work-start-learning"
+              to={ch.routes.learn(next.id)}
+              className="min-h-[50px] w-full sm:w-auto px-6 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm inline-flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 transition-all touch-manipulation"
+            >
+              <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+              <span>{started ? `Continue Learn: Lesson ${next.number} (${next.title})` : 'Start Learn: Lesson 1'}</span>
+            </Link>
+          </div>
         </div>
+
         <ChapterIntroduction chapter={ch} />
         <ChapterPrerequisites chapter={ch} />
-        {ch.units.map((u) => (
-          <div key={u.id} className="space-y-3" data-learn-unit={u.id}>
-            <UnitIntroduction unit={u} />
-            <details className="rounded-xl border border-surface-border bg-surface-card px-4 py-2">
-              <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-slate-200 font-medium">Before Unit {u.number}: ideas this unit uses (optional)</summary>
-              <div className="pt-3"><UnitPrerequisites chapter={ch} unitId={u.id} /></div>
-            </details>
-            <ol className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              {u.lessonIds.map((id) => {
-                const l = ch.lessons[id]; const st = lessonStatus(l, records[id]);
-                return (
-                  <li key={id}>
-                    <Link to={ch.routes.learn(id)} data-learn-link={id} className="block min-h-[64px] rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-4 space-y-1">
-                      <div className="flex items-center justify-between gap-2"><span className="text-xs font-mono text-slate-400">Learn · Lesson {l.number}</span><span data-status={st} className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${TONE[st]}`}>{STATUS_LABEL[st]}</span></div>
-                      <div className="font-bold text-white">{l.title}</div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ol>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px] text-amber-400">format_list_bulleted</span>
+              Curriculum Units & Lessons
+            </h3>
+            <span className="text-xs font-mono text-slate-400">{ch.units.length} units · {all.length} lessons</span>
           </div>
-        ))}
-              </section>
+
+          {ch.units.map((u) => (
+            <div key={u.id} className="space-y-3" data-learn-unit={u.id}>
+              <UnitIntroduction unit={u} />
+              <details className="rounded-xl border border-surface-border bg-surface-card/60 px-4 py-2 overflow-hidden">
+                <summary className="cursor-pointer min-h-[44px] flex items-center justify-between text-xs sm:text-sm text-slate-200 font-medium hover:text-white transition-colors">
+                  <span className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">psychology</span>
+                    Before Unit {u.number}: ideas this unit uses (optional)
+                  </span>
+                  <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </summary>
+                <div className="pt-3 pb-1 border-t border-surface-border/60">
+                  <UnitPrerequisites chapter={ch} unitId={u.id} />
+                </div>
+              </details>
+
+              <ol className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
+                {u.lessonIds.map((id) => {
+                  const l = ch.lessons[id];
+                  const st = lessonStatus(l, records[id]);
+                  return (
+                    <li key={id}>
+                      <Link
+                        to={ch.routes.learn(id)}
+                        data-learn-link={id}
+                        className="block min-h-[68px] rounded-2xl border border-surface-border/80 bg-surface-card hover:bg-surface-card/80 hover:border-amber-400/60 active:scale-[0.99] p-4 space-y-1.5 transition-all shadow-xs touch-manipulation group"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-surface-lowest text-[10px] text-amber-400 border border-amber-500/20 font-bold">
+                              L{l.number}
+                            </span>
+                            Lesson {l.number}
+                          </span>
+                          <span
+                            data-status={st}
+                            className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${TONE[st]}`}
+                          >
+                            <span className="text-[10px]">
+                              {st === 'completed' || st === 'mastered' ? '✓' : st === 'in_progress' ? '▶' : '○'}
+                            </span>
+                            {STATUS_LABEL[st]}
+                          </span>
+                        </div>
+                        <div className="font-bold text-white group-hover:text-amber-300 transition-colors text-sm sm:text-base">
+                          {l.title}
+                        </div>
+                        <p className="text-xs text-slate-400 truncate">{l.objective}</p>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </section>
     </VisualRegistryProvider>
   );
 };
@@ -91,8 +180,6 @@ const Crumb: React.FC<{ last: string }> = ({ last }) => (
 export const WorkHub: React.FC = () => {
   const counts = workCoverageCounts();
   const ex = workExerciseCounts();
-  const card = 'rounded-2xl border bg-surface-card p-5 space-y-2 flex flex-col justify-between min-h-[150px]';
-  const btn = 'min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border';
   return (
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="work">
       <GlobalHeader />
@@ -104,30 +191,81 @@ export const WorkHub: React.FC = () => {
           <p className="text-sm md:text-base text-slate-300 max-w-3xl">Work and energy: when a force really does work in physics, how to calculate it in joules, how work changes energy, kinetic and potential energy, why the mechanical energy is conserved, power, and how pulleys, ramps and levers make tasks easier without reducing the work.</p>
         </header>
 
-        <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-testid="work-destinations">
-          <div className={`${card} border-amber-500/40`} style={{ borderTop: '4px solid #F59E0B' }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} units and {Object.keys(WORK_CHAPTER.lessons).length} lessons so far, with prerequisites, worked examples and practice.</p></div>
-            <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-sm">Start learning</a>
+        <section aria-label="Ways to learn" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="work-destinations">
+          <div className="rounded-2xl border border-amber-500/50 bg-gradient-to-b from-amber-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: '4px solid #F59E0B' }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-amber-400">school</span>
+                <h2 className="text-lg font-black text-white">Learn</h2>
+              </div>
+              <p className="text-xs text-slate-300">{WORK_CHAPTER.units.length} units and {Object.keys(WORK_CHAPTER.lessons).length} lessons, with prerequisites, worked examples and practice.</p>
+            </div>
+            <a href="#learn" data-destination="learn" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm shadow-sm transition-all touch-manipulation">Start learning</a>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #FBBF24' }}>
-            <div><h2 className="text-lg font-black text-white">Free Laboratory</h2><p className="text-xs text-slate-300">Work Laboratory: choose a force, its direction and a displacement, and see the signed work of each force. Five optional investigations (A to E). No gates.</p></div>
-            <Link to="/physics/work/lab" data-destination="lab" className={btn}>Open the laboratory</Link>
+
+          <div className="rounded-2xl border border-yellow-500/40 bg-gradient-to-b from-yellow-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: '4px solid #FBBF24' }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-yellow-400">science</span>
+                <h2 className="text-lg font-black text-white">Free Laboratory</h2>
+              </div>
+              <p className="text-xs text-slate-300">Work Laboratory: choose a force, its direction and a displacement, and see the signed work of each force. 5 investigations. No gates.</p>
+            </div>
+            <Link to="/physics/work/lab" data-destination="lab" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the laboratory</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #A78BFA' }}>
-            <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">All {ex.questions} questions, with every part ({ex.parts} in all), solved step by step.</p></div>
-            <Link to="/physics/work/exercises" data-destination="exercises" className={btn}>Open the exercises</Link>
+
+          <div className="rounded-2xl border border-violet-500/40 bg-gradient-to-b from-violet-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: '4px solid #A78BFA' }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-violet-400">assignment</span>
+                <h2 className="text-lg font-black text-white">NCERT Exercises</h2>
+              </div>
+              <p className="text-xs text-slate-300">All {ex.questions} questions, with every part ({ex.parts} in all), solved step by step.</p>
+            </div>
+            <Link to="/physics/work/exercises" data-destination="exercises" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the exercises</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: '4px solid #34D399' }}>
-            <div><h2 className="text-lg font-black text-white">Chapter Practice</h2><p className="text-xs text-slate-300">{WORK_PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order; no prerequisites, no login.</p></div>
-            <Link to="/physics/work/practice" data-destination="practice" className={btn}>Open Chapter Practice</Link>
+
+          <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: '4px solid #34D399' }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-emerald-400">task_alt</span>
+                <h2 className="text-lg font-black text-white">Chapter Practice</h2>
+              </div>
+              <p className="text-xs text-slate-300">{WORK_PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order.</p>
+            </div>
+            <Link to="/physics/work/practice" data-destination="practice" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open Chapter Practice</Link>
           </div>
         </section>
 
         <section aria-label="Laboratories" className="space-y-3" data-testid="work-labs">
-          <h2 className="text-xl font-black text-white">Laboratories</h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {[{ to: '/physics/work/lab', d: 'work-lab', t: 'Work Laboratory', x: 'Force, direction and displacement: the signed work of each force.' }, { to: '/physics/work/kinetic', d: 'kinetic-lab', t: 'Work-Energy Laboratory', x: 'A cart under a net force: the area under the force graph is the change in kinetic energy.' }, { to: '/physics/work/energy', d: 'energy-lab', t: 'Energy Laboratory', x: 'Release an object on a ramp or drop it: kinetic, potential and thermal energy, with and without friction.' }, { to: '/physics/work/power', d: 'power-lab', t: 'Power Laboratory', x: 'Change the work and the time: the power P = W \u00F7 t in watts, with a work-time graph.' }, { to: '/physics/work/machines', d: 'machines-lab', t: 'Simple Machines Laboratory', x: 'An inclined plane, a pulley system and a lever, each with its forces, distances and work.' }, { to: '/physics/work/derivations', d: 'derivations', t: 'Derivations', x: 'Step-by-step derivations with your own numbers and missing-step questions.' }].map((l) => (
-              <Link key={l.d} to={l.to} data-destination={l.d} className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-4 space-y-1 min-h-[96px]"><div className="font-bold text-white">{l.t}</div><p className="text-xs text-slate-300">{l.x}</p></Link>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px] text-amber-400">science</span>
+              Laboratories & Experiments
+            </h2>
+            <span className="text-xs font-mono text-slate-400">6 interactive workbenches</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { to: '/physics/work/lab', d: 'work-lab', t: 'Work Laboratory', x: 'Force, direction and displacement: the signed work of each force.', icon: 'straighten', c: '#F59E0B' },
+              { to: '/physics/work/kinetic', d: 'kinetic-lab', t: 'Work-Energy Laboratory', x: 'A cart under a net force: the area under the force graph is the change in kinetic energy.', icon: 'speed', c: '#38BDF8' },
+              { to: '/physics/work/energy', d: 'energy-lab', t: 'Energy Laboratory', x: 'Release an object on a ramp or drop it: kinetic, potential and thermal energy.', icon: 'bolt', c: '#FBBF24' },
+              { to: '/physics/work/power', d: 'power-lab', t: 'Power Laboratory', x: 'Change the work and the time: power P = W ÷ t in watts, with a work-time graph.', icon: 'timer', c: '#F472B6' },
+              { to: '/physics/work/machines', d: 'machines-lab', t: 'Simple Machines Laboratory', x: 'An inclined plane, a pulley system and a lever, each with its forces, distances and work.', icon: 'build', c: '#2DD4BF' },
+              { to: '/physics/work/derivations', d: 'derivations', t: 'Derivations', x: 'Step-by-step derivations with your own numbers and missing-step questions.', icon: 'functions', c: '#A78BFA' }
+            ].map((l) => (
+              <Link
+                key={l.d}
+                to={l.to}
+                data-destination={l.d}
+                className="block rounded-2xl border border-surface-border/80 bg-surface-card hover:bg-surface-card/80 hover:border-amber-400/60 p-4 space-y-1.5 min-h-[96px] transition-all shadow-xs touch-manipulation group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]" style={{ color: l.c }}>{l.icon}</span>
+                  <div className="font-bold text-white group-hover:text-amber-300 transition-colors text-sm sm:text-base">{l.t}</div>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">{l.x}</p>
+              </Link>
             ))}
           </div>
         </section>

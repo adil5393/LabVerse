@@ -42,39 +42,102 @@ export const TwoVariablesLearnSection: React.FC = () => {
   const all = ch.units.flatMap((u) => u.lessonIds.map((id) => ch.lessons[id]));
   const next = all.find((l) => { const st = lessonStatus(l, records[l.id]); return st !== 'completed' && st !== 'mastered'; }) ?? all[0];
   const started = all.some((l) => lessonStatus(l, records[l.id]) !== 'not_started');
+  const doneCount = all.filter((l) => { const st = lessonStatus(l, records[l.id]); return st === 'completed' || st === 'mastered'; }).length;
+  const masteredCount = all.filter((l) => lessonStatus(l, records[l.id]) === 'mastered').length;
+  const progressPct = Math.round((doneCount / Math.max(all.length, 1)) * 100);
+
   return (
     <VisualRegistryProvider value={TV_VISUALS}>
       <section aria-label="Learn the ideas" className="space-y-6" data-testid="two-variables-learn-section">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-black text-white">Learn the ideas</h2>
-            <p className="text-sm text-slate-300 max-w-3xl">From a story to an equation, its solutions, a table and a graph, with a point you can move and an instant check. You can skip ahead, or open the Free Laboratory, at any time.</p>
+        {/* Modern Learning Hero Banner */}
+        <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-b from-purple-950/30 via-surface-card to-surface-card p-5 sm:p-6 shadow-lg">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-5">
+            <div className="space-y-2 max-w-2xl">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[10px] font-bold tracking-wider uppercase">
+                  Class 9 Mathematics · Algebra
+                </span>
+                <span className="text-slate-400 text-xs font-mono">
+                  {doneCount}/{all.length} completed
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                Learn the ideas
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                From real-world stories to linear equations, solutions, coordinates, and interactive graphical lines.
+              </p>
+
+              {/* Progress bar */}
+              <div className="pt-2 space-y-1.5">
+                <div className="w-full h-2 rounded-full bg-surface-lowest border border-surface-border overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400 rounded-full"
+                    style={{ width: `${Math.max(4, progressPct)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                  <span>{doneCount} of {all.length} lessons completed</span>
+                  <span className="text-purple-300 font-semibold">{masteredCount} mastered</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-2">
+              <Link
+                data-testid="two-variables-start-learning"
+                to={ch.routes.learn(next.id)}
+                className="min-h-[48px] px-6 rounded-xl bg-purple-600 hover:bg-purple-500 active:scale-[0.99] text-white font-black text-sm inline-flex items-center justify-center gap-2 shadow-md shadow-purple-600/20 transition-colors touch-manipulation"
+              >
+                <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                <span>{started ? `Continue: Lesson ${next.number}` : 'Start: Lesson 1'}</span>
+              </Link>
+            </div>
           </div>
-          <Link data-testid="two-variables-start-learning" to={ch.routes.learn(next.id)} className="min-h-[48px] px-5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm inline-flex items-center">
-            {started ? `Continue Learn: Lesson ${next.number}` : 'Start Learn: Lesson 1'}
-          </Link>
         </div>
+
         <ChapterIntroduction chapter={ch} />
         <ChapterPrerequisites chapter={ch} />
+
         {ch.units.map((u) => (
           <div key={u.id} className="space-y-3" data-learn-unit={u.id}>
             <UnitIntroduction unit={u} />
-            <details className="rounded-xl border border-surface-border bg-surface-card px-4 py-2">
-              <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-slate-200 font-medium">Before Unit {u.number}: ideas this unit uses (optional)</summary>
-              <div className="pt-3"><UnitPrerequisites chapter={ch} unitId={u.id} /></div>
+            <details className="rounded-xl border border-surface-border bg-surface-card/60 px-4 py-2 overflow-hidden">
+              <summary className="cursor-pointer min-h-[44px] flex items-center justify-between text-xs sm:text-sm text-slate-200 font-medium hover:text-white transition-colors">
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-primary">psychology</span>
+                  Before Unit {u.number}: ideas this unit uses (optional)
+                </span>
+                <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+              </summary>
+              <div className="pt-3 pb-1 border-t border-surface-border/60"><UnitPrerequisites chapter={ch} unitId={u.id} /></div>
             </details>
-            <ol className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+            <ol className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
               {u.lessonIds.map((id) => {
                 const l = ch.lessons[id];
                 const st = lessonStatus(l, records[id]);
                 return (
                   <li key={id}>
-                    <Link to={ch.routes.learn(id)} data-learn-link={id} className="block min-h-[64px] rounded-2xl border border-surface-border bg-surface-card hover:border-purple-400/60 p-4 space-y-1">
+                    <Link
+                      to={ch.routes.learn(id)}
+                      data-learn-link={id}
+                      className="block min-h-[68px] rounded-2xl border border-surface-border/80 bg-surface-card hover:bg-surface-card/80 hover:border-purple-400/60 active:scale-[0.99] p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group"
+                    >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-mono text-slate-400">Learn · Lesson {l.number}</span>
-                        <span data-status={st} className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${TONE[st]}`}>{STATUS_LABEL[st]}</span>
+                        <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 rounded bg-surface-lowest text-[10px] text-purple-400 border border-purple-500/20 font-bold">
+                            L{l.number}
+                          </span>
+                          Lesson {l.number}
+                        </span>
+                        <span data-status={st} className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${TONE[st]}`}>
+                          <span className="text-[10px]">{st === 'completed' || st === 'mastered' ? '✓' : st === 'in_progress' ? '▶' : '○'}</span>
+                          {STATUS_LABEL[st]}
+                        </span>
                       </div>
-                      <div className="font-bold text-white">{l.title}</div>
+                      <div className="font-bold text-white group-hover:text-purple-300 transition-colors text-sm sm:text-base leading-snug">
+                        {l.title}
+                      </div>
                     </Link>
                   </li>
                 );

@@ -18,9 +18,9 @@ const Plot: React.FC<{ title: string; yLabel: string; lines: Line[]; totalS: num
   const X = (t: number) => L + (t / Math.max(totalS, 1e-9)) * (W - L - R);
   const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
   return (
-    <figure className="rounded-lg border border-surface-border bg-surface-lowest p-2 min-w-0 w-full sm:min-w-[260px] flex-1" data-testid={testId}>
+    <figure className="rounded-lg border border-surface-border bg-surface-lowest p-2 min-w-0 w-full sm:min-w-[220px] flex-1 flex flex-col justify-between shrink-0" data-testid={testId}>
       <figcaption className="text-[11px] font-mono uppercase tracking-wider text-slate-300 mb-1">{title}</figcaption>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`${title}. ${lines.map((l) => l.label).join(', ')} against simulated time.`}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto flex-1 min-h-[85px] max-h-[140px] sm:max-h-[165px] shrink" role="img" aria-label={`${title}. ${lines.map((l) => l.label).join(', ')} against simulated time.`}>
         <line x1={L} y1={Y(0)} x2={W - R} y2={Y(0)} stroke="#475569" strokeWidth={1} />
         <line x1={L} y1={T} x2={L} y2={H - B} stroke="#475569" strokeWidth={1} />
         <text x={L - 4} y={T + 4} textAnchor="end" fill="#94a3b8" fontSize={10}>{Math.round(hi * 10) / 10}</text>
@@ -44,7 +44,7 @@ export const MotionTimeGraphs: React.FC<{ path: MotionPath; tMs: number }> = ({ 
   const samples = Array.from({ length: n + 1 }, (_, i) => sampleAt(path, (i / n) * total));
   const pts = (f: (s: (typeof samples)[number]) => number): [number, number][] => samples.map((s) => [s.tMs / 1000, f(s)]);
   return (
-    <div className="flex flex-wrap gap-3" data-testid="motion-graphs">
+    <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch w-full min-h-0" data-testid="motion-graphs">
       <Plot testId="graph-position" title="Position – time" yLabel="x (m)" totalS={total / 1000} nowS={Math.min(tMs, total) / 1000}
         lines={[{ label: 'position x', color: PHYS.position, pts: pts((s) => metres(s.positionCm)) }]} />
       <Plot testId="graph-distance" title="Distance and displacement – time" yLabel="metres" totalS={total / 1000} nowS={Math.min(tMs, total) / 1000}

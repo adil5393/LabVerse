@@ -57,7 +57,6 @@ export const PhysicsHub: React.FC = () => (
 export const MotionHub: React.FC = () => {
   const solved = solvedExerciseNumbers().length;
   const counts = motionCoverageCounts();
-  const card = 'rounded-2xl border bg-surface-card p-5 space-y-2 flex flex-col justify-between min-h-[150px]';
   return (
     <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="motion">
       <GlobalHeader />
@@ -69,34 +68,82 @@ export const MotionHub: React.FC = () => {
           <p className="text-sm md:text-base text-slate-300 max-w-3xl">Learn how to describe the motion of an object in a straight line. Start with position and reference points, then distance, displacement, speed, velocity, acceleration, graphs, the equations of motion and circular motion.</p>
         </header>
 
-        <section aria-label="Ways to learn" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="motion-destinations">
-          <div className={`${card} border-sky-500/40`} style={{ borderTop: "4px solid #38BDF8" }}>
-            <div><h2 className="text-lg font-black text-white">Learn</h2><p className="text-xs text-slate-300">10 lessons in 5 units, with prerequisites, worked examples and practice.</p></div>
-            <a href="#learn" data-destination="learn" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Start learning</a>
+        <section aria-label="Ways to learn" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="motion-destinations">
+          <div className="rounded-2xl border border-sky-500/50 bg-gradient-to-b from-sky-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #38BDF8" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-sky-400">school</span>
+                <h2 className="text-lg font-black text-white">Learn</h2>
+              </div>
+              <p className="text-xs text-slate-300">10 lessons in 5 units, with prerequisites, worked examples and practice.</p>
+            </div>
+            <a href="#learn" data-destination="learn" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-[0.99] text-slate-950 font-black text-sm shadow-sm transition-all touch-manipulation">Start learning</a>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #F59E0B" }}>
-            <div><h2 className="text-lg font-black text-white">Free Laboratory</h2><p className="text-xs text-slate-300">Move an object on a track and see distance and displacement. No gates.</p></div>
-            <Link to="/physics/motion/lab" data-destination="lab" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the laboratory</Link>
+
+          <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #F59E0B" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-amber-400">science</span>
+                <h2 className="text-lg font-black text-white">Free Laboratory</h2>
+              </div>
+              <p className="text-xs text-slate-300">Move an object on a track and see distance and displacement. No gates.</p>
+            </div>
+            <Link to="/physics/motion/lab" data-destination="lab" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the laboratory</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #F472B6" }}>
-            <div><h2 className="text-lg font-black text-white">Motion Graph Studio</h2><p className="text-xs text-slate-300">Position–time, velocity–time and acceleration–time graphs drawn from one motion, with a time cursor and live numbers.</p></div>
-            <Link to="/physics/motion/graphs" data-destination="graphs" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the Graph Studio</Link>
+
+          <div className="rounded-2xl border border-pink-500/40 bg-gradient-to-b from-pink-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #F472B6" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-pink-400">show_chart</span>
+                <h2 className="text-lg font-black text-white">Motion Graph Studio</h2>
+              </div>
+              <p className="text-xs text-slate-300">Position–time, velocity–time and acceleration–time graphs drawn from one motion, with a time cursor and live numbers.</p>
+            </div>
+            <Link to="/physics/motion/graphs" data-destination="graphs" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the Graph Studio</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #FB923C" }}>
-            <div><h2 className="text-lg font-black text-white">Equation Laboratory</h2><p className="text-xs text-slate-300">v = u + at, s = ut + ½at² and v² = u² + 2as with your own numbers, signs and graphs.</p></div>
-            <Link to="/physics/motion/equations" data-destination="equations" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the Equation Laboratory</Link>
+
+          <div className="rounded-2xl border border-orange-500/40 bg-gradient-to-b from-orange-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #FB923C" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-orange-400">functions</span>
+                <h2 className="text-lg font-black text-white">Equation Laboratory</h2>
+              </div>
+              <p className="text-xs text-slate-300">v = u + at, s = ut + ½at² and v² = u² + 2as with your own numbers, signs and graphs.</p>
+            </div>
+            <Link to="/physics/motion/equations" data-destination="equations" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the Equation Laboratory</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #2DD4BF" }}>
-            <div><h2 className="text-lg font-black text-white">Circular Motion</h2><p className="text-xs text-slate-300">Constant speed on a circle: distance along the arc, the straight-line displacement and the turning velocity.</p></div>
-            <Link to="/physics/motion/circular" data-destination="circular" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the circular motion lab</Link>
+
+          <div className="rounded-2xl border border-teal-500/40 bg-gradient-to-b from-teal-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #2DD4BF" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-teal-400">refresh</span>
+                <h2 className="text-lg font-black text-white">Circular Motion</h2>
+              </div>
+              <p className="text-xs text-slate-300">Constant speed on a circle: distance along the arc, the straight-line displacement and the turning velocity.</p>
+            </div>
+            <Link to="/physics/motion/circular" data-destination="circular" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the circular motion lab</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #A78BFA" }}>
-            <div><h2 className="text-lg font-black text-white">NCERT Exercises</h2><p className="text-xs text-slate-300">All {solved} of {MOTION_EXERCISES.length} questions, with every part, solved step by step.</p></div>
-            <Link to="/physics/motion/exercises" data-destination="exercises" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open the exercises</Link>
+
+          <div className="rounded-2xl border border-violet-500/40 bg-gradient-to-b from-violet-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #A78BFA" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-violet-400">assignment</span>
+                <h2 className="text-lg font-black text-white">NCERT Exercises</h2>
+              </div>
+              <p className="text-xs text-slate-300">All {solved} of {MOTION_EXERCISES.length} questions, with every part, solved step by step.</p>
+            </div>
+            <Link to="/physics/motion/exercises" data-destination="exercises" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open the exercises</Link>
           </div>
-          <div className={`${card} border-surface-border`} style={{ borderTop: "4px solid #34D399" }}>
-            <div><h2 className="text-lg font-black text-white">Chapter Practice</h2><p className="text-xs text-slate-300">{PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order; no prerequisites, no login.</p></div>
-            <Link to="/physics/motion/practice" data-destination="practice" className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-slate-700 text-slate-100 font-bold text-sm border border-surface-border">Open Chapter Practice</Link>
+
+          <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm relative overflow-hidden" style={{ borderTop: "4px solid #34D399" }}>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-emerald-400">task_alt</span>
+                <h2 className="text-lg font-black text-white">Chapter Practice</h2>
+              </div>
+              <p className="text-xs text-slate-300">{PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order; no prerequisites, no login.</p>
+            </div>
+            <Link to="/physics/motion/practice" data-destination="practice" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open Chapter Practice</Link>
           </div>
         </section>
 

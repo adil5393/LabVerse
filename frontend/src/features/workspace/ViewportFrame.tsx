@@ -111,10 +111,10 @@ export const ViewportFrame: React.FC<ViewportFrameProps> = ({
           }}
         >
           <div
-            className="absolute inset-0 p-2 pt-12 flex items-center justify-center"
+            className="absolute inset-0 p-2 pt-12 pb-6 flex flex-col justify-start items-center overflow-y-auto touch-pan-y"
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transformOrigin: 'center',
+              transformOrigin: 'center top',
               transition: drag.current ? 'none' : 'transform 120ms',
             }}
           >

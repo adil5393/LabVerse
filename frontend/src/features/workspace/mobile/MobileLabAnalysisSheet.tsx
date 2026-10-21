@@ -47,7 +47,7 @@ export const MobileLabAnalysisSheet: React.FC<MobileLabAnalysisSheetProps> = ({
   return (
     <div
       className={`w-full bg-surface-container border-t border-outline-variant flex flex-col transition-all duration-200 select-none shrink-0 ${
-        isExpanded ? 'h-[48vh] max-h-[420px]' : 'h-11'
+        isExpanded ? 'h-[56vh] min-h-[310px] max-h-[480px]' : 'h-11'
       }`}
       data-testid="mobile-analysis-sheet"
       data-expanded={isExpanded}

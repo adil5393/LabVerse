@@ -239,7 +239,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                     ? 'h-8'
                     : dockMode === 'focus'
                     ? 'h-[52vh] sm:h-[360px]'
-                    : 'h-[34vh] sm:h-[220px]'
+                    : 'h-[38vh] sm:h-[295px] min-h-[260px]'
                 }`}
               >
                 <div
@@ -302,7 +302,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                   </div>
                 </div>
                 {dockMode !== 'collapsed' && (
-                  <div className="flex-1 overflow-y-auto p-2">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     {analysisDock}
                   </div>
                 )}

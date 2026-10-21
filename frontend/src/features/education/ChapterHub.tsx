@@ -55,30 +55,69 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
         </header>
 
         <div className="grid gap-4 lg:grid-cols-12">
-          <section className="lg:col-span-6 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-br from-amber-950/40 via-surface-card to-surface-lowest p-5 md:p-7 space-y-3" aria-label="Learn">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">Guided learning path</span>
-            <h2 className="text-xl md:text-2xl font-black text-white">{started ? 'Continue' : 'Start'}: Lesson {next.number}, {next.title}</h2>
-            <p className="text-sm text-slate-300">{next.objective.charAt(0).toUpperCase() + next.objective.slice(1)}</p>
-            <p className="text-xs font-mono text-slate-400" data-testid="path-progress">{doneCount} of {ordered.length} lessons completed · {masteredCount} mastered · next lesson: {STATUS_LABEL[nextStatus]}</p>
-            <Link data-testid="start-learning" to={chapter.routes.learn(next.id)} className="min-h-[52px] w-full rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm flex items-center justify-center">
-              {started ? `Continue Lesson ${next.number}` : 'Start Lesson 1'}
+          <section className="lg:col-span-6 rounded-3xl border-2 border-amber-500/50 bg-gradient-to-br from-amber-950/40 via-surface-card to-surface-lowest p-5 md:p-7 space-y-4 shadow-lg shadow-amber-950/20 relative overflow-hidden" aria-label="Learn">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">school</span>
+                Guided learning path
+              </span>
+              <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
+                {Math.round((doneCount / Math.max(ordered.length, 1)) * 100)}% Complete
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <h2 className="text-xl md:text-2xl font-black text-white">{started ? 'Continue' : 'Start'}: Lesson {next.number}, {next.title}</h2>
+              <p className="text-xs sm:text-sm text-slate-300">{next.objective.charAt(0).toUpperCase() + next.objective.slice(1)}</p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="space-y-1.5 pt-1">
+              <div className="w-full h-2 rounded-full bg-surface-lowest border border-surface-border overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-amber-300 rounded-full"
+                  style={{ width: `${Math.max(4, Math.round((doneCount / Math.max(ordered.length, 1)) * 100))}%` }}
+                />
+              </div>
+              <p className="text-xs font-mono text-slate-400" data-testid="path-progress">{doneCount} of {ordered.length} lessons completed · {masteredCount} mastered · next lesson: {STATUS_LABEL[nextStatus]}</p>
+            </div>
+
+            <Link data-testid="start-learning" to={chapter.routes.learn(next.id)} className="min-h-[52px] w-full rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-md shadow-amber-500/20 transition-colors touch-manipulation">
+              <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+              <span>{started ? `Continue Lesson ${next.number}` : 'Start Lesson 1'}</span>
             </Link>
           </section>
 
-          <section className="lg:col-span-3 rounded-3xl border border-surface-border bg-surface-card p-5 space-y-3 flex flex-col" aria-label="Free laboratory">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold">Open workbench</span>
-            <h2 className="text-lg font-black text-white">{labLabel}</h2>
-            <p className="text-sm text-slate-300 flex-1">{labBlurb}</p>
-            <Link data-testid="open-lab" to={chapter.routes.lab} className="min-h-[48px] rounded-xl border border-cyan-400 text-cyan-200 font-bold text-sm flex items-center justify-center hover:bg-cyan-500/10">Open laboratory</Link>
+          <section className="lg:col-span-3 rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-cyan-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm" aria-label="Free laboratory">
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">science</span>
+                Open workbench
+              </span>
+              <h2 className="text-lg font-black text-white">{labLabel}</h2>
+              <p className="text-xs sm:text-sm text-slate-300">{labBlurb}</p>
+            </div>
+            <Link data-testid="open-lab" to={chapter.routes.lab} className="min-h-[48px] rounded-xl border border-cyan-400/80 bg-cyan-500/10 text-cyan-200 font-bold text-sm flex items-center justify-center gap-1.5 hover:bg-cyan-500/20 transition-colors touch-manipulation">
+              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+              <span>Open laboratory</span>
+            </Link>
           </section>
 
-          <section className="lg:col-span-3 rounded-3xl border border-surface-border bg-surface-card p-5 space-y-3 flex flex-col" aria-label="Chapter practice">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Practise</span>
-            <h2 className="text-lg font-black text-white">Chapter practice</h2>
-            <p className="text-sm text-slate-300 flex-1">Mixed problems from every lesson, in any order, with no need to finish lessons first.</p>
+          <section className="lg:col-span-3 rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-emerald-950/20 via-surface-card to-surface-card p-5 space-y-3 flex flex-col justify-between shadow-sm" aria-label="Chapter practice">
+            <div className="space-y-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px]">task_alt</span>
+                Practise
+              </span>
+              <h2 className="text-lg font-black text-white">Chapter practice</h2>
+              <p className="text-xs sm:text-sm text-slate-300">Mixed problems from every lesson, in any order, with no need to finish lessons first.</p>
+            </div>
             {chapter.routes.practice
-              ? <Link data-testid="open-practice" to={chapter.routes.practice} className="min-h-[48px] rounded-xl border border-emerald-400 text-emerald-200 font-bold text-sm flex items-center justify-center hover:bg-emerald-500/10">Start practising</Link>
-              : <span className="text-xs text-slate-500">Available from the chapter hub.</span>}
+              ? <Link data-testid="open-practice" to={chapter.routes.practice} className="min-h-[48px] rounded-xl border border-emerald-400/80 bg-emerald-500/10 text-emerald-200 font-bold text-sm flex items-center justify-center gap-1.5 hover:bg-emerald-500/20 transition-colors touch-manipulation">
+                  <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                  <span>Start practising</span>
+                </Link>
+              : <span className="text-xs text-slate-500 p-2 block text-center">Available from the chapter hub.</span>}
           </section>
         </div>
 
@@ -86,26 +125,57 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
         <ChapterPrerequisites chapter={chapter} />
 
         <section aria-label="Units and lessons" className="space-y-6">
-          <h2 className="text-xl font-black text-white">Lessons</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px] text-amber-400">format_list_bulleted</span>
+              Lessons & Modules
+            </h2>
+            <span className="text-xs font-mono text-slate-400">{ordered.length} total lessons</span>
+          </div>
           {chapter.units.map((u) => (
             <div key={u.id} className="space-y-3" data-unit={u.id}>
               <UnitIntroduction unit={u} />
-              <details className="rounded-xl border border-surface-border bg-surface-card px-4 py-2">
-                <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-slate-200 font-medium">Before Unit {u.number}: ideas this unit uses (optional)</summary>
-                <div className="pt-3"><UnitPrerequisites chapter={chapter} unitId={u.id} /></div>
+              <details className="rounded-xl border border-surface-border bg-surface-card/60 px-4 py-2 overflow-hidden">
+                <summary className="cursor-pointer min-h-[44px] flex items-center justify-between text-xs sm:text-sm text-slate-200 font-medium hover:text-white transition-colors">
+                  <span className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-primary">psychology</span>
+                    Before Unit {u.number}: ideas this unit uses (optional)
+                  </span>
+                  <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+                </summary>
+                <div className="pt-3 pb-1 border-t border-surface-border/60"><UnitPrerequisites chapter={chapter} unitId={u.id} /></div>
               </details>
-              <ol className="grid gap-2 md:grid-cols-2">
+              <ol className="grid gap-2.5 md:grid-cols-2">
                 {u.lessonIds.map((id) => {
                   const l = chapter.lessons[id];
                   const st = statuses[id];
                   return (
                     <li key={id}>
-                      <Link to={chapter.routes.learn(id)} data-lesson-link={id} className="block min-h-[64px] rounded-2xl border border-surface-border bg-surface-card hover:border-amber-400/60 p-4 space-y-1">
+                      <Link
+                        to={chapter.routes.learn(id)}
+                        data-lesson-link={id}
+                        className="block min-h-[68px] rounded-2xl border border-surface-border/80 bg-surface-card hover:bg-surface-card/80 hover:border-amber-400/60 active:scale-[0.99] p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group"
+                      >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-mono text-slate-400">Lesson {l.number}</span>
-                          <span data-status={st} className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span>
+                          <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-surface-lowest text-[10px] text-amber-400 border border-amber-500/20 font-bold">
+                              L{l.number}
+                            </span>
+                            Lesson {l.number}
+                          </span>
+                          <span
+                            data-status={st}
+                            className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold flex items-center gap-1 ${STATUS_STYLE[st]}`}
+                          >
+                            <span className="text-[10px]">
+                              {st === 'completed' || st === 'mastered' ? '✓' : st === 'in_progress' ? '▶' : '○'}
+                            </span>
+                            {STATUS_LABEL[st]}
+                          </span>
                         </div>
-                        <div className="font-bold text-white">{l.title}</div>
+                        <div className="font-bold text-white group-hover:text-amber-300 transition-colors text-sm sm:text-base">
+                          {l.title}
+                        </div>
                       </Link>
                     </li>
                   );

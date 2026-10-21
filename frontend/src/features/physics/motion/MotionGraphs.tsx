@@ -103,7 +103,7 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
         <span className="normal-case text-slate-400 basis-full">height = {spec.heightMeans}{spec.slopeName ? `, slope = ${spec.slopeName}` : ''}{spec.kind === 'vt' ? ', area = displacement' : ''}</span>
       </figcaption>
       <svg ref={ref} viewBox={`0 0 ${GW} ${GH}`} tabIndex={0} role="slider" aria-label={label} aria-valuemin={0} aria-valuemax={T} aria-valuenow={Number(t.toFixed(2))} aria-valuetext={`${fmt(t)} seconds: ${spec.yName} ${fmtSign(spec.y(cur))} ${spec.yUnit}`}
-        className="w-full rounded-xl bg-surface-lowest border border-surface-border select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-crosshair"
+        className="w-full h-auto max-h-[160px] sm:max-h-[185px] xl:max-h-[210px] rounded-xl bg-surface-lowest border border-surface-border select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-crosshair"
         onPointerDown={seek} onKeyDown={onKey}>
         <defs><pattern id={`hatch-${spec.kind}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill={PHYS.displacement} opacity={0.12} /><line x1="0" y1="0" x2="0" y2="6" stroke={PHYS.displacement} strokeWidth="2" opacity={0.6} /></pattern></defs>
         {tT.map((v) => <g key={`t${v}`}><line x1={X(v)} y1={MT} x2={X(v)} y2={GH - MB} stroke="#334155" strokeWidth={0.6} /><text x={X(v)} y={GH - MB + 14} textAnchor="middle" fontSize={10} fill="#94a3b8">{v}</text></g>)}
@@ -138,7 +138,7 @@ const TrackStrip: React.FC<{ profile: Profile; t: number }> = ({ profile, t }) =
   const tk = ticksFor(lo, hi);
   const arrowLen = Math.min(70, Math.abs(s.v) * 4);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Track from ${fmt(lo)} m to ${fmt(hi)} m with the reference point O at 0 m. At ${fmt(t)} s the object is at ${fmtSign(s.x)} m moving with velocity ${fmtSign(s.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Track from ${fmt(lo)} m to ${fmt(hi)} m with the reference point O at 0 m. At ${fmt(t)} s the object is at ${fmtSign(s.x)} m moving with velocity ${fmtSign(s.v)} m/s.`} className="w-full h-auto max-h-[64px] sm:max-h-[82px] rounded-xl bg-surface-lowest border border-surface-border">
       <line x1={P} y1={56} x2={W - P} y2={56} stroke={PHYS.axis} strokeWidth={3} />
       {tk.map((v) => <g key={v}><line x1={X(v)} y1={50} x2={X(v)} y2={62} stroke={v === 0 ? PHYS.origin : PHYS.axis} strokeWidth={v === 0 ? 2.5 : 1} /><text x={X(v)} y={78} textAnchor="middle" fontSize={10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v === 0 ? 'O' : v}</text></g>)}
       <text x={W - P} y={92} textAnchor="end" fontSize={10} fill="#94a3b8">position (m)</text>
@@ -287,14 +287,13 @@ export const GraphScene: React.FC<{ g: GraphStudioModel; kinds?: GraphKind[]; sh
   const { profile, tClamped, setPlaying, setT } = g;
   const graphs = kinds ?? g.graphs;
   return (
-    <>
+    <div className="w-full flex flex-col gap-2.5 sm:gap-3">
       {showTrack && <TrackStrip profile={profile} t={tClamped} />}
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className={`grid gap-2 sm:gap-3 ${graphs.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
         {graphs.map((k) => <Graph key={k} spec={SPECS[k]} profile={profile} t={tClamped} shade={shade} onSeek={(v) => { setPlaying(false); setT(v); }} />)}
       </div>
-
-    </>
+    </div>
   );
 };
 

@@ -90,5 +90,33 @@ describe('Motion and Forces laboratories are composed from regions, not a legacy
     const frame = render(<ViewportFrame toolbar={<b>tool</b>}><i>scene</i></ViewportFrame>);
     expect(frame).toContain('viewport-fit');
     expect(frame).toContain('tool');
+    // Ensure viewport container scrolls without underflowing beneath bottom controls
+    expect(frame).toContain('touch-pan-y');
+    expect(frame).toContain('overflow-y-auto');
+  });
+
+  it('GraphLab: viewport adapts to graph size with responsive touch-friendly layout', async () => {
+    const { GraphLab } = await import('../../physics/motion/GraphLab');
+    const html = render(
+      <GraphLab
+        labTitle="Motion Graph Studio"
+        outlinerTitle="Scenarios"
+        inspectorTitle="Inspector"
+        listTitle="Scenarios"
+        items={[{ id: 's1', title: 'Uniform Acceleration' }]}
+        activeId="s1"
+        onPick={() => {}}
+        kinds={['xt', 'vt']}
+        reference={<div>Ref</div>}
+        notes={<div>Notes</div>}
+      />,
+      '/physics/motion/graphs'
+    );
+    expect(html).toContain('data-visual="motionGraphs"');
+    expect(html).toContain('data-graph="xt"');
+    expect(html).toContain('data-graph="vt"');
+    expect(html).toContain('data-testid="viewport-experiment-tools"');
+    // Scene container uses safe vertical centering without underflowing below transport
+    expect(html).toContain('touch-pan-y');
   });
 });

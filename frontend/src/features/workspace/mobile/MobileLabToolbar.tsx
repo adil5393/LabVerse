@@ -61,7 +61,7 @@ export const MobileLabToolbar: React.FC<MobileLabToolbarProps> = ({
               style={{
                 borderColor: t.active ? color : undefined,
                 backgroundColor: t.active ? `${color}18` : undefined,
-                color: t.active ? '#f1f5f9' : undefined,
+                color: t.active ? 'rgb(var(--lv-ink))' : undefined,
               }}
             >
               <span className="truncate">{t.label}</span>

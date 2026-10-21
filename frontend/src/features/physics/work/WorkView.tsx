@@ -266,7 +266,7 @@ export const WorkView: React.FC<WorkViewProps> = ({
 
         {/* Right Properties Inspector (Desktop) */}
         {editable && (
-          <div className="hidden md:flex">
+          <div className="app-chrome text-on-surface hidden md:flex">
             <PropertiesInspector
               setup={setup}
               result={r}

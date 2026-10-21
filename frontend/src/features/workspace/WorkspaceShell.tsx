@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { WorkstationHeader, type WorkspaceTab } from '../physics/work/components/WorkstationHeader';
 import { GlobalBlackboard } from './GlobalBlackboard';
 import { useChapterNavigation } from './chapterNavigation';
+import { usePhoneLayout } from './usePhoneLayout';
+import { BottomSheet } from './BottomSheet';
 
 export interface WorkspaceShellProps {
   chapterId: string;
@@ -81,7 +83,9 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
   // Panel collapse states: on tablet widths the side panels start collapsed so the experiment keeps the room (they open from their rails).
   const narrow = typeof window !== 'undefined' && window.innerWidth < 1100;
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const isMobile = usePhoneLayout();
+  const [phonePanel, setPhonePanel] = useState<'setup' | 'results'>('setup');
+  const toolsLabel = chapterId === 'electricity' ? 'Equipment' : chapterId === 'states-of-matter' ? 'Controls' : meta?.subject === 'mathematics' ? 'Tools' : 'Experiments';
   const [isOutlinerCollapsed, setIsOutlinerCollapsed] = useState(narrow);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(narrow);
   const [dockMode, setDockModeState] = useState<'collapsed' | 'balanced' | 'focus'>(isMobile ? 'collapsed' : 'balanced');
@@ -107,6 +111,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   // Mobile drawer and inspector sheet
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const [mobileAnalysisOpen, setMobileAnalysisOpen] = useState(false);
 
   // Register active lab context whenever mounted or experiment state updates
   useEffect(() => {
@@ -115,14 +120,19 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
   }, [registerLab, labTitle, experimentSetupSnapshot]);
 
   const handleTabChange = (tab: WorkspaceTab) => {
+    if (tab === 'analyze' && isMobile) {
+      if (mobileLayout) setMobileAnalysisOpen(true);
+      else setPhonePanel('results');
+      return;
+    }
     if (controlledOnTabChange) {
       controlledOnTabChange(tab);
       return;
     }
 
     if (tab === 'exercises') {
-      if (meta?.defaultExercisesUrl) {
-        navigate(meta.defaultExercisesUrl);
+      if (meta?.defaultPracticeUrl || meta?.defaultExercisesUrl) {
+        navigate(meta.defaultPracticeUrl || meta!.defaultExercisesUrl!);
       }
       return;
     }
@@ -144,7 +154,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
   return (
     <div
-      className="h-dvh w-full overflow-hidden flex flex-col bg-background text-on-surface antialiased select-none font-sans"
+      className="science-surface h-dvh w-full overflow-hidden flex flex-col bg-background text-on-surface antialiased font-sans"
       data-workspace={chapterId}
       data-testid="workspace-shell"
     >
@@ -154,8 +164,8 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
         onTabChange={handleTabChange}
         beginnerMode={beginnerMode}
         onToggleBeginnerMode={onToggleBeginnerMode}
-        onReset={mobileLayout ? undefined : onReset}
-        onTogglePlay={mobileLayout ? undefined : onTogglePlay}
+        onReset={onReset}
+        onTogglePlay={isMobile ? undefined : onTogglePlay}
         playing={playing}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -178,16 +188,31 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
       ) : (
         <>
           {/* Mobile-first Layout Mode (< sm) */}
-          {mobileLayout && (
-            <div className="flex-1 flex flex-col sm:hidden overflow-hidden w-full max-w-full relative">
+          {mobileLayout && isMobile && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden w-full max-w-full relative">
               {mobileLayout}
             </div>
           )}
+          {!mobileLayout && isMobile && <div className="app-chrome flex-1 min-h-0 overflow-y-auto mobile-lab-scroll bg-background text-on-surface" data-testid="phone-workspace">
+            <div className="workspace-phone-viewport science-surface flex flex-col relative overflow-hidden bg-surface-lowest" data-testid="viewport-region">{viewport}</div>
+            {(onTogglePlay || onReset) && <div className="workspace-phone-tools mobile-lab-transport">
+              {onTogglePlay && <button type="button" onClick={onTogglePlay} className="!bg-primary !text-on-primary" aria-label={playing ? 'Pause simulation' : 'Play simulation'}><span className="material-symbols-outlined" aria-hidden>{playing ? 'pause' : 'play_arrow'}</span>{playing ? 'Pause' : 'Play'}</button>}
+              {onReset && <button type="button" onClick={onReset}><span className="material-symbols-outlined" aria-hidden>restart_alt</span>Reset</button>}
+            </div>}
+            <div className="workspace-phone-tools" role="group" aria-label="Lab panels">
+              {(inspector || mobileInspector) && <button type="button" aria-pressed={phonePanel === 'setup'} onClick={() => setPhonePanel('setup')}><span className="material-symbols-outlined" aria-hidden>tune</span>Setup</button>}
+              {analysisDock && <button type="button" aria-pressed={phonePanel === 'results'} onClick={() => setPhonePanel('results')}><span className="material-symbols-outlined" aria-hidden>analytics</span>Results</button>}
+              {outliner && <button type="button" onClick={() => setMobileDrawerOpen(true)}><span className="material-symbols-outlined" aria-hidden>add_circle</span>{toolsLabel}</button>}
+            </div>
+            <section className="mobile-panel p-4" aria-label={phonePanel === 'setup' ? inspectorTitle : analysisDockTitle}>
+              {phonePanel === 'setup' ? mobileInspector || inspector || analysisDock : analysisDock}
+            </section>
+          </div>}
           {/* Desktop Workstation Mode (>= sm when mobileLayout is provided, or default) */}
-          <div className={`flex-1 flex flex-col md:flex-row overflow-hidden relative ${mobileLayout ? 'hidden sm:flex' : ''}`}>
+          {!isMobile && <div className="flex-1 min-h-0 flex flex-row overflow-hidden relative">
             {/* Left Outliner / Explorer Slot (Desktop) */}
             {outliner && (
-              <div className="hidden md:flex shrink-0 h-full">
+              <div className="app-chrome hidden md:flex shrink-0 h-full text-on-surface">
               {isOutlinerCollapsed ? (
                 <button
                   type="button"
@@ -232,7 +257,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
                 data-testid="analysis-dock"
                 data-dock-mode={dockMode}
                 style={dockMode !== 'collapsed' && dockPx ? { height: dockPx } : undefined}
-                className={`shrink-0 max-h-[75vh] sm:max-h-[60vh] border-t border-outline-variant bg-surface-container flex flex-col relative ${dockPx && dockMode !== 'collapsed' ? '' : 'transition-all duration-200'} ${
+                className={`app-chrome text-on-surface shrink-0 max-h-[75vh] sm:max-h-[60vh] border-t border-outline-variant bg-surface-container flex flex-col relative ${dockPx && dockMode !== 'collapsed' ? '' : 'transition-all duration-200'} ${
                   dockPx && dockMode !== 'collapsed'
                     ? ''
                     : dockMode === 'collapsed'
@@ -312,7 +337,7 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
 
           {/* Right Properties Inspector Slot (Desktop) */}
           {inspector && (
-            <div className="hidden md:flex shrink-0 h-full">
+            <div className="app-chrome text-on-surface hidden md:flex shrink-0 h-full">
               {isInspectorCollapsed ? (
                 <button
                   type="button"
@@ -343,71 +368,13 @@ export const WorkspaceShell: React.FC<WorkspaceShellProps> = ({
               )}
             </div>
           )}
-        </div>
+        </div>}
         </>
       )}
 
-      {/* Mobile Inspector Sheet (Mobile only - fallback when mobileLayout is not provided) */}
-      {!mobileLayout && (mobileInspector || inspector) && (
-        <div className="md:hidden">
-          {/* Mobile Inspector Floating Trigger (only when there is no dock bar to hold the button) */}
-          {!analysisDock && <button
-            type="button"
-            onClick={() => setMobileInspectorOpen(true)}
-            className="fixed bottom-4 right-4 z-40 bg-primary text-on-primary p-3 rounded-full shadow-lg border border-primary-container flex items-center justify-center"
-            aria-label="Open Properties Inspector"
-          >
-            <span className="material-symbols-outlined text-[20px]">tune</span>
-          </button>}
-
-          {/* Mobile Bottom Sheet Drawer */}
-          {mobileInspectorOpen && (
-            <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-xs">
-              <div className="bg-surface-container-high rounded-t-2xl max-h-[85vh] flex flex-col overflow-hidden border-t border-outline-variant shadow-2xl animate-in slide-in-from-bottom duration-200">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-                  <div className="flex items-center space-x-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">tune</span>
-                    <span className="font-bold text-sm text-on-surface">{inspectorTitle}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setMobileInspectorOpen(false)}
-                    className="p-1 text-on-surface-variant hover:text-on-surface"
-                    aria-label="Close Inspector"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">close</span>
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4">{mobileInspector || inspector}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Mobile Drawer (Mobile Curriculum / Outliner) */}
-      {mobileDrawerOpen && outliner && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
-            onClick={() => setMobileDrawerOpen(false)}
-          />
-          <div className="relative w-4/5 max-w-xs bg-surface-container-low h-full z-10 flex flex-col shadow-2xl border-r border-outline-variant">
-            <div className="flex items-center justify-between p-3 border-b border-outline-variant">
-              <span className="font-bold text-sm text-on-surface">{outlinerTitle}</span>
-              <button
-                type="button"
-                onClick={() => setMobileDrawerOpen(false)}
-                className="p-1 text-on-surface-variant hover:text-on-surface"
-                aria-label="Close Drawer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">{outliner}</div>
-          </div>
-        </div>
-      )}
+      {mobileInspectorOpen && (mobileInspector || inspector) && <BottomSheet title={inspectorTitle} onClose={() => setMobileInspectorOpen(false)}>{mobileInspector || inspector}</BottomSheet>}
+      {mobileDrawerOpen && outliner && <BottomSheet title={outlinerTitle} onClose={() => setMobileDrawerOpen(false)}>{outliner}</BottomSheet>}
+      {mobileAnalysisOpen && analysisDock && <BottomSheet title={analysisDockTitle} onClose={() => setMobileAnalysisOpen(false)}>{analysisDock}</BottomSheet>}
     </div>
   );
 };

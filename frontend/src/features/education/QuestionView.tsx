@@ -35,14 +35,16 @@ export interface QuestionViewProps {
   lockOnCorrect?: boolean;
   disabled?: boolean;
   submitLabel?: string;
+  savedAttempt?: { input: AnswerInput; evaluation: Evaluation };
 }
 
-export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, onRefresher, lockOnCorrect = true, disabled, submitLabel = 'Check answer' }) => {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [text, setText] = useState('');
-  const [result, setResult] = useState<Evaluation | null>(null);
+export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, onRefresher, lockOnCorrect = true, disabled, submitLabel = 'Check answer', savedAttempt }) => {
+  const previousInput = savedAttempt?.input;
+  const [selected, setSelected] = useState<string | null>(previousInput && (previousInput.kind === 'choice' || previousInput.kind === 'visual') ? previousInput.id : null);
+  const [text, setText] = useState(previousInput?.kind === 'numeric' ? previousInput.text : '');
+  const [result, setResult] = useState<Evaluation | null>(savedAttempt?.evaluation ?? null);
   const judges = useJudges();
-  const [order, setOrder] = useState<string[]>(() => (question.kind === 'order' ? question.items.map((i) => i.id) : []));
+  const [order, setOrder] = useState<string[]>(() => previousInput?.kind === 'order' ? previousInput.ids : question.kind === 'order' ? question.items.map((i) => i.id) : []);
   const done = result?.correct === true && lockOnCorrect;
   const inputId = `q-${question.id}`;
 

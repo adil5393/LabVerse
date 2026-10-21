@@ -114,7 +114,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       onPointerDown={handleBackgroundPointerDown}
       onPointerMove={onCanvasPointerMove}
       onPointerUp={onCanvasPointerUp}
-      className={`relative flex-1 h-full w-full overflow-hidden workbench-mat select-none ${
+      className={`relative flex-1 h-full w-full overflow-hidden workbench-mat select-none touch-none ${
         isPanning ? 'cursor-grabbing' : 'cursor-default'
       }`}
     >

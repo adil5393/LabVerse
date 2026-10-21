@@ -9,18 +9,20 @@ interface EquipmentTrayProps {
 export const EquipmentTray: React.FC<EquipmentTrayProps> = ({ catalog, onAddEquipment }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [search, setSearch] = useState('');
 
   // Extract unique categories
   const categories = Array.from(new Set(catalog.map((item) => item.category)));
 
   const filteredItems = catalog.filter((item) => {
+    if (!`${item.name} ${item.description}`.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (activeCategory === 'all') return true;
     return item.category === activeCategory;
   });
 
   return (
     <aside
-      className={`bg-surface-low border-r border-surface-border flex flex-col shrink-0 transition-all duration-200 z-20 select-none ${collapsed ? 'w-12' : 'w-64 sm:w-72'
+      className={`equipment-tray bg-surface-low border-r border-surface-border flex flex-col shrink-0 transition-all duration-200 z-20 select-none ${collapsed ? 'w-12' : 'w-64 sm:w-72'
         }`}
     >
       {/* Header bar of drawer */}
@@ -68,6 +70,10 @@ export const EquipmentTray: React.FC<EquipmentTrayProps> = ({ catalog, onAddEqui
         </div>
       ) : (
         <>
+          <label className="flex items-center gap-2 border border-surface-border rounded-xl mx-2 mt-3 px-3 bg-surface">
+            <span className="material-symbols-outlined text-slate-400" aria-hidden>search</span>
+            <input type="search" aria-label="Find equipment" placeholder="Find equipment" value={search} onChange={(e) => setSearch(e.target.value)} className="min-h-11 min-w-0 w-full bg-transparent text-sm outline-none" />
+          </label>
           {/* Category filter tabs */}
           <div className="p-2 border-b border-surface-border/70 flex gap-1 overflow-x-auto text-xs">
             <button
@@ -122,6 +128,7 @@ export const EquipmentTray: React.FC<EquipmentTrayProps> = ({ catalog, onAddEqui
                   </span>
                   <button
                     onClick={() => onAddEquipment(item)}
+                    aria-label={`Add ${item.name}`}
                     className="px-2.5 py-1 rounded-lg bg-surface-high hover:bg-primary text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1 transition-all border border-surface-border hover:border-primary"
                   >
                     <span className="material-symbols-outlined text-[14px]">add</span>
@@ -131,6 +138,7 @@ export const EquipmentTray: React.FC<EquipmentTrayProps> = ({ catalog, onAddEqui
               </div>
             ))}
           </div>
+          {!filteredItems.length && <p role="status" className="p-4 text-sm text-slate-400">No equipment matches your search.</p>}
         </>
       )}
     </aside>

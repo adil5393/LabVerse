@@ -377,8 +377,9 @@ export const ParticleChamber: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
-    const clientY = e.clientY - rect.top;
+    const scale = Math.min(rect.width / CANVAS_WIDTH, rect.height / CANVAS_HEIGHT);
+    const clientX = (e.clientX - rect.left - (rect.width - CANVAS_WIDTH * scale) / 2) / scale;
+    const clientY = (e.clientY - rect.top - (rect.height - CANVAS_HEIGHT * scale) / 2) / scale;
 
     // Check if clicked near piston handle or crossbar
     const pistonTopY = OFFSET_Y + Math.max(20, FLOOR_Y - config.pistonHeight);
@@ -403,7 +404,8 @@ export const ParticleChamber: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const clientY = e.clientY - rect.top;
+    const scale = Math.min(rect.width / CANVAS_WIDTH, rect.height / CANVAS_HEIGHT);
+    const clientY = (e.clientY - rect.top - (rect.height - CANVAS_HEIGHT * scale) / 2) / scale;
 
     // Dragging down decreases cavity height; dragging up increases cavity height
     const deltaY = clientY - dragStartYRef.current;
@@ -453,8 +455,8 @@ export const ParticleChamber: React.FC = () => {
   return (
     <div className="relative flex-1 flex flex-col items-center justify-center p-3 bg-surface-lowest overflow-hidden">
       {/* Top HUD Badges */}
-      <div className="absolute top-4 left-6 right-6 flex items-center justify-between pointer-events-none z-10">
-        <div className="flex items-center gap-2">
+      <div className="w-full flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10 shrink-0 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
           {/* Temperature HUD */}
           <div className="bg-surface-elevated/90 backdrop-blur-md border border-surface-border px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-2">
             <span className="material-symbols-outlined text-amber-400 text-lg">device_thermostat</span>
@@ -507,7 +509,7 @@ export const ParticleChamber: React.FC = () => {
       </div>
 
       {/* 2D Canvas Container */}
-      <div className="relative rounded-2xl overflow-hidden border border-surface-border shadow-2xl bg-surface-card/60">
+      <div className="relative flex-1 min-h-0 w-full rounded-2xl overflow-hidden border border-surface-border bg-surface-card/60">
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
@@ -517,14 +519,14 @@ export const ParticleChamber: React.FC = () => {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           className="cursor-default select-none block"
-          style={{ touchAction: 'none' }}
+          style={{ touchAction: 'none', width: '100%', height: '100%', objectFit: 'contain' }}
         />
       </div>
 
       {/* Bottom Hint */}
       <div className="text-[11px] font-mono text-slate-500 mt-2 flex items-center gap-2">
         <span className="material-symbols-outlined text-[14px]">touch_app</span>
-        <span>Drag the top piston to compress/expand volume. Toggle Heat/Cool on the left panel.</span>
+        <span>Drag the piston to change volume. Open Controls to heat or cool.</span>
       </div>
     </div>
   );

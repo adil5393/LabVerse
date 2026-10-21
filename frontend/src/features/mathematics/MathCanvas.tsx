@@ -34,6 +34,7 @@ import type {
   MathViewportTransform,
 } from '../../engine/mathematics/types';
 import { MathDrawOptionsPanel } from './MathDrawOptionsPanel';
+import { fitMathViewport } from '../../engine/mathematics/viewportFit';
 
 const DRAG_THRESHOLD_PX = 5;
 
@@ -211,6 +212,9 @@ export const MathCanvas: React.FC = () => {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
           setCanvasDimensions({ width, height });
+          const current = useMathStore.getState();
+          const construction = Object.values(current.objects).filter((o): o is MathPoint => o.kind === 'point');
+          current.setViewport(fitMathViewport(construction, width, height, current.viewport.unitPixels));
         }
       }
     });
@@ -1942,7 +1946,7 @@ export const MathCanvas: React.FC = () => {
       </svg>
 
       {/* Top Contextual Instructions Banner */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+      <div className="math-canvas-hint absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
         <div className="px-3.5 py-1.5 rounded-full bg-surface-lowest/90 backdrop-blur border border-surface-border text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
           {activeTool === 'select' && (
             <>
@@ -2015,9 +2019,10 @@ export const MathCanvas: React.FC = () => {
 
       {/* Draw Tool Floating Options Panel */}
       <MathDrawOptionsPanel />
+      <button type="button" aria-label="Fit construction to canvas" className="absolute top-3 right-3 z-20 min-h-11 min-w-11 rounded-xl border border-surface-border bg-surface text-on-surface text-sm font-semibold px-3" onClick={() => setViewport(fitMathViewport(points, canvasDimensions.width, canvasDimensions.height, viewport.unitPixels))}>Fit</button>
 
       {/* Bottom Coordinate Readout HUD */}
-      <div className="absolute bottom-3 left-4 flex items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-lowest/90 backdrop-blur border border-surface-border text-xs font-mono text-slate-300 pointer-events-none shadow-lg">
+      <div className="hidden md:flex absolute bottom-3 left-4 items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-lowest/90 backdrop-blur border border-surface-border text-xs font-mono text-slate-300 pointer-events-none shadow-lg">
         <span className="flex items-center gap-1.5 text-primary">
           <span className="material-symbols-outlined text-[15px]">location_searching</span>
           <span>CURSOR:</span>

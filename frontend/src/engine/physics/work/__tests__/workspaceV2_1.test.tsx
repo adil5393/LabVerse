@@ -341,12 +341,12 @@ describe('Workspace V2.2: Workstation Navigation & Header', () => {
     expect(html).toContain('Learn');
     expect(html).toContain('Experiment');
     expect(html).toContain('Analyze');
-    expect(html).toContain('Exercises');
+    expect(html).toContain('Practice');
     expect(html).toContain('Blackboard');
-    expect(html).toContain('Beginner');
+    expect(html).toContain('Switch detail level');
     expect(html).toContain('Advanced');
     expect(html).toContain('Reset');
-    expect(html).toContain('Run Sim');
+    expect(html).toContain('aria-label="Play simulation"');
     expect(html).toContain('title="Undo parameter change (Ctrl+Z)"');
   });
 

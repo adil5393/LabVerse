@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../components/GlobalHeader';
+import { subjectCrumb } from '../../engine/education/subjects';
 import { lessonStatus, STATUS_LABEL } from '../../engine/education/progress';
 import type { EduChapter, JudgeRegistry, LearningStatus } from '../../engine/education/types';
 import { useEducationStore } from '../../store/useEducationStore';
@@ -44,7 +45,7 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-6 py-6 space-y-8">
         <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400">
           <Link to="/" className="hover:text-amber-400">Subject Explorer</Link><span>/</span>
-          <Link to="/mathematics" className="hover:text-amber-400">Mathematics</Link><span>/</span>
+          <Link to={subjectCrumb(chapter).href} className="hover:text-amber-400">{subjectCrumb(chapter).label}</Link><span>/</span>
           <span className="text-amber-400 font-bold">{crumb}</span>
         </nav>
 
@@ -137,7 +138,7 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
             <section
               key={u.id}
               data-unit={u.id}
-              className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-[#131923] to-[#0f131c] p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
+              className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-surface-card to-surface-lowest p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
             >
               <UnitIntroduction unit={u} />
 
@@ -179,7 +180,7 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
                         <Link
                           to={chapter.routes.learn(id)}
                           data-lesson-link={id}
-                          className="block min-w-0 w-full min-h-[72px] rounded-2xl border border-surface-border bg-[#18202e] hover:bg-[#1e2738] hover:border-amber-400/60 active:scale-[0.99] p-3.5 sm:p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group overflow-hidden"
+                          className="block min-w-0 w-full min-h-[72px] rounded-2xl border border-surface-border bg-surface-card hover:bg-surface-high hover:border-amber-400/60 active:scale-[0.99] p-3.5 sm:p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group overflow-hidden"
                         >
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5 min-w-0 shrink">

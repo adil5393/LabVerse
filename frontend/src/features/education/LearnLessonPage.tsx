@@ -141,6 +141,12 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
           )}
 
           <nav aria-label="Lesson stages" className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <label className="lesson-stages-mobile">
+              <span className="text-sm text-slate-400 shrink-0">Stage {stageIdx + 1} of {STAGES.length}</span>
+              <select aria-label="Choose lesson stage" value={stage} onChange={(e) => setStage(e.target.value as Stage)}>
+                {STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </label>
             {STAGES.map((s) => (
               <button
                 key={s.id}
@@ -148,7 +154,7 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
                 aria-current={stage === s.id ? 'step' : undefined}
                 data-stage={s.id}
                 onClick={() => setStage(s.id)}
-                className={`shrink-0 min-h-[48px] px-4 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors touch-manipulation ${
+                className={`lesson-stages-desktop shrink-0 min-h-[48px] px-4 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors touch-manipulation ${
                   stage === s.id
                     ? 'border-primary bg-primary/15 text-white shadow-xs font-bold'
                     : 'border-surface-border bg-surface-card text-slate-300 hover:text-white hover:border-slate-400'
@@ -188,7 +194,7 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
                   <button type="button" className="min-h-[48px] px-5 rounded-xl border border-cyan-400 text-cyan-200 font-bold text-sm hover:bg-cyan-500/10" onClick={() => { markInvestigated(lesson.id); navigate(lesson.investigation!.href); }}>{lesson.investigation.buttonLabel}</button>
                 </div>
               )}
-              <div className="flex justify-between gap-2">
+              <div className="lesson-step-actions flex flex-wrap justify-between gap-2">
                 <button type="button" className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm disabled:opacity-40" disabled={stepIdx === 0} onClick={() => setStepIdx((i) => i - 1)}>Previous</button>
                 {stepIdx < lesson.steps.length - 1
                   ? <button type="button" className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm" onClick={() => setStepIdx((i) => i + 1)}>Next idea</button>

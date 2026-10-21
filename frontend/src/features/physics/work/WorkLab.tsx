@@ -29,8 +29,13 @@ import {
   type DockSizeMode,
 } from './components';
 import { useChapterNavigation, useSetupHistory, useUndoShortcuts } from '../../workspace';
+import { usePhoneLayout } from '../../workspace/usePhoneLayout';
+import { BottomSheet } from '../../workspace/BottomSheet';
+import { CalculationPanel } from './components/CalculationPanel';
 
 export const WorkLab: React.FC = () => {
+  const isPhone = usePhoneLayout();
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { registerLab, getLabSetup } = useChapterNavigation('work');
@@ -131,8 +136,9 @@ export const WorkLab: React.FC = () => {
   useUndoShortcuts(handleUndo, handleRedo);
 
   const handleTabChange = useCallback((tab: WorkspaceTab) => {
+    if (tab === 'analyze' && isPhone) { setAnalysisOpen(true); return; }
     if (tab === 'exercises') {
-      navigate('/physics/work/exercises');
+      navigate('/physics/work/practice');
       return;
     }
     if (tab === 'learn') {
@@ -146,7 +152,7 @@ export const WorkLab: React.FC = () => {
     } else if (tab === 'experiment') {
       if (dockMode === 'focus') setDockMode('balanced');
     }
-  }, [navigate, dockMode]);
+  }, [navigate, dockMode, isPhone]);
 
   const handleToggleVisibility = useCallback((id: string) => {
     setVisibilityMap((prev) => ({
@@ -172,7 +178,7 @@ export const WorkLab: React.FC = () => {
 
   return (
     <div
-      className="h-screen w-screen overflow-hidden flex flex-col bg-background text-on-surface antialiased select-none font-sans"
+      className="science-surface h-dvh w-full overflow-hidden flex flex-col bg-background text-on-surface antialiased font-sans"
       data-chapter="work-lab"
       data-workspace="work"
       data-testid="workspace-shell"
@@ -187,7 +193,7 @@ export const WorkLab: React.FC = () => {
           setPlaying(false);
           setLoad((l) => ({ ...l, key: l.key + 1 }));
         }}
-        onTogglePlay={() => setPlaying((p) => !p)}
+        onTogglePlay={isPhone ? undefined : () => setPlaying((p) => !p)}
         playing={playing}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -199,7 +205,7 @@ export const WorkLab: React.FC = () => {
       />
 
       {/* 2. MAIN WORKSPACE VIEWPORT BODY */}
-      <div className="flex-1 flex overflow-hidden relative w-full h-[calc(100vh-40px)]">
+      <div className="flex-1 min-h-0 flex overflow-hidden relative w-full">
         {/* WORKSPACE MODE: BLACKBOARD */}
         {activeTab === 'blackboard' && (
           <BlackboardWorkspace
@@ -209,7 +215,7 @@ export const WorkLab: React.FC = () => {
         {/* WORKSPACE MODE: EXPERIMENT & ANALYZE */}
         <div className={activeTab === 'blackboard' ? 'hidden' : 'contents'}>
           {/* Mobile Design A View (< md) */}
-          <div className="flex md:hidden flex-1 flex-col h-full overflow-hidden w-full">
+          {isPhone && <div className="flex flex-1 flex-col h-full overflow-hidden w-full">
             <WorkMobileLab
               setup={load.setup}
               result={computeWork(load.setup)}
@@ -234,12 +240,12 @@ export const WorkLab: React.FC = () => {
               lockMap={lockMap}
               expTitle={exp?.title}
             />
-          </div>
+          </div>}
 
           {/* Desktop 5-Region Workstation (>= md) */}
-          <div className="hidden md:flex flex-1 h-full overflow-hidden w-full">
+          {!isPhone && <div className="flex flex-1 h-full overflow-hidden w-full">
             {/* Left Outliner / Curriculum Explorer (Desktop) */}
-            <div className="flex h-full relative">
+            <div className="app-chrome text-on-surface flex h-full relative">
               {!outlinerCollapsed ? (
                 <SceneOutliner
                   cartMassKg={load.setup.massKg}
@@ -315,14 +321,13 @@ export const WorkLab: React.FC = () => {
                 onShowVerticalChange={setShowVertical}
               />
             </div>
-          </div>
+          </div>}
         </div>
       </div>
 
       {/* Mobile Slide-Out Drawer for Scene Outliner */}
       {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden bg-black/60 backdrop-blur-xs select-none">
-          <div className="w-[280px] h-full bg-surface-container-low shadow-2xl">
+        <BottomSheet title="Experiments & objects" onClose={() => setMobileDrawerOpen(false)}>
             <SceneOutliner
               onCloseMobile={() => setMobileDrawerOpen(false)}
               cartMassKg={load.setup.massKg}
@@ -342,12 +347,7 @@ export const WorkLab: React.FC = () => {
                 setMobileDrawerOpen(false);
               }}
             />
-          </div>
-          <div
-            className="flex-1 h-full"
-            onClick={() => setMobileDrawerOpen(false)}
-          />
-        </div>
+        </BottomSheet>
       )}
 
       {/* Mobile Inspector Bottom Sheet Modal */}
@@ -363,6 +363,7 @@ export const WorkLab: React.FC = () => {
         showVertical={showVertical}
         onShowVerticalChange={setShowVertical}
       />
+      {analysisOpen && <BottomSheet title="Work results" onClose={() => setAnalysisOpen(false)}><CalculationPanel result={computeWork(load.setup)} displacement={load.setup.displacement} description="Work done over the configured displacement" /></BottomSheet>}
     </div>
   );
 };

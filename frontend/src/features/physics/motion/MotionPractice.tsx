@@ -10,9 +10,8 @@ import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { PRACTICE_CATEGORIES, PRACTICE_ITEMS, practiceByCategory } from '../../../engine/physics/motion/practice';
 import { VisualRegistryProvider } from '../../education/visuals';
-import { QuestionView } from '../../education/QuestionView';
+import { PracticeDeck } from '../../education/PracticeDeck';
 import { MOTION_VISUALS } from './MotionTrack';
-import { PHYS } from './physicsColors';
 
 export const MotionPractice: React.FC = () => {
   const [first, setFirst] = useState<Record<string, boolean>>({});
@@ -20,7 +19,7 @@ export const MotionPractice: React.FC = () => {
   const right = Object.values(first).filter(Boolean).length;
   const missed = PRACTICE_ITEMS.filter((i) => first[i.id] === false);
   return (
-    <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="motion-practice">
+    <div className="practice-page min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans" data-chapter="motion-practice">
       <GlobalHeader />
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
         <nav className="flex flex-wrap items-center gap-2 text-xs font-mono text-slate-400" aria-label="Breadcrumb">
@@ -31,12 +30,12 @@ export const MotionPractice: React.FC = () => {
         </nav>
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">Chapter Practice</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">{PRACTICE_ITEMS.length} original questions across the whole chapter: concept checks, calculations, graphs, predictions, sign and unit errors, comparisons and circular motion. Open to everyone, in any order. Each question appears once, and your first answer is the one that counts in the summary.</p>
-          <p className="text-xs text-slate-400">This page is for checking yourself. It does not change your lesson progress, and looking at feedback never counts as mastery.</p>
+          <p className="text-base text-slate-300">Explore {PRACTICE_ITEMS.length} questions, one at a time. Start anywhere.</p>
+          <details className="text-sm text-slate-400"><summary className="cursor-pointer">How practice works</summary><p className="mt-2">Your first answer counts toward the summary. Feedback helps you learn; practice does not change your lesson mastery.</p></details>
         </header>
 
-        <section aria-label="Your summary" className="rounded-xl border p-3 space-y-1" style={{ borderColor: `${PHYS.time}80` }} data-testid="practice-summary" aria-live="polite">
-          <h2 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.time }}>Your summary (first answers only)</h2>
+        <section aria-label="Your summary" className="rounded-xl border border-surface-border bg-surface p-3 space-y-1" data-testid="practice-summary" aria-live="polite">
+          <h2 className="text-xs text-primary font-semibold">Your summary (first answers only)</h2>
           <p className="text-sm text-slate-100" data-testid="practice-score">{right} of {answered} answered correctly on the first try · {PRACTICE_ITEMS.length - answered} not yet answered</p>
           {missed.length > 0 && (
             <p className="text-xs text-slate-300">To review: {missed.map((m, i) => <span key={m.id}>{i ? ', ' : ''}<Link className="underline hover:text-sky-300" to={`/physics/motion/learn/${m.lessonId}`}>{m.lessonId.replace('pm-l', 'Lesson ')}</Link></span>)}</p>
@@ -44,19 +43,7 @@ export const MotionPractice: React.FC = () => {
         </section>
 
         <VisualRegistryProvider value={MOTION_VISUALS}>
-          {PRACTICE_CATEGORIES.map((c) => (
-            <section key={c.id} aria-label={c.title} className="space-y-3" data-practice-category={c.id}>
-              <div><h2 className="text-xl font-black text-white">{c.title}</h2><p className="text-xs text-slate-400">{c.blurb}</p></div>
-              <ol className="space-y-4">
-                {practiceByCategory(c.id).map((it, i) => (
-                  <li key={it.id} className="rounded-2xl border border-surface-border bg-surface-card p-4 space-y-2" data-practice-item={it.id}>
-                    <div className="text-[11px] font-mono text-slate-400">{c.title} · question {i + 1}</div>
-                    <QuestionView question={it.question} onSubmit={(ev) => { if (ev.invalid) return; setFirst((f) => (it.id in f ? f : { ...f, [it.id]: ev.correct })); }} />
-                  </li>
-                ))}
-              </ol>
-            </section>
-          ))}
+          <PracticeDeck groups={PRACTICE_CATEGORIES.map((c) => ({ ...c, items: practiceByCategory(c.id) }))} onAnswer={(it, ev) => { if (ev.invalid) return; setFirst((f) => (it.id in f ? f : { ...f, [it.id]: ev.correct })); }} />
         </VisualRegistryProvider>
       </main>
     </div>

@@ -44,7 +44,7 @@ export const LabButton = React.forwardRef<HTMLButtonElement, LabButtonProps>(({
   const variantClasses = {
     primary: active
       ? 'bg-amber-400/20 text-amber-200 border-2 border-amber-400/60 hover:bg-amber-400/30'
-      : 'bg-primary text-slate-950 font-bold border-2 border-primary hover:bg-primary-light shadow-sm',
+      : 'bg-primary text-on-primary font-bold border-2 border-primary hover:bg-primary-light shadow-sm',
     secondary: active
       ? 'bg-surface-elevated text-primary border border-primary/50 shadow-inner'
       : 'bg-surface-elevated hover:bg-surface-high text-slate-200 hover:text-white border border-surface-border shadow-sm',

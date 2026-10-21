@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import appSource from '../../../../App.tsx?raw';
-import explorerSource from '../../../../features/explorer/SubjectExplorer.tsx?raw';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
+import { SubjectExplorer } from '../../../../features/explorer/SubjectExplorer';
 import electricitySource from '../../../../features/electricity/ElectricityLab.tsx?raw';
 import trackSource from '../../../../features/physics/motion/MotionTrack.tsx?raw';
 import graphsSource from '../../../../features/physics/motion/MotionGraphs.tsx?raw';
@@ -30,10 +33,12 @@ describe('Physics route integration: Motion is added, Electricity is preserved',
   it('the Physics hub and the four Motion destinations are registered', () => {
     for (const r of ['/physics', '/physics/motion', '/physics/motion/lab', '/physics/motion/exercises', '/physics/motion/learn/:lessonId']) expect(appSource, r).toContain(`path="${r}"`);
   });
-  it('the physics subject card still enters the Electricity lab, and also offers the chapter list', () => {
+  it('the phone-first subject card opens all Physics chapters and keeps Electricity available', () => {
     expect(getSubjectById('physics')!.route).toBe('/physics/electricity');
     expect(LABVERSE_SUBJECTS.map((s) => s.id)).toEqual(['physics', 'chemistry', 'mathematics', 'biology', 'robotics']);
-    expect(explorerSource).toContain('to="/physics"');
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(SubjectExplorer)));
+    expect(html).toContain('href="/physics"');
+    expect(html).toContain('href="/physics/electricity"');
     expect(electricitySource).toContain('<Link to="/physics"');
   });
   it('Chapter routes agree with the chapter data', () => {

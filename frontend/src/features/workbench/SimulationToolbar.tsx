@@ -17,7 +17,7 @@ export const SimulationToolbar: React.FC = () => {
   const status = simulationResult?.status;
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#161b26]/90 backdrop-blur-md border border-[#2d3748] shadow-2xl text-xs select-none max-w-[calc(100%-1rem)] overflow-x-auto no-scrollbar">
+    <div className="circuit-toolbar absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#161b26]/90 backdrop-blur-md border border-[#2d3748] shadow-2xl text-xs select-none max-w-[calc(100%-1rem)] overflow-x-auto no-scrollbar">
       {/* 1. Run / Pause Visualization */}
       <button
         onClick={() => setSimulationSettings({ isRunning: !isRunning })}

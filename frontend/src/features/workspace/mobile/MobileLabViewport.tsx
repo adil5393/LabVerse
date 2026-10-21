@@ -19,7 +19,7 @@ export const MobileLabViewport: React.FC<MobileLabViewportProps> = ({
   children,
   telemetry,
   overlayControls,
-  className = 'h-[36vh] min-h-[200px] max-h-[270px]',
+  className = 'h-[40dvh] min-h-[220px] max-h-[360px]',
 }) => {
   const hasTopBar = Boolean(telemetry || overlayControls);
   return (

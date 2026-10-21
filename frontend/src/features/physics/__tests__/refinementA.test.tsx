@@ -18,10 +18,11 @@ describe('Milestone A: Forces Chapter Practice is reachable', () => {
     expect(appSource).toContain('path="/physics/forces/practice"');
     expect(appSource).toContain('ForcesPractice');
   });
-  it('renders every one of the 29 questions exactly once, grouped by category', () => {
+    it('offers every question once in the topic picker while showing one question at a time', () => {
     expect(FORCE_PRACTICE_ITEMS.length).toBe(29);
     const html = at(<ForcesPractice />);
-    for (const it of FORCE_PRACTICE_ITEMS) expect(html.split(`data-practice-item="${it.id}"`).length - 1, it.id).toBe(1);
+      for (const it of FORCE_PRACTICE_ITEMS) expect(html.split(`data-practice-option="${it.id}"`).length - 1, it.id).toBe(1);
+      expect(html.split('data-practice-item=').length - 1).toBe(1);
     for (const c of FORCE_PRACTICE_CATEGORIES) expect(html).toContain(`data-practice-category="${c.id}"`);
     expect(html).toContain('0 of 0 answered correctly');
   });

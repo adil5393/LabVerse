@@ -485,6 +485,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
               }}
               className="cursor-crosshair group/term"
             >
+              <circle r={isPowerSupply ? 12 : 6} fill="transparent" pointerEvents="all" />
               {/* Active snap preview target halo during wire drawing */}
               {isTermSnapped && (
                 <circle

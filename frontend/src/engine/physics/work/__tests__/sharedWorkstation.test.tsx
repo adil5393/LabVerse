@@ -41,14 +41,14 @@ describe('shared lab workstation', () => {
 
   it('the header shows only the controls a lab has wired (no dead buttons)', () => {
     const bare = renderToStaticMarkup(<MemoryRouter><WorkstationHeader activeTab="experiment" onTabChange={none} /></MemoryRouter>);
-    expect(bare).not.toContain('Run Sim');
+    expect(bare).not.toContain('aria-label="Play simulation"');
     expect(bare).not.toContain('>Reset<');
     expect(bare).not.toContain('Beginner');
     expect(bare).not.toContain('Undo parameter change');
     const wired = renderToStaticMarkup(<MemoryRouter><WorkstationHeader activeTab="experiment" onTabChange={none} onTogglePlay={none} onReset={none} onUndo={none} onRedo={none} onToggleBeginnerMode={none} beginnerMode={false} /></MemoryRouter>);
-    expect(wired).toContain('Run Sim');
+    expect(wired).toContain('aria-label="Play simulation"');
     expect(wired).toContain('Reset');
-    expect(wired).toContain('Beginner');
+    expect(wired).toContain('Switch detail level');
     expect(wired).toContain('Undo parameter change');
   });
 
@@ -108,11 +108,12 @@ describe('shared lab workstation', () => {
     expect(renderToStaticMarkup(<PowerView initial={DEFAULT_POWER} part="readout" />)).toContain('data-testid="power-readout"');
   });
 
-  it('small screens get an overflow menu for the modes and secondary actions, and the mode tabs only show from md up', () => {
+  it('keeps the learning journey visible and secondary actions in an overflow menu', () => {
     const html = renderToStaticMarkup(<MemoryRouter><WorkstationHeader activeTab="experiment" onTabChange={none} onTogglePlay={none} onReset={none} onUndo={none} onToggleBeginnerMode={none} onOpenInspector={none} labTitle="Force Laboratory" /></MemoryRouter>);
     expect(html).toContain('data-testid="header-menu-button"');
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('class="hidden md:flex items-center space-x-3 h-full');
+    expect(html).toContain('aria-label="Workstation modes"');
+    expect(html).toContain('Practice');
     expect(html).toContain('Force Laboratory');
   });
 });

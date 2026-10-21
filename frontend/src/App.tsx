@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SubjectExplorer } from './features/explorer/SubjectExplorer';
 import { LoginPage } from './features/auth/LoginPage';
 import { RequireAuth } from './features/auth/RequireAuth';
+import { ExperienceFrame } from './components/ExperienceFrame';
 
 // Lazy-loaded Subject & Chapter Modules
 const ElectricityLab = lazy(() =>
@@ -185,10 +186,10 @@ const MotionExercises = lazy(() =>
   import('./features/physics/motion/MotionExercises').then((m) => ({ default: m.MotionExercises }))
 );
 const RouteLoadingFallback: React.FC = () => (
-  <div className="min-h-screen bg-[#0a0f1d] text-white flex flex-col items-center justify-center p-6 space-y-4">
+  <div className="min-h-screen bg-background text-on-surface flex flex-col items-center justify-center p-6 space-y-4" role="status" aria-live="polite">
     <div className="w-10 h-10 border-4 border-amber-500/20 border-t-amber-400 rounded-full animate-spin" />
     <div className="text-sm font-mono text-slate-400 animate-pulse tracking-wide">
-      Loading Laboratory Module...
+      Getting your lab ready…
     </div>
   </div>
 );
@@ -196,6 +197,7 @@ const RouteLoadingFallback: React.FC = () => (
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <ExperienceFrame>
       <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           {/* Sign-in is the only public page; every other route needs a session. */}
@@ -295,6 +297,7 @@ export const App: React.FC = () => {
           </Route>
         </Routes>
       </Suspense>
+      </ExperienceFrame>
     </BrowserRouter>
   );
 };

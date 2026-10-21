@@ -122,7 +122,7 @@ export const CircleToolRail: React.FC<CircleToolRailProps> = ({ allowedTools }) 
   }, [visibleTools, setActiveTool, deleteSelected]);
 
   return (
-    <aside className="w-14 bg-surface-low border-r border-surface-border flex flex-col items-center py-3 gap-2 shrink-0 select-none z-10">
+    <aside className="geometry-tool-palette w-14 bg-surface-low border-r border-surface-border flex flex-col items-center py-3 gap-2 shrink-0 select-none z-10">
       {visibleTools.map((tool) => {
         const isActive = activeTool === tool.id;
         return (
@@ -135,6 +135,8 @@ export const CircleToolRail: React.FC<CircleToolRailProps> = ({ allowedTools }) 
                 : 'text-slate-400 hover:text-slate-200 hover:bg-surface-elevated'
             }`}
             title={`${tool.label} (${tool.shortcut})`}
+            data-tool-label={tool.label}
+            aria-label={tool.label}
           >
             <span className="material-symbols-outlined text-[20px]">{tool.icon}</span>
 

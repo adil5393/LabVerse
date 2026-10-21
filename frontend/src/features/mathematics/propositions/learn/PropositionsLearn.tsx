@@ -102,7 +102,7 @@ export const PropositionsLearnSection: React.FC = () => {
             <section
               key={u.id}
               data-learn-unit={u.id}
-              className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-[#131923] to-[#0f131c] p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
+              className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-surface-card to-surface-lowest p-4 sm:p-6 md:p-7 space-y-5 shadow-md shadow-black/20 min-w-0 w-full overflow-hidden"
             >
               <UnitIntroduction unit={u} />
 
@@ -144,7 +144,7 @@ export const PropositionsLearnSection: React.FC = () => {
                         <Link
                           to={ch.routes.learn(id)}
                           data-learn-link={id}
-                          className="block min-w-0 w-full min-h-[72px] rounded-2xl border border-surface-border bg-[#18202e] hover:bg-[#1e2738] hover:border-purple-400/60 active:scale-[0.99] p-3.5 sm:p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group overflow-hidden"
+                          className="block min-w-0 w-full min-h-[72px] rounded-2xl border border-surface-border bg-surface-card hover:bg-surface-high hover:border-purple-400/60 active:scale-[0.99] p-3.5 sm:p-4 space-y-1.5 transition-colors shadow-xs touch-manipulation group overflow-hidden"
                         >
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-xs font-mono text-slate-400 font-bold flex items-center gap-1.5 min-w-0 shrink">

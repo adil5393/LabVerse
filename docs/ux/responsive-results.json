@@ -1,0 +1,196 @@
+{
+  "checks": [
+    {
+      "route": "/",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/physics/motion/lab",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/physics/work/lab",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/mathematics/workbench",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/chemistry/states-of-matter",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/physics/electricity/workbench",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/physics/motion/practice",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/physics/forces/practice",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/physics/work/practice",
+      "width": 320,
+      "content": 320
+    },
+    {
+      "route": "/",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/physics/motion/lab",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/physics/work/lab",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/mathematics/workbench",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/chemistry/states-of-matter",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/physics/electricity/workbench",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/physics/motion/practice",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/physics/forces/practice",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/physics/work/practice",
+      "width": 390,
+      "content": 390
+    },
+    {
+      "route": "/",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/physics/motion/lab",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/physics/work/lab",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/mathematics/workbench",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/chemistry/states-of-matter",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/physics/electricity/workbench",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/physics/motion/practice",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/physics/forces/practice",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/physics/work/practice",
+      "width": 768,
+      "content": 768
+    },
+    {
+      "route": "/",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/physics/motion/lab",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/physics/work/lab",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/mathematics/workbench",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/chemistry/states-of-matter",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/physics/electricity/workbench",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/physics/motion/practice",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/physics/forces/practice",
+      "width": 1440,
+      "content": 1440
+    },
+    {
+      "route": "/physics/work/practice",
+      "width": 1440,
+      "content": 1440
+    }
+  ],
+  "errors": [],
+  "touchFlows": [
+    "search",
+    "guide escape",
+    "geometry point placement",
+    "equipment add",
+    "chemistry heating",
+    "practice paging",
+    "landscape",
+    "lesson stages",
+    "sign out"
+  ]
+}

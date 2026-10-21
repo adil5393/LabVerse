@@ -47,7 +47,7 @@ export const MobileLabAnalysisSheet: React.FC<MobileLabAnalysisSheetProps> = ({
   return (
     <div
       className={`w-full bg-surface-container border-t border-outline-variant flex flex-col transition-all duration-200 select-none shrink-0 ${
-        isExpanded ? 'h-[56vh] min-h-[310px] max-h-[480px]' : 'h-11'
+        isExpanded ? 'h-[48dvh] min-h-[240px] max-h-[480px]' : 'h-12'
       }`}
       data-testid="mobile-analysis-sheet"
       data-expanded={isExpanded}
@@ -56,7 +56,7 @@ export const MobileLabAnalysisSheet: React.FC<MobileLabAnalysisSheetProps> = ({
       <button
         type="button"
         onClick={() => setIsExpanded((prev) => !prev)}
-        className="w-full h-11 px-3 flex items-center justify-between bg-surface-container-high border-b border-outline-variant text-xs font-mono text-outline hover:text-white cursor-pointer touch-manipulation shrink-0"
+        className="w-full min-h-12 px-4 flex items-center justify-between gap-2 bg-surface-container-high border-b border-outline-variant text-sm text-outline hover:text-white cursor-pointer touch-manipulation shrink-0"
         aria-expanded={isExpanded}
         aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${title}`}
       >
@@ -67,7 +67,7 @@ export const MobileLabAnalysisSheet: React.FC<MobileLabAnalysisSheetProps> = ({
           <span className="font-bold uppercase tracking-wider text-on-surface truncate">
             {title}
           </span>
-          <span className="text-[10px] text-primary font-mono ml-1 shrink-0">
+          <span className="sr-only">
             {isExpanded ? '(Tap to collapse)' : '(Tap to expand)'}
           </span>
         </div>

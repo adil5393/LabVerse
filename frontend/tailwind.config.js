@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import { experienceColors, colorVariables } from './experience-theme.js';
+
 export default {
   darkMode: 'class',
   content: [
@@ -60,6 +62,7 @@ export default {
         'surface-variant': '#31353e',
         'on-surface': '#dfe2ee',
         'on-surface-variant': '#c2c6d6',
+        ...colorVariables(experienceColors),
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

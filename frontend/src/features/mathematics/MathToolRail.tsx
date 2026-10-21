@@ -29,7 +29,7 @@ export const MathToolRail: React.FC = () => {
   const currentToolColor = activeToolColorKey ? defaultColors[activeToolColorKey] : null;
 
   return (
-    <aside className="w-14 lg:w-16 bg-surface-low border-r border-surface-border flex flex-col items-center py-4 gap-2 select-none shrink-0 z-10">
+    <aside className="geometry-tool-palette w-14 lg:w-16 bg-surface-low border-r border-surface-border flex flex-col items-center py-4 gap-2 select-none shrink-0 z-10">
       <div className="flex flex-col items-center gap-2 w-full px-2">
         {MATH_TOOLS.map((tool) => {
           const isActive = activeTool === tool.id;
@@ -51,6 +51,9 @@ export const MathToolRail: React.FC = () => {
           return (
             <button
               key={tool.id}
+              data-tool-label={tool.displayName}
+              aria-label={tool.displayName}
+              aria-pressed={isActive}
               onClick={() => {
                 setTool(tool.id);
                 if (tool.id !== activeTool) setShowColorPopover(false);

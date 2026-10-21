@@ -887,52 +887,12 @@ export const WorkbenchPage: React.FC = () => {
             connectivityMap={connectivityGraph.endpointToNodeMap}
           />
 
-          {/* Empty Canvas Initial Prompt */}
-          {instances.length === 0 && (
-            <g transform="translate(140, 110)" pointerEvents="none">
-              <rect
-                width="440"
-                height="150"
-                rx="12"
-                fill="#121722"
-                stroke="#293140"
-                strokeWidth="1.5"
-                strokeDasharray="6,6"
-              />
-              <text
-                x="220"
-                y="55"
-                fill="#ffffff"
-                fontSize="14"
-                fontFamily="Inter"
-                fontWeight="600"
-                textAnchor="middle"
-              >
-                Interactive Workbench Ready
-              </text>
-              <text
-                x="220"
-                y="85"
-                fill="#8c909f"
-                fontSize="12"
-                fontFamily="JetBrains Mono"
-                textAnchor="middle"
-              >
-                Place a breadboard or connect components directly via Jumper Wires
-              </text>
-              <text
-                x="220"
-                y="115"
-                fill="#4edea3"
-                fontSize="11"
-                fontFamily="JetBrains Mono"
-                textAnchor="middle"
-              >
-                Universal Terminal Connections & 400-Tie Breadboard Snapping Active
-              </text>
-            </g>
-          )}
       </CanvasContainer>
+      {instances.length === 0 && <div className="circuit-empty pointer-events-none absolute top-1/2 left-4 right-4 -translate-y-1/2 mx-auto max-w-sm rounded-2xl border border-surface-border bg-surface/95 p-5 text-center">
+        <span className="material-symbols-outlined text-primary text-3xl" aria-hidden>electrical_services</span>
+        <h2 className="text-lg font-bold text-white mt-3">Build your first circuit</h2>
+        <p className="text-sm text-slate-300 mt-2">Open Equipment to add a supply, resistor and LED. Tap two terminals to connect them.</p>
+      </div>}
 
       {/* Simulation Controls Toolbar (Milestone D) */}
       <SimulationToolbar />

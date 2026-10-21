@@ -89,7 +89,7 @@ export const SoundHub: React.FC = () => {
             <ChapterPrerequisites chapter={ch} />
             <div className="space-y-6">
               {ch.units.map((u) => (
-                <section key={u.id} data-learn-unit={u.id} className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-[#131923] to-[#0f131c] p-4 sm:p-6 space-y-5 min-w-0">
+                <section key={u.id} data-learn-unit={u.id} className="rounded-3xl border border-surface-border/80 bg-gradient-to-b from-surface-card to-surface-lowest p-4 sm:p-6 space-y-5 min-w-0">
                   <UnitIntroduction unit={u} narrate />
                   {u.prerequisiteIds.length > 0 && (
                     <details className="rounded-xl border border-surface-border/50 bg-surface-lowest/50 px-3.5 py-2 group">
@@ -102,7 +102,7 @@ export const SoundHub: React.FC = () => {
                       const l = ch.lessons[id]; const st = lessonStatus(l, records[id]);
                       return (
                         <li key={id}>
-                          <Link to={ch.routes.learn(id)} data-learn-link={id} className="block min-h-[88px] rounded-2xl border border-surface-border bg-[#18202e] hover:bg-[#1e2738] hover:border-teal-400/60 p-3.5 space-y-1 touch-manipulation">
+                          <Link to={ch.routes.learn(id)} data-learn-link={id} className="block min-h-[88px] rounded-2xl border border-surface-border bg-surface-card hover:bg-surface-high hover:border-teal-400/60 p-3.5 space-y-1 touch-manipulation">
                             <div className="flex items-center justify-between gap-2"><span className="text-xs font-mono text-slate-400 font-bold">Lesson {l.number}</span><span data-status={st} className={`text-[11px] font-mono px-2.5 py-0.5 rounded-full border ${STATUS_CLASS[st]}`}>{STATUS_LABEL[st]}</span></div>
                             <div className="font-bold text-white text-base break-words">{l.title}</div>
                             <p className="text-xs text-slate-400 line-clamp-2">{l.objective}</p>

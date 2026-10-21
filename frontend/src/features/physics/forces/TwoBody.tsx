@@ -43,8 +43,9 @@ export const useTwoBody = ({ initial = DEFAULT_TWO_BODY, resetToken }: Pick<TwoB
   const [setup, setSetup] = useState<TwoBodySetup>(initial);
   const [prev, setPrev] = useState(initial);
   const [tok, setTok] = useState(resetToken);
-  if (prev !== initial || tok !== resetToken) { setPrev(initial); setTok(resetToken); setSetup(initial); }
   const [t, setT] = useState(0);
+  const simTimeRef = useRef(0);
+  if (prev !== initial || tok !== resetToken) { setPrev(initial); setTok(resetToken); setSetup(initial); simTimeRef.current = 0; setT(0); }
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(1);
   const [err, setErr] = useState('');
@@ -59,21 +60,30 @@ export const useTwoBody = ({ initial = DEFAULT_TWO_BODY, resetToken }: Pick<TwoB
     const next = { ...setup, ...patch };
     const why = validateTwoBody(next);
     if (why) { setErr(why); return; }
-    setErr(''); setSetup(next); setPlaying(false); setT(0);
+    setErr(''); setSetup(next); setPlaying(false); simTimeRef.current = 0; setT(0);
   };
+
+  if (!playing) {
+    simTimeRef.current = t;
+  }
+
   const ref = useRef({ t, tMax, rate });
   useEffect(() => { ref.current = { t, tMax, rate }; });
   useEffect(() => {
     if (!playing) return;
+    simTimeRef.current = t;
     if (reduced) {
-      const id = window.setInterval(() => { const { t: t0, tMax: m } = ref.current; const next = Math.min(m, Math.floor(t0) + 1); setT(next); if (next >= m) setPlaying(false); }, 800);
+      const id = window.setInterval(() => { const { tMax: m } = ref.current; const next = Math.min(m, Math.floor(simTimeRef.current) + 1); simTimeRef.current = next; setT(next); if (next >= m) setPlaying(false); }, 800);
       return () => window.clearInterval(id);
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, tMax: m, rate: r } = ref.current;
-      const next = tickClock(t0 * 1000, now - last, r, m * 1000) / 1000;
-      last = now; setT(next);
+      const dt = Math.min(Math.max(0, now - last), 100);
+      last = now;
+      const { tMax: m, rate: r } = ref.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, r, m * 1000) / 1000;
+      simTimeRef.current = next;
+      setT(next);
       if (next >= m) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
     };
@@ -81,11 +91,11 @@ export const useTwoBody = ({ initial = DEFAULT_TWO_BODY, resetToken }: Pick<TwoB
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
-  const togglePlay = () => { if (tt >= tMax) setT(0); setPlaying((x) => !x); };
-  const stepBack = () => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); };
-  const stepForward = () => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); };
-  const rewind = () => { setPlaying(false); setT(0); };
-  const scrub = (v: number) => { setPlaying(false); setT(v); };
+  const togglePlay = () => { if (tt >= tMax) { simTimeRef.current = 0; setT(0); } setPlaying((x) => !x); };
+  const stepBack = () => { setPlaying(false); const next = Math.max(0, Math.ceil(tt) - 1); simTimeRef.current = next; setT(next); };
+  const stepForward = () => { setPlaying(false); const next = Math.min(tMax, Math.floor(tt) + 1); simTimeRef.current = next; setT(next); };
+  const rewind = () => { setPlaying(false); simTimeRef.current = 0; setT(0); };
+  const scrub = (v: number) => { setPlaying(false); simTimeRef.current = v; setT(v); };
   return { setup, setSetup, t, setT, tt, tMax, p, hist, playing, setPlaying, rate, setRate, err, setErr, showNet, setShowNet, reduced, change, togglePlay, stepBack, stepForward, rewind, scrub };
 };
 export type TwoBodyModel = ReturnType<typeof useTwoBody>;
@@ -228,7 +238,7 @@ export const TwoBodyView: React.FC<TwoBodyProps> = ({ initial = DEFAULT_TWO_BODY
           <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={tMax} step={0.05} value={tt} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${tbFmt(tt)} seconds`} className="w-full min-h-[44px]" />
+          <input type="range" min={0} max={tMax} step="any" value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${tbFmt(tt)} seconds`} className="w-full min-h-[44px]" />
         </label>
         <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
       </div>

@@ -10,21 +10,29 @@ export function useTimedPlayback(tEnd: number, rate = 1) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const reduced = useReducedMotion();
+  const simTimeRef = useRef(0);
   const ref = useRef({ t, tEnd, rate });
   useEffect(() => { ref.current = { t, tEnd, rate }; });
 
+  if (!playing) {
+    simTimeRef.current = t;
+  }
+
   useEffect(() => {
     if (!playing) return;
-    if (ref.current.t >= ref.current.tEnd) { ref.current.t = 0; setT(0); }
+    if (simTimeRef.current >= ref.current.tEnd) { simTimeRef.current = 0; setT(0); }
+    else { simTimeRef.current = t; }
     if (reduced) {
-      const id = window.setTimeout(() => { setT(ref.current.tEnd); setPlaying(false); }, 0);
+      const id = window.setTimeout(() => { simTimeRef.current = ref.current.tEnd; setT(ref.current.tEnd); setPlaying(false); }, 0);
       return () => window.clearTimeout(id);
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, tEnd: end, rate: rr } = ref.current;
-      const next = tickClock(t0 * 1000, now - last, rr, end * 1000) / 1000;
+      const dt = Math.min(Math.max(0, now - last), 100);
       last = now;
+      const { tEnd: end, rate: rr } = ref.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, rr, end * 1000) / 1000;
+      simTimeRef.current = next;
       setT(next);
       if (next >= end) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
@@ -33,10 +41,18 @@ export function useTimedPlayback(tEnd: number, rate = 1) {
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
-  const toggle = useCallback(() => setPlaying((p) => !p), []);
+  const toggle = useCallback(() => {
+    setPlaying((p) => {
+      if (!p && simTimeRef.current >= ref.current.tEnd) {
+        simTimeRef.current = 0;
+        setT(0);
+      }
+      return !p;
+    });
+  }, []);
   /** Stop and go back to the start (used when the setup changes or Reset is pressed). */
-  const reset = useCallback(() => { setPlaying(false); setT(0); }, []);
-  const scrub = useCallback((to: number) => { setPlaying(false); setT(to); }, []);
+  const reset = useCallback(() => { setPlaying(false); simTimeRef.current = 0; setT(0); }, []);
+  const scrub = useCallback((to: number) => { setPlaying(false); simTimeRef.current = to; setT(to); }, []);
 
   return { t: Math.min(t, tEnd), playing, setPlaying, toggle, reset, scrub, atEnd: tEnd > 0 && t >= tEnd };
 }

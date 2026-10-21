@@ -128,8 +128,8 @@ export const ForcesMobileLab: React.FC<ForcesMobileLabProps> = ({
       }
     >
       <div className="w-full h-full flex flex-col overflow-hidden">
-        {/* Track Ruler (36px high on mobile) */}
-        <div className="w-full h-11 px-2 pt-0.5 border-b border-surface-border/40 shrink-0">
+        {/* Track Ruler (56px high on mobile, prevents cart & label clipping) */}
+        <div className="w-full h-14 px-2 pt-0.5 border-b border-surface-border/40 shrink-0 flex items-center">
           {scene.isVisible('cart') ? (
             <Track setup={m.setup} tMax={m.tMax} t={m.tt} fixedSpan={40} compact={true} />
           ) : null}

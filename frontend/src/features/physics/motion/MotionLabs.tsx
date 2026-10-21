@@ -160,7 +160,7 @@ export const CircularLab: React.FC = () => {
       <LabButton type="button" size="sm" onClick={() => c.jumpTo(c.setup.periodS)} data-testid="jump-full">One full turn</LabButton>
       <LabButton type="button" size="sm" onClick={c.rewind} icon={ICON('restart_alt')}>Back to 0 s</LabButton>
       <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[160px] grow max-w-md">Time
-        <input type="range" min={0} max={c.tMax} step={0.1} value={c.tt} onChange={(e) => c.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r1(c.tt)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
+        <input type="range" min={0} max={c.tMax} step="any" value={c.tt} onChange={(e) => c.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r1(c.tt)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
         <span className="font-mono text-[11px] w-20 text-right">{r1(c.tt)} / {r1(c.tMax)} s</span>
       </label>
       {!beginnerMode && <LabSelect compact aria-label="Replay speed on screen. This does not change the motion." value={c.rate} onChange={(e) => c.setRate(Number(e.target.value))} options={[{ value: 0.25, label: '0.25×' }, { value: 0.5, label: '0.5×' }, { value: 1, label: '1×' }, { value: 2, label: '2×' }]} />}

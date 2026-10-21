@@ -171,7 +171,7 @@ export const EnergyLab: React.FC = () => {
       </LabButton>
       <LabButton type="button" size="sm" onClick={playback.reset} data-testid="energy-reset" icon={<span className="material-symbols-outlined text-[15px]">restart_alt</span>}>Back to start</LabButton>
       <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[150px]">Time
-        <input type="range" min={0} max={r.tEnd} step={Math.max(r.tEnd / 200, 0.001)} value={playback.t} onChange={(e) => playback.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${f2(playback.t)} seconds of ${f2(r.tEnd)}`} className="flex-1 min-w-[90px] accent-primary" data-testid="energy-time" />
+        <input type="range" min={0} max={r.tEnd} step="any" value={playback.t} onChange={(e) => playback.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${f2(playback.t)} seconds of ${f2(r.tEnd)}`} className="flex-1 min-w-[90px] accent-primary" data-testid="energy-time" />
         <span className="font-mono text-[11px] w-20 text-right">{f2(playback.t)} / {f2(r.tEnd)} s</span>
       </label>
       {!beginnerMode && (

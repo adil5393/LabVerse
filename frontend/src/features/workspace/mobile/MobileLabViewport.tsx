@@ -21,27 +21,24 @@ export const MobileLabViewport: React.FC<MobileLabViewportProps> = ({
   overlayControls,
   className = 'h-[36vh] min-h-[200px] max-h-[270px]',
 }) => {
+  const hasTopBar = Boolean(telemetry || overlayControls);
   return (
     <div
       className={`w-full relative flex flex-col bg-surface-lowest border-b border-outline-variant overflow-hidden select-none shrink-0 touch-manipulation ${className}`}
       data-testid="mobile-lab-viewport"
     >
-      {/* Optional Top-Left Live Telemetry Overlay */}
-      {telemetry && (
-        <div className="absolute top-2 left-2 z-20 pointer-events-none">
-          <div className="pointer-events-auto">{telemetry}</div>
-        </div>
-      )}
-
-      {/* Optional Top-Right Overlay Controls */}
-      {overlayControls && (
-        <div className="absolute top-2 right-2 z-20 flex items-center space-x-1">
-          {overlayControls}
+      {/* Top Telemetry & Controls Bar - in-flow to prevent obscuring experiment track/canvas */}
+      {hasTopBar && (
+        <div className="w-full flex items-center justify-between px-2.5 py-1 z-20 shrink-0 bg-surface-lowest/95 border-b border-surface-border/40 min-h-[32px]">
+          <div className="min-w-0 flex items-center">{telemetry}</div>
+          {overlayControls && (
+            <div className="flex items-center space-x-1 shrink-0 ml-auto">{overlayControls}</div>
+          )}
         </div>
       )}
 
       {/* Simulation Content */}
-      <div className="w-full h-full flex flex-col min-h-0 relative">
+      <div className="w-full flex-1 min-h-0 relative flex flex-col">
         {children}
       </div>
     </div>

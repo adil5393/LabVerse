@@ -47,6 +47,7 @@ export const useCircularMotion = ({ radiusM = 10, periodS = 12, spin = 'counterc
   const [rate, setRate] = useState(1);
   const [err, setErr] = useState('');
   const reduced = useReducedMotion();
+  const simTimeRef = useRef(startTime);
   const tMax = Math.min(CIRCLE_LIMITS.maxTime, setup.periodS * 3);
   const tt = Math.min(t, tMax);
   const s = circleStateAt(setup, tt);
@@ -55,22 +56,30 @@ export const useCircularMotion = ({ radiusM = 10, periodS = 12, spin = 'counterc
     const next = { ...setup, ...patch };
     const why = validateCircle(next);
     if (why) { setErr(why); return; }
-    setErr(''); setSetup(next); setPlaying(false); setT(0);
+    setErr(''); setSetup(next); setPlaying(false); simTimeRef.current = 0; setT(0);
   };
+
+  if (!playing) {
+    simTimeRef.current = t;
+  }
 
   const ref = useRef({ t, tMax, rate });
   useEffect(() => { ref.current = { t, tMax, rate }; });
   useEffect(() => {
     if (!playing) return;
+    simTimeRef.current = t;
     if (reduced) {
-      const id = window.setInterval(() => { const { t: t0, tMax: m } = ref.current; const next = Math.min(m, Math.floor(t0) + 1); setT(next); if (next >= m) setPlaying(false); }, 800);
+      const id = window.setInterval(() => { const { tMax: m } = ref.current; const next = Math.min(m, Math.floor(simTimeRef.current) + 1); simTimeRef.current = next; setT(next); if (next >= m) setPlaying(false); }, 800);
       return () => window.clearInterval(id);
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, tMax: m, rate: r } = ref.current;
-      const next = tickClock(t0 * 1000, now - last, r, m * 1000) / 1000;
-      last = now; setT(next);
+      const dt = Math.min(Math.max(0, now - last), 100);
+      last = now;
+      const { tMax: m, rate: r } = ref.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, r, m * 1000) / 1000;
+      simTimeRef.current = next;
+      setT(next);
       if (next >= m) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
     };
@@ -78,12 +87,12 @@ export const useCircularMotion = ({ radiusM = 10, periodS = 12, spin = 'counterc
     return () => cancelAnimationFrame(raf);
   }, [playing, reduced]);
 
-  const togglePlay = () => { if (tt >= tMax) setT(0); setPlaying((p) => !p); };
-  const stepBack = () => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); };
-  const stepForward = () => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); };
-  const rewind = () => { setPlaying(false); setT(0); };
-  const scrub = (v: number) => { setPlaying(false); setT(v); };
-  const jumpTo = (v: number) => { setPlaying(false); setT(Math.min(tMax, v)); };
+  const togglePlay = () => { if (tt >= tMax) { simTimeRef.current = 0; setT(0); } setPlaying((p) => !p); };
+  const stepBack = () => { setPlaying(false); const next = Math.max(0, Math.ceil(tt) - 1); simTimeRef.current = next; setT(next); };
+  const stepForward = () => { setPlaying(false); const next = Math.min(tMax, Math.floor(tt) + 1); simTimeRef.current = next; setT(next); };
+  const rewind = () => { setPlaying(false); simTimeRef.current = 0; setT(0); };
+  const scrub = (v: number) => { setPlaying(false); simTimeRef.current = v; setT(v); };
+  const jumpTo = (v: number) => { setPlaying(false); const to = Math.min(tMax, v); simTimeRef.current = to; setT(to); };
   return { setup, setSetup, t, setT, tt, tMax, s, playing, setPlaying, rate, setRate, err, setErr, reduced, change, togglePlay, stepBack, stepForward, rewind, scrub, jumpTo };
 };
 export type CircularMotionModel = ReturnType<typeof useCircularMotion>;
@@ -193,7 +202,7 @@ export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10
           <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={tMax} step={0.1} value={tt} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className="w-full min-h-[44px]" />
+          <input type="range" min={0} max={tMax} step="any" value={tt} onChange={(e) => c.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className="w-full min-h-[44px]" />
         </label>
         <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; it does not change the speed of the object.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
       </div>

@@ -200,19 +200,28 @@ export const useGraphStudio = ({ scenarioId, profile: given, graphs = ['xt', 'vt
   const single = profile.segments.length === 1;
   const list: PresetLike[] | null = presets ?? (sc ? SCENARIOS : null);
 
+  const simTimeRef = useRef(0);
+  if (!playing) {
+    simTimeRef.current = t;
+  }
+
   const stateRef = useRef({ t, T, rate });
   useEffect(() => { stateRef.current = { t, T, rate }; });
   useEffect(() => {
     if (!playing) return;
+    simTimeRef.current = t;
     if (reduced) {
-      const id = window.setInterval(() => { const { t: t0, T: tot } = stateRef.current; const next = Math.min(tot, Math.floor(t0) + 1); setT(next); if (next >= tot) setPlaying(false); }, 800);
+      const id = window.setInterval(() => { const { T: tot } = stateRef.current; const next = Math.min(tot, Math.floor(simTimeRef.current) + 1); simTimeRef.current = next; setT(next); if (next >= tot) setPlaying(false); }, 800);
       return () => window.clearInterval(id);
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, T: tot, rate: r } = stateRef.current;
-      const next = tickClock(t0 * 1000, now - last, r, tot * 1000) / 1000;
-      last = now; setT(next);
+      const dt = Math.min(Math.max(0, now - last), 100);
+      last = now;
+      const { T: tot, rate: r } = stateRef.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, r, tot * 1000) / 1000;
+      simTimeRef.current = next;
+      setT(next);
       if (next >= tot) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
     };
@@ -224,7 +233,7 @@ export const useGraphStudio = ({ scenarioId, profile: given, graphs = ['xt', 'vt
     const next: Profile = { x0: patch.x0 ?? profile.x0, v0: patch.v0 ?? profile.v0, segments: [{ durationS: patch.d ?? seg.durationS, a: patch.a ?? seg.a }] };
     const why = validateProfile(next);
     if (why) { setErr(why); return; }
-    setErr(''); setProfile(next); setPlaying(false);
+    setErr(''); setProfile(next); setPlaying(false); simTimeRef.current = 0; setT(0);
   };
   const where = `x–t graph point (${fmt(s.t)} s, ${fmtSign(s.x)} m): its height is the position and its slope is the velocity, ${fmtSign(s.v)} m/s. v–t graph point (${fmt(s.t)} s, ${fmtSign(s.v)} m/s): its height is the velocity and its slope is the acceleration, ${fmtSign(s.a)} m/s².`;
   const kind = classify(profile);
@@ -234,12 +243,12 @@ export const useGraphStudio = ({ scenarioId, profile: given, graphs = ['xt', 'vt
   const pred = withPrediction && sc && !given ? sc.predict : null;
 
   /** Load a whole preset or scenario: a new profile, back to 0 s, a clean prediction. */
-  const loadProfile = (next: Profile) => { setProfile(next); setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); };
-  const togglePlay = () => { if (tClamped >= T) setT(0); setPlaying((p) => !p); };
-  const stepBack = () => { setPlaying(false); setT(Math.max(0, Math.ceil(tClamped) - 1)); };
-  const stepForward = () => { setPlaying(false); setT(Math.min(T, Math.floor(tClamped) + 1)); };
-  const rewind = () => { setPlaying(false); setT(0); };
-  const scrub = (v: number) => { setPlaying(false); setT(v); };
+  const loadProfile = (next: Profile) => { setProfile(next); simTimeRef.current = 0; setT(0); setPlaying(false); setErr(''); setChoice(null); setChecked(false); };
+  const togglePlay = () => { if (tClamped >= T) { simTimeRef.current = 0; setT(0); } setPlaying((p) => !p); };
+  const stepBack = () => { setPlaying(false); const next = Math.max(0, Math.ceil(tClamped) - 1); simTimeRef.current = next; setT(next); };
+  const stepForward = () => { setPlaying(false); const next = Math.min(T, Math.floor(tClamped) + 1); simTimeRef.current = next; setT(next); };
+  const rewind = () => { setPlaying(false); simTimeRef.current = 0; setT(0); };
+  const scrub = (v: number) => { setPlaying(false); simTimeRef.current = v; setT(v); };
 
   return {
     profile, setProfile, T, t, setT, playing, setPlaying, rate, setRate, err, setErr, reduced, tClamped, s, area, aAvg, seg, single, list, edit, where, kind,
@@ -361,7 +370,7 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
           <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Replay speed on screen. This does not change the motion." className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white"><option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-300 grow min-w-[160px]">Time
-          <input type="range" min={0} max={T} step={0.1} value={tClamped} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${fmt(tClamped)} seconds`} className="w-full min-h-[44px]" />
+          <input type="range" min={0} max={T} step="any" value={tClamped} onChange={(e) => g.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${fmt(tClamped)} seconds`} className="w-full min-h-[44px]" />
         </label>
         <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays. The values at a given simulated time never change.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>
       </div>

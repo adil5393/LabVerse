@@ -245,7 +245,7 @@ export const MachinesLab: React.FC = () => {
       </LabButton>
       <LabButton type="button" size="sm" onClick={playback.reset} data-testid="machines-reset" icon={ICON('restart_alt')}>Back to start</LabButton>
       <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[200px]">{runLabel}
-        <input type="range" min={0} max={1} step={0.01} value={p} onChange={(e) => playback.scrub(Number(e.target.value) * RUN_SECONDS)} aria-label={runLabel} aria-valuetext={`${Math.round(p * 100)} percent`} className="flex-1 min-w-[90px] accent-primary" data-testid="machines-progress" />
+        <input type="range" min={0} max={1} step="any" value={p} onChange={(e) => playback.scrub(Number(e.target.value) * RUN_SECONDS)} aria-label={runLabel} aria-valuetext={`${Math.round(p * 100)} percent`} className="flex-1 min-w-[90px] accent-primary" data-testid="machines-progress" />
         <span className="font-mono text-[11px] w-10 text-right">{Math.round(p * 100)}%</span>
       </label>
     </div>

@@ -78,7 +78,7 @@ export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?
   const p = sampleAtTime(setup, t, tMax);
   const surface = surfaceById(setup.surfaceId);
   return (
-    <svg viewBox={compact ? '20 20 580 85' : `0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
+    <svg viewBox={compact ? '20 12 580 95' : `0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
       <line x1={20} y1={70} x2={TRACK_W - 20} y2={70} stroke={surface.muK === 0 ? '#38bdf8' : PHYS.axis} strokeWidth={4} strokeDasharray={surface.muK === 0 ? '2 6' : '0'} />
       {ticks.map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
       <text x={TRACK_W - 24} y={106} textAnchor="end" fontSize={10} fill="#94a3b8">position (m) · surface: {surface.label}</text>
@@ -124,7 +124,8 @@ export const useForceCart = ({ initial = DEFAULT_SETUP, showNet = true, startTim
   const [showIndividual, setShowIndividual] = useState(true);
   const [showNetForce, setShowNetForce] = useState(showNet);
   const reduced = useReducedMotion();
-  if (prevInit !== initial || prevTok !== resetToken) { setPrevInit(initial); setPrevTok(resetToken); setSetup(initial); setErr(''); setT(startTime); setPlaying(false); }
+  const simTimeRef = useRef(startTime);
+  if (prevInit !== initial || prevTok !== resetToken) { setPrevInit(initial); setPrevTok(resetToken); setSetup(initial); setErr(''); simTimeRef.current = startTime; setT(startTime); setPlaying(false); }
   const tt = Math.min(t, tMax);
   const p = sampleAtTime(setup, tt, tMax);
   const d = diagramOf(p);
@@ -133,22 +134,30 @@ export const useForceCart = ({ initial = DEFAULT_SETUP, showNet = true, startTim
     const next = { ...setup, ...patch };
     const why = validateSetup(next);
     if (why) { setErr(why); return; }
-    setErr(''); setSetup(next); setPlaying(false); setT(0);
+    setErr(''); setSetup(next); setPlaying(false); simTimeRef.current = 0; setT(0);
   };
+
+  if (!playing) {
+    simTimeRef.current = t;
+  }
 
   const ref = useRef({ t, tMax, rate });
   useEffect(() => { ref.current = { t, tMax, rate }; });
   useEffect(() => {
     if (!playing) return;
+    simTimeRef.current = t;
     if (reduced) {
-      const id = window.setInterval(() => { const { t: t0, tMax: m } = ref.current; const next = Math.min(m, Math.floor(t0) + 1); setT(next); if (next >= m) setPlaying(false); }, 800);
+      const id = window.setInterval(() => { const { tMax: m } = ref.current; const next = Math.min(m, Math.floor(simTimeRef.current) + 1); simTimeRef.current = next; setT(next); if (next >= m) setPlaying(false); }, 800);
       return () => window.clearInterval(id);
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, tMax: m, rate: r } = ref.current;
-      const next = tickClock(t0 * 1000, now - last, r, m * 1000) / 1000;
-      last = now; setT(next);
+      const dt = Math.min(Math.max(0, now - last), 100);
+      last = now;
+      const { tMax: m, rate: r } = ref.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, r, m * 1000) / 1000;
+      simTimeRef.current = next;
+      setT(next);
       if (next >= m) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
     };
@@ -159,12 +168,12 @@ export const useForceCart = ({ initial = DEFAULT_SETUP, showNet = true, startTim
   return {
     setup, tMax, tt, p, d, playing, rate, err, showIndividual, showNetForce, reduced, live: explain(setup, p), figureAlt: alt ?? `${d.text}`,
     change, setRate, setShowIndividual, setShowNetForce,
-    setRunLength: (v: number) => { setTMax(v); setT(0); setPlaying(false); },
-    togglePlay: () => { if (tt >= tMax) setT(0); setPlaying((x) => !x); },
-    stepBack: () => { setPlaying(false); setT(Math.max(0, Math.ceil(tt) - 1)); },
-    stepForward: () => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt) + 1)); },
-    resetTime: () => { setPlaying(false); setT(0); },
-    scrub: (v: number) => { setPlaying(false); setT(v); },
+    setRunLength: (v: number) => { setTMax(v); simTimeRef.current = 0; setT(0); setPlaying(false); },
+    togglePlay: () => { if (tt >= tMax) { simTimeRef.current = 0; setT(0); } setPlaying((x) => !x); },
+    stepBack: () => { setPlaying(false); const next = Math.max(0, Math.ceil(simTimeRef.current) - 1); simTimeRef.current = next; setT(next); },
+    stepForward: () => { setPlaying(false); const next = Math.min(tMax, Math.floor(simTimeRef.current) + 1); simTimeRef.current = next; setT(next); },
+    resetTime: () => { setPlaying(false); simTimeRef.current = 0; setT(0); },
+    scrub: (v: number) => { setPlaying(false); simTimeRef.current = v; setT(v); },
   };
 };
 export type ForceCartModel = ReturnType<typeof useForceCart>;
@@ -234,7 +243,7 @@ export const ForceTimeControls: React.FC<{ m: ForceCartModel; compact?: boolean 
         <select value={tMax} onChange={(e) => m.setRunLength(Number(e.target.value))} aria-label="Length of the run in seconds" className={sel}><option value={10}>10 s</option><option value={20}>20 s</option><option value={30}>30 s</option></select>
       </label>
       <label className={`flex items-center gap-2 text-xs text-slate-300 grow ${compact ? 'min-w-[120px]' : 'min-w-[160px]'}`}>{compact ? '' : 'Time'}
-        <input type="range" min={0} max={tMax} step={0.1} value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className={`w-full ${compact ? 'min-h-[40px] sm:min-h-[32px]' : 'min-h-[44px]'}`} />
+        <input type="range" min={0} max={tMax} step="any" value={tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${r2(tt)} seconds`} className={`w-full ${compact ? 'min-h-[40px] sm:min-h-[32px]' : 'min-h-[44px]'}`} />
       </label>
       {!compact && <p className="basis-full text-[11px] text-slate-400">Replay speed only changes how fast the picture plays; the physics uses simulated time.{reduced ? ' Reduced motion is on: Play steps one second at a time.' : ''}</p>}
     </div>

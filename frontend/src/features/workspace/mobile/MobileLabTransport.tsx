@@ -121,7 +121,7 @@ export const MobileLabTransport: React.FC<MobileLabTransportProps> = ({
             type="range"
             min={0}
             max={maxTime}
-            step={0.05}
+            step="any"
             value={time}
             onChange={(e) => onScrub(Number(e.target.value))}
             aria-label="Simulation time scrubber"

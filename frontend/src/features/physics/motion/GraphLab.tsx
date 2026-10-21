@@ -119,7 +119,7 @@ export const GraphLab: React.FC<GraphLabProps> = ({ labTitle, outlinerTitle, ins
       <LabButton type="button" size="sm" onClick={g.stepForward} aria-label="Step forward 1 second of simulated time" icon={ICON('skip_next')}>+1 s</LabButton>
       <LabButton type="button" size="sm" onClick={g.rewind} icon={ICON('restart_alt')}>Back to 0 s</LabButton>
       <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[160px] grow max-w-md">Time
-        <input type="range" min={0} max={g.T} step={0.1} value={g.tClamped} onChange={(e) => g.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${fmt(g.tClamped)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
+        <input type="range" min={0} max={g.T} step="any" value={g.tClamped} onChange={(e) => g.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${fmt(g.tClamped)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
         <span className="font-mono text-[11px] w-20 text-right">{f1(g.tClamped)} / {f1(g.T)} s</span>
       </label>
       {!beginnerMode && (

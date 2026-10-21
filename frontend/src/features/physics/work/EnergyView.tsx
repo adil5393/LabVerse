@@ -210,25 +210,34 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
   const [axis, setAxis] = useState<'time' | 'distance'>('time');
   const reduced = useReducedMotion();
   const r = computeEnergy(setup);
-  const change = (patch: Partial<EnergySetup>) => { const next = { ...setup, ...patch }; setSetup(next); setPlaying(false); setT(0); onSetupChange?.(next); };
+  const simTimeRef = useRef(0);
+  const change = (patch: Partial<EnergySetup>) => { const next = { ...setup, ...patch }; setSetup(next); setPlaying(false); simTimeRef.current = 0; setT(0); onSetupChange?.(next); };
 
   // The parent can replace the setup (undo); adopt it when it differs from what is shown.
   if (initial !== lastInitial) {
     setLastInitial(initial);
-    if (JSON.stringify(initial) !== JSON.stringify(setup)) { setSetup(initial); setPlayingState(false); setT(0); }
+    if (JSON.stringify(initial) !== JSON.stringify(setup)) { setSetup(initial); setPlayingState(false); simTimeRef.current = 0; setT(0); }
+  }
+
+  if (!playing) {
+    simTimeRef.current = t;
   }
 
   const ref = useRef({ t, tEnd: r.tEnd, rate });
   useEffect(() => { ref.current = { t, tEnd: r.tEnd, rate }; });
   useEffect(() => {
     if (!playing) return;
-    if (ref.current.t >= ref.current.tEnd) { ref.current.t = 0; setT(0); }
-    if (reduced) { const id = window.setTimeout(() => { setT(ref.current.tEnd); setPlaying(false); }, 0); return () => window.clearTimeout(id); }
+    if (simTimeRef.current >= ref.current.tEnd) { simTimeRef.current = 0; setT(0); }
+    else { simTimeRef.current = t; }
+    if (reduced) { const id = window.setTimeout(() => { simTimeRef.current = ref.current.tEnd; setT(ref.current.tEnd); setPlaying(false); }, 0); return () => window.clearTimeout(id); }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, tEnd, rate: rr } = ref.current;
-      const next = tickClock(t0 * 1000, now - last, rr, tEnd * 1000) / 1000;
-      last = now; setT(next);
+      const dt = Math.min(Math.max(0, now - last), 100);
+      last = now;
+      const { tEnd, rate: rr } = ref.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, rr, tEnd * 1000) / 1000;
+      simTimeRef.current = next;
+      setT(next);
       if (next >= tEnd) { setPlayingState(false); onPlayingChange?.(false); return; }
       raf = requestAnimationFrame(loop);
     };
@@ -250,10 +259,10 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
       ) : <p role="alert" className="text-sm rounded-xl border px-3 py-3" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }} data-testid="energy-error">This setup cannot run: {r.reason}</p>}
       {r.valid && (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Run the experiment">
-          <button type="button" onClick={() => { if (t >= r.tEnd) setT(0); setPlaying(!playing); }} disabled={r.tEnd === 0} className={`${btn} bg-surface-elevated`} data-testid="energy-play">{playing ? 'Pause' : t >= r.tEnd && r.tEnd > 0 ? 'Replay' : 'Play'}</button>
-          <button type="button" onClick={() => { setPlaying(false); setT(0); }} className={`${btn} bg-surface-card`} data-testid="energy-reset">Back to start</button>
+          <button type="button" onClick={() => { if (t >= r.tEnd) { simTimeRef.current = 0; setT(0); } setPlaying(!playing); }} disabled={r.tEnd === 0} className={`${btn} bg-surface-elevated`} data-testid="energy-play">{playing ? 'Pause' : t >= r.tEnd && r.tEnd > 0 ? 'Replay' : 'Play'}</button>
+          <button type="button" onClick={() => { setPlaying(false); simTimeRef.current = 0; setT(0); }} className={`${btn} bg-surface-card`} data-testid="energy-reset">Back to start</button>
           <label className="flex items-center gap-2 text-xs text-slate-300 flex-1 min-w-[160px]">Time
-            <input type="range" min={0} max={r.tEnd} step={Math.max(r.tEnd / 200, 0.001)} value={tt} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} aria-label="Simulated time" aria-valuetext={`${f2(tt)} seconds of ${f2(r.tEnd)}`} className="flex-1 min-h-[44px]" data-testid="energy-time" />
+            <input type="range" min={0} max={r.tEnd} step="any" value={tt} onChange={(e) => { setPlaying(false); const val = Number(e.target.value); simTimeRef.current = val; setT(val); }} aria-label="Simulated time" aria-valuetext={`${f2(tt)} seconds of ${f2(r.tEnd)}`} className="flex-1 min-h-[44px]" data-testid="energy-time" />
             <span className="font-mono w-24">{f2(tt)} / {f2(r.tEnd)} s</span>
           </label>
         </div>

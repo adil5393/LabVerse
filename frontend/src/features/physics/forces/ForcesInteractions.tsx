@@ -166,7 +166,7 @@ export const ForcesInteractions: React.FC = () => {
       <LabButton type="button" size="sm" onClick={m.stepForward} aria-label="Step forward 1 second of simulated time" icon={ICON('skip_next')}>+1 s</LabButton>
       <LabButton type="button" size="sm" onClick={m.rewind} icon={ICON('restart_alt')}>Back to 0 s</LabButton>
       <label className="flex items-center gap-2 text-xs text-slate-300 min-w-[160px] grow max-w-md">Time
-        <input type="range" min={0} max={m.tMax} step={0.05} value={m.tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${t1(m.tt)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
+        <input type="range" min={0} max={m.tMax} step="any" value={m.tt} onChange={(e) => m.scrub(Number(e.target.value))} aria-label="Simulated time" aria-valuetext={`${t1(m.tt)} seconds`} className="flex-1 min-w-[90px] accent-primary" />
         <span className="font-mono text-[11px] w-20 text-right">{t1(m.tt)} / {t1(m.tMax)} s</span>
       </label>
       {!beginnerMode && <LabSelect compact aria-label="Replay speed on screen. This does not change the motion." value={m.rate} onChange={(e) => m.setRate(Number(e.target.value))} options={[{ value: 0.25, label: '0.25×' }, { value: 0.5, label: '0.5×' }, { value: 1, label: '1×' }, { value: 2, label: '2×' }]} />}

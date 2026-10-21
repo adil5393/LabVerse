@@ -198,8 +198,10 @@ export const WorkView: React.FC<WorkViewProps> = ({
     let raf = 0;
     let last = performance.now();
     const loop = (now: number) => {
-      const next = tickClock(ref.current * DURATION_MS, now - last, 1, DURATION_MS) / DURATION_MS;
+      const dt = Math.min(Math.max(0, now - last), 100);
+      const next = tickClock(ref.current * DURATION_MS, dt, 1, DURATION_MS) / DURATION_MS;
       last = now;
+      ref.current = next;
       setProgress(next);
       if (next >= 1) {
         setPlaying(false);

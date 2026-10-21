@@ -79,7 +79,8 @@ export const useMotionTrack = ({ range, start, moves, durations, editable, show,
   const reduced = useReducedMotion();
   const dragging = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
-  if (prevInitial !== initial) { setPrevInitial(initial); setPath(initial); setT(totalDurationMs(initial)); setPlaying(false); setMsg(''); }
+  const simTimeRef = useRef(tMs);
+  if (prevInitial !== initial) { const initT = totalDurationMs(initial); setPrevInitial(initial); setPath(initial); simTimeRef.current = initT; setT(initT); setPlaying(false); setMsg(''); }
 
   const total = totalDurationMs(path);
   const s = sampleAt(path, tMs);
@@ -89,15 +90,21 @@ export const useMotionTrack = ({ range, start, moves, durations, editable, show,
 
   useEffect(() => { onPath?.(path); }, [path, onPath]);
 
+  if (!playing) {
+    simTimeRef.current = tMs;
+  }
+
   // ---- playback: the clock only chooses WHICH simulated time to draw ----
   const stateRef = useRef({ tMs, total, rate });
   useEffect(() => { stateRef.current = { tMs, total, rate }; });
   useEffect(() => {
     if (!playing) return;
+    simTimeRef.current = tMs;
     if (reduced) {
       const id = window.setInterval(() => {
-        const { tMs: t0, total: tot } = stateRef.current;
-        const next = Math.min(tot, (Math.floor(t0 / 1000) + 1) * 1000);
+        const { total: tot } = stateRef.current;
+        const next = Math.min(tot, (Math.floor(simTimeRef.current / 1000) + 1) * 1000);
+        simTimeRef.current = next;
         setT(next);
         if (next >= tot) setPlaying(false);
       }, 800);
@@ -105,9 +112,11 @@ export const useMotionTrack = ({ range, start, moves, durations, editable, show,
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { tMs: t0, total: tot, rate: r } = stateRef.current;
-      const next = tickClock(t0, now - last, r, tot);
+      const dt = Math.min(Math.max(0, now - last), 100);
       last = now;
+      const { total: tot, rate: r } = stateRef.current;
+      const next = tickClock(simTimeRef.current, dt, r, tot);
+      simTimeRef.current = next;
       setT(next);
       if (next >= tot) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
@@ -119,18 +128,20 @@ export const useMotionTrack = ({ range, start, moves, durations, editable, show,
   // ---- actions (each one appends to the model; none touches the clock logic) ----
   const apply = (r: ReturnType<typeof addMove>) => {
     if (!r.ok) { setMsg(r.reason); return; }
-    setMsg(''); setPath(r.path); setT(totalDurationMs(r.path)); setPlaying(false);
+    const nextT = totalDurationMs(r.path);
+    simTimeRef.current = nextT;
+    setMsg(''); setPath(r.path); setT(nextT); setPlaying(false);
   };
   const moveBy = (d: number) => apply(addMoveBy(path, d, moveS * 1000));
   const goTo = (target: number) => apply(addMove(path, target, moveS * 1000));
   const wait = () => apply(addMove(path, metres(end.positionCm), moveS * 1000));
   const onType = (e: React.FormEvent) => { e.preventDefault(); const v = Number(typed.replace('−', '-')); if (typed.trim() === '' || !Number.isFinite(v)) { setMsg('Type a position in metres, such as 40 or -15.'); return; } goTo(v); setTyped(''); };
-  const undo = () => { const p2 = undoMove(path); setPath(p2); setT(totalDurationMs(p2)); setPlaying(false); setMsg(''); };
-  const reset = () => { const p2 = resetPath(path); setPath(p2); setT(0); setPlaying(false); setMsg(''); };
-  const togglePlay = () => { if (atEnd) setT(0); setPlaying((p) => !p); };
-  const stepBack = () => { setPlaying(false); setT(Math.max(0, Math.ceil(tMs / 1000) * 1000 - 1000)); };
-  const stepForward = () => { setPlaying(false); setT(Math.min(total, Math.floor(tMs / 1000) * 1000 + 1000)); };
-  const scrub = (v: number) => { setPlaying(false); setT(v); };
+  const undo = () => { const p2 = undoMove(path); const nextT = totalDurationMs(p2); simTimeRef.current = nextT; setPath(p2); setT(nextT); setPlaying(false); setMsg(''); };
+  const reset = () => { const p2 = resetPath(path); simTimeRef.current = 0; setPath(p2); setT(0); setPlaying(false); setMsg(''); };
+  const togglePlay = () => { if (atEnd) { simTimeRef.current = 0; setT(0); } setPlaying((p) => !p); };
+  const stepBack = () => { setPlaying(false); const next = Math.max(0, Math.ceil(simTimeRef.current / 1000) * 1000 - 1000); simTimeRef.current = next; setT(next); };
+  const stepForward = () => { setPlaying(false); const next = Math.min(total, Math.floor(simTimeRef.current / 1000) * 1000 + 1000); simTimeRef.current = next; setT(next); };
+  const scrub = (v: number) => { setPlaying(false); simTimeRef.current = v; setT(v); };
 
   const turned = turnCount(path) > 0 && s.distanceCm > Math.abs(s.displacementCm) + 0.5;
   const live = `At t = ${(s.tMs / 1000).toFixed(s.tMs % 1000 ? 1 : 0)} s (simulated time) the object is at ${describePosition(s.positionCm)}. Distance travelled so far: ${fmtLength(s.distanceCm)}. Displacement from the start: ${describeDisplacement(s.displacementCm)}.${turned ? ' The object has turned back, so the distance is greater than the size of the displacement.' : ''}${show.includes('speed') && st.averageSpeed !== null ? ` Average speed so far: ${fmtRate(st.averageSpeed)}.` : ''}${show.includes('velocity') && st.averageVelocity !== null ? ` Average velocity so far: ${fmtSignedRate(st.averageVelocity)}; velocity at this instant: ${fmtSignedRate(velocityAt(path, s.tMs))}.` : ''}`;

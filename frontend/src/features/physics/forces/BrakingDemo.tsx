@@ -102,24 +102,34 @@ export function useBrakingDemo({ initial = DEFAULT_BRAKING, resetToken }: Brakin
   const tt = Math.min(t, tMax);
   const s = brakingAt(setup, tt);
 
+  const simTimeRef = useRef(0);
   const change = (patch: Partial<BrakingSetup>) => {
     const next = { ...setup, ...patch }; const why = validateBraking(next);
     if (why) { setErr(why); return; }
-    setErr(''); setSetup(next); setPlaying(false); setT(0);
+    setErr(''); setSetup(next); setPlaying(false); simTimeRef.current = 0; setT(0);
   };
+
+  if (!playing) {
+    simTimeRef.current = t;
+  }
+
   const ref = useRef({ t, tMax, rate });
   useEffect(() => { ref.current = { t, tMax, rate }; });
   useEffect(() => {
     if (!playing) return;
+    simTimeRef.current = t;
     if (reduced) {
-      const id = window.setInterval(() => { const { t: t0, tMax: m } = ref.current; const next = Math.min(m, Math.floor(t0) + 1); setT(next); if (next >= m) setPlaying(false); }, 800);
+      const id = window.setInterval(() => { const { tMax: m } = ref.current; const next = Math.min(m, Math.floor(simTimeRef.current) + 1); simTimeRef.current = next; setT(next); if (next >= m) setPlaying(false); }, 800);
       return () => window.clearInterval(id);
     }
     let raf = 0, last = performance.now();
     const loop = (now: number) => {
-      const { t: t0, tMax: m, rate: r } = ref.current;
-      const next = tickClock(t0 * 1000, now - last, r, m * 1000) / 1000;
-      last = now; setT(next);
+      const dt = Math.min(Math.max(0, now - last), 100);
+      last = now;
+      const { tMax: m, rate: r } = ref.current;
+      const next = tickClock(simTimeRef.current * 1000, dt, r, m * 1000) / 1000;
+      simTimeRef.current = next;
+      setT(next);
       if (next >= m) { setPlaying(false); return; }
       raf = requestAnimationFrame(loop);
     };
@@ -139,8 +149,8 @@ export function useBrakingDemo({ initial = DEFAULT_BRAKING, resetToken }: Brakin
       ? `The vehicle slows. The belt exerts a backward force of ${r2(setup.passengerMassKg * setup.decel)} N on the passenger, so the passenger slows with the vehicle (${r2(s.passengerV)} m/s) and does not move forward relative to the seat.`
       : `The vehicle slows to ${r2(s.vehicleV)} m/s. No horizontal force acts on the passenger, so their velocity relative to the road stays ${r2(s.passengerV)} m/s. They move ${r2(s.relative)} m forward relative to the vehicle: inertia, not a new forward force.${s.state === 'gap used up' ? ` The model ends here, after a gap of ${GAP_M} m, before any contact.` : ''}`;
 
-  const reset = () => { setPlaying(false); setT(0); };
-  const jumpToEnd = () => { setPlaying(false); setT(tMax); };
+  const reset = () => { setPlaying(false); simTimeRef.current = 0; setT(0); };
+  const jumpToEnd = () => { setPlaying(false); simTimeRef.current = tMax; setT(tMax); };
 
   return { setup, t, tt, tMax, playing, rate, err, reduced, s, arrows, net, live, change, setPlaying, setT, setRate, reset, jumpToEnd };
 }
@@ -297,7 +307,7 @@ export const BrakingTimeControls: React.FC<{ b: UseBrakingDemoReturn; compact?: 
           type="range"
           min={0}
           max={tMax}
-          step={0.05}
+          step="any"
           value={tt}
           onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }}
           aria-label="Simulated time"

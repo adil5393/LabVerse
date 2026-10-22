@@ -1,3 +1,4 @@
+import { ForcesPlayback as SimulationPlaybackControls, ForceSceneChoice, type ForceSceneView } from './ForcesSession';
 /**
  * The Force Laboratory cart (PHY-2A): a cart on a track, its force diagram, the numbers and a v–t strip, all drawn from ONE
  * model (engine/physics/forces/forceModel.ts). Playback only moves a clock in simulated time (never the frame rate);
@@ -26,7 +27,6 @@ import {
   ExperimentSetupGroup,
   NetForceSummary,
   ModelAssumptions,
-  SimulationPlaybackControls,
 } from '../shared/controls';
 
 export const r2 = (n: number, p = 2): string => { const r = Math.round(n * 10 ** p) / 10 ** p; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
@@ -156,7 +156,7 @@ export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?
   const wR = isMobile ? 5 : 4;
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
+    <svg ref={svgRef} viewBox={`0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="science-surface w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
       <line x1={20} y1={70} x2={TRACK_W - 20} y2={70} stroke={surface.muK === 0 ? '#38bdf8' : PHYS.axis} strokeWidth={4} strokeDasharray={surface.muK === 0 ? '2 6' : '0'} />
       {ticks.filter((v) => X(v) >= 20 && X(v) <= TRACK_W - 20).map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={12} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
       <text x={TRACK_W - 24} y={106} textAnchor="end" fontSize={12} fill="#94a3b8">{isMobile ? 'position (m)' : `position (m) · surface: ${surface.label}`} </text>
@@ -177,7 +177,7 @@ export const VStrip: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ se
   const X = (tt: number) => 44 + (tt / tMax) * (W - 60), Y = (v: number) => 12 + (1 - (v - lo) / (hi - lo)) * (H - 40);
   const cur = sampleAtTime(setup, t, tMax);
   return (
-    <svg ref={stripRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Velocity–time strip: the velocity goes from ${sg(all[0].v)} m/s to ${sg(all[all.length - 1].v)} m/s over ${tMax} s; at ${r2(t)} s it is ${sg(cur.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-vstrip">
+    <svg ref={stripRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Velocity–time strip: the velocity goes from ${sg(all[0].v)} m/s to ${sg(all[all.length - 1].v)} m/s over ${tMax} s; at ${r2(t)} s it is ${sg(cur.v)} m/s.`} className="science-surface w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-vstrip">
       <line x1={44} y1={Y(0)} x2={W - 16} y2={Y(0)} stroke="#94a3b8" strokeWidth={1} />
       <path d={pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.t)},${Y(p.v)}`).join(' ')} fill="none" stroke={PHYS.velocity} strokeWidth={2.5} />
       <line x1={X(t)} y1={10} x2={X(t)} y2={H - 28} stroke={PHYS.time} strokeDasharray="5 3" />
@@ -516,24 +516,21 @@ export const ForceDataTable: React.FC<{ m: ForceCartModel }> = ({ m }) => (
 export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETUP, editable = true, showNet = true, startTime = 0, alt, resetToken, graphs = false }) => {
   const m = useForceCart({ initial, showNet, startTime, resetToken, alt });
   const [setupOpen, setSetupOpen] = useState(false);
+  const [view, setView] = useState<ForceSceneView>('motion');
 
   return (
     <div className="space-y-4" data-visual="forceCart" data-testid="force-cart">
-      {/* 1. Primary Simulation Viewport Surface */}
+      <p className="force-session-hint">Press Play to watch the cart. Switch views to see why it moves.</p>
       <div className="space-y-3">
-        <div className="rounded-2xl border border-surface-border bg-gradient-to-b from-surface-card/60 to-surface-card/30 p-2 sm:p-3 overflow-hidden shadow-xs space-y-2.5">
-          <Track setup={m.setup} tMax={m.tMax} t={m.tt} />
-          <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1 border-t border-surface-border/50">
-            <ForceToggles m={m} compact />
-            <div className="text-xs font-mono font-bold text-slate-300 flex items-center gap-1.5" data-testid="viewport-net-badge">
-              <span className="text-[11px] text-slate-400">Net Force:</span>
-              <span className="px-2 py-0.5 rounded-md bg-surface-lowest border border-surface-border" style={{ color: PHYS.netForce }}>
-                {sg(m.p.net)} N
-              </span>
-            </div>
-          </div>
-          <ForceFigure object="cart" arrows={m.d.arrows} net={m.d.net} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} />
+        <ForceSceneChoice value={view} onChange={setView} />
+        <div className="force-scene">
+          {view === 'motion' ? <Track setup={m.setup} tMax={m.tMax} t={m.tt} /> : <ForceFigure object="cart" arrows={m.d.arrows} net={m.d.net} showIndividual={m.showIndividual} showNet={m.showNetForce} alt={m.figureAlt} listing={false} />}
         </div>
+        <dl className="force-quick-readings" aria-label="Current motion">
+          <div><dt>Net force</dt><dd>{sg(m.p.net)} N</dd></div>
+          <div><dt>Acceleration</dt><dd>{sg(m.p.a)} m/s²</dd></div>
+          <div><dt>Velocity</dt><dd>{sg(m.p.v)} m/s</dd></div>
+        </dl>
         <ForceTimeControls
           m={m}
           setupToggle={editable ? {
@@ -557,7 +554,11 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
       )}
 
       {/* 3. Measurements, Graphs, and Historical Data */}
-      <ForceLive m={m} />
+      <ActivityDetails title="Understand the forces">
+        <ForceToggles m={m} />
+        <p className="text-sm leading-relaxed">{m.figureAlt}</p>
+        <ForceLive m={m} />
+      </ActivityDetails>
       <ActivityDetails title="Measurements and graphs">
         <ForceReadout m={m} />
         {graphs ? <ForceGraphs setup={m.setup} tMax={m.tMax} t={m.tt} /> : <VStrip setup={m.setup} tMax={m.tMax} t={m.tt} />}

@@ -495,6 +495,8 @@ export const ForcesLab: React.FC = () => {
       exp={exp}
       tabs={tabs}
       inspector={inspectorContent}
+      activities={[...FORCE_EXPERIMENTS, ...FIRST_LAW_EXPERIMENTS, ...SECOND_LAW_EXPERIMENTS]}
+      onSelectActivity={select}
     />
   );
 

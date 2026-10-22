@@ -1,0 +1,107 @@
+{
+  "examples": 49,
+  "widths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "renderAndInteractionChecks": 196,
+  "activityChanges": [
+    {
+      "route": "/physics/forces/lab",
+      "activity": "free"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "A"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "B"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "C"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "D"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "E"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "F"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "G"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "H"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "I"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "J"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "K"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "L"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "M"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "N"
+    },
+    {
+      "route": "/physics/forces/lab",
+      "activity": "O"
+    },
+    {
+      "route": "/physics/forces/interactions",
+      "activity": "free"
+    },
+    {
+      "route": "/physics/forces/interactions",
+      "activity": "P"
+    },
+    {
+      "route": "/physics/forces/interactions",
+      "activity": "Q"
+    },
+    {
+      "route": "/physics/forces/interactions",
+      "activity": "R"
+    },
+    {
+      "route": "/physics/forces/interactions",
+      "activity": "S"
+    },
+    {
+      "route": "/physics/forces/interactions",
+      "activity": "T"
+    }
+  ],
+  "runtimeErrors": [],
+  "diagramFindings": [],
+  "tests": {
+    "files": 101,
+    "passed": 1788
+  },
+  "productionBuild": "passed"
+}

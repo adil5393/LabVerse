@@ -67,7 +67,7 @@ const ComparePredict: React.FC = () => {
         </div>
       )}
       <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.position }}>{'▶'} 2 · Experiment: compare the free-body diagrams side by side</h4>
-      <PairIdentifyView mode="compare" />
+      <details className="activity-details"><summary>Compare the force diagrams</summary><PairIdentifyView mode="compare" /></details>
     </section>
   );
 };
@@ -226,6 +226,8 @@ export const ForcesInteractions: React.FC = () => {
       inspector={inspectorContent}
       onReset={!pairExp ? m.rewind : undefined}
       comparePredict={<ComparePredict />}
+      activities={all}
+      onSelectActivity={select}
     />
   );
 

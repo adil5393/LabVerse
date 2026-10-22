@@ -9,6 +9,7 @@ import type { VisualRef } from '../../engine/education/types';
 import { InteractiveActivity } from '../../components/InteractiveActivity';
 
 const activityKinds = new Set(['motionTrack', 'motionGraphs', 'derivation', 'circularMotion', 'forceArrows', 'forceCart', 'brakingDemo', 'secondLawDerivation', 'twoBody', 'pairIdentify', 'workLab', 'kineticLab', 'workDerivation', 'energyLab', 'powerLab', 'pulleyLab', 'rampLab', 'leverLab', 'soundVibration', 'soundBellJar', 'soundWave', 'soundGraph']);
+const forceActivities: Record<string, string> = { forceArrows: 'Explore the forces', forceCart: 'Explore force and motion', brakingDemo: 'Notice what happens when we brake', secondLawDerivation: 'Build the idea, one step at a time', twoBody: 'Explore two interacting objects', pairIdentify: 'Find a force pair' };
 
 export interface VisualProps {
   props: Record<string, unknown>;
@@ -24,9 +25,12 @@ export type VisualRegistry = Record<string, React.ComponentType<VisualProps>>;
 
 const RegistryContext = createContext<VisualRegistry>({});
 export const VisualRegistryProvider = RegistryContext.Provider;
+const CalmContext = createContext(false);
+export const CalmVisualsProvider = CalmContext.Provider;
 
 export const VisualHost: React.FC<{ visual: VisualRef; onAnswer?: (id: string) => void; locked?: boolean }> = ({ visual, onAnswer, locked }) => {
   const registry = useContext(RegistryContext);
+  const calmContext = useContext(CalmContext);
   const Visual = registry[visual.kind];
   if (!Visual) {
     // A missing visual must never hide the lesson: fall back to the text alternative.
@@ -35,9 +39,9 @@ export const VisualHost: React.FC<{ visual: VisualRef; onAnswer?: (id: string) =
   return (
     <figure className="m-0 min-w-0">
       {activityKinds.has(visual.kind)
-        ? <InteractiveActivity><Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} /></InteractiveActivity>
+        ? <InteractiveActivity calm={calmContext || Boolean(forceActivities[visual.kind])} title={forceActivities[visual.kind] ?? (calmContext ? 'Explore the idea' : undefined)}><Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} /></InteractiveActivity>
         : <div className="science-surface rounded-xl overflow-hidden"><Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} /></div>}
-      <figcaption className="mt-2 text-xs text-slate-400 leading-relaxed">{visual.alt}</figcaption>
+      <figcaption className="mt-2 text-xs text-slate-400 leading-relaxed">{calmContext || forceActivities[visual.kind] ? <details><summary className="min-h-[44px] py-3 cursor-pointer">About this activity</summary>{visual.alt}</details> : visual.alt}</figcaption>
     </figure>
   );
 };

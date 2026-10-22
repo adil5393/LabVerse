@@ -1,8 +1,7 @@
+import { ForceActivityPicker, ForceSceneChoice, type ForceSceneView } from './ForcesSession';
 import React, { useState } from 'react';
 import {
-  MobileLabViewport,
   MobileLabTransport,
-  MobileLabToolbar,
   MobileLabParameterSheet,
   MobileLabAnalysisSheet,
   MobileLabShell,
@@ -28,6 +27,8 @@ export interface ForcesMobileLabProps {
   exp?: ForceExperiment | FirstLawExperiment | SecondLawExperiment;
   tabs: DockTab[];
   inspector: React.ReactNode;
+  activities?: { id: string; title: string }[];
+  onSelectActivity?: (id: string | null) => void;
 }
 
 /**
@@ -44,15 +45,16 @@ export const ForcesMobileLab: React.FC<ForcesMobileLabProps> = ({
   exp,
   tabs,
   inspector,
+  activities = [],
+  onSelectActivity,
 }) => {
   const [searchParams] = useSearchParams();
   const [paramsOpen, setParamsOpen] = useState(searchParams.get('sheet') === 'params');
+  const [view, setView] = useState<ForceSceneView>('motion');
   const initialAnalysisOpen = searchParams.get('sheet') === 'analysis';
 
-  // Live telemetry metrics
-  const net = m.d.net;
-  const netMag = net ? Math.round(net.magnitude * 10) / 10 : 0;
-  const accel = r2(netMag / m.setup.massKg);
+  const netMag = m.p.net;
+  const accel = sg(m.p.a);
   const surface = surfaceById(m.setup.surfaceId);
 
   // Cycle replay speed
@@ -79,84 +81,25 @@ export const ForcesMobileLab: React.FC<ForcesMobileLabProps> = ({
     content: t.content,
   }));
 
-  // 1. Simulation Viewport Slot (35-38% screen height)
-  const viewportSlot = isBraking ? (
-    <MobileLabViewport
-      className="h-[36vh] min-h-[210px] max-h-[270px]"
-      telemetry={
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/90 backdrop-blur border border-outline-variant text-[11px] font-mono shadow-sm">
-          <span className="text-slate-400">v:</span>
-          <span className="text-amber-400 font-bold">{r2(b.s.vehicleV)} m/s</span>
-          <span className="text-slate-500">|</span>
-          <span className="text-slate-400">Rel:</span>
-          <span className="text-emerald-400 font-bold">{r2(b.s.relative)} m</span>
-        </div>
-      }
-    >
-      <div className="w-full h-full flex flex-col p-1.5 overflow-hidden">
-        <div className="shrink-0 h-16">{scene.isVisible('vehicle') ? <BrakingScene b={b} /> : null}</div>
-        <div className="flex-1 min-h-0 pt-1">
-          <ForceFigure
-            object="passenger"
-            arrows={b.arrows.filter((a) => a.id !== 'belt' || scene.isVisible('restraint'))}
-            net={b.net}
-            fixedScale={2.2}
-            compact={true}
-            showIndividual
-            showNet
-            alt={`Forces on passenger`}
-            listing={false}
-            fill
-          />
-        </div>
+  const viewportSlot = (
+    <div className="app-chrome forces-session p-3 space-y-3">
+      {onSelectActivity && <ForceActivityPicker value={exp?.id ?? null} items={activities} onChange={onSelectActivity} />}
+      <p className="force-session-hint">{exp ? exp.goal : 'Change one thing. Press Play. Notice what changes.'}</p>
+      <ForceSceneChoice value={view} onChange={setView} />
+      <div className="force-scene">
+        {view === 'motion' ? (isBraking ? (scene.isVisible('vehicle') && <BrakingScene b={b} />) : (scene.isVisible('cart') && <Track setup={m.setup} tMax={m.tMax} t={m.tt} fixedSpan={40} compact />)) : (
+          <ForceFigure object={isBraking ? 'passenger' : 'cart'}
+            arrows={isBraking ? b.arrows.filter(a => a.id !== 'belt' || scene.isVisible('restraint')) : m.d.arrows.filter(a => !(a.id === 'A' && !scene.isVisible('pushA')) && !(a.id === 'B' && !scene.isVisible('pushB')) && !(a.id === 'friction' && !scene.isVisible('surface')))}
+            net={isBraking ? b.net : m.d.net} showIndividual={isBraking || m.showIndividual} showNet={isBraking || m.showNetForce}
+            alt={isBraking ? 'Forces on the passenger' : m.figureAlt} listing={false} />
+        )}
       </div>
-    </MobileLabViewport>
-  ) : (
-    <MobileLabViewport
-      className="h-[36vh] min-h-[210px] max-h-[270px]"
-      telemetry={
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/90 backdrop-blur border border-outline-variant text-[11px] font-mono shadow-sm">
-          <span className="text-slate-400">v:</span>
-          <span className="text-cyan-300 font-bold">{sg(m.p.v)} m/s</span>
-          <span className="text-slate-500">|</span>
-          <span className="text-slate-400">F<sub>net</sub>:</span>
-          <span className="text-amber-300 font-bold">{netMag} N</span>
-          <span className="text-slate-500">|</span>
-          <span className="text-slate-400">a:</span>
-          <span className="text-emerald-300 font-bold">{accel} m/s²</span>
-        </div>
-      }
-    >
-      <div className="w-full h-full flex flex-col overflow-hidden">
-        {/* Track Ruler (56px high on mobile, prevents cart & label clipping) */}
-        <div className="w-full h-14 px-2 pt-0.5 border-b border-surface-border/40 shrink-0 flex items-center">
-          {scene.isVisible('cart') ? (
-            <Track setup={m.setup} tMax={m.tMax} t={m.tt} fixedSpan={40} compact={true} />
-          ) : null}
-        </div>
-
-        {/* Free-Body Diagram with auto-framed cart & vectors */}
-        <div className="flex-1 min-h-0 relative flex items-center justify-center p-1">
-          <ForceFigure
-            object="cart"
-            arrows={m.d.arrows.filter(
-              (a) =>
-                !(a.id === 'A' && !scene.isVisible('pushA')) &&
-                !(a.id === 'B' && !scene.isVisible('pushB')) &&
-                !(a.id === 'friction' && !scene.isVisible('surface'))
-            )}
-            net={m.d.net}
-            fixedScale={2.2}
-            compact={true}
-            showIndividual={m.showIndividual}
-            showNet={m.showNetForce}
-            alt={m.figureAlt}
-            listing={false}
-            fill
-          />
-        </div>
-      </div>
-    </MobileLabViewport>
+      <dl className="force-quick-readings">
+        <div><dt>{isBraking ? 'Vehicle' : 'Velocity'}</dt><dd>{sg(isBraking ? b.s.vehicleV : m.p.v)} m/s</dd></div>
+        <div><dt>{isBraking ? 'Passenger' : 'Acceleration'}</dt><dd>{isBraking ? `${sg(b.s.passengerV)} m/s` : `${accel} m/s²`}</dd></div>
+        <div><dt>{isBraking ? 'Separation' : 'Net force'}</dt><dd>{isBraking ? `${r2(b.s.relative)} m` : `${sg(netMag)} N`}</dd></div>
+      </dl>
+    </div>
   );
 
   // 2. Playback Transport Slot
@@ -197,88 +140,13 @@ export const ForcesMobileLab: React.FC<ForcesMobileLabProps> = ({
     />
   );
 
-  // 3. Toggles & Quick Controls Slot
   const toolbarSlot = (
-    <div className="space-y-2 pb-2">
-      <MobileLabToolbar
-        toggles={[
-          {
-            id: 'individual-forces',
-            label: 'Show Forces',
-            active: m.showIndividual,
-            onToggle: () => m.setShowIndividual((v) => !v),
-            activeColor: PHYS.force,
-          },
-          {
-            id: 'net-force',
-            label: 'Show Net Force',
-            active: m.showNetForce,
-            onToggle: () => m.setShowNetForce((v) => !v),
-            activeColor: PHYS.netForce,
-          },
-        ]}
-        secondaryRow={
-          <div className="grid grid-cols-3 gap-1.5 w-full">
-            <button
-              type="button"
-              onClick={() => setParamsOpen(true)}
-              className="min-h-[38px] px-2 rounded-lg border border-outline-variant bg-surface-container flex items-center justify-center gap-1 text-[11px] text-slate-300 active:bg-surface-variant touch-manipulation min-w-0"
-              data-testid="mobile-surface-chip"
-            >
-              <span className="text-slate-400 shrink-0">Surf:</span>
-              <span className="font-semibold text-cyan-300 truncate">
-                {surface.label.split(' ')[0]}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setParamsOpen(true)}
-              className="min-h-[38px] px-2 rounded-lg border border-outline-variant bg-surface-container flex items-center justify-center gap-1 text-[11px] text-slate-300 active:bg-surface-variant touch-manipulation min-w-0"
-              data-testid="mobile-mass-chip"
-            >
-              <span className="text-slate-400 shrink-0">m:</span>
-              <span className="font-semibold text-amber-300 truncate">{r2(m.setup.massKg)} kg</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setParamsOpen(true)}
-              className="min-h-[38px] px-2 rounded-lg border border-primary/50 bg-primary/15 text-primary text-xs font-bold flex items-center justify-center gap-1 active:bg-primary/25 touch-manipulation shadow-sm min-w-0"
-              data-testid="open-params-button"
-            >
-              <span className="material-symbols-outlined text-[16px]">tune</span>
-              <span>Params</span>
-            </button>
-          </div>
-        }
-      />
-
-      {/* Live Scientific Metrics Cards */}
-      <div className="grid grid-cols-3 gap-1.5 px-2.5 text-xs">
-        <div className="rounded-xl bg-surface-container border border-outline-variant p-2 flex flex-col justify-center min-w-0">
-          <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider truncate">Velocity</span>
-          <span className="text-sm font-mono font-bold text-cyan-300 mt-0.5 truncate">{sg(m.p.v)} m/s</span>
-        </div>
-        <div className="rounded-xl bg-surface-container border border-outline-variant p-2 flex flex-col justify-center min-w-0">
-          <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider truncate">Accel (a)</span>
-          <span className="text-sm font-mono font-bold text-emerald-300 mt-0.5 truncate">{accel} m/s²</span>
-        </div>
-        <div className="rounded-xl bg-surface-container border border-outline-variant p-2 flex flex-col justify-center min-w-0">
-          <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider truncate">F (net)</span>
-          <span className="text-sm font-mono font-bold text-amber-300 mt-0.5 truncate">{netMag} N</span>
-        </div>
-      </div>
-
-      {/* Optional Investigation Banner */}
-      {exp && (
-        <div className="mx-2.5 p-2.5 rounded-xl border border-primary/30 bg-primary/10 text-xs text-slate-200 space-y-1">
-          <div className="flex items-center justify-between text-[11px] font-mono text-primary font-bold">
-            <span>Investigation {exp.id}: {exp.title}</span>
-          </div>
-          <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">{exp.goal}</p>
-        </div>
-      )}
+    <div className="app-chrome forces-session p-3 space-y-3" data-testid="mobile-lab-toolbar">
+      <div className="force-setup-row"><p>{isBraking ? 'Vehicle and passenger' : `${r2(m.setup.massKg)} kg cart · ${surface.label}`}</p><button type="button" onClick={() => setParamsOpen(true)} data-testid="open-params-button">Edit Setup</button></div>
+      {!isBraking && view === 'forces' && <div className="flex flex-wrap gap-2">
+        <button type="button" data-toggle="individual" aria-pressed={m.showIndividual} onClick={() => m.setShowIndividual(v => !v)}>Individual forces</button>
+        <button type="button" data-toggle="net" aria-pressed={m.showNetForce} onClick={() => m.setShowNetForce(v => !v)}>Net force</button>
+      </div>}
     </div>
   );
 
@@ -289,7 +157,7 @@ export const ForcesMobileLab: React.FC<ForcesMobileLabProps> = ({
       initialExpanded={initialAnalysisOpen}
       title={exp ? `Investigation ${exp.id}` : 'Analysis & Data'}
       summaryChip={
-        <span>
+        isBraking ? <span>Passenger force: {sg(b.s.passengerForce)} N</span> : <span>
           <strong className="text-amber-300">F<sub>net</sub>:</strong> {netMag} N ·{' '}
           <strong className="text-emerald-300">a:</strong> {accel} m/s²
         </span>
@@ -302,7 +170,7 @@ export const ForcesMobileLab: React.FC<ForcesMobileLabProps> = ({
     <MobileLabParameterSheet
       isOpen={paramsOpen}
       onClose={() => setParamsOpen(false)}
-      title="Forces Parameters & Inspector"
+      title="Change the experiment"
     >
       {inspector}
     </MobileLabParameterSheet>

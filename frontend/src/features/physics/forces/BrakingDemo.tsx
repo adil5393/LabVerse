@@ -16,6 +16,7 @@ import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
 import { useViewportProfile } from '../shared/viewportProfiles';
 import { ActivityDetails } from '../../../components/InteractiveActivity';
+import { ForcesPlayback } from './ForcesSession';
 import {
   ParameterControl,
   ExperimentSetupGroup,
@@ -162,7 +163,7 @@ export const BrakingScene: React.FC<{ b: UseBrakingDemoReturn; alt?: string }> =
   const text = alt ?? `Sudden braking: vehicle at ${r2(setup.speed)} m/s brakes at ${r2(setup.decel)} m/s² from 1 s. Passenger ${setup.restrained ? 'wears a belt' : 'has no belt'}. ${b.live}`;
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full h-auto rounded-xl bg-surface-lowest border border-surface-border" data-testid="braking-scene">
+    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="science-surface w-full h-auto rounded-xl bg-surface-lowest border border-surface-border" data-testid="braking-scene">
       <line x1={15} y1={110} x2={W - 15} y2={110} stroke={PHYS.axis} strokeWidth={3} />
       {tick.map((m) => (
         <g key={m}>
@@ -263,6 +264,12 @@ export const BrakingTimeControls: React.FC<{
   };
 }> = ({ b, compact = false, setupToggle }) => {
   const { tt, tMax, playing, setPlaying, setT, reset, jumpToEnd, rate, setRate, reduced } = b;
+  if (!compact) return <ForcesPlayback time={tt} maxTime={tMax} playing={playing} rate={rate} reducedMotion={reduced}
+    onTogglePlay={() => { if (tt >= tMax) setT(0); setPlaying(x => !x); }}
+    onStepBack={() => { setPlaying(false); setT(Math.max(0, Math.ceil(tt * 10) / 10 - .1)); }}
+    onStepForward={() => { setPlaying(false); setT(Math.min(tMax, Math.floor(tt * 10) / 10 + .1)); }}
+    onReset={reset} onScrub={value => { setPlaying(false); setT(value); }} onRateChange={setRate} onJumpToEnd={jumpToEnd}
+    stepSeconds={.1} testId="braking-time" playTestId="braking-play" resetTestId="braking-reset" setupToggle={setupToggle} />;
   return (
     <div role="group" aria-label="Time controls" className={`flex flex-wrap items-center gap-2 ${compact ? '' : 'rounded-xl border border-surface-border bg-surface-card/60 p-3'}`} data-testid="braking-time">
       {!compact && <span className="text-[11px] font-mono w-full" style={{ color: PHYS.time }}>{'⏱'} Simulated time (braking starts at 1 s)</span>}
@@ -412,14 +419,7 @@ export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAK
       <div className="space-y-3">
         <div className="rounded-2xl border border-surface-border bg-gradient-to-b from-surface-card/60 to-surface-card/30 p-2 sm:p-3 overflow-hidden shadow-xs space-y-2.5">
           <BrakingScene b={b} alt={alt} />
-          <ForceFigure
-            object="passenger"
-            arrows={b.arrows}
-            net={b.net}
-            showIndividual
-            showNet
-            alt={`Forces on the passenger: ${b.setup.restrained && b.s.passengerForce !== 0 ? `belt ${r2(Math.abs(b.s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(b.setup.passengerMassKg * G)} N each, vertical.`}
-          />
+
         </div>
         <BrakingTimeControls
           b={b}
@@ -445,6 +445,16 @@ export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAK
 
       {/* 3. Measurements, Graphs, and Observations */}
       <BrakingLiveStatus b={b} />
+      <ActivityDetails title="Why does the passenger move?">
+          <ForceFigure
+            object="passenger"
+            arrows={b.arrows}
+            net={b.net}
+            showIndividual
+            showNet
+            alt={`Forces on the passenger: ${b.setup.restrained && b.s.passengerForce !== 0 ? `belt ${r2(Math.abs(b.s.passengerForce))} N backward; ` : 'no horizontal force; '}weight and normal force ${r2(b.setup.passengerMassKg * G)} N each, vertical.`}
+          />
+      </ActivityDetails>
       <ActivityDetails title="Measurements"><BrakingReadout b={b} className="grid grid-cols-2 lg:grid-cols-4 gap-2" /></ActivityDetails>
     </div>
   );

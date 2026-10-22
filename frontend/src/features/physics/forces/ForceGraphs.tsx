@@ -39,7 +39,7 @@ export const PlotView: React.FC<PlotProps> = ({ id, title, xName, xUnit, yName, 
     <figure className="space-y-1 min-w-0" data-graph={id}>
       <figcaption className="text-xs font-mono uppercase tracking-wider" style={{ color }}>{title}</figcaption>
       <p className="text-xs text-slate-400">{yName} ({yUnit})</p>
-      <svg ref={diagramRef} viewBox={`0 0 ${GW} ${GH}`} role="img" aria-label={alt} className="w-full rounded-xl bg-surface-lowest border border-surface-border">
+      <svg ref={diagramRef} viewBox={`0 0 ${GW} ${GH}`} role="img" aria-label={alt} className="science-surface w-full rounded-xl bg-surface-lowest border border-surface-border">
         {ticks(xr[0], xr[1]).map((v) => <g key={`x${v}`}><line x1={X(v)} y1={MT} x2={X(v)} y2={GH - MB} stroke="#334155" strokeWidth={0.6} /><text x={X(v)} y={GH - MB + 12} textAnchor="middle" fontSize={12} fill="#94a3b8">{v}</text></g>)}
         {ticks(yr[0], yr[1]).map((v) => <g key={`y${v}`}><line x1={ML} y1={Y(v)} x2={GW - MR} y2={Y(v)} stroke={v === 0 ? '#94a3b8' : '#334155'} strokeWidth={v === 0 ? 1.2 : 0.6} /><text x={ML - 4} y={Y(v) + 3} textAnchor="end" fontSize={12} fill="#94a3b8">{v}</text></g>)}
         {xr[0] < 0 && <line x1={X(0)} y1={MT} x2={X(0)} y2={GH - MB} stroke="#94a3b8" strokeWidth={1.2} />}

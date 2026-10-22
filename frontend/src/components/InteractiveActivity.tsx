@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 /** Keep the same simulation mounted when moving between a lesson and focus mode. */
-export function InteractiveActivity({ children }: { children: React.ReactNode }) {
+export function InteractiveActivity({ children, calm = false, title = 'Try it yourself' }: { children: React.ReactNode; calm?: boolean; title?: string }) {
   const [focused, setFocused] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -41,10 +41,10 @@ export function InteractiveActivity({ children }: { children: React.ReactNode })
     };
   }, [focused]);
   return (
-    <div ref={root} className={`physics-activity science-surface ${focused ? 'activity-focused' : ''}`}
+    <div ref={root} className={`physics-activity ${calm ? 'app-chrome forces-session' : 'science-surface'} ${focused ? 'activity-focused' : ''}`}
       role={focused ? 'dialog' : undefined} aria-modal={focused || undefined} aria-label={focused ? 'Physics activity' : undefined}>
       <div className="activity-toolbar">
-        <span className="text-xs font-semibold">Try it yourself</span>
+        <span className="text-xs font-semibold">{title}</span>
         {focused
           ? <button ref={close} type="button" onClick={() => setFocused(false)}>Back to lesson <span aria-hidden>↙</span></button>
           : <button ref={trigger} type="button" onClick={() => setFocused(true)}>Focus activity <span aria-hidden>↗</span></button>}

@@ -78,7 +78,7 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
 
   return (
     <figure ref={containerRef} className={`min-w-0 ${fill ? 'h-full min-h-0 w-full' : 'space-y-2'}`} data-testid="force-figure">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`science-surface w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
         <line x1={20} y1={GROUND} x2={W - 20} y2={GROUND} stroke={PHYS.axis} strokeWidth={3} />
         <rect x={CX - BW / 2} y={top} width={BW} height={BH} rx={6} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
         <text x={CX} y={top + BH / 2 + 4} textAnchor="middle" fontSize={isMobile ? 14 : 13} fontWeight={700} fill="#e2e8f0">{object}</text>

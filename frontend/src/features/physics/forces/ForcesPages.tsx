@@ -16,7 +16,7 @@ import { useEducationStore } from '../../../store/useEducationStore';
 import { ChapterIntroduction, UnitIntroduction } from '../../education/Intro';
 import { LearnLessonPage } from '../../education/LearnLessonPage';
 import { ChapterPrerequisites, UnitPrerequisites } from '../../education/Prerequisites';
-import { VisualRegistryProvider, type VisualRegistry } from '../../education/visuals';
+import { CalmVisualsProvider, VisualRegistryProvider, type VisualRegistry } from '../../education/visuals';
 import { ForceArrowsVisual, ForceCartView, ForceCartVisual } from './ForceCart';
 import { BrakingDemoVisual } from './BrakingDemo';
 import { MassSweepGraphs } from './ForceGraphs';
@@ -35,7 +35,7 @@ const CRUMB = 'How Forces Affect Motion';
 
 export const ForcesLearnPage: React.FC = () => {
   const { lessonId = '' } = useParams();
-  return <LearnLessonPage chapter={FORCES_CHAPTER} registry={FORCE_VISUALS} lessonId={lessonId} crumb={CRUMB} />;
+  return <CalmVisualsProvider value><LearnLessonPage chapter={FORCES_CHAPTER} registry={FORCE_VISUALS} lessonId={lessonId} crumb={CRUMB} /></CalmVisualsProvider>;
 };
 
 const TONE: Record<LearningStatus, string> = {

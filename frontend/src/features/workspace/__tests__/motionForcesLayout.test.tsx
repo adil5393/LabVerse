@@ -84,7 +84,9 @@ describe('Motion and Forces laboratories are composed from regions, not a legacy
     const track = render(<MotionTrackView range={[-50, 100]} start={0} moves={[10, 20]} editable show={['position', 'distance', 'displacement']} stepM={5} playback alt="track" />);
     for (const id of ['motion-live', 'motion-readout', 'motion-history', 'motion-controls', 'motion-playback']) expect(track).toContain(`data-testid="${id}"`);
     const cart = render(<ForceCartView graphs />);
-    for (const id of ['force-controls', 'force-track', 'force-figure', 'force-time', 'force-readout', 'force-live']) expect(cart).toContain(`data-testid="${id}"`);
+    for (const id of ['force-controls', 'force-track', 'force-time', 'force-readout', 'force-live']) expect(cart).toContain(`data-testid="${id}"`);
+    expect(cart).toContain('See forces');
+    expect(cart).not.toContain('data-testid="force-figure"');
   });
 
   it('shared pieces: dock tabs show the first tab, the viewport frame has fit and zoom', () => {
@@ -128,7 +130,7 @@ describe('Motion and Forces laboratories are composed from regions, not a legacy
     const html = render(<ForceCartView editable graphs />);
     const trackIdx = html.indexOf('data-testid="force-track"');
     const controlsIdx = html.indexOf('data-testid="force-controls"');
-    const netBadgeIdx = html.indexOf('data-testid="viewport-net-badge"');
+    const netBadgeIdx = html.indexOf('aria-label="Current motion"');
     expect(trackIdx).toBeGreaterThan(0);
     expect(controlsIdx).toBeGreaterThan(0);
     // Track viewport must come before setup controls

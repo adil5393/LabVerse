@@ -1,8 +1,7 @@
+import { ForceActivityPicker, ForceSceneChoice, type ForceSceneView } from './ForcesSession';
 import React, { useState } from 'react';
 import {
-  MobileLabViewport,
   MobileLabTransport,
-  MobileLabToolbar,
   MobileLabParameterSheet,
   MobileLabAnalysisSheet,
   MobileLabShell,
@@ -22,6 +21,8 @@ export interface TwoBodyMobileLabProps {
   inspector: React.ReactNode;
   onReset?: () => void;
   comparePredict?: React.ReactNode;
+  activities?: { id: string; title: string }[];
+  onSelectActivity?: (id: string | null) => void;
 }
 
 /**
@@ -36,9 +37,12 @@ export const TwoBodyMobileLab: React.FC<TwoBodyMobileLabProps> = ({
   inspector,
   onReset,
   comparePredict,
+  activities = [],
+  onSelectActivity,
 }) => {
   const [searchParams] = useSearchParams();
   const [paramsOpen, setParamsOpen] = useState(searchParams.get('sheet') === 'params');
+  const [view, setView] = useState<ForceSceneView>('motion');
 
   const analysisTabs: MobileAnalysisTab[] = tabs.map((t) => ({
     id: t.id,
@@ -48,42 +52,21 @@ export const TwoBodyMobileLab: React.FC<TwoBodyMobileLabProps> = ({
   }));
 
   const viewportSlot = (
-    <MobileLabViewport
-      className="h-[36vh] min-h-[210px] max-h-[270px]"
-      telemetry={
-        !pairExp ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/90 backdrop-blur border border-outline-variant text-[11px] font-mono shadow-sm">
-            <span className="text-slate-400">vA:</span>
-            <span className="font-bold text-sky-400">{m.p.vA.toFixed(1)} m/s</span>
-            <span className="text-slate-500">|</span>
-            <span className="text-slate-400">vB:</span>
-            <span className="font-bold text-amber-400">{m.p.vB.toFixed(1)} m/s</span>
-            <span className="text-slate-500">|</span>
-            <span className="text-slate-400">Σp:</span>
-            <span className="font-bold text-emerald-400">
-              {(m.setup.massA * m.p.vA + m.setup.massB * m.p.vB).toFixed(1)}
-            </span>
-          </div>
-        ) : undefined
-      }
-    >
-      <div className="w-full h-full flex flex-col p-1.5 overflow-y-auto no-scrollbar justify-center">
-        {!pairExp && (
-          <TwoBodyScene
-            m={m}
-            hidden={{
-              A: !scene.isVisible('A'),
-              B: !scene.isVisible('B'),
-              link: !scene.isVisible('link'),
-            }}
-          />
-        )}
-        {pairExp && id === 'S' && comparePredict}
-        {pairExp && id !== 'S' && (
-          <PairIdentifyView key={pairExp.id} scenarioId={pairExp.scenarios[0]} />
-        )}
-      </div>
-    </MobileLabViewport>
+    <div className="app-chrome forces-session p-3 space-y-3">
+      {onSelectActivity && <ForceActivityPicker value={id} items={activities} onChange={onSelectActivity} />}
+      {!pairExp && <>
+        <p className="force-session-hint">Watch the carts move, then compare the forces. Their interaction is equal and opposite.</p>
+        <ForceSceneChoice value={view} onChange={setView} />
+        <TwoBodyScene m={m} view={view} hidden={{ A: !scene.isVisible('A'), B: !scene.isVisible('B'), link: !scene.isVisible('link') }} />
+        <dl className="force-quick-readings">
+          <div><dt>Velocity A</dt><dd>{m.p.vA.toFixed(1)} m/s</dd></div>
+          <div><dt>Velocity B</dt><dd>{m.p.vB.toFixed(1)} m/s</dd></div>
+          <div><dt>Total momentum</dt><dd>{m.p.pTotal.toFixed(1)} kg·m/s</dd></div>
+        </dl>
+      </>}
+      {pairExp && id === 'S' && comparePredict}
+      {pairExp && id !== 'S' && <PairIdentifyView key={pairExp.id} scenarioId={pairExp.scenarios[0]} />}
+    </div>
   );
 
   const transportSlot = !pairExp ? (
@@ -93,8 +76,8 @@ export const TwoBodyMobileLab: React.FC<TwoBodyMobileLabProps> = ({
       onStepBack={m.stepBack}
       onStepForward={m.stepForward}
       onReset={onReset}
-      stepBackLabel="-0.5s"
-      stepForwardLabel="+0.5s"
+      stepBackLabel="−1 s"
+      stepForwardLabel="+1 s"
       time={m.tt}
       maxTime={Math.max(m.tMax, 0.1)}
       onScrub={(timeSec) => m.scrub(timeSec)}
@@ -103,19 +86,9 @@ export const TwoBodyMobileLab: React.FC<TwoBodyMobileLabProps> = ({
     />
   ) : null;
 
-  const toolbarSlot = (
-    <div className="w-full flex flex-col gap-2 p-2.5">
-      <MobileLabToolbar
-        statusText={
-          !pairExp
-            ? `mA: ${m.setup.massA}kg · mB: ${m.setup.massB}kg · F: ${m.setup.force}N`
-            : `Investigation ${id ?? 'Pairs'}`
-        }
-        onOpenParameters={() => setParamsOpen(true)}
-        parameterButtonLabel="Edit Parameters"
-      />
-    </div>
-  );
+  const toolbarSlot = !pairExp ? (
+    <div className="app-chrome forces-session p-3 force-setup-row" data-testid="mobile-lab-toolbar"><p>{m.setup.massA} kg + {m.setup.massB} kg · {m.setup.force} N</p><button type="button" onClick={() => setParamsOpen(true)}>Edit Parameters</button></div>
+  ) : null;
 
   const parameterSheetSlot = (
     <MobileLabParameterSheet

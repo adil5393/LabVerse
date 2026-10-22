@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { FORCE_PRACTICE_CATEGORIES, FORCE_PRACTICE_ITEMS, forcePracticeByCategory } from '../../../engine/physics/forces/practice';
-import { VisualRegistryProvider } from '../../education/visuals';
+import { CalmVisualsProvider, VisualRegistryProvider } from '../../education/visuals';
 import { PracticeDeck } from '../../education/PracticeDeck';
 import { FORCE_VISUALS } from './ForcesPages';
 import { ChapterWorkspaceNav } from '../../workspace';
@@ -38,9 +38,9 @@ export const ForcesPractice: React.FC = () => {
           )}
         </section>
 
-        <VisualRegistryProvider value={FORCE_VISUALS}>
+        <CalmVisualsProvider value><VisualRegistryProvider value={FORCE_VISUALS}>
           <PracticeDeck groups={FORCE_PRACTICE_CATEGORIES.map((c) => ({ ...c, items: forcePracticeByCategory(c.id) }))} onAnswer={(it, ev) => { if (ev.invalid) return; setFirst((f) => (it.id in f ? f : { ...f, [it.id]: ev.correct })); }} />
-        </VisualRegistryProvider>
+        </VisualRegistryProvider></CalmVisualsProvider>
       </main>
     </div>
   );

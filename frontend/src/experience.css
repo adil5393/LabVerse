@@ -170,3 +170,22 @@ input[type="range"] { accent-color: #008782; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+/* Lesson activities retain their state while using the whole screen. */
+.physics-activity { background: rgb(var(--lv-bg)); color: rgb(var(--lv-ink)); border: 1px solid #334155; border-radius: 1rem; min-width: 0; overflow: clip; }
+.activity-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem; padding: .25rem .75rem; background: #172338; color: #e2e8f0; border-bottom: 1px solid #334155; }
+.activity-toolbar button { min-height: 44px; padding: .5rem; font-size: .75rem; font-weight: 700; color: #93c5fd; border-radius: .5rem; }
+.activity-content { padding: .75rem; min-width: 0; }
+.activity-focused { position: fixed; inset: 0; z-index: 200; border: 0; border-radius: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
+.activity-focused > .activity-toolbar { position: sticky; top: 0; z-index: 5; padding-top: max(.25rem, env(safe-area-inset-top)); }
+.activity-focused > .activity-content { max-width: 960px; margin-inline: auto; }
+.activity-details { border: 1px solid #334155; border-radius: .75rem; padding: .25rem .75rem .75rem; }
+.activity-details > summary { min-height: 44px; padding-block: .75rem; cursor: pointer; color: #cbd5e1; font-size: .875rem; font-weight: 600; }
+.physics-activity button, .physics-activity select, .physics-activity input:not([type=checkbox]):not([type=radio]) { min-height: 44px; }
+.physics-activity select, .physics-activity input { max-width: 100%; }
+[data-testid="derivation-math"] { overflow-x: auto; }
+@media (max-width: 639px) {
+  .activity-content { padding: .5rem; }
+  .physics-activity { margin-inline: -.5rem; }
+  .physics-activity.activity-focused { margin: 0; }
+  .physics-activity [class*="text-[10px]"], .physics-activity [class*="text-[11px]"] { font-size: .75rem; }
+}

@@ -113,7 +113,7 @@ export const WorkMobileLab: React.FC<WorkMobileLabProps> = ({
 
   const viewportSlot = (
     <MobileLabViewport
-      className="h-[36vh] min-h-[210px] max-h-[270px]"
+      className="h-[46dvh] min-h-[380px] max-h-[430px]"
       telemetry={
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/90 backdrop-blur border border-outline-variant text-[11px] font-mono shadow-sm">
           <span className="text-slate-400">F:</span>

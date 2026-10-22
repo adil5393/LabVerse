@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { InteractiveActivity } from '../../../components/InteractiveActivity';
 import { Link, useSearchParams } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { EQUATION_PRESETS } from '../../../engine/physics/motion/equations';
@@ -227,7 +228,7 @@ export const DerivationPage: React.FC = () => {
   const [params] = useSearchParams();
   return (
     <Shell testid="motion-derivations" last="Understand the Derivation" title="Understand the Derivation" intro="Follow how the three equations of motion (Eqs. 4.4a, 4.4b and 4.4c of the chapter) are built from the definition of acceleration and the velocity–time graph. Some steps ask you to supply the missing reasoning first. Free exploration: nothing to unlock, and reading a derivation never counts as mastery.">
-      <DerivationView key={params.get('d') ?? 'A'} id={params.get('d') ?? 'A'} />
+      <InteractiveActivity><DerivationView key={params.get('d') ?? 'A'} id={params.get('d') ?? 'A'} /></InteractiveActivity>
       <p className="text-sm text-slate-300">Try the numbers yourself in the <Link className="underline hover:text-sky-300" to="/physics/motion/equations">Equation Laboratory</Link>, or see the derivations in <Link className="underline hover:text-sky-300" to="/physics/motion/learn/pm-l9">Lesson 9</Link>.</p>
     </Shell>
   );

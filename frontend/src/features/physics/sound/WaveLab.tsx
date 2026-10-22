@@ -52,9 +52,9 @@ export const WavePanel: React.FC<WavePanelProps> = ({ initialSetup, initialT, in
   const canvas = (
     <div className={stickyCanvas && mobile ? 'sticky top-0 z-10 bg-background/95 backdrop-blur pb-2' : ''} data-testid="wave-canvas">
       <WaveScene wave={wave} tPhys={tPhys} presentation={pres.wave} mark={mark} alt={alt} />
-      <p className="text-[13px] text-slate-400 mt-1" data-testid="idealised-note">
+      <details open={!mobile} className="text-[13px] text-slate-400 mt-1"><summary className="min-h-[44px] py-3 cursor-pointer">Picture speed and scale</summary><p data-testid="idealised-note">
         Idealised and exaggerated: the picture is shown <strong className="text-slate-200">{wave.slow} times slower</strong> than real, and the crowding and the movement of the particles are enlarged so that you can see them (in real air the change of density is about one part in a billion).
-      </p>
+      </p></details>
       <p className="text-[13px] text-slate-300" data-testid="cr-legend"><span className="text-orange-400 font-bold">C</span> compression · <span className="text-violet-400 font-bold">R</span> rarefaction · brighter blue strip = denser air.</p>
     </div>
   );
@@ -125,8 +125,8 @@ export const WavePanel: React.FC<WavePanelProps> = ({ initialSetup, initialT, in
     <div ref={ref} className={`grid gap-4 ${twoColumn ? 'grid-cols-[minmax(0,1fr)_minmax(0,22rem)]' : ''}`} data-testid="wave-panel" data-profile={pres.profile}>
       <div className="space-y-3 min-w-0">
         {canvas}
-        {graph}
         {transport}
+        {mobile && graph ? <details className="rounded-xl border border-surface-border"><summary className="min-h-[44px] py-3 px-3 text-sm font-semibold cursor-pointer">Density graph</summary>{graph}</details> : graph}
         {!wave.valid && <p role="alert" className="text-sm text-rose-300" data-testid="wave-problem">{wave.reason}</p>}
         {mobile && controls !== 'none' && <details className="rounded-xl border border-surface-border bg-surface-card p-3"><summary className="min-h-[44px] flex items-center font-bold text-sm text-slate-200 cursor-pointer">Measurements</summary><div className="pt-2">{readouts}</div></details>}
       </div>

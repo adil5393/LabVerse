@@ -20,6 +20,10 @@ import { tickClock } from '../../../engine/physics/motion/kinematics';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
 import type { VisualProps } from '../../education/visuals';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
+import { MobileWorkScene } from './components/MobileWorkScene';
+import { Field } from './Field';
+import { useDiagramLayout } from '../shared/viewportProfiles';
 import {
   SimulationViewport,
   PropertiesInspector,
@@ -38,10 +42,12 @@ const COLOR: Record<ForceKind, string> = {
 const TAG: Record<ForceKind, string> = { applied: 'F', friction: 'f', weight: 'W', normal: 'N' };
 
 export const FsGraph: React.FC<{ r: WorkResult }> = ({ r }) => {
+  const diagramRef = useRef<SVGSVGElement>(null);
+  const { width: gw } = useDiagramLayout(diagramRef, 260, 158);
   const s = r.setup.displacement;
   const dist = Math.abs(s);
   const fs = dist === 0 ? 0 : r.applied.alongAxis * Math.sign(s);
-  const gw = 260, gh = 130, l = 44, b = 100, top = 14, right = 244;
+  const gh = 130, l = 44, b = 100, top = 14, right = gw - 16;
   const yMax = Math.max(10, Math.abs(fs) * 1.2), xMax = Math.max(1, dist * 1.1);
   const X = (m: number) => l + (m / xMax) * (right - l), Y = (n: number) => b - ((n + yMax) / (2 * yMax)) * (b - top);
   const work = fs * dist;
@@ -49,6 +55,7 @@ export const FsGraph: React.FC<{ r: WorkResult }> = ({ r }) => {
   return (
     <figure className="min-w-0 space-y-1.5 flex flex-col items-center" data-testid="fs-graph">
       <svg
+        ref={diagramRef}
         viewBox={`0 0 ${gw} ${gh + 28}`}
         role="img"
         aria-label={`Force-displacement graph of the applied force along the displacement: ${fmtSigned(fs)} N from 0 to ${fmt(dist)} m; the area under the line is the work, ${fmtSigned(work)} J.`}
@@ -67,19 +74,19 @@ export const FsGraph: React.FC<{ r: WorkResult }> = ({ r }) => {
           />
         )}
         <line x1={X(0)} y1={Y(fs)} x2={X(dist)} y2={Y(fs)} stroke="#adc6ff" strokeWidth={3} />
-        <text x={l - 4} y={Y(0) + 4} textAnchor="end" fontSize={10} fill="#94A3B8" fontFamily="JetBrains Mono">
+        <text x={l - 4} y={Y(0) + 4} textAnchor="end" fontSize={12} fill="#94A3B8" fontFamily="JetBrains Mono">
           0
         </text>
-        <text x={l - 4} y={Y(fs) + 4} textAnchor="end" fontSize={10} fill="#adc6ff" fontFamily="JetBrains Mono">
+        <text x={l - 4} y={Y(fs) + 4} textAnchor="end" fontSize={12} fill="#adc6ff" fontFamily="JetBrains Mono">
           {fmt(fs)}
         </text>
-        <text x={X(dist)} y={Y(0) + (fs >= 0 ? 12 : -4)} textAnchor="middle" fontSize={10} fill="#94A3B8" fontFamily="JetBrains Mono">
+        <text x={X(dist)} y={Y(0) + (fs >= 0 ? 12 : -4)} textAnchor="middle" fontSize={12} fill="#94A3B8" fontFamily="JetBrains Mono">
           {fmt(dist)} m
         </text>
-        <text x={(l + right) / 2} y={gh + 14} textAnchor="middle" fontSize={10} fill="#94A3B8" fontFamily="JetBrains Mono">
-          distance moved along displacement (m)
+        <text x={(l + right) / 2} y={gh + 14} textAnchor="middle" fontSize={12} fill="#94A3B8" fontFamily="JetBrains Mono">
+          distance (m)
         </text>
-        <text x={6} y={top + 6} fontSize={10} fill="#94A3B8" fontFamily="JetBrains Mono">
+        <text x={6} y={top + 6} fontSize={12} fill="#94A3B8" fontFamily="JetBrains Mono">
           F along s (N)
         </text>
       </svg>
@@ -91,6 +98,7 @@ export const FsGraph: React.FC<{ r: WorkResult }> = ({ r }) => {
 };
 
 export interface WorkViewProps {
+  embedded?: boolean;
   initial: WorkSetup;
   editable?: boolean;
   graph?: boolean;
@@ -120,6 +128,7 @@ export interface WorkViewProps {
 }
 
 export const WorkView: React.FC<WorkViewProps> = ({
+  embedded = false,
   initial,
   editable = false,
   graph = false,
@@ -230,6 +239,32 @@ export const WorkView: React.FC<WorkViewProps> = ({
   const description = describeWork(r);
   const s = setup.displacement;
 
+  if (embedded) return <div className="space-y-3" data-visual="workLab" data-testid="work-view">
+    <MobileWorkScene result={r} progress={progress} showVertical={showVertical} alt={alt ?? description} />
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className="min-h-[44px] px-4 rounded-lg bg-surface-elevated text-sm font-semibold" onClick={() => { if (progress >= 1) setProgress(0); setPlaying(!playing); }}>{playing ? 'Pause' : progress >= 1 ? 'Replay' : 'Play'}</button>
+      <button type="button" className="min-h-[44px] px-4 rounded-lg border border-surface-border text-sm" onClick={() => { setPlaying(false); setProgress(0); }}>Back to start</button>
+    </div>
+    <label className="flex flex-wrap items-center gap-2 text-xs">Progress
+      <input aria-label="Experiment progress" type="range" min={0} max={1} step={0.01} value={progress} className="min-w-0 flex-1 min-h-[44px]" onChange={e => { setPlaying(false); setProgress(Number(e.target.value)); }} />
+      <span>{Math.round(progress * 100)}%</span>
+    </label>
+    {editable && <ActivityDetails title="Change the experiment">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field id="force" label="Applied force" unit="N" value={setup.forceN} step={1} onChange={forceN => change({ forceN })} />
+        <Field id="angle" label="Force angle" unit="°" value={setup.angleDeg} step={15} onChange={angleDeg => change({ angleDeg })} />
+        <Field id="distance" label="Displacement" unit="m" value={setup.displacement} step={1} onChange={displacement => change({ displacement })} />
+        <Field id="mass" label="Mass" unit="kg" value={setup.massKg} step={1} onChange={massKg => change({ massKg })} />
+      </div>
+      {err && <p role="alert" className="text-red-300 text-sm">{err}</p>}
+    </ActivityDetails>}
+    <p className="text-sm text-slate-200">{description}</p>
+    <ActivityDetails title="Work calculations and graph">
+      <dl className="grid grid-cols-2 gap-3 text-xs">{r.forces.map(f => <div key={f.id}><dt>{f.label}</dt><dd className="text-base font-mono">{fmtSigned(f.work)} J</dd></div>)}</dl>
+      {graph && <FsGraph r={r} />}
+    </ActivityDetails>
+  </div>;
+
   return (
     <div className="w-full h-full min-h-[460px] md:min-h-[540px] flex flex-col flex-1 min-w-0 overflow-hidden" data-visual="workLab" data-testid="work-view">
       {/* Upper Area: Viewport + Inspector */}
@@ -322,6 +357,7 @@ export const WorkVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const p = props as { setup: WorkSetup; editable?: boolean; progress?: number; graph?: boolean };
   return (
     <WorkView
+      embedded
       initial={p.setup}
       editable={p.editable ?? false}
       graph={p.graph ?? false}

@@ -80,23 +80,28 @@ export const DerivationView: React.FC<{ id?: string; alt?: string }> = ({ id = '
   return (
     <DerivationNarration d={d} index={i} gated={gated}>
     <div className="space-y-3" data-visual="workDerivation" data-testid="work-derivation" data-derivation={d.id}>
-      <div role="group" aria-label="Choose a derivation" className="flex flex-wrap gap-2">
+      <label className="block sm:hidden text-xs text-slate-300">Choose a derivation
+        <select aria-label="Choose a derivation" value={d.id} onChange={e => { setWhich(e.target.value); setI(0); }} className="w-full min-h-[44px] block mt-1 rounded-lg bg-surface-card text-white border border-surface-border px-2">
+          {DERIVATIONS.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}
+        </select>
+      </label>
+      <div role="group" aria-label="Choose a derivation" className="hidden sm:flex flex-wrap gap-2">
         {DERIVATIONS.map((x) => <button key={x.id} type="button" data-derivation-tab={x.id} aria-pressed={x.id === d.id} onClick={() => { setWhich(x.id); setI(0); }} className="min-h-[44px] px-3 rounded-lg border-2 text-xs font-bold text-slate-100" style={{ borderColor: x.id === d.id ? PHYS.prediction : '#334155' }}>{x.id === d.id ? '✓ ' : ''}{x.title.split(':')[0]}</button>)}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2"><Nar as="h3" id={dnid.title} className="text-lg font-bold text-white">{d.title}</Nar><NarrationPlayer label="this derivation" /></div>
       <p className="text-[11px] text-slate-400" data-testid="derivation-source">{d.kind === 'enrichment' ? 'LabVerse enrichment. ' : ''}Source: {d.source}</p>
-      <div className="rounded-xl border p-3 text-xs text-slate-200 space-y-1" style={{ borderColor: `${PHYS.displacement}66` }} data-testid="derivation-assumptions">
+      <ActivityDetails title="Assumptions"><div className="text-xs text-slate-200 space-y-1" data-testid="derivation-assumptions">
         <strong style={{ color: PHYS.displacement }}>Assumptions</strong>
         <ul className="list-disc pl-5">{d.assumptions.map((a, ai) => <Nar as="li" key={a} id={dnid.assume(ai)}>{a}</Nar>)}</ul>
-      </div>
-      <div className="rounded-xl border border-surface-border bg-surface-card/60 p-3 space-y-2" data-testid="derivation-params">
+      </div></ActivityDetails>
+      <ActivityDetails title="Change the numbers"><div className="space-y-2" data-testid="derivation-params">
         <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">Change the numbers (the figure and every value update)</h4>
         <div className="flex flex-wrap gap-3 items-center">
           {d.params.map((sp) => <Field key={`${d.id}-${sp.id}`} id={`p-${sp.id}`} label={sp.label} unit={sp.unit} value={p[sp.id]} step={sp.step} onChange={(v) => setParams((all) => ({ ...all, [d.id]: { ...all[d.id], [sp.id]: Math.min(sp.max, Math.max(sp.min, v)) } }))} />)}
         </div>
         <p className="text-[11px] text-slate-400">Limits: {d.params.map((sp) => `${sp.label} ${sp.min} to ${sp.max} ${sp.unit}`).join('; ')}.</p>
         {problem && <p role="alert" className="text-xs rounded-lg px-3 py-2 border" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }} data-testid="derivation-problem">{problem}</p>}
-      </div>
+      </div></ActivityDetails>
       {!problem && (
         <div data-testid="derivation-figure">
           {Figure ? <Figure d={d} ctx={ctx} uses={step.uses} /> : <p className="text-xs text-slate-300">{Object.entries(ctx).map(([k, v]) => `${k} = ${f2(v)}`).join(', ')}</p>}
@@ -143,3 +148,4 @@ export const DerivationView: React.FC<{ id?: string; alt?: string }> = ({ id = '
 };
 
 export const DerivationVisual: React.FC<VisualProps> = ({ props, alt }) => <DerivationView id={String((props as { id?: string }).id ?? 'K')} alt={alt} />;
+import { ActivityDetails } from '../../../components/InteractiveActivity';

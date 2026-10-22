@@ -539,9 +539,10 @@ export const ForcesDerivation: React.FC = () => {
           <h1 className="text-3xl font-black text-white">Derive Newton&apos;s second law</h1>
           <p className="text-sm text-slate-300 max-w-3xl">Follow the textbook&apos;s argument from the cart experiments (Eqs. 6.1 and 6.2), or derive F = ma from momentum. Some steps ask you to supply the missing reasoning first. Free exploration: reading a derivation never counts as mastery.</p>
         </header>
-        <SecondLawDerivationView key={params.get('d') ?? 'A'} id={params.get('d') ?? 'A'} />
+        <InteractiveActivity><SecondLawDerivationView key={params.get('d') ?? 'A'} id={params.get('d') ?? 'A'} /></InteractiveActivity>
         <p className="text-sm text-slate-300">Try the numbers in the <Link className="underline hover:text-sky-300" to="/physics/forces/lab?experiment=K">Force Laboratory</Link>, or see the derivations in <Link className="underline hover:text-sky-300" to="/physics/forces/learn/pf-l6">Lesson 6</Link> and <Link className="underline hover:text-sky-300" to="/physics/forces/learn/pf-l7">Lesson 7</Link>.</p>
       </main>
     </div>
   );
 };
+import { InteractiveActivity } from '../../../components/InteractiveActivity';

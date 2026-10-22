@@ -72,8 +72,9 @@ describe('Physics Mobile & Desktop Viewport Profiles', () => {
       />
     );
 
-    expect(html).toContain('viewBox="30 40 560 230"');
-    expect(html).toContain('Push 15 N →');
+    expect(html).toContain('viewBox="0 0 420 300"');
+    expect(html).toContain('data-magnitude="15"');
+    expect(html).toContain('Force 15 N →');
   });
 
   it('renders ForceCart Track with compact mobile framing when compact is true', () => {
@@ -86,7 +87,7 @@ describe('Physics Mobile & Desktop Viewport Profiles', () => {
       />
     );
 
-    expect(html).toContain('viewBox="20 12 580 95"');
+    expect(html).toContain('viewBox="0 0 420 120"');
     expect(html).toContain('0 m');
   });
 });

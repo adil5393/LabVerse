@@ -40,6 +40,12 @@ export const MOBILE_PROFILE: ViewportProfile = {
 
 export const MOBILE_BREAKPOINT_PX = 640;
 
+/** Native-size drawing coordinates on narrow cards, independent of the page viewport. */
+export function useDiagramLayout(ref: RefObject<Element | null>, desktopWidth: number, height: number) {
+  const profile = useViewportProfile(ref);
+  return { width: profile.isMobile ? Math.max(180, Math.min(desktopWidth, profile.width)) : desktopWidth, height, isMobile: profile.isMobile };
+}
+
 /**
  * Hook to observe container dimensions and determine whether to use the
  * mobile or desktop viewport profile.

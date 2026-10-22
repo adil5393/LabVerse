@@ -1,3 +1,4 @@
+import { useDiagramLayout } from '../shared/viewportProfiles';
 /**
  * Understand the Derivation (PHY-1F): student-guided derivations of the three equations of motion with a
  * synchronised velocity–time figure. The figure and every number come from the same constant-acceleration
@@ -5,7 +6,7 @@
  * never counts as mastery; steps with a check stay closed until the student supplies the missing reasoning.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { VisualProps } from '../../education/visuals';
 import { DERIVATIONS, DERIVATION_CASES, derivationById, motionOf, signedPieces, type Derivation, type DerivationStep, type Highlight } from '../../../engine/physics/motion/derivations';
 import { fmt, fmtSign, series, totalTime, type Profile } from '../../../engine/physics/motion/profile';
@@ -16,9 +17,11 @@ import { NarrationPlayer } from '../../narration/NarrationPlayer';
 import { DerivationNarration } from '../../narration/DerivationNarration';
 import { dnid } from '../../../engine/narration/derivationSegments';
 
-const W = 520, H = 230, ML = 46, MR = 16, MT = 16, MB = 34;
+const ML = 46, MR = 16, MT = 16, MB = 34;
 
 const Figure: React.FC<{ profile: Profile; uses: Highlight[]; derivation: Derivation }> = ({ profile, uses, derivation }) => {
+  const diagramRef = useRef<SVGSVGElement>(null);
+  const { width: W, height: H } = useDiagramLayout(diagramRef, 520, 250);
   const m = motionOf(profile), T = totalTime(profile);
   const pts = series(profile, 80);
   const vs = pts.map((p) => p.v);
@@ -36,20 +39,20 @@ const Figure: React.FC<{ profile: Profile; uses: Highlight[]; derivation: Deriva
   const dim = (h: Highlight) => (on(h) ? 1 : 0.18);
   const label = `Velocity–time graph from t = 0 to ${fmt(T)} s: the velocity goes from u = ${fmtSign(m.u)} m/s to v = ${fmtSign(m.v)} m/s with a = ${fmtSign(m.a)} m/s². Rectangle (height u) area ${fmtSign(pieces.rect)} m, triangle (height v − u) area ${fmtSign(pieces.tri)} m, total ${fmtSign(pieces.total)} m.`;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="derivation-figure">
+    <svg ref={diagramRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="derivation-figure">
       <defs><pattern id="dhatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill={PHYS.distance} opacity={0.12} /><line x1="0" y1="0" x2="0" y2="6" stroke={PHYS.distance} strokeWidth="2" opacity={0.7} /></pattern></defs>
       <line x1={ML} y1={Y(0)} x2={W - MR} y2={Y(0)} stroke="#94a3b8" strokeWidth={1.2} />
       <line x1={ML} y1={MT} x2={ML} y2={H - MB} stroke="#94a3b8" strokeWidth={1.2} />
-      <text x={W - MR} y={H - MB - 5} textAnchor="end" fontSize={11} fill={PHYS.time}>time (s)</text>
-      <text transform={`translate(12 ${H / 2}) rotate(-90)`} textAnchor="middle" fontSize={11} fill={PHYS.velocity}>velocity (m/s)</text>
+      <text x={W - MR} y={H - MB - 5} textAnchor="end" fontSize={12} fill={PHYS.time}>time (s)</text>
+      <text transform={`translate(12 ${H / 2}) rotate(-90)`} textAnchor="middle" fontSize={12} fill={PHYS.velocity}>velocity (m/s)</text>
       {showAreas && on('total') && <path d={whole} fill={PHYS.displacement} opacity={0.3} />}
       {showAreas && <path d={rect} data-region="rect" fill={m.u < 0 ? 'url(#dhatch)' : PHYS.position} opacity={on('rect') ? 0.5 : 0.08} stroke={PHYS.position} strokeWidth={on('rect') ? 1.5 : 0} />}
       {showAreas && <path d={tri} data-region="tri" fill={m.v < m.u ? 'url(#dhatch)' : PHYS.acceleration} opacity={on('tri') ? 0.55 : 0.08} stroke={PHYS.acceleration} strokeWidth={on('tri') ? 1.5 : 0} />}
       <path d={line} fill="none" stroke={PHYS.velocity} strokeWidth={on('slope') ? 4 : 2.5} />
       <g opacity={dim('u')}><circle cx={X(0)} cy={Y(m.u)} r={5} fill={PHYS.velocity} /><text x={X(0) + 8} y={Y(m.u) - 7} fontSize={12} fontWeight={700} fill={PHYS.velocity}>u = {fmtSign(m.u)}</text></g>
       <g opacity={dim('v')}><circle cx={X(T)} cy={Y(m.v)} r={5} fill={PHYS.velocity} /><text x={X(T) - 8} y={Y(m.v) - 7} textAnchor="end" fontSize={12} fontWeight={700} fill={PHYS.velocity}>v = {fmtSign(m.v)}</text></g>
-      <g opacity={dim('t')}><line x1={X(0)} y1={H - MB + 8} x2={X(T)} y2={H - MB + 8} stroke={PHYS.time} strokeWidth={2} /><text x={(X(0) + X(T)) / 2} y={H - MB + 20} textAnchor="middle" fontSize={11} fill={PHYS.time}>t = {fmt(T)} s</text></g>
-      {on('slope') && <text x={(X(0) + X(T)) / 2} y={MT + 10} textAnchor="middle" fontSize={11} fill={PHYS.acceleration}>slope = a = {fmtSign(m.a)} m/s²</text>}
+      <g opacity={dim('t')}><line x1={X(0)} y1={H - MB + 8} x2={X(T)} y2={H - MB + 8} stroke={PHYS.time} strokeWidth={2} /><text x={(X(0) + X(T)) / 2} y={H - MB + 20} textAnchor="middle" fontSize={12} fill={PHYS.time}>t = {fmt(T)} s</text></g>
+      {on('slope') && <text x={(X(0) + X(T)) / 2} y={MT + 10} textAnchor="middle" fontSize={12} fill={PHYS.acceleration}>slope = a = {fmtSign(m.a)} m/s²</text>}
     </svg>
   );
 };
@@ -86,8 +89,8 @@ export const DerivationView: React.FC<{ id?: string; alt?: string }> = ({ id = '
         <ul className="list-disc pl-5">{d.assumptions.map((a, ai) => <Nar as="li" key={a} id={dnid.assume(ai)}>{a}</Nar>)}</ul>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-        <label className="flex items-center gap-2">Case for the figure
-          <select value={caseId} onChange={(e) => setCaseId(e.target.value)} aria-label="Case shown in the figure" data-testid="derivation-case" className="min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
+        <label className="flex flex-wrap items-center gap-2 w-full min-w-0">Case for the figure
+          <select value={caseId} onChange={(e) => setCaseId(e.target.value)} aria-label="Case shown in the figure" data-testid="derivation-case" className="min-h-[44px] max-w-full w-full sm:w-auto rounded-lg border border-surface-border bg-surface-lowest px-2 text-white">
             {DERIVATION_CASES.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
           </select>
         </label>

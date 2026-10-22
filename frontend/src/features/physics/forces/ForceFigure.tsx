@@ -10,7 +10,6 @@ import { netWorking, type Arrow } from '../../../engine/physics/forces/forceDiag
 import { PHYS } from '../motion/physicsColors';
 import { useViewportProfile } from '../shared/viewportProfiles';
 
-const W = 620, H = 300, CX = W / 2, GROUND = 214, BW = 100, BH = 56;
 const COLOR: Record<Arrow['kind'], string> = { applied: PHYS.force, friction: PHYS.friction, weight: PHYS.vertical, normal: PHYS.vertical, net: PHYS.netForce };
 const num = (n: number): string => String(Math.round(n * 100) / 100);
 
@@ -45,12 +44,15 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
   const containerRef = useRef<HTMLElement | null>(null);
   const profile = useViewportProfile(containerRef);
   const isMobile = profile.isMobile || compact;
+  const W = isMobile ? Math.max(180, profile.isMobile ? profile.width : 420) : 620, H = 300;
+  const CX = W / 2, GROUND = 214, BW = isMobile ? 68 : 100, BH = 56;
 
   const horizontals = arrows.filter((a) => a.direction === 'left' || a.direction === 'right');
   const verticals = arrows.filter((a) => a.direction === 'up' || a.direction === 'down');
   const maxMag = Math.max(1e-9, ...horizontals.map((a) => a.magnitude), net?.magnitude ?? 0);
-  const k = fixedScale ?? 190 / maxMag; // pixels per newton for the horizontal arrows (largest = 190 px unless the scale is fixed)
-  const len = (m: number) => (fixedScale ? Math.min(250, Math.max(14, m * k)) : Math.max(14, m * k));
+  const maxLength = isMobile ? W / 2 - 18 + BW / 2 : 250;
+  const k = fixedScale ?? Math.min(190, maxLength) / maxMag;
+  const len = (m: number) => Math.min(maxLength, Math.max(14, m * k));
   const top = GROUND - BH;
   const rowY = (i: number) => top - 22 - i * 26;
   const rows = horizontals.filter((a) => a.kind === 'applied');
@@ -69,14 +71,14 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
       <g key={a.id} data-arrow={a.id} data-direction={a.direction} data-magnitude={a.magnitude}>
         <line x1={x0} y1={y} x2={x1} y2={y} stroke={color} strokeWidth={strokeW} />
         <Head x={x1} y={y} dir={a.direction} color={color} />
-        <text x={(x0 + x1) / 2} y={y - 8} textAnchor="middle" fontSize={isMobile ? 12 : 11} fontWeight={700} fill={color}>{a.label} {num(a.magnitude)} N {a.direction === 'right' ? '→' : '←'}</text>
+        <text x={isMobile ? CX : (x0 + x1) / 2} y={y - 8} textAnchor="middle" fontSize={isMobile ? 13 : 11} fontWeight={700} fill={color}>{isMobile ? a.kind === 'net' ? 'Net' : a.kind === 'friction' ? 'Friction' : 'Force' : a.label} {num(a.magnitude)} N {a.direction === 'right' ? '→' : '←'}</text>
       </g>
     );
   };
 
   return (
     <figure ref={containerRef} className={`min-w-0 ${fill ? 'h-full min-h-0 w-full' : 'space-y-2'}`} data-testid="force-figure">
-      <svg viewBox={isMobile ? '30 40 560 230' : `0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} preserveAspectRatio="xMidYMid meet" className={`w-full ${fill ? 'h-full' : ''} rounded-xl bg-surface-lowest border border-surface-border`}>
         <line x1={20} y1={GROUND} x2={W - 20} y2={GROUND} stroke={PHYS.axis} strokeWidth={3} />
         <rect x={CX - BW / 2} y={top} width={BW} height={BH} rx={6} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
         <text x={CX} y={top + BH / 2 + 4} textAnchor="middle" fontSize={isMobile ? 14 : 13} fontWeight={700} fill="#e2e8f0">{object}</text>
@@ -90,13 +92,13 @@ export const ForceFigure: React.FC<ForceFigureProps> = ({ object, arrows, net, s
             <g key={a.id} data-arrow={a.id} data-direction={a.direction} data-magnitude={a.magnitude}>
               <line x1={x} y1={y0} x2={x} y2={y1} stroke={COLOR[a.kind]} strokeWidth={isMobile ? 3.5 : 3} strokeDasharray={a.kind === 'weight' ? '0' : '0'} />
               <Head x={x} y={y1} dir={a.direction} color={COLOR[a.kind]} />
-              <text x={up ? x - 8 : x + 8} y={up ? (y0 + y1) / 2 + 4 : y1 + 4} textAnchor={up ? 'end' : 'start'} fontSize={isMobile ? 12 : 11} fontWeight={700} fill={COLOR[a.kind]}>{a.label} {num(a.magnitude)} N {up ? '↑' : '↓'}</text>
+              <text x={isMobile ? (up ? 12 : W - 12) : up ? x - 8 : x + 8} y={up ? (y0 + y1) / 2 + 4 : y1 + 4} textAnchor={isMobile ? (up ? 'start' : 'end') : up ? 'end' : 'start'} fontSize={isMobile ? 13 : 11} fontWeight={700} fill={COLOR[a.kind]}>{isMobile ? (up ? 'N' : 'W') : a.label} {num(a.magnitude)} N {up ? '↑' : '↓'}</text>
             </g>
           );
         })}
         {showNet && (net
           ? <g data-arrow="net" data-direction={net.direction} data-magnitude={net.magnitude}>{hArrow(net, netY, isMobile ? 6.5 : 6)}<text x={CX} y={netY - 22} textAnchor="middle" fontSize={isMobile ? 12 : 11} fill={PHYS.netForce}>net force on the {object}</text></g>
-          : <text x={CX} y={isMobile ? 258 : H - 10} textAnchor="middle" fontSize={isMobile ? 13 : 12} fontWeight={700} fill={PHYS.correct} data-arrow="net-zero">{'✓'} net force = 0 N (balanced)</text>)}
+          : <text x={CX} y={H - 10} textAnchor="middle" fontSize={isMobile ? 13 : 12} fontWeight={700} fill={PHYS.correct} data-arrow="net-zero">{'✓'} net force = 0 N (balanced)</text>)}
       </svg>
       {listing && (
         <figcaption className="text-xs text-slate-200 space-y-1" data-testid="force-listing">

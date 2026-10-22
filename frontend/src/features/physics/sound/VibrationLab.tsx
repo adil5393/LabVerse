@@ -72,7 +72,7 @@ export const VibrationPanel: React.FC<VibrationPanelProps> = ({ initialKind = 's
   const scene = (
     <div className={stickyCanvas && mobile ? 'sticky top-0 z-10 bg-background/95 backdrop-blur pb-2' : ''} data-testid="vibration-canvas">
       <VibrationScene vib={vib} tS={clock.t} struck={struck} animate={animate} lengthCm={str.lengthCm} thickness={str.thickness} presentation={pres.vib} alt={alt} />
-      <p className="text-[13px] text-slate-400 mt-1" data-testid="slow-note">The wiggle is drawn {SLOW_VIBRATION} times slower than real so that you can see it. The size of the vibration, the loudness bar and the graph below run in real time. The size of the swing is a drawing scale, not a length.</p>
+      <details open={!mobile} className="text-[13px] text-slate-400 mt-1"><summary className="min-h-[44px] py-3 cursor-pointer">Picture speed and scale</summary><p data-testid="slow-note">The wiggle is drawn {SLOW_VIBRATION} times slower than real so that you can see it. The size of the vibration, the loudness bar and the graph below run in real time. The size of the swing is a drawing scale, not a length.</p></details>
     </div>
   );
 
@@ -99,7 +99,7 @@ export const VibrationPanel: React.FC<VibrationPanelProps> = ({ initialKind = 's
       <button type="button" className={`${btnPrimary} w-full`} onClick={pluck} disabled={!vib.valid || vib.strike <= 0} data-action="pluck">
         <span className="material-symbols-outlined text-[20px]" aria-hidden>{kind === 'string' ? 'touch_app' : 'campaign'}</span>{kind === 'string' ? 'Pluck the band' : 'Strike the fork'}
       </button>
-      {kind === 'string' ? (
+      <ActivityDetails title="Change the instrument">{kind === 'string' ? (
         <>
           <RangeField id="vib-tension" label="Tension" value={str.tension} min={STRING_LIMITS.tension[0]} max={STRING_LIMITS.tension[1]} step={0.01} unit="× start" format={(v) => f2(v)} onChange={(v) => newSetup(() => setStr((s) => ({ ...s, tension: v })))} hint="More tension: more cycles every second." />
           <RangeField id="vib-length" label="Length" value={str.lengthCm} min={STRING_LIMITS.lengthCm[0]} max={STRING_LIMITS.lengthCm[1]} step={1} unit="cm" onChange={(v) => newSetup(() => setStr((s) => ({ ...s, lengthCm: v })))} hint="A longer band vibrates more slowly." />
@@ -115,7 +115,7 @@ export const VibrationPanel: React.FC<VibrationPanelProps> = ({ initialKind = 's
           </div>
           <RangeField id="vib-fork-strike" label="Strike strength" value={forkStrike} min={0} max={1} step={0.05} onChange={(v) => newSetup(() => setForkStrike(v))} format={(v) => `${Math.round(v * 100)} %`} hint="Harder: a bigger vibration and a louder note, but still the same number of cycles every second." />
         </>
-      )}
+      )}</ActivityDetails>
       <TransportBar playing={clock.playing} t={clock.t} duration={duration} reduced={clock.reduced} blocked={false} onToggle={onToggle} onReplay={pluck} onReset={onReset} onScrub={onScrub} timeLabel={timeLabel} playLabel={struck && !clock.atEnd ? 'Play' : 'Pluck'} />
       <SoundSwitch hz={vib.valid ? vib.hz : undefined} />
       <button type="button" className={btn} onClick={() => { stopSound(null); }} hidden={!snapshot.playing} data-action="stop-sound">Stop the sound</button>
@@ -127,11 +127,12 @@ export const VibrationPanel: React.FC<VibrationPanelProps> = ({ initialKind = 's
       <div className="space-y-3 min-w-0">
         {scene}
         <p role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card px-3 py-2" data-testid="vib-status">{status}</p>
-        <EnvelopeGraph vib={vib} tS={clock.t} struck={struck} tEnd={duration} presentation={pres.vib} alt={`Graph of the size of the vibration (loudness) against real time after the strike: it falls steadily and the object is at rest after about ${f1(vib.valid ? vib.restAfterS : 0)} seconds, after which there is no sound.`} />
+        {mobile && controls}
+        <ActivityDetails title="Vibration and loudness graph"><EnvelopeGraph vib={vib} tS={clock.t} struck={struck} tEnd={duration} presentation={pres.vib} alt={`Graph of the size of the vibration (loudness) against real time after the strike: it falls steadily and the object is at rest after about ${f1(vib.valid ? vib.restAfterS : 0)} seconds, after which there is no sound.`} /></ActivityDetails>
         {mobile && editable ? <details className="rounded-xl border border-surface-border bg-surface-card p-3"><summary className="min-h-[44px] flex items-center font-bold text-sm text-slate-200 cursor-pointer">Measurements</summary><div className="pt-2">{readouts}</div></details> : <div className="rounded-xl border border-surface-border bg-surface-card p-3">{readouts}</div>}
         {!vib.valid && <p role="alert" className="text-sm text-rose-300" data-testid="vib-problem">{vib.reason}</p>}
       </div>
-      {controls && <div className="min-w-0">{controls}</div>}
+      {!mobile && controls && <div className="min-w-0">{controls}</div>}
     </div>
   );
 };
@@ -144,3 +145,4 @@ export const VIBRATION_ASSUMPTIONS = [
   `The wiggle on the screen is slowed ${SLOW_VIBRATION} times. The loudness graph, the bar and the sound run in real time.`,
   'The tone is a pure sine wave at the object\'s frequency. A real fork is close to that; a real band or string is a mixture of frequencies and sounds richer.',
 ];
+import { ActivityDetails } from '../../../components/InteractiveActivity';

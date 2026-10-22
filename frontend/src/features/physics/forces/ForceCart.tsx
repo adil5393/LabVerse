@@ -15,7 +15,8 @@ import { ForceFigure } from './ForceFigure';
 import { ForceGraphs } from './ForceGraphs';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
-import { useViewportProfile } from '../shared/viewportProfiles';
+import { useDiagramLayout, useViewportProfile } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 import type { ArrowsVisualProps, CartVisualProps } from '../../../engine/physics/forces/learn/questions';
 import { toArrows } from '../../../engine/physics/forces/learn/questions';
 import { describeDiagram, netArrow } from '../../../engine/physics/forces/forceDiagram';
@@ -71,7 +72,6 @@ export const DirToggle: React.FC<{ label: string; value: Dir; onChange: (d: Dir)
   <DirectionSelector label={label} value={value} onChange={onChange} accentColor={PHYS.force} />
 );
 
-const TRACK_W = 620, TRACK_H = 110;
 
 /**
  * Continuous camera-following track visualization:
@@ -140,9 +140,11 @@ export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?
   const svgRef = useRef<SVGSVGElement | null>(null);
   const profile = useViewportProfile(svgRef);
   const isMobile = profile.isMobile || compact;
+  const TRACK_W = isMobile ? Math.max(180, profile.isMobile ? profile.width : 420) : 620;
+  const TRACK_H = isMobile ? 120 : 110;
 
   const X = (x: number) => 30 + ((x - lo) / (hi - lo)) * (TRACK_W - 60);
-  const step = [1, 2, 5, 10, 20, 50, 100, 200].find((s) => (hi - lo) / s <= 8) ?? 500;
+  const step = [1, 2, 5, 10, 20, 50, 100, 200].find((s) => (hi - lo) / s <= (isMobile ? 4 : 8)) ?? 500;
   const ticks: number[] = [];
   for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(v);
   const p = sampleAtTime(setup, t, tMax);
@@ -154,10 +156,10 @@ export const Track: React.FC<{ setup: Setup; tMax: number; t: number; fixedSpan?
   const wR = isMobile ? 5 : 4;
 
   return (
-    <svg ref={svgRef} viewBox={isMobile ? '20 12 580 95' : `0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
+    <svg ref={svgRef} viewBox={`0 0 ${TRACK_W} ${TRACK_H}`} role="img" aria-label={`Track from ${r2(lo)} m to ${r2(hi)} m. At ${r2(t)} s the cart is at ${sg(p.x)} m moving at ${sg(p.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-track">
       <line x1={20} y1={70} x2={TRACK_W - 20} y2={70} stroke={surface.muK === 0 ? '#38bdf8' : PHYS.axis} strokeWidth={4} strokeDasharray={surface.muK === 0 ? '2 6' : '0'} />
-      {ticks.filter((v) => X(v) >= 20 && X(v) <= TRACK_W - 20).map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={isMobile ? 11 : 10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
-      <text x={TRACK_W - 24} y={106} textAnchor="end" fontSize={isMobile ? 11 : 10} fill="#94a3b8">position (m) · surface: {surface.label}</text>
+      {ticks.filter((v) => X(v) >= 20 && X(v) <= TRACK_W - 20).map((v) => <g key={v}><line x1={X(v)} y1={66} x2={X(v)} y2={76} stroke="#94a3b8" /><text x={X(v)} y={92} textAnchor="middle" fontSize={12} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v}</text></g>)}
+      <text x={TRACK_W - 24} y={106} textAnchor="end" fontSize={12} fill="#94a3b8">{isMobile ? 'position (m)' : `position (m) · surface: ${surface.label}`} </text>
       <rect x={X(p.x) - cW / 2} y={cTop} width={cW} height={cH} rx={4} fill={PHYS.position} stroke="#0f172a" strokeWidth={2} />
       <circle cx={X(p.x) - cW / 3.5} cy={70} r={wR} fill="#0f172a" /><circle cx={X(p.x) + cW / 3.5} cy={70} r={wR} fill="#0f172a" />
       <text x={X(p.x)} y={isMobile ? 28 : 32} textAnchor="middle" fontSize={isMobile ? 12 : 11} fontWeight={700} fill={PHYS.position}>{sg(p.x)} m</text>
@@ -170,17 +172,19 @@ export const VStrip: React.FC<{ setup: Setup; tMax: number; t: number }> = ({ se
   const pts = all.filter((_, i) => i % 5 === 0);
   let lo = Math.min(0, ...pts.map((p) => p.v)), hi = Math.max(0, ...pts.map((p) => p.v));
   if (hi - lo < 1) hi = lo + 1;
-  const W = 620, H = 130, X = (tt: number) => 44 + (tt / tMax) * (W - 60), Y = (v: number) => 12 + (1 - (v - lo) / (hi - lo)) * (H - 40);
+  const stripRef = useRef<SVGSVGElement>(null);
+  const { width: W, height: H } = useDiagramLayout(stripRef, 620, 160);
+  const X = (tt: number) => 44 + (tt / tMax) * (W - 60), Y = (v: number) => 12 + (1 - (v - lo) / (hi - lo)) * (H - 40);
   const cur = sampleAtTime(setup, t, tMax);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Velocity–time strip: the velocity goes from ${sg(all[0].v)} m/s to ${sg(all[all.length - 1].v)} m/s over ${tMax} s; at ${r2(t)} s it is ${sg(cur.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-vstrip">
+    <svg ref={stripRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Velocity–time strip: the velocity goes from ${sg(all[0].v)} m/s to ${sg(all[all.length - 1].v)} m/s over ${tMax} s; at ${r2(t)} s it is ${sg(cur.v)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="force-vstrip">
       <line x1={44} y1={Y(0)} x2={W - 16} y2={Y(0)} stroke="#94a3b8" strokeWidth={1} />
       <path d={pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.t)},${Y(p.v)}`).join(' ')} fill="none" stroke={PHYS.velocity} strokeWidth={2.5} />
       <line x1={X(t)} y1={10} x2={X(t)} y2={H - 28} stroke={PHYS.time} strokeDasharray="5 3" />
       <circle cx={X(t)} cy={Y(cur.v)} r={5} fill={PHYS.velocity} />
-      <text x={8} y={16} fontSize={10} fill={PHYS.velocity}>v (m/s)</text>
-      <text x={W - 16} y={H - 8} textAnchor="end" fontSize={10} fill={PHYS.time}>time (s), 0 to {tMax}</text>
-      <text x={44} y={H - 8} fontSize={10} fill="#94a3b8">{lo < 0 ? r2(lo) : '0'}…{r2(hi)} m/s</text>
+      <text x={8} y={16} fontSize={12} fill={PHYS.velocity}>v (m/s)</text>
+      <text x={W - 16} y={H - 8} textAnchor="end" fontSize={12} fill={PHYS.time}>time (s), 0 to {tMax}</text>
+      <text x={44} y={H - 8} fontSize={12} fill="#94a3b8">{lo < 0 ? r2(lo) : '0'}…{r2(hi)} m/s</text>
     </svg>
   );
 };
@@ -553,9 +557,11 @@ export const ForceCartView: React.FC<ForceCartProps> = ({ initial = DEFAULT_SETU
       )}
 
       {/* 3. Measurements, Graphs, and Historical Data */}
-      <ForceReadout m={m} />
-      {graphs ? <ForceGraphs setup={m.setup} tMax={m.tMax} t={m.tt} /> : <VStrip setup={m.setup} tMax={m.tMax} t={m.tt} />}
       <ForceLive m={m} />
+      <ActivityDetails title="Measurements and graphs">
+        <ForceReadout m={m} />
+        {graphs ? <ForceGraphs setup={m.setup} tMax={m.tMax} t={m.tt} /> : <VStrip setup={m.setup} tMax={m.tMax} t={m.tt} />}
+      </ActivityDetails>
       <details className="rounded-xl border border-surface-border bg-surface-card/50 p-3">
         <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-slate-200 font-medium">Motion history (text alternative to the strip)</summary>
         <div className="mt-2"><ForceDataTable m={m} /></div>

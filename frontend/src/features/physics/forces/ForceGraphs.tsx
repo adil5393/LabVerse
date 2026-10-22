@@ -1,3 +1,4 @@
+import { useDiagramLayout } from '../shared/viewportProfiles';
 /**
  * Synchronised graphs for the Force Laboratory (PHY-2C): force–acceleration (linear), acceleration–mass (inverse),
  * momentum–time and force–time with the impulse shaded. All four read the SAME simulated history and the same current
@@ -5,12 +6,12 @@
  * highlighted point on every graph is the cart's present state, so the graphs cannot disagree with it.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { accelerationMassCurve, forceAccelerationLine, impulseBetween, momentumChangeBetween, momentumHistory } from '../../../engine/physics/forces/secondLaw';
 import { DT, sampleAtTime, type Setup } from '../../../engine/physics/forces/forceModel';
 import { PHYS } from '../motion/physicsColors';
 
-const GW = 300, GH = 190, ML = 46, MR = 12, MT = 14, MB = 34;
+const ML = 46, MR = 12, MT = 14, MB = 34;
 const r2 = (n: number): string => { const r = Math.round(n * 100) / 100; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
 const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : `${n > 0 ? '+' : '−'}${r2(Math.abs(n))}`);
 const niceStep = (span: number): number => { for (const s of [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500]) if (span / s <= 5) return s; return 1000; };
@@ -24,6 +25,8 @@ export interface PlotProps {
 }
 
 export const PlotView: React.FC<PlotProps> = ({ id, title, xName, xUnit, yName, yUnit, color, pts, xr, yr, marks = [], shadeTo, cursor, caption, alt }) => {
+  const diagramRef = useRef<SVGSVGElement>(null);
+  const { width: GW, height: GH } = useDiagramLayout(diagramRef, 300, 220);
   const X = (x: number) => ML + ((x - xr[0]) / (xr[1] - xr[0])) * (GW - ML - MR);
   const Y = (y: number) => MT + (1 - (y - yr[0]) / (yr[1] - yr[0])) * (GH - MT - MB);
   const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(' ');
@@ -35,17 +38,19 @@ export const PlotView: React.FC<PlotProps> = ({ id, title, xName, xUnit, yName, 
   return (
     <figure className="space-y-1 min-w-0" data-graph={id}>
       <figcaption className="text-xs font-mono uppercase tracking-wider" style={{ color }}>{title}</figcaption>
-      <svg viewBox={`0 0 ${GW} ${GH}`} role="img" aria-label={alt} className="w-full rounded-xl bg-surface-lowest border border-surface-border">
-        {ticks(xr[0], xr[1]).map((v) => <g key={`x${v}`}><line x1={X(v)} y1={MT} x2={X(v)} y2={GH - MB} stroke="#334155" strokeWidth={0.6} /><text x={X(v)} y={GH - MB + 12} textAnchor="middle" fontSize={9} fill="#94a3b8">{v}</text></g>)}
-        {ticks(yr[0], yr[1]).map((v) => <g key={`y${v}`}><line x1={ML} y1={Y(v)} x2={GW - MR} y2={Y(v)} stroke={v === 0 ? '#94a3b8' : '#334155'} strokeWidth={v === 0 ? 1.2 : 0.6} /><text x={ML - 4} y={Y(v) + 3} textAnchor="end" fontSize={9} fill="#94a3b8">{v}</text></g>)}
+      <p className="text-xs text-slate-400">{yName} ({yUnit})</p>
+      <svg ref={diagramRef} viewBox={`0 0 ${GW} ${GH}`} role="img" aria-label={alt} className="w-full rounded-xl bg-surface-lowest border border-surface-border">
+        {ticks(xr[0], xr[1]).map((v) => <g key={`x${v}`}><line x1={X(v)} y1={MT} x2={X(v)} y2={GH - MB} stroke="#334155" strokeWidth={0.6} /><text x={X(v)} y={GH - MB + 12} textAnchor="middle" fontSize={12} fill="#94a3b8">{v}</text></g>)}
+        {ticks(yr[0], yr[1]).map((v) => <g key={`y${v}`}><line x1={ML} y1={Y(v)} x2={GW - MR} y2={Y(v)} stroke={v === 0 ? '#94a3b8' : '#334155'} strokeWidth={v === 0 ? 1.2 : 0.6} /><text x={ML - 4} y={Y(v) + 3} textAnchor="end" fontSize={12} fill="#94a3b8">{v}</text></g>)}
         {xr[0] < 0 && <line x1={X(0)} y1={MT} x2={X(0)} y2={GH - MB} stroke="#94a3b8" strokeWidth={1.2} />}
-        <text x={(ML + GW - MR) / 2} y={GH - 4} textAnchor="middle" fontSize={10} fill={PHYS.time}>{xName} ({xUnit})</text>
-        <text transform={`translate(10 ${(MT + GH - MB) / 2}) rotate(-90)`} textAnchor="middle" fontSize={10} fill={color}>{yName} ({yUnit})</text>
+        <text x={(ML + GW - MR) / 2} y={GH - 4} textAnchor="middle" fontSize={12} fill={PHYS.time}>{xName} ({xUnit})</text>
+        <text transform={`translate(16 ${(MT + GH - MB) / 2}) rotate(-90)`} textAnchor="middle" fontSize={12} fill={color}>{yUnit}</text>
         {shade && <path d={shade} fill={PHYS.netForce} opacity={0.25} stroke={PHYS.netForce} strokeWidth={0.5} />}
         <path d={line} fill="none" stroke={color} strokeWidth={2.5} />
         {cursor !== undefined && <line x1={X(cursor)} y1={MT} x2={X(cursor)} y2={GH - MB} stroke={PHYS.time} strokeDasharray="4 3" />}
-        {marks.map((m, i) => <g key={i}><circle cx={X(m.x)} cy={Y(m.y)} r={i === 0 ? 5.5 : 4} fill={i === 0 ? color : 'none'} stroke={i === 0 ? '#0f172a' : color} strokeWidth={2} /><text x={Math.min(GW - 60, X(m.x) + 7)} y={Y(m.y) - 7} fontSize={9} fontWeight={700} fill={color}>{m.label}</text></g>)}
+        {marks.map((m, i) => <g key={i}><circle cx={X(m.x)} cy={Y(m.y)} r={i === 0 ? 5.5 : 4} fill={i === 0 ? color : 'none'} stroke={i === 0 ? '#0f172a' : color} strokeWidth={2} /></g>)}
       </svg>
+      {marks.length > 0 && <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="Highlighted values">{marks.map((m, i) => <li key={i} style={{ color: color }}>● {m.label}</li>)}</ul>}
       <p className="text-[11px] text-slate-300">{caption}</p>
     </figure>
   );

@@ -155,9 +155,9 @@ const LabShell: React.FC<{ title: string; crumb: string; mode: 'experiment'; int
   <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid font-sans">
     <GlobalHeader />
     <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-4 space-y-4">
-      <ChapterWorkspaceNav chapterId="sound" currentPageTitle={title} currentMode="experiment" showBackToLab={false} />
-      <header className="space-y-1"><h1 className="text-2xl md:text-3xl font-black text-white">{title}</h1><p className="text-sm text-slate-300 max-w-3xl">{intro}</p></header>
-      {children}
+      <div className="hidden sm:block"><ChapterWorkspaceNav chapterId="sound" currentPageTitle={title} currentMode="experiment" showBackToLab={false} /></div>
+      <header className="space-y-2"><h1 className="text-2xl md:text-3xl font-black text-white">{title}</h1><details className="text-sm text-slate-300"><summary className="min-h-[44px] cursor-pointer py-3">How to use this lab</summary><p className="max-w-3xl pb-2">{intro}</p></details></header>
+      <InteractiveActivity>{children}</InteractiveActivity>
       <section className="rounded-2xl border border-surface-border bg-surface-card p-4 space-y-2" aria-label="What this laboratory assumes" data-testid="lab-assumptions">
         <h2 className="text-base font-black text-white">What this laboratory assumes</h2>
         <ul className="list-disc pl-5 space-y-1 text-[13px] text-slate-300">{assumptions.map((a) => <li key={a}>{a}</li>)}</ul>
@@ -168,7 +168,7 @@ const LabShell: React.FC<{ title: string; crumb: string; mode: 'experiment'; int
 
 export const VibrationLabPage: React.FC = () => (
   <LabShell title="Vibration Laboratory" crumb="Vibration Laboratory" mode="experiment" intro="Pluck a rubber band stretched across a box, or strike a tuning fork. Sound is made exactly while the object vibrates." assumptions={VIBRATION_ASSUMPTIONS}>
-    <VibrationPanel stickyCanvas />
+    <VibrationPanel />
   </LabShell>
 );
 
@@ -178,7 +178,7 @@ export const WaveLabPage: React.FC = () => (
     'The row of dots is the air particles at rest and in motion; the strip below is the density at each place; the graph is drawn from the same wave at the same instant.',
     'Changing the frequency or the slow-motion factor restarts the picture from time zero so that nothing jumps; changing the amplitude does not.',
   ]}>
-    <WavePanel stickyCanvas />
+    <WavePanel />
   </LabShell>
 );
 
@@ -258,3 +258,4 @@ export const SoundExercises: React.FC = () => {
     </div>
   );
 };
+import { InteractiveActivity } from '../../../components/InteractiveActivity';

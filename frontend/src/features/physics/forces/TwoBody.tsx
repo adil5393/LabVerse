@@ -14,7 +14,8 @@ import { netArrow, type Arrow } from '../../../engine/physics/forces/forceDiagra
 import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
-import { useViewportProfile } from '../shared/viewportProfiles';
+import { useDiagramLayout, useViewportProfile } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 import {
   ParameterControl,
   ExperimentSetupGroup,
@@ -51,7 +52,7 @@ const Num: React.FC<{
 const arrow = (id: string, label: string, by: string, on: string, value: number, kind: Arrow['kind'] = 'applied'): Arrow | null =>
   Math.abs(value) < 1e-12 ? null : { id, kind, label, by, on, magnitude: Math.abs(value), direction: value > 0 ? 'right' : 'left', horizontal: value };
 
-const TW = 620, TH = 120;
+const TH = 120;
 
 export interface TwoBodyProps { initial?: TwoBodySetup; editable?: boolean; alt?: string; resetToken?: number }
 
@@ -124,6 +125,7 @@ export const TwoBodyScene: React.FC<{ m: TwoBodyModel; alt?: string; hidden?: Re
   const trackRef = useRef<SVGSVGElement | null>(null);
   const profile = useViewportProfile(trackRef);
   const isMobile = profile.isMobile;
+  const TW = isMobile ? Math.max(180, profile.width) : 620;
 
   // track scale
   const xs = hist.flatMap((h) => [h.xA, h.xB]);
@@ -131,7 +133,7 @@ export const TwoBodyScene: React.FC<{ m: TwoBodyModel; alt?: string; hidden?: Re
   if (hi - lo < 4) { lo -= 2; hi += 2; }
   const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
   const X = (x: number) => 30 + ((x - lo) / (hi - lo)) * (TW - 60);
-  const step = [0.5, 1, 2, 5, 10, 20, 50, 100].find((s) => (hi - lo) / s <= 8) ?? 200;
+  const step = [0.5, 1, 2, 5, 10, 20, 50, 100].find((s) => (hi - lo) / s <= (isMobile ? 3 : 8)) ?? 200;
   const ticks: number[] = []; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks.push(Math.round(v * 100) / 100);
   const scale = 60 / Math.max(1e-9, Math.abs(p.fOnAByB), Math.abs(p.fOnBByA), Math.abs(p.external));
   const A_ARROW = (v: number) => Math.max(14, Math.abs(v) * scale);
@@ -150,16 +152,16 @@ export const TwoBodyScene: React.FC<{ m: TwoBodyModel; alt?: string; hidden?: Re
     <>
       <svg ref={trackRef} viewBox={`0 0 ${TW} ${TH}`} role="img" aria-label={text} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="two-body-track">
         <line x1={20} y1={86} x2={TW - 20} y2={86} stroke={PHYS.axis} strokeWidth={3} />
-        {ticks.map((v) => <g key={v}><line x1={X(v)} y1={82} x2={X(v)} y2={92} stroke="#94a3b8" /><text x={X(v)} y={106} textAnchor="middle" fontSize={isMobile ? 10 : 9} fill="#94a3b8">{v}</text></g>)}
+        {ticks.map((v) => <g key={v}><line x1={X(v)} y1={82} x2={X(v)} y2={92} stroke="#94a3b8" /><text x={X(v)} y={106} textAnchor="middle" fontSize={12} fill="#94a3b8">{v}</text></g>)}
         {show('link') && setup.mode === 'tow' && <line x1={X(p.xA) + cW / 2} y1={72} x2={X(p.xB) - cW / 2} y2={72} stroke={PHYS.force} strokeWidth={2} strokeDasharray="3 3" />}
         {([['A', p.xA, PHYS.position, p.fOnAByB, p.external], ['B', p.xB, PHYS.displacement, p.fOnBByA, 0]] as [string, number, string, number, number][]).filter(([n]) => show(n)).map(([n, x, col, f]) => (
           <g key={n}>
             <rect x={X(x) - cW / 2} y={cY} width={cW} height={cH} rx={4} fill={col} stroke="#0f172a" strokeWidth={2} />
             <text x={X(x)} y={cY + cH / 2 + 5} textAnchor="middle" fontSize={isMobile ? 13 : 12} fontWeight={800} fill="#0f172a">{n}</text>
-            {Math.abs(f) > 1e-12 && (<g><line x1={X(x)} y1={cY - 8} x2={X(x) + Math.sign(f) * A_ARROW(f)} y2={cY - 8} stroke={PHYS.force} strokeWidth={3} /><polygon points={`${X(x) + Math.sign(f) * A_ARROW(f)},${cY - 8} ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},${cY - 13} ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},${cY - 3}`} fill={PHYS.force} /><text x={X(x) + Math.sign(f) * A_ARROW(f) / 2} y={cY - 16} textAnchor="middle" fontSize={isMobile ? 11 : 9} fontWeight={700} fill={PHYS.force}>{n === 'A' ? 'by B on A' : 'by A on B'} {tbFmt(Math.abs(f))} N</text></g>)}
+            {Math.abs(f) > 1e-12 && (<g><line x1={X(x)} y1={cY - 8} x2={X(x) + Math.sign(f) * A_ARROW(f)} y2={cY - 8} stroke={PHYS.force} strokeWidth={3} /><polygon points={`${X(x) + Math.sign(f) * A_ARROW(f)},${cY - 8} ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},${cY - 13} ${X(x) + Math.sign(f) * (A_ARROW(f) - 9)},${cY - 3}`} fill={PHYS.force} /><text x={X(x) + Math.sign(f) * A_ARROW(f) / 2} y={cY - 16} textAnchor="middle" fontSize={12} fontWeight={700} fill={PHYS.force}>{isMobile ? n : n === 'A' ? 'by B on A' : 'by A on B'} {tbFmt(Math.abs(f))} N</text></g>)}
           </g>
         ))}
-        <text x={TW - 24} y={118} textAnchor="end" fontSize={9} fill="#94a3b8">position (m)</text>
+        <text x={TW - 24} y={118} textAnchor="end" fontSize={12} fill="#94a3b8">position (m)</text>
       </svg>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -182,7 +184,9 @@ export const TwoBodyReadout: React.FC<{ m: TwoBodyModel }> = ({ m }) => {
   // velocity timeline
   const vs = hist.flatMap((h) => [h.vA, h.vB]);
   let vlo = Math.min(0, ...vs), vhi = Math.max(0, ...vs); if (vhi - vlo < 1) vhi = vlo + 1;
-  const VW = 620, VH = 130, VX = (tm: number) => 44 + (tm / tMax) * (VW - 60), VY = (v: number) => 12 + (1 - (v - vlo) / (vhi - vlo)) * (VH - 40);
+  const timeline = useRef<SVGSVGElement>(null);
+  const { width: VW, height: VH } = useDiagramLayout(timeline, 620, 160);
+  const VX = (tm: number) => 44 + (tm / tMax) * (VW - 60), VY = (v: number) => 12 + (1 - (v - vlo) / (vhi - vlo)) * (VH - 40);
 
   return (
     <div className="space-y-3">
@@ -206,15 +210,15 @@ export const TwoBodyReadout: React.FC<{ m: TwoBodyModel }> = ({ m }) => {
         </dl>
       </div>
 
-      <svg viewBox={`0 0 ${VW} ${VH}`} role="img" aria-label={`Velocity–time timeline: cart A goes from ${sg(hist[0].vA)} to ${sg(hist[hist.length - 1].vA)} m/s and cart B from ${sg(hist[0].vB)} to ${sg(hist[hist.length - 1].vB)} m/s; at ${tbFmt(tt)} s they are ${sg(p.vA)} and ${sg(p.vB)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="two-body-timeline">
+      <svg ref={timeline} viewBox={`0 0 ${VW} ${VH}`} role="img" aria-label={`Velocity–time timeline: cart A goes from ${sg(hist[0].vA)} to ${sg(hist[hist.length - 1].vA)} m/s and cart B from ${sg(hist[0].vB)} to ${sg(hist[hist.length - 1].vB)} m/s; at ${tbFmt(tt)} s they are ${sg(p.vA)} and ${sg(p.vB)} m/s.`} className="w-full rounded-xl bg-surface-lowest border border-surface-border" data-testid="two-body-timeline">
         <line x1={44} y1={VY(0)} x2={VW - 16} y2={VY(0)} stroke="#94a3b8" />
         <path d={hist.map((h, i) => `${i ? 'L' : 'M'}${VX(h.t)},${VY(h.vA)}`).join(' ')} fill="none" stroke={PHYS.position} strokeWidth={2.5} />
         <path d={hist.map((h, i) => `${i ? 'L' : 'M'}${VX(h.t)},${VY(h.vB)}`).join(' ')} fill="none" stroke={PHYS.displacement} strokeWidth={2.5} strokeDasharray="6 3" />
         <line x1={VX(tt)} y1={10} x2={VX(tt)} y2={VH - 28} stroke={PHYS.time} strokeDasharray="5 3" />
         <circle cx={VX(tt)} cy={VY(p.vA)} r={5} fill={PHYS.position} /><circle cx={VX(tt)} cy={VY(p.vB)} r={5} fill={PHYS.displacement} />
-        <text x={8} y={16} fontSize={10} fill="#94a3b8">v (m/s)</text>
-        <text x={VW - 16} y={VH - 8} textAnchor="end" fontSize={10} fill={PHYS.time}>time (s)</text>
-        <text x={50} y={VH - 8} fontSize={10} fill={PHYS.position}>━ cart A</text><text x={120} y={VH - 8} fontSize={10} fill={PHYS.displacement}>┅ cart B</text>
+        <text x={8} y={16} fontSize={12} fill="#94a3b8">v (m/s)</text>
+        <text x={VW - 16} y={VH - 8} textAnchor="end" fontSize={12} fill={PHYS.time}>time (s)</text>
+        <text x={50} y={VH - 8} fontSize={12} fill={PHYS.position}>━ cart A</text><text x={120} y={VH - 8} fontSize={12} fill={PHYS.displacement}>┅ cart B</text>
       </svg>
       <div role="status" aria-live="polite" className="text-sm text-slate-100 rounded-xl border border-surface-border bg-surface-card p-3" data-testid="two-body-live">{live}</div>
     </div>
@@ -317,7 +321,7 @@ export const TwoBodyView: React.FC<TwoBodyProps> = ({ initial = DEFAULT_TWO_BODY
       )}
 
       {/* 3. Measurements, Graphs, and Observations */}
-      <TwoBodyReadout m={m} />
+      <ActivityDetails title="Both carts: measurements and timeline"><TwoBodyReadout m={m} /></ActivityDetails>
     </div>
   );
 };
@@ -369,7 +373,7 @@ export const PairIdentifyView: React.FC<{ scenarioId?: string; mode?: 'identify'
             </div>
             <div className="space-y-1 rounded-xl border p-2" style={{ borderColor: `${PHYS.force}66` }} data-panel="pair">
               <h4 className="text-xs font-mono uppercase tracking-wider" style={{ color: PHYS.force }}>2 · An action–reaction pair: forces on TWO objects</h4>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <ForceFigure object="book" arrows={[toArrow(book.forces[1])]} net={null} showIndividual showNet={false} listing={false} alt="Free-body diagram of the book: the normal force from the table, 10 N up." />
                 <ForceFigure object="table" arrows={[toArrow(book.forces[3])]} net={null} showIndividual showNet={false} listing={false} alt="Free-body diagram of the table: the force of the book pressing on it, 10 N down." />
               </div>

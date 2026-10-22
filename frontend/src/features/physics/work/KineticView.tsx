@@ -1,3 +1,5 @@
+import { useDiagramLayout } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 /**
  * The Work-Energy Laboratory scene (PHY-3B): a cart on a track under a constant net force, with the net-force graph (the
  * shaded area is the work), the kinetic-energy graph and a bookkeeping table that checks W_net = ΔK. Everything is read from
@@ -16,7 +18,7 @@ import { Field } from './Field';
 
 const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-', '−');
 const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : n > 0 ? `+${f2(n)}` : f2(n));
-const W = 440, H = 190;
+
 
 const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: string; width?: number }> = ({ x1, y1, x2, y2, color, width = 3 }) => {
   const a = Math.atan2(y2 - y1, x2 - x1), s = 9;
@@ -42,19 +44,20 @@ export interface KineticSceneInteraction {
 
 export const KineticScene: React.FC<{ r: KineticResult; t: number; alt: string; interaction?: KineticSceneInteraction }> = ({ r, t, alt, interaction: ix }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const { width: W, height: H } = useDiagramLayout(svgRef, 440, 200);
   // While a handle is dragged the scale is frozen, so the handle stays under the cursor instead of the scene re-fitting.
   const frozen = useRef<{ lo: number; hi: number; k: number } | null>(null);
   const [, redraw] = useState(0);
   const now = kineticAt(r, t);
   const [autoLo, autoHi] = extent(r);
   const lo = frozen.current?.lo ?? autoLo, hi = frozen.current?.hi ?? autoHi;
-  const x0 = 24, w = W - 48, ground = 120;
+  const x0 = 38, w = W - 76, ground = 120;
   const px = (m: number) => x0 + ((m - lo) / (hi - lo)) * w;
   const BW = 54, BH = 36, cx = px(now.x), top = ground - BH;
-  const autoK = 70 / Math.max(1, Math.abs(r.setup.netForce));
+  const autoK = Math.min(70, W / 5) / Math.max(1, Math.abs(r.setup.netForce));
   const k = frozen.current?.k ?? autoK;
   const kmax = Math.max(1, r.K0, r.K1, now.K);
-  const vlen = Math.min(80, Math.abs(now.v) * 6);
+  const vlen = Math.min(W / 5, Math.abs(now.v) * 6);
   const F = r.setup.netForce;
   const vis = (id: string) => ix?.visibility[id] !== false;
   const sel = (id: string) => ix?.selectedId === id;
@@ -78,16 +81,16 @@ export const KineticScene: React.FC<{ r: KineticResult; t: number; alt: string; 
   const select = (id: string) => (e: React.PointerEvent) => { if (ix) { e.stopPropagation(); ix.onSelect(id); } };
 
   const forceDir = Math.sign(F) || 1;
-  const forceLen = Math.max(16, Math.abs(F) * k);
+  const forceLen = Math.min(Math.max(16, Math.abs(F) * k), forceDir > 0 ? W - 18 - cx : cx - 18);
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="kinetic-svg"
       style={ix ? { touchAction: 'none' } : undefined} onPointerDown={() => ix?.onSelect(null)}>
       <line x1={x0} y1={ground} x2={x0 + w} y2={ground} stroke={PHYS.axis} strokeWidth={4} />
-      <line x1={px(0)} y1={ground - 70} x2={px(0)} y2={ground + 6} stroke={PHYS.time} strokeDasharray="4 3" /><text x={px(0)} y={ground + 20} textAnchor="middle" fontSize={11} fill={PHYS.time}>start</text>
+      <line x1={px(0)} y1={ground - 70} x2={px(0)} y2={ground + 6} stroke={PHYS.time} strokeDasharray="4 3" /><text x={px(0)} y={ground + 20} textAnchor="middle" fontSize={12} fill={PHYS.time}>start</text>
       {vis('displacement') && r.setup.displacement !== 0 && (
         <g onPointerDown={select('displacement')} className={ix ? 'cursor-pointer' : undefined}>
           <line x1={px(r.setup.displacement)} y1={ground - 70} x2={px(r.setup.displacement)} y2={ground + 6} stroke={sel('displacement') ? SEL : PHYS.displacement} strokeDasharray="4 3" strokeWidth={sel('displacement') ? 2.5 : 1} />
-          <text x={px(r.setup.displacement)} y={ground + 20} textAnchor="middle" fontSize={11} fill={PHYS.displacement}>end ({sg(r.setup.displacement)} m)</text>
+          <text x={px(r.setup.displacement)} y={ground + 20} textAnchor="middle" fontSize={12} fill={PHYS.displacement}>end ({sg(r.setup.displacement)} m)</text>
         </g>
       )}
       {ix && vis('displacement') && (
@@ -99,14 +102,14 @@ export const KineticScene: React.FC<{ r: KineticResult; t: number; alt: string; 
       {vis('cart') && (
         <g onPointerDown={select('cart')} className={ix ? 'cursor-pointer' : undefined}>
           <rect x={cx - BW / 2} y={top} width={BW} height={BH} rx={5} fill="#1e293b" stroke={sel('cart') ? SEL : PHYS.position} strokeWidth={sel('cart') ? 3 : 2} />
-          <text x={cx} y={top + 22} textAnchor="middle" fontSize={11} fontWeight={700} fill="#e2e8f0">{f2(r.setup.massKg)} kg</text>
-          {Math.abs(now.v) > 1e-9 && (() => { const d = Math.sign(now.v); return <g data-arrow="velocity"><Arrow x1={cx} y1={ground - BH / 2} x2={cx + d * Math.max(14, vlen)} y2={ground - BH / 2} color={PHYS.velocity} /><text x={cx + d * Math.max(14, vlen)} y={ground - BH / 2 + 15} textAnchor={d > 0 ? 'end' : 'start'} fontSize={10} fill={PHYS.velocity}>v {sg(now.v)} m/s</text></g>; })()}
+          <text x={cx} y={top + 22} textAnchor="middle" fontSize={12} fontWeight={700} fill="#e2e8f0">{f2(r.setup.massKg)} kg</text>
+          {Math.abs(now.v) > 1e-9 && (() => { const d = Math.sign(now.v); return <g data-arrow="velocity"><Arrow x1={cx} y1={ground - BH / 2} x2={cx + d * Math.max(14, vlen)} y2={ground - BH / 2} color={PHYS.velocity} /><text x={cx + d * Math.max(14, vlen)} y={ground - BH / 2 + 15} textAnchor={d > 0 ? 'end' : 'start'} fontSize={12} fill={PHYS.velocity}>v {sg(now.v)} m/s</text></g>; })()}
         </g>
       )}
       {vis('force') && Math.abs(F) > 0 && (
         <g data-arrow="net-force" onPointerDown={select('force')} className={ix ? 'cursor-pointer' : undefined}>
           <Arrow x1={cx} y1={top - 10} x2={cx + forceDir * forceLen} y2={top - 10} color={sel('force') ? SEL : ENERGY.work} width={sel('force') ? 5 : 4} />
-          <text x={cx + forceDir * forceLen} y={top - 16} textAnchor={forceDir > 0 ? 'end' : 'start'} fontSize={11} fontWeight={800} fill={ENERGY.work}>F net {sg(F)} N</text>
+          <text x={cx + forceDir * forceLen} y={top - 16} textAnchor={forceDir > 0 ? 'end' : 'start'} fontSize={12} fontWeight={800} fill={ENERGY.work}>F net {sg(F)} N</text>
         </g>
       )}
       {ix && vis('force') && (
@@ -115,10 +118,10 @@ export const KineticScene: React.FC<{ r: KineticResult; t: number; alt: string; 
           onPointerMove={(e) => dragX(e, (vx, f) => { const maxF = Math.min(KIN_LIMITS.forceMax, 150 / f.k); ix.onForce(Math.max(-maxF, Math.min(maxF, Math.round((vx - cx) / f.k)))); })}
           onPointerUp={release} onPointerCancel={release}><title>Drag to change the net force</title></circle>
       )}
-      <text x={x0} y={150} fontSize={11} fontWeight={700} fill={ENERGY.kinetic}>kinetic energy K = {f2(now.K)} J</text>
+      <text x={x0} y={150} fontSize={12} fontWeight={700} fill={ENERGY.kinetic}>kinetic energy K = {f2(now.K)} J</text>
       <rect x={x0} y={156} width={w} height={14} rx={3} fill="#0f172a" stroke="#334155" />
       <rect data-bar="kinetic" x={x0} y={156} width={Math.max(0, (now.K / kmax) * w)} height={14} rx={3} fill={ENERGY.kinetic} />
-      <text x={x0 + w} y={184} textAnchor="end" fontSize={10} fill="#94A3B8">full bar = {f2(kmax)} J</text>
+      <text x={x0 + w} y={184} textAnchor="end" fontSize={12} fill="#94A3B8">full bar = {f2(kmax)} J</text>
     </svg>
   );
 };
@@ -135,7 +138,7 @@ export const KineticFigure: React.FC<{ r: KineticResult; t: number; showScene?: 
   return (
     <div className="space-y-3 min-w-0" data-testid="kinetic-figure">
       {showScene && <KineticScene r={r} t={t} alt={describeKinetic(r)} />}
-      <div className="grid gap-3 md:grid-cols-2">
+      <ActivityDetails title="Force and energy graphs"><div className="grid gap-3 md:grid-cols-2">
         <EnergyPlot id="force-position" title="Net force against position" xName="position x" xUnit="m" yName="net force F" yUnit="N" xr={[lo, hi]} yr={fr}
           lines={[{ id: 'f', name: 'net force F (constant)', color: ENERGY.work, pts: [[lo, F], [hi, F]] }]}
           shade={{ x0: 0, x1: now.x, y: F, color: F * now.x >= 0 ? PHYS.correct : PHYS.error }} cursor={now.x}
@@ -147,7 +150,7 @@ export const KineticFigure: React.FC<{ r: KineticResult; t: number; showScene?: 
           points={[{ x: 0, y: r.K0, label: `start ${f2(r.K0)} J`, color: ENERGY.kinetic }, { x: now.t, y: now.K, label: `now ${f2(now.K)} J`, color: '#e2e8f0' }]}
           caption={`K never goes below 0 J. It changes from ${f2(r.K0)} J to ${f2(r.K1)} J, a change of ${sg(r.dK)} J, which equals the net work ${sg(r.wNet)} J. The mass ${f2(m)} kg and the speeds decide K = ½mv².`}
           alt={`Kinetic energy against time: from ${f2(r.K0)} J at the start to ${f2(r.K1)} J at ${f2(r.tEnd)} s; the present value is ${f2(now.K)} J. It is never negative.`} />
-      </div>
+      </div></ActivityDetails>
       <p className="sr-only">Displacement s = {sg(s)} m</p>
     </div>
   );

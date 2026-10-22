@@ -1,3 +1,5 @@
+import { useDiagramLayout } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 /**
  * The Energy Laboratory scene (PHY-3C): an object on a ramp (or in free fall), a horizontal energy-bar view of K, U, the thermal
  * energy Q and the mechanical energy, an energy graph and a bookkeeping table that checks K + U + Q = constant. Everything is read
@@ -16,7 +18,7 @@ import { Field } from './Field';
 
 const f2 = (n: number): string => String(Math.round(n * 100) / 100).replace('-', '−');
 const sg = (n: number): string => (Math.abs(n) < 1e-9 ? '0' : n > 0 ? `+${f2(n)}` : f2(n));
-const W = 440, H = 250;
+
 
 /** Direct manipulation of the scene: select objects, drag the release height and the reference level. */
 export interface EnergySceneInteraction {
@@ -30,6 +32,7 @@ export interface EnergySceneInteraction {
 
 export const EnergyScene: React.FC<{ r: EnergyResult; st: EnergyState; alt: string; interaction?: EnergySceneInteraction }> = ({ r, st, alt, interaction: ix }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const { width: W, height: H } = useDiagramLayout(svgRef, 440, 260);
   // While a handle is dragged the scale is frozen, so the handle stays under the cursor instead of the scene re-fitting.
   const frozenK = useRef<number | null>(null);
   const [, redraw] = useState(0);
@@ -37,7 +40,7 @@ export const EnergyScene: React.FC<{ r: EnergyResult; st: EnergyState; alt: stri
   const sin = sinT(th), cos = cosT(th), d = r.slopeLength;
   const Lh = d * cos;
   const vertical = th === 90;
-  const k = frozenK.current ?? Math.min(vertical ? 1e9 : 320 / Math.max(Lh, 1e-9), 170 / h0);
+  const k = frozenK.current ?? Math.min(vertical ? 1e9 : (W - 90) / Math.max(Lh, 1e-9), 170 / h0);
   const x0 = 64, ground = 218, top = ground - k * h0;
   const px = (s: number) => x0 + k * s * cos + (vertical ? 40 : 0), py = (s: number) => ground - k * (h0 - s * sin);
   const bx = px(st.s), by = py(st.s);
@@ -70,8 +73,8 @@ export const EnergyScene: React.FC<{ r: EnergyResult; st: EnergyState; alt: stri
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={alt} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="energy-svg"
       style={ix ? { touchAction: 'none' } : undefined} onPointerDown={() => ix?.onSelect(null)}>
       <line x1={x0 - 10} y1={ground} x2={W - 14} y2={ground} stroke={PHYS.axis} strokeWidth={3} />
-      <text x={x0 - 14} y={ground + 4} textAnchor="end" fontSize={11} fill="#94A3B8">0 m</text>
-      <line x1={x0 - 6} y1={top} x2={x0 - 14} y2={top} stroke={PHYS.axis} strokeWidth={2} /><text x={x0 - 18} y={top + 4} textAnchor="end" fontSize={11} fill="#94A3B8">{f2(h0)} m</text>
+      <text x={x0 - 14} y={ground + 4} textAnchor="end" fontSize={12} fill="#94A3B8">0 m</text>
+      <line x1={x0 - 6} y1={top} x2={x0 - 14} y2={top} stroke={PHYS.axis} strokeWidth={2} /><text x={x0 - 18} y={top + 4} textAnchor="end" fontSize={12} fill="#94A3B8">{f2(h0)} m</text>
       {vis('ramp') && (
         <g onPointerDown={select('ramp')} className={ix ? 'cursor-pointer' : undefined}>
           {vertical
@@ -85,32 +88,34 @@ export const EnergyScene: React.FC<{ r: EnergyResult; st: EnergyState; alt: stri
           onPointerMove={(e) => dragTo(e, (raw, scale) => ix.onHeight(Math.max(ENERGY_LIMITS.heightMin, Math.min(ENERGY_LIMITS.heightMax, (ground - 6) / scale, Math.round(raw * 2) / 2))))}
           onPointerUp={release} onPointerCancel={release}><title>Drag to change the release height</title></circle>
       )}
-      {vis('reference') && refVisible && <g data-testid="reference-line" onPointerDown={select('reference')}><line x1={x0 - 6} y1={refY} x2={W - 14} y2={refY} stroke={sel('reference') ? SEL : ENERGY.potential} strokeDasharray="6 4" strokeWidth={sel('reference') ? 2.5 : 1} /><text x={x0 + 4} y={refY + 14} textAnchor="start" fontSize={11} fill={ENERGY.potential}>reference height {f2(ref)} m: U = 0</text></g>}
+      {vis('reference') && refVisible && <g data-testid="reference-line" onPointerDown={select('reference')}><line x1={x0 - 6} y1={refY} x2={W - 14} y2={refY} stroke={sel('reference') ? SEL : ENERGY.potential} strokeDasharray="6 4" strokeWidth={sel('reference') ? 2.5 : 1} /><text x={x0 + 4} y={refY + 14} textAnchor="start" fontSize={12} fill={ENERGY.potential}>U = 0 at {f2(ref)} m</text></g>}
       {ix && vis('reference') && refVisible && (
         <circle data-handle="reference" cx={W - 24} cy={refY} r={8} fill="#0f172a" fillOpacity={0.6} stroke={sel('reference') ? SEL : ENERGY.potential} strokeWidth={2} className={ix.locks.reference ? 'cursor-not-allowed' : 'cursor-ns-resize'}
           onPointerDown={(e) => grab(e, 'reference')}
           onPointerMove={(e) => dragTo(e, (raw) => ix.onReference(Math.max(ENERGY_LIMITS.refMin, Math.min(ENERGY_LIMITS.refMax, Math.round(raw * 2) / 2))))}
           onPointerUp={release} onPointerCancel={release}><title>Drag to move the reference level (U = 0)</title></circle>
       )}
-      {vis('reference') && !refVisible && <text x={W - 16} y={16} textAnchor="end" fontSize={11} fill={ENERGY.potential} data-testid="reference-line">reference height {f2(ref)} m (off the picture)</text>}
+      {vis('reference') && !refVisible && <text x={W - 16} y={16} textAnchor="end" fontSize={12} fill={ENERGY.potential} data-testid="reference-line">reference height {f2(ref)} m (off the picture)</text>}
       {vis('ball') && (
         <g onPointerDown={select('ball')} className={ix ? 'cursor-pointer' : undefined}>
           {sel('ball') && <circle cx={bx} cy={by - 12} r={17} fill="none" stroke={SEL} strokeWidth={2} strokeDasharray="4 3" />}
           <circle cx={bx} cy={by - 12} r={12} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
-          <text x={bx} y={by - 8} textAnchor="middle" fontSize={10} fontWeight={700} fill="#e2e8f0">{f2(m)}</text>
-          {st.v > 1e-9 && <g data-arrow="velocity"><line x1={bx} y1={by - 12} x2={bx + ux * arrow} y2={by - 12 + uy * arrow} stroke={PHYS.velocity} strokeWidth={3} /><text x={bx + ux * arrow + (bx + ux * arrow > W - 110 ? -4 : 4)} y={by - 12 + uy * arrow + (uy * arrow > 4 ? 12 : -6)} textAnchor={bx + ux * arrow > W - 110 ? 'end' : 'start'} fontSize={11} fontWeight={700} fill={PHYS.velocity}>v {f2(st.v)} m/s</text></g>}
+          <text x={bx} y={by - 8} textAnchor="middle" fontSize={12} fontWeight={700} fill="#e2e8f0">{f2(m)}</text>
+          {st.v > 1e-9 && <g data-arrow="velocity"><line x1={bx} y1={by - 12} x2={bx + ux * arrow} y2={by - 12 + uy * arrow} stroke={PHYS.velocity} strokeWidth={3} /><text x={bx + ux * arrow + (bx + ux * arrow > W - 110 ? -4 : 4)} y={by - 12 + uy * arrow + (uy * arrow > 4 ? 12 : -6)} textAnchor={bx + ux * arrow > W - 110 ? 'end' : 'start'} fontSize={12} fontWeight={700} fill={PHYS.velocity}>v {f2(st.v)} m/s</text></g>}
         </g>
       )}
-      <text x={W - 16} y={H - 6} textAnchor="end" fontSize={11} fill="#94A3B8">height {f2(st.h)} m</text>
+      <text x={W - 16} y={H - 6} textAnchor="end" fontSize={12} fill="#94A3B8">height {f2(st.h)} m</text>
     </svg>
   );
 };
 
 export const EnergyBars: React.FC<{ r: EnergyResult; st: EnergyState }> = ({ r, st }) => {
+  const ref = useRef<SVGSVGElement>(null);
+  const { width } = useDiagramLayout(ref, 440, 280);
   const series = energySeries(r, 40);
   const scale = Math.max(1, ...series.flatMap((p) => [Math.abs(p.K), Math.abs(p.U), p.Q, Math.abs(p.mechanical)]), Math.abs(r.E0));
   const neg = Math.min(0, ...series.map((p) => p.U), ...series.map((p) => p.mechanical));
-  const width = 440, left = 118, right = 78, usable = width - left - right;
+  const left = 14, right = 80, usable = width - left - right;
   const lo = Math.min(0, neg), unit = usable / (scale - lo), zero = left + -lo * unit;
   const rows: { id: string; label: string; v: number; color: string }[] = [
     { id: 'kinetic', label: 'kinetic K', v: st.K, color: ENERGY.kinetic },
@@ -119,20 +124,20 @@ export const EnergyBars: React.FC<{ r: EnergyResult; st: EnergyState }> = ({ r, 
     { id: 'mechanical', label: 'mechanical K + U', v: st.mechanical, color: ENERGY.total },
   ];
   return (
-    <svg viewBox={`0 0 ${width} 150`} role="img" aria-label={`Energy bars. Kinetic ${f2(st.K)} J, potential ${f2(st.U)} J, thermal from friction ${f2(st.Q)} J, mechanical ${f2(st.mechanical)} J, total ${f2(st.total)} J.`} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="energy-bars">
+    <svg ref={ref} viewBox={`0 0 ${width} 280`} role="img" aria-label={`Energy bars. Kinetic ${f2(st.K)} J, potential ${f2(st.U)} J, thermal from friction ${f2(st.Q)} J, mechanical ${f2(st.mechanical)} J, total ${f2(st.total)} J.`} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="energy-bars">
       {rows.map((row, i) => {
-        const y = 14 + i * 32, len = row.v * unit;
+        const y = 32 + i * 58, len = row.v * unit;
         return (
           <g key={row.id} data-bar={row.id} data-value={row.v}>
-            <text x={left - 8} y={y + 14} textAnchor="end" fontSize={11} fontWeight={700} fill={row.color}>{row.label}</text>
+            <text x={left} y={y - 8} fontSize={12} fontWeight={700} fill={row.color}>{row.label}</text>
             <rect x={Math.min(zero, zero + len)} y={y} width={Math.abs(len)} height={20} rx={3} fill={row.color} opacity={row.id === 'mechanical' ? 0.55 : 0.9} />
-            <text x={Math.max(zero, zero + len) + 6} y={y + 14} fontSize={11} fill="#e2e8f0">{f2(row.v)} J</text>
+            <text x={width - 12} y={y + 14} textAnchor="end" fontSize={12} fill="#e2e8f0">{f2(row.v)} J</text>
           </g>
         );
       })}
-      <line x1={zero} y1={6} x2={zero} y2={144} stroke="#94A3B8" strokeWidth={1.5} />
-      <line x1={zero + r.E0 * unit} y1={6} x2={zero + r.E0 * unit} y2={144} stroke={ENERGY.total} strokeDasharray="4 4" data-testid="initial-total-line" />
-      <text x={Math.min(width - 4, zero + r.E0 * unit + 4)} y={148} fontSize={9} fill={ENERGY.total} textAnchor={zero + r.E0 * unit > width - 90 ? 'end' : 'start'}>starting total {f2(r.E0)} J</text>
+      <line x1={zero} y1={32} x2={zero} y2={226} stroke="#94A3B8" strokeWidth={1.5} />
+      <line x1={zero + r.E0 * unit} y1={32} x2={zero + r.E0 * unit} y2={226} stroke={ENERGY.total} strokeDasharray="4 4" data-testid="initial-total-line" />
+      <text x={14} y={264} fontSize={12} fill={ENERGY.total}>Starting total {f2(r.E0)} J</text>
     </svg>
   );
 };
@@ -254,7 +259,6 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
       {r.valid && st ? (
         <>
           <EnergyScene r={r} st={st} alt={describeEnergy(r)} />
-          <EnergyBars r={r} st={st} />
         </>
       ) : <p role="alert" className="text-sm rounded-xl border px-3 py-3" style={{ color: '#fecdd3', borderColor: `${PHYS.error}80`, background: `${PHYS.error}14` }} data-testid="energy-error">This setup cannot run: {r.reason}</p>}
       {r.valid && (
@@ -298,12 +302,13 @@ export const EnergyView: React.FC<EnergyViewProps> = ({ initial, editable = fals
         </div>
       )}
       {r.valid && st && (
-        <section aria-label="Energy bookkeeping" className="space-y-2" data-testid="energy-readout">
+        <ActivityDetails title="Energy bars, measurements and graph"><section aria-label="Energy bookkeeping" className="space-y-2" data-testid="energy-readout">
+          <EnergyBars r={r} st={st} />
           <EnergyReadout r={r} st={st} />
           <EnergyFigure r={r} st={st} axis={axis} />
           {!alt && <p className="text-xs text-slate-300" data-testid="energy-description">{describeEnergy(r)}</p>}
           <p className="text-[11px] text-slate-400">Assumptions: a point-like object, constant g, a straight ramp, constant kinetic friction (coefficient {f2(setup.mu)}), no air resistance, no bounce at the bottom. U is measured from the reference height you choose: only changes of U matter. A model result, not a proof.</p>
-        </section>
+        </section></ActivityDetails>
       )}
     </div>
   );

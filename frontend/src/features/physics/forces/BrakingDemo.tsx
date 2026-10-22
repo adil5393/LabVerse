@@ -15,6 +15,7 @@ import { ForceFigure } from './ForceFigure';
 import { PHYS } from '../motion/physicsColors';
 import { useReducedMotion } from '../motion/useReducedMotion';
 import { useViewportProfile } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 import {
   ParameterControl,
   ExperimentSetupGroup,
@@ -146,17 +147,18 @@ export const BrakingScene: React.FC<{ b: UseBrakingDemoReturn; alt?: string }> =
   const svgRef = useRef<SVGSVGElement | null>(null);
   const profile = useViewportProfile(svgRef);
   const isMobile = profile.isMobile;
+  const W = isMobile ? Math.max(180, profile.width) : 680;
 
   const span = Math.max(10, setup.speed * (BRAKE_AT + 1.5) + 4);
-  const leftPad = 135;
-  const rightPad = 35;
+  const leftPad = isMobile ? 100 : 135;
+  const rightPad = 24;
   const roadW = W - leftPad - rightPad;
   const X = (m: number) => leftPad + (m / span) * roadW;
-  const carW = 110;
+  const carW = isMobile ? 82 : 110;
   const carX = X(s.vehicleX);
   const seat = carX - carW * 0.5;
   const pX = seat + (s.relative / GAP_M) * (carW * 0.35);
-  const tick = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60].filter((m) => m <= span);
+  const tick = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60].filter((m) => m <= span).filter((_, i) => !isMobile || i % 2 === 0);
   const text = alt ?? `Sudden braking: vehicle at ${r2(setup.speed)} m/s brakes at ${r2(setup.decel)} m/s² from 1 s. Passenger ${setup.restrained ? 'wears a belt' : 'has no belt'}. ${b.live}`;
 
   return (
@@ -165,21 +167,21 @@ export const BrakingScene: React.FC<{ b: UseBrakingDemoReturn; alt?: string }> =
       {tick.map((m) => (
         <g key={m}>
           <line x1={X(m)} y1={106} x2={X(m)} y2={116} stroke="#94a3b8" />
-          <text x={X(m)} y={130} textAnchor="middle" fontSize={isMobile ? 11 : 10} fill="#94a3b8">{m}</text>
+          <text x={X(m)} y={130} textAnchor="middle" fontSize={12} fill="#94a3b8">{m}</text>
         </g>
       ))}
-      <text x={W - 20} y={144} textAnchor="end" fontSize={isMobile ? 11 : 10} fill="#94a3b8">position on the road (m)</text>
+      <text x={W - 20} y={144} textAnchor="end" fontSize={12} fill="#94a3b8">position on the road (m)</text>
       {/* Car chassis - cleanly bounded so rear does not clip */}
       <rect x={carX - carW} y={62} width={carW} height={44} rx={8} fill="#1e293b" stroke={PHYS.position} strokeWidth={2} />
       {/* Seat backrest */}
       <rect x={seat - 10} y={70} width={6} height={20} fill="#475569" />
-      <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={isMobile ? 11 : 10} fill={PHYS.position}>vehicle {r2(s.vehicleV)} m/s</text>
+      <text x={carX - carW / 2} y={100} textAnchor="middle" fontSize={12} fill={PHYS.position}>{isMobile ? 'car' : 'vehicle'} {r2(s.vehicleV)} m/s</text>
       {/* Passenger */}
       <circle cx={pX} cy={72} r={isMobile ? 12 : 9} fill={PHYS.velocity} stroke="#0f172a" strokeWidth={2} />
-      <text x={pX} y={isMobile ? 48 : 50} textAnchor="middle" fontSize={isMobile ? 12 : 11} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>
+      <text x={isMobile ? 12 : pX} y={isMobile ? 42 : 50} textAnchor={isMobile ? "start" : "middle"} fontSize={12} fontWeight={700} fill={PHYS.velocity}>passenger {r2(s.passengerV)} m/s</text>
       {setup.restrained && <line x1={seat - 4} y1={80} x2={pX} y2={74} stroke={PHYS.force} strokeWidth={isMobile ? 4 : 3} strokeDasharray="4 3" />}
       <line x1={seat} y1={30} x2={seat} y2={36} stroke={PHYS.time} />
-      <text x={leftPad + 2} y={20} fontSize={isMobile ? 11 : 10} fill={PHYS.time}>{s.state === 'cruising' ? 'cruising' : s.state}</text>
+      <text x={leftPad + 2} y={20} fontSize={12} fill={PHYS.time}>{s.state === 'cruising' ? 'cruising' : s.state}</text>
     </svg>
   );
 };
@@ -442,8 +444,8 @@ export const BrakingDemoView: React.FC<BrakingProps> = ({ initial = DEFAULT_BRAK
       )}
 
       {/* 3. Measurements, Graphs, and Observations */}
-      <BrakingReadout b={b} className="grid grid-cols-2 lg:grid-cols-4 gap-2" />
       <BrakingLiveStatus b={b} />
+      <ActivityDetails title="Measurements"><BrakingReadout b={b} className="grid grid-cols-2 lg:grid-cols-4 gap-2" /></ActivityDetails>
     </div>
   );
 };

@@ -1,3 +1,5 @@
+import { useDiagramLayout, useViewportProfile } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 /**
  * Motion Graph Studio (PHY-1C): a track, the position–time graph, the velocity–time graph and the
  * acceleration–time graph, all drawn from ONE constant-acceleration profile and ONE time cursor.
@@ -18,7 +20,7 @@ import { useReducedMotion } from './useReducedMotion';
 
 
 
-const GW = 560, GH = 210, ML = 54, MR = 14, MT = 14, MB = 36;
+const ML = 54, MR = 14, MT = 14, MB = 36;
 const niceStep = (span: number): number => { for (const s of [0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200]) if (span / s <= 6) return s; return 500; };
 const ticksFor = (lo: number, hi: number): number[] => {
   const st = niceStep(hi - lo), out: number[] = [];
@@ -40,6 +42,8 @@ const SPECS: Record<GraphKind, GraphSpec> = {
 export interface ShadeRegion { t0: number; t1: number; label: string; color: 'displacement' | 'distance' | 'velocity' | 'acceleration' }
 
 const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t: number) => void; shade?: ShadeRegion[] }> = ({ spec, profile, t, onSeek, shade }) => {
+  const ref = useRef<SVGSVGElement>(null);
+  const { width: GW, height: GH, isMobile } = useDiagramLayout(ref, 560, 210);
   const T = totalTime(profile);
   const pts = useMemo(() => series(profile, 160), [profile]);
   const ys = pts.map(spec.y);
@@ -50,8 +54,8 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
   const Y = (yy: number) => MT + (1 - (yy - lo) / (hi - lo)) * (GH - MT - MB);
   const cur = stateAt(profile, t);
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.t).toFixed(1)},${Y(spec.y(p)).toFixed(1)}`).join(' ');
-  const tT = ticksFor(0, T), yT = ticksFor(lo, hi);
-  const ref = useRef<SVGSVGElement>(null);
+  const thin = (values: number[]) => isMobile ? values.filter((_, i) => i % 2 === 0) : values;
+  const tT = thin(ticksFor(0, T)), yT = thin(ticksFor(lo, hi));
   const seek = (e: React.PointerEvent | React.MouseEvent) => {
     const r = ref.current!.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * GW;
@@ -103,13 +107,13 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
         <span className="normal-case text-slate-400 basis-full">height = {spec.heightMeans}{spec.slopeName ? `, slope = ${spec.slopeName}` : ''}{spec.kind === 'vt' ? ', area = displacement' : ''}</span>
       </figcaption>
       <svg ref={ref} viewBox={`0 0 ${GW} ${GH}`} tabIndex={0} role="slider" aria-label={label} aria-valuemin={0} aria-valuemax={T} aria-valuenow={Number(t.toFixed(2))} aria-valuetext={`${fmt(t)} seconds: ${spec.yName} ${fmtSign(spec.y(cur))} ${spec.yUnit}`}
-        className="w-full h-auto max-h-[160px] sm:max-h-[185px] xl:max-h-[210px] rounded-xl bg-surface-lowest border border-surface-border select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-crosshair"
+        className="w-full h-auto max-h-[240px] rounded-xl bg-surface-lowest border border-surface-border select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-crosshair"
         onPointerDown={seek} onKeyDown={onKey}>
         <defs><pattern id={`hatch-${spec.kind}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill={PHYS.displacement} opacity={0.12} /><line x1="0" y1="0" x2="0" y2="6" stroke={PHYS.displacement} strokeWidth="2" opacity={0.6} /></pattern></defs>
-        {tT.map((v) => <g key={`t${v}`}><line x1={X(v)} y1={MT} x2={X(v)} y2={GH - MB} stroke="#334155" strokeWidth={0.6} /><text x={X(v)} y={GH - MB + 14} textAnchor="middle" fontSize={10} fill="#94a3b8">{v}</text></g>)}
-        {yT.map((v) => <g key={`y${v}`}><line x1={ML} y1={Y(v)} x2={GW - MR} y2={Y(v)} stroke={v === 0 ? '#94a3b8' : '#334155'} strokeWidth={v === 0 ? 1.2 : 0.6} /><text x={ML - 6} y={Y(v) + 3} textAnchor="end" fontSize={10} fill="#94a3b8">{v}</text></g>)}
-        <text x={(ML + GW - MR) / 2} y={GH - 4} textAnchor="middle" fontSize={11} fill={PHYS.time}>time t (s)</text>
-        <text transform={`translate(12 ${(MT + GH - MB) / 2}) rotate(-90)`} textAnchor="middle" fontSize={11} fill={spec.color}>{spec.yName} ({spec.yUnit})</text>
+        {tT.map((v) => <g key={`t${v}`}><line x1={X(v)} y1={MT} x2={X(v)} y2={GH - MB} stroke="#334155" strokeWidth={0.6} /><text x={X(v)} y={GH - MB + 14} textAnchor="middle" fontSize={12} fill="#94a3b8">{v}</text></g>)}
+        {yT.map((v) => <g key={`y${v}`}><line x1={ML} y1={Y(v)} x2={GW - MR} y2={Y(v)} stroke={v === 0 ? '#94a3b8' : '#334155'} strokeWidth={v === 0 ? 1.2 : 0.6} /><text x={ML - 6} y={Y(v) + 3} textAnchor="end" fontSize={12} fill="#94a3b8">{v}</text></g>)}
+        <text x={(ML + GW - MR) / 2} y={GH - 4} textAnchor="middle" fontSize={12} fill={PHYS.time}>time t (s)</text>
+        <text transform={`translate(12 ${(MT + GH - MB) / 2}) rotate(-90)`} textAnchor="middle" fontSize={12} fill={spec.color}>{spec.yName} ({spec.yUnit})</text>
         {bands}
         {area}
         <path d={line} fill="none" stroke={spec.color} strokeWidth={2.5} />
@@ -117,7 +121,7 @@ const Graph: React.FC<{ spec: GraphSpec; profile: Profile; t: number; onSeek: (t
         {turns.map((tt) => <g key={`turn${tt}`}><circle cx={X(tt)} cy={Y(spec.y(stateAt(profile, tt)))} r={4} fill="none" stroke="#e2e8f0" strokeWidth={1.5} /></g>)}
         <line x1={X(t)} y1={MT} x2={X(t)} y2={GH - MB} stroke={PHYS.time} strokeWidth={1.5} strokeDasharray="5 3" />
         <circle cx={X(t)} cy={Y(spec.y(cur))} r={5.5} fill={spec.color} stroke="#0f172a" strokeWidth={2} />
-        <text x={Math.min(GW - 70, X(t) + 8)} y={Math.max(MT + 10, Y(spec.y(cur)) - 8)} fontSize={11} fontWeight={700} fill={spec.color}>({fmt(t)} s, {fmtSign(spec.y(cur))})</text>
+        <text x={Math.min(GW - 70, X(t) + 8)} y={Math.max(MT + 10, Y(spec.y(cur)) - 8)} fontSize={12} fontWeight={700} fill={spec.color}>({fmt(t)} s, {fmtSign(spec.y(cur))})</text>
       </svg>
       {shade && spec.kind === 'vt' && (
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11px]" aria-label="Shaded areas" data-testid="shade-legend">
@@ -132,17 +136,19 @@ const TrackStrip: React.FC<{ profile: Profile; t: number }> = ({ profile, t }) =
   const pts = useMemo(() => series(profile, 100).map((p) => p.x), [profile]);
   let lo = Math.min(0, ...pts), hi = Math.max(0, ...pts);
   const pad = Math.max(2, (hi - lo) * 0.08); lo -= pad; hi += pad;
-  const W = 560, H = 96, P = 28;
+  const ref = useRef<SVGSVGElement>(null);
+  const { width: W, isMobile } = useDiagramLayout(ref, 560, 110);
+  const H = 110, P = 28;
   const X = (v: number) => P + ((v - lo) / (hi - lo)) * (W - 2 * P);
   const s = stateAt(profile, t);
-  const tk = ticksFor(lo, hi);
+  const tk = ticksFor(lo, hi).filter((_, i) => !isMobile || i % 2 === 0);
   const arrowLen = Math.min(70, Math.abs(s.v) * 4);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Track from ${fmt(lo)} m to ${fmt(hi)} m with the reference point O at 0 m. At ${fmt(t)} s the object is at ${fmtSign(s.x)} m moving with velocity ${fmtSign(s.v)} m/s.`} className="w-full h-auto max-h-[64px] sm:max-h-[82px] rounded-xl bg-surface-lowest border border-surface-border">
+    <svg ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Track from ${fmt(lo)} m to ${fmt(hi)} m with the reference point O at 0 m. At ${fmt(t)} s the object is at ${fmtSign(s.x)} m moving with velocity ${fmtSign(s.v)} m/s.`} className="w-full h-auto max-h-[120px] rounded-xl bg-surface-lowest border border-surface-border">
       <line x1={P} y1={56} x2={W - P} y2={56} stroke={PHYS.axis} strokeWidth={3} />
-      {tk.map((v) => <g key={v}><line x1={X(v)} y1={50} x2={X(v)} y2={62} stroke={v === 0 ? PHYS.origin : PHYS.axis} strokeWidth={v === 0 ? 2.5 : 1} /><text x={X(v)} y={78} textAnchor="middle" fontSize={10} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v === 0 ? 'O' : v}</text></g>)}
-      <text x={W - P} y={92} textAnchor="end" fontSize={10} fill="#94a3b8">position (m)</text>
-      <path d={`M${X(profile.x0)},40 L${X(profile.x0) - 5},32 L${X(profile.x0) + 5},32 Z`} fill={PHYS.position} /><text x={X(profile.x0)} y={28} textAnchor="middle" fontSize={10} fill={PHYS.position}>start</text>
+      {tk.map((v) => <g key={v}><line x1={X(v)} y1={50} x2={X(v)} y2={62} stroke={v === 0 ? PHYS.origin : PHYS.axis} strokeWidth={v === 0 ? 2.5 : 1} /><text x={X(v)} y={78} textAnchor="middle" fontSize={12} fill={v === 0 ? PHYS.origin : '#94a3b8'}>{v === 0 ? 'O' : v}</text></g>)}
+      <text x={W - P} y={92} textAnchor="end" fontSize={12} fill="#94a3b8">position (m)</text>
+      <path d={`M${X(profile.x0)},40 L${X(profile.x0) - 5},32 L${X(profile.x0) + 5},32 Z`} fill={PHYS.position} /><text x={X(profile.x0)} y={28} textAnchor="middle" fontSize={12} fill={PHYS.position}>start</text>
       {arrowLen > 3 && <g stroke={PHYS.velocity} fill={PHYS.velocity}><line x1={X(s.x)} y1={34} x2={X(s.x) + Math.sign(s.v) * arrowLen} y2={34} strokeWidth={3} /><path d={`M${X(s.x) + Math.sign(s.v) * (arrowLen + 6)},34 l${-Math.sign(s.v) * 8},-5 l0,10 Z`} /></g>}
       <circle cx={X(s.x)} cy={56} r={10} fill={PHYS.position} stroke="#0f172a" strokeWidth={2} />
     </svg>
@@ -162,8 +168,8 @@ const NumField: React.FC<{ label: string; unit: string; value: number; step: num
   const [last, setLast] = useState(value);
   if (last !== value) { setLast(value); setText(String(value)); }
   return (
-    <div className="flex items-center gap-1 text-xs text-slate-300">
-      <label className="flex items-center gap-1">{label}
+    <div className="flex flex-wrap items-end gap-1 text-xs text-slate-300">
+      <label className="flex flex-col gap-1 flex-1 min-w-0">{label}
         <input value={text} data-field={id} inputMode="decimal" aria-label={`${label} in ${unit}`} onChange={(e) => { setText(e.target.value); const n = Number(e.target.value.replace('−', '-')); if (e.target.value.trim() !== '' && Number.isFinite(n)) onChange(n); }}
           className="w-20 min-h-[44px] rounded-lg border border-surface-border bg-surface-lowest px-2 text-white font-mono" />
       </label><span>{unit}</span>
@@ -286,12 +292,22 @@ export const GraphPrediction: React.FC<{ g: GraphStudioModel }> = ({ g }) => {
 export const GraphScene: React.FC<{ g: GraphStudioModel; kinds?: GraphKind[]; shade?: ShadeRegion[]; showTrack?: boolean }> = ({ g, kinds, shade, showTrack = true }) => {
   const { profile, tClamped, setPlaying, setT } = g;
   const graphs = kinds ?? g.graphs;
+  const container = useRef<HTMLDivElement>(null);
+  const { isMobile } = useViewportProfile(container);
+  const [selected, setSelected] = useState(graphs[0]);
+  const active = graphs.includes(selected) ? selected : graphs[0];
   return (
-    <div className="w-full flex flex-col gap-2.5 sm:gap-3">
+    <div ref={container} className="w-full flex flex-col gap-2.5 sm:gap-3">
       {showTrack && <TrackStrip profile={profile} t={tClamped} />}
 
-      <div className={`grid gap-2 sm:gap-3 ${graphs.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-        {graphs.map((k) => <Graph key={k} spec={SPECS[k]} profile={profile} t={tClamped} shade={shade} onSeek={(v) => { setPlaying(false); setT(v); }} />)}
+      {isMobile && graphs.length > 1 && <label className="text-xs text-slate-300">Choose a graph
+        <select aria-label="Choose a graph" value={active} onChange={e => setSelected(e.target.value as GraphKind)} className="block w-full mt-1 min-h-[44px] rounded-lg border border-surface-border bg-surface-card px-3 text-sm text-white">
+          {graphs.map(k => <option key={k} value={k}>{SPECS[k].title}</option>)}
+        </select>
+      </label>}
+
+      <div className={`grid gap-2 sm:gap-3 ${graphs.length === 1 || isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+        {(isMobile ? graphs.filter(k => k === active) : graphs).map((k) => <Graph key={k} spec={SPECS[k]} profile={profile} t={tClamped} shade={shade} onSeek={(v) => { setPlaying(false); setT(v); }} />)}
       </div>
     </div>
   );
@@ -407,7 +423,7 @@ export const GraphStudioView: React.FC<GraphStudioProps> = ({ scenarioId, profil
 
       {/* 4. Equations and Measurements */}
       {equations && <EquationPanel profile={profile} t={tClamped} />}
-      <GraphReadout g={g} />
+      <ActivityDetails title="Measurements and motion history"><GraphReadout g={g} /></ActivityDetails>
     </div>
   );
 };

@@ -55,7 +55,7 @@ describe('Physics Simulation Stability & Viewport Geometry Regressions', () => {
       );
 
       // Verify compact viewBox includes expanded vertical bounds
-      expect(html).toContain('viewBox="20 12 580 95"');
+      expect(html).toContain('viewBox="0 0 420 120"');
       // The cart label must be rendered inside the track SVG
       expect(html).toContain('data-testid="force-track"');
       expect(html).toContain('0 m');

@@ -112,7 +112,7 @@ export const GraphMobileLab: React.FC<GraphMobileLabProps> = ({
                   type="button"
                   onClick={() => setActiveGraph(k)}
                   aria-pressed={active}
-                  className={`min-h-[32px] px-3 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
+                  className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
                     active
                       ? 'bg-primary text-slate-950 shadow-sm'
                       : 'bg-surface-container-high text-slate-300 border border-outline-variant hover:text-white'
@@ -129,8 +129,8 @@ export const GraphMobileLab: React.FC<GraphMobileLabProps> = ({
         )}
 
         {/* The Selected Graph Scene - adapts cleanly to container height with touch scrolling */}
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar touch-pan-y pb-2">
-          <GraphScene g={g} kinds={[activeGraph]} showTrack={true} />
+        <div className="flex-1 min-h-0 overflow-y-auto touch-pan-y pb-2">
+          <GraphScene g={g} kinds={[activeGraph]} showTrack={false} />
         </div>
       </div>
     </MobileLabViewport>

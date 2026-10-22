@@ -1,3 +1,5 @@
+import { useDiagramLayout } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 /**
  * The Simple Machines scenes (PHY-3D): the inclined plane, the pulley system and the lever. Each is drawn from its model in
  * engine/physics/work/machines.ts, so the geometry, the force arrows, the distances, the work bars and the text all agree.
@@ -75,12 +77,13 @@ const useHandleDrag = () => {
 export const RampView: React.FC<{ initial: RampSetup; editable?: boolean; alt?: string; startProgress?: number } & MachineViewControl<RampSetup>> = ({ initial, editable = false, alt, startProgress = 0, ...ctl }) => {
   const { setup, p, setP, change, part, showScene, showReadout } = useMachineState(initial, startProgress, ctl);
   const drag = useHandleDrag();
+  const { width: W, height: H, isMobile } = useDiagramLayout(drag.svgRef, 440, 280);
   const ix = ctl.interaction;
   const vis = (id: string) => ix?.visibility[id] !== false;
   const sel = (id: string) => ix?.selectedId === id;
   const r = computeRamp(setup);
   if (!r.valid) return showScene ? <div className="space-y-3" data-visual="rampLab">{errBox(r.reason ?? '', 'ramp-error')}{editable && part === 'all' && <RampControls setup={setup} change={change} />}</div> : null;
-  const W = 440, H = 262, x0 = 56, ground = 190, k = drag.frozen.current ?? Math.min(320 / Math.max(r.width, 1e-9), 150 / setup.height, 1e9);
+  const x0 = 46, ground = 190, k = drag.frozen.current ?? Math.min((W - 90) / Math.max(r.width, 1e-9), 150 / setup.height, 1e9);
   const wpx = r.width * k, hpx = setup.height * k;
   const top = { x: x0, y: ground - hpx }, bottom = { x: x0 + wpx, y: ground }; // the ramp descends to the right; the load goes UP towards the top-left
   const along = { x: -r.width / setup.length, y: -setup.height / setup.length }; // unit vector up the slope in screen-ish coords (x right, y up is negative)
@@ -107,13 +110,13 @@ export const RampView: React.FC<{ initial: RampSetup; editable?: boolean; alt?: 
           onPointerUp={drag.release} onPointerCancel={drag.release}><title>Drag to change the height</title></circle>}
         <line x1={x0} y1={ground} x2={bottom.x + 20} y2={ground} stroke={PHYS.axis} strokeWidth={3} />
         <line x1={x0 - 12} y1={top.y} x2={x0 - 12} y2={ground} stroke={PHYS.displacement} strokeWidth={2} /><text x={x0 + 8} y={ground - 10} textAnchor="start" fontSize={12} fontWeight={700} fill={PHYS.displacement}>h = {f2(setup.height)} m</text>
-        <text x={(x0 + bottom.x) / 2} y={ground + 50} textAnchor="middle" fontSize={11} fill="#94A3B8">width {f2(r.width)} m</text>
+        <text x={(x0 + bottom.x) / 2} y={ground + 50} textAnchor="middle" fontSize={12} fill="#94A3B8">width {f2(r.width)} m</text>
         <text x={(top.x + bottom.x) / 2 + 12} y={(top.y + bottom.y) / 2 - 8} fontSize={12} fontWeight={700} fill={PHYS.distance}>L = {f2(setup.length)} m</text>
         {vis('load') && <g onPointerDown={(e) => { if (ix) { e.stopPropagation(); ix.onSelect('load'); } }} className={ix ? 'cursor-pointer' : undefined}>
         <rect x={cx - 11} y={cy - 11} width={22} height={22} rx={3} fill="#1e293b" stroke={sel('load') ? SEL : PHYS.position} strokeWidth={sel('load') ? 3 : 2} transform={`rotate(${-Math.atan2(along.y, along.x) * 180 / Math.PI + 180} ${cx} ${cy})`} />
         </g>}
-        <g data-arrow="effort"><Arrow x1={cx} y1={cy} x2={cx + along.x * Math.max(24, r.effort * scale)} y2={cy + along.y * Math.max(24, r.effort * scale)} color={ENERGY.work} width={4} /><text x={cx + along.x * Math.max(24, r.effort * scale) + 4} y={cy + along.y * Math.max(24, r.effort * scale) - 6} fontSize={11} fontWeight={800} fill={ENERGY.work}>effort {f2(r.effort)} N</text></g>
-        <g data-arrow="weight"><Arrow x1={cx} y1={cy} x2={cx} y2={cy + Math.min(46, Math.max(24, r.load * scale))} color={PHYS.vertical} /><text x={cx - 6} y={cy + Math.min(46, Math.max(24, r.load * scale)) + 14} textAnchor="end" fontSize={11} fontWeight={700} fill={PHYS.vertical}>weight {f2(r.load)} N</text></g>
+        <g data-arrow="effort"><Arrow x1={cx} y1={cy} x2={cx + along.x * Math.max(24, r.effort * scale)} y2={cy + along.y * Math.max(24, r.effort * scale)} color={ENERGY.work} width={4} /><text x={cx + along.x * Math.max(24, r.effort * scale) + 4} y={cy + along.y * Math.max(24, r.effort * scale) - 6} fontSize={12} fontWeight={800} fill={ENERGY.work}>{isMobile ? 'F' : 'effort'} {f2(r.effort)} N</text></g>
+        <g data-arrow="weight"><Arrow x1={cx} y1={cy} x2={cx} y2={cy + Math.min(46, Math.max(24, r.load * scale))} color={PHYS.vertical} /><text x={cx - 6} y={cy + Math.min(46, Math.max(24, r.load * scale)) + 14} textAnchor="end" fontSize={12} fontWeight={700} fill={PHYS.vertical}>{isMobile ? 'W' : 'weight'} {f2(r.load)} N</text></g>
         {setup.mu > 0 && <g data-arrow="friction"><Arrow x1={cx} y1={cy} x2={cx - along.x * Math.max(18, setup.mu * r.load * (r.width / setup.length) * scale)} y2={cy - along.y * Math.max(18, setup.mu * r.load * (r.width / setup.length) * scale)} color={PHYS.friction} /></g>}
       </svg>}
       {part === 'all' && <div className="flex flex-wrap items-center gap-2"><ProgressControl value={p} onChange={setP} label="How far up the ramp" testid="ramp-progress" unit="along the ramp" /></div>}
@@ -121,6 +124,7 @@ export const RampView: React.FC<{ initial: RampSetup; editable?: boolean; alt?: 
       <p className="text-xs text-slate-300" data-testid="ramp-now">Moved {f2(p * setup.length)} m along the ramp and risen {f2(p * setup.height)} m; work done by the effort so far {f2(p * r.inputWork)} J, useful work so far {f2(p * r.outputWork)} J.</p>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="Key to the arrows"><li style={{ color: ENERGY.work }} className="font-bold">effort F′ along the ramp</li><li style={{ color: PHYS.vertical }} className="font-bold">weight (load) m g</li>{setup.mu > 0 && <li style={{ color: PHYS.friction }} className="font-bold">friction on the load (down the ramp)</li>}</ul>
       {editable && part === 'all' && <RampControls setup={setup} change={change} />}
+      <ActivityDetails title="Measurements and explanation">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="ramp-readout">
         {cellOf('effort', 'effort F′', `${f2(r.effort)} N`, ENERGY.work)}
         {cellOf('load', 'load m g', `${f2(r.load)} N`, PHYS.vertical)}
@@ -135,6 +139,7 @@ export const RampView: React.FC<{ initial: RampSetup; editable?: boolean; alt?: 
       <p className="text-sm rounded-xl border px-3 py-2 text-slate-100" style={{ borderColor: r.outputWork <= r.inputWork + 1e-9 ? PHYS.correct : PHYS.error }} data-testid="ramp-check">{r.outputWork <= r.inputWork + 1e-9 ? '✓ ' : '✗ '}Useful work {f2(r.outputWork)} J {r.lost < 1e-9 ? '=' : '≤'} work done {f2(r.inputWork)} J{r.lost > 1e-9 ? `; the difference ${f2(r.lost)} J is thermal energy` : ' (a smooth ramp is an ideal machine)'}. Lifting straight up takes {f2(r.directEffort)} N over {f2(setup.height)} m: the same {f2(r.directWork)} J.</p>
       {!alt && <p className="text-xs text-slate-300" data-testid="ramp-description">{text}</p>}
       <p className="text-[11px] text-slate-400">Assumptions: a rigid straight ramp, a steady push parallel to the slope at constant speed (no change of kinetic energy), constant kinetic friction coefficient; no efficiency is assumed: it follows from the friction. Mass {RAMP_LIMITS.massMin} to {RAMP_LIMITS.massMax} kg; height {RAMP_LIMITS.heightMin} to {RAMP_LIMITS.heightMax} m; length up to {RAMP_LIMITS.lengthMax} m.</p>
+      </ActivityDetails>
       </>}
     </div>
   );
@@ -156,15 +161,17 @@ const RampControls: React.FC<{ setup: RampSetup; change: (o: Partial<RampSetup>)
 // ----------------------------------------------------------------------------- pulley
 export const PulleyView: React.FC<{ initial: PulleySetup; editable?: boolean; alt?: string; startProgress?: number } & MachineViewControl<PulleySetup>> = ({ initial, editable = false, alt, startProgress = 0, ...ctl }) => {
   const { setup, p, setP, change, part, showScene, showReadout } = useMachineState(initial, startProgress, ctl);
+  const pulleyRef = useRef<SVGSVGElement>(null);
+  const { width: W, height: H, isMobile } = useDiagramLayout(pulleyRef, 440, 300);
   const ix = ctl.interaction;
   const vis = (id: string) => ix?.visibility[id] !== false;
   const sel = (id: string) => ix?.selectedId === id;
   const r = computePulley(setup);
   if (!r.valid) return showScene ? <div className="space-y-3" data-visual="pulleyLab">{errBox(r.reason ?? '', 'pulley-error')}{editable && part === 'all' && <PulleyControls setup={setup} change={change} />}</div> : null;
   const at = pulleyAt(r, p);
-  const n = setup.strands, W = 440, H = 270, topY = 24, travel = 80;
+  const n = setup.strands, topY = 24, travel = 80;
   const q = setup.lift > 0 ? at.rise / setup.lift : 0;            // fraction of the lift
-  const left = 150, width = n === 1 ? 0 : Math.min(150, 30 * n);
+  const left = isMobile ? 40 : 150, width = n === 1 ? 0 : Math.min(isMobile ? W - 140 : 150, 30 * n);
   const mid = n === 1 ? left - 14 : left + width / 2;               // x of the load
   const highY = topY + 50, my = highY + (1 - q) * travel;         // top of the movable block (or of the load rope end for a fixed pulley)
   const xs = n === 1 ? [left - 14] : Array.from({ length: n }, (_, i) => left + (i * width) / (n - 1));
@@ -178,7 +185,7 @@ export const PulleyView: React.FC<{ initial: PulleySetup; editable?: boolean; al
   const text = `Pulley: a ${f2(setup.massKg)} kg load (${f2(r.load)} N) is raised ${f2(setup.lift)} m by a system with ${n} supporting strand${n > 1 ? 's' : ''}${n > 1 && setup.blockKg > 0 ? ` and a ${f2(setup.blockKg)} kg movable block` : ''}. The effort is ${f2(r.effort)} N (mechanical advantage ${f2(r.actualMA)}, ideal ${n}). The rope pulled is ${n} × ${f2(setup.lift)} = ${f2(r.ropePulled)} m. Work done by the effort ${f2(r.inputWork)} J; useful work ${f2(r.outputWork)} J${r.storedInBlock > 0 ? `; ${f2(r.storedInBlock)} J is stored in the lifted block` : ''}.${n === 1 ? ' A single fixed pulley only changes the direction of the effort.' : ''}`;
   return (
     <div className="space-y-3 min-w-0" data-visual="pulleyLab" data-testid="pulley-view">
-      {showScene && <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="pulley-svg" style={ix ? { touchAction: 'none' } : undefined} onPointerDown={() => ix?.onSelect(null)}>
+      {showScene && <svg ref={pulleyRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="pulley-svg" style={ix ? { touchAction: 'none' } : undefined} onPointerDown={() => ix?.onSelect(null)}>
         <rect x={left - 44} y={topY - 10} width={Math.max(width, 0) + 150} height={10} fill={PHYS.axis} />
         {vis('pulley') && <g onPointerDown={(e) => { if (ix) { e.stopPropagation(); ix.onSelect('pulley'); } }} className={ix ? 'cursor-pointer' : undefined} opacity={sel('pulley') ? 1 : undefined} style={sel('pulley') ? { filter: 'drop-shadow(0 0 4px #00d4ff)' } : undefined}>
         {n === 1 ? (
@@ -198,18 +205,19 @@ export const PulleyView: React.FC<{ initial: PulleySetup; editable?: boolean; al
         </g>}
         {vis('load') && <g onPointerDown={(e) => { if (ix) { e.stopPropagation(); ix.onSelect('load'); } }} className={ix ? 'cursor-pointer' : undefined}>
         <rect x={mid - 26} y={loadTop} width={52} height={36} rx={5} fill="#1e293b" stroke={sel('load') ? SEL : PHYS.position} strokeWidth={sel('load') ? 3 : 2} />
-        <text x={mid} y={loadTop + 23} textAnchor="middle" fontSize={11} fontWeight={700} fill="#e2e8f0">{f2(setup.massKg)} kg</text>
+        <text x={mid} y={loadTop + 23} textAnchor="middle" fontSize={12} fontWeight={700} fill="#e2e8f0">{f2(setup.massKg)} kg</text>
         </g>}
-        <g data-arrow="load"><Arrow x1={mid + 38} y1={loadTop + 4} x2={mid + 38} y2={loadTop + 44} color={PHYS.vertical} /><text x={mid + 46} y={loadTop + 40} fontSize={11} fontWeight={700} fill={PHYS.vertical}>load {f2(r.load)} N</text></g>
-        <g data-arrow="effort"><Arrow x1={n === 1 ? left + 14 : effX} y1={(n === 1 ? topY + 44 + q * travel : effEnd)} x2={n === 1 ? left + 14 : effX} y2={(n === 1 ? topY + 44 + q * travel : effEnd) + 46} color={ENERGY.work} width={4} /><text x={(n === 1 ? left + 14 : effX) + 8} y={(n === 1 ? topY + 44 + q * travel : effEnd) + 40} fontSize={11} fontWeight={800} fill={ENERGY.work}>effort {f2(r.effort)} N</text></g>
+        <g data-arrow="load"><Arrow x1={mid + 38} y1={loadTop + 4} x2={mid + 38} y2={loadTop + 44} color={PHYS.vertical} /><text x={mid + 46} y={loadTop + 40} fontSize={12} fontWeight={700} fill={PHYS.vertical}>load {f2(r.load)} N</text></g>
+        <g data-arrow="effort"><Arrow x1={n === 1 ? left + 14 : effX} y1={(n === 1 ? topY + 44 + q * travel : effEnd)} x2={n === 1 ? left + 14 : effX} y2={(n === 1 ? topY + 44 + q * travel : effEnd) + 46} color={ENERGY.work} width={4} /><text x={(n === 1 ? left + 14 : effX) + 8} y={(n === 1 ? topY + 44 + q * travel : effEnd) + 40} fontSize={12} fontWeight={800} fill={ENERGY.work}>{isMobile ? 'F' : 'effort'} {f2(r.effort)} N</text></g>
         <text x={8} y={H - 36} fontSize={12} fontWeight={700} fill={PHYS.displacement}>load risen {f2(at.rise)} m</text>
         <text x={8} y={H - 18} fontSize={12} fontWeight={700} fill={PHYS.distance}>rope pulled {f2(at.rope)} m = {n} × {f2(at.rise)} m</text>
-        <text x={W - 8} y={H - 8} textAnchor="end" fontSize={10} fill="#94A3B8">schematic: the free end of the rope leaves the top block</text>
+        <text x={W - 8} y={H - 8} textAnchor="end" fontSize={12} fill="#94A3B8">{isMobile ? 'Schematic • rope leaves top block' : 'schematic: the free end of the rope leaves the top block'}</text>
       </svg>}
       {part === 'all' && <div className="flex flex-wrap items-center gap-2"><ProgressControl value={p} onChange={setP} label="Pull the rope" testid="pulley-progress" unit="of the lift" /></div>}
       {showReadout && <>
       <p className="text-xs text-slate-300" data-testid="pulley-now">Load risen {f2(at.rise)} m; rope pulled {f2(at.rope)} m (always {n} × the rise: the rope and the load are linked); work you have done {f2(at.inWork)} J; useful work so far {f2(at.outWork)} J.</p>
       {editable && part === 'all' && <PulleyControls setup={setup} change={change} />}
+      <ActivityDetails title="Measurements and explanation">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="pulley-readout">
         {cellOf('effort', 'effort', `${f2(r.effort)} N`, ENERGY.work)}
         {cellOf('load', 'load m g', `${f2(r.load)} N`, PHYS.vertical)}
@@ -224,6 +232,7 @@ export const PulleyView: React.FC<{ initial: PulleySetup; editable?: boolean; al
       <p className="text-sm rounded-xl border px-3 py-2 text-slate-100" style={{ borderColor: r.outputWork <= r.inputWork + 1e-9 ? PHYS.correct : PHYS.error }} data-testid="pulley-check">{r.outputWork <= r.inputWork + 1e-9 ? '✓ ' : '✗ '}Useful work {f2(r.outputWork)} J {r.storedInBlock < 1e-9 ? '=' : '≤'} work done {f2(r.inputWork)} J: {n === 1 ? 'the fixed pulley changes the direction of the force, not its size, and the rope pulled equals the rise.' : `the effort is ${n === 1 ? '' : `1/${n} of the load`} but acts over ${n} times the distance.`}</p>
       {!alt && <p className="text-xs text-slate-300" data-testid="pulley-description">{text}</p>}
       <p className="text-[11px] text-slate-400">Assumptions: a light rope that does not stretch or slip, frictionless axles, the load and the movable block raised slowly (no change of kinetic energy). The only loss is the weight of the movable block, which is lifted too; no efficiency is assumed. Load {PULLEY_LIMITS.massMin} to {PULLEY_LIMITS.massMax} kg; up to {PULLEY_LIMITS.strandsMax} strands.</p>
+      </ActivityDetails>
       </>}
     </div>
   );
@@ -245,21 +254,22 @@ const PulleyControls: React.FC<{ setup: PulleySetup; change: (o: Partial<PulleyS
 export const LeverView: React.FC<{ initial: LeverSetup; editable?: boolean; alt?: string; startProgress?: number } & MachineViewControl<LeverSetup>> = ({ initial, editable = false, alt, startProgress = 0, ...ctl }) => {
   const { setup, p, setP, change, part, showScene, showReadout } = useMachineState(initial, startProgress, ctl);
   const drag = useHandleDrag();
+  const { width: W, height: H, isMobile } = useDiagramLayout(drag.svgRef, 440, 280);
   const ix = ctl.interaction;
   const vis = (id: string) => ix?.visibility[id] !== false;
   const sel = (id: string) => ix?.selectedId === id;
   const r = computeLever(setup);
   if (!r.valid) return showScene ? <div className="space-y-3" data-visual="leverLab">{errBox(r.reason ?? '', 'lever-error')}{editable && part === 'all' && <LeverControls setup={setup} change={change} />}</div> : null;
-  const W = 440, H = 262, cx = 220, cy = 120;
+  const cx = W / 2, cy = 120;
   const maxArm = Math.max(setup.loadArm, setup.effortArm);
-  const k = drag.frozen.current ?? 170 / maxArm;
+  const k = drag.frozen.current ?? (W / 2 - 48) / maxArm;
   const lpos = setup.loadArm * k;           // the load is always on the right
   const epos = (setup.kind === 'I' ? -1 : 1) * setup.effortArm * k; // effort on the left (Class I) or the right (II, III)
   const sign = r.state === 'balanced' ? 0 : r.state === 'load rises' ? 1 : -1;
   const shown = r.state === 'balanced' ? p * setup.turnDeg : sign * setup.turnDeg; // degrees, load side up positive
   const a = (-shown * Math.PI) / 180; // screen rotation: load side (right) up means a negative screen angle
   const pt = (x: number) => ({ x: cx + x * Math.cos(a), y: cy + x * Math.sin(a) });
-  const barL = pt(-175), barR = pt(175), L = pt(lpos), E = pt(epos);
+  const barL = pt(-(W / 2 - 40)), barR = pt(W / 2 - 40), L = pt(lpos), E = pt(epos);
   const loadPx = Math.max(24, Math.min(60, r.load * 0.3)), effPx = Math.max(24, Math.min(60, Math.max(r.balanceEffort, setup.effort) * 0.3));
   const eDown = setup.kind === 'I';
   const turnRad = (shown * Math.PI) / 180;
@@ -270,16 +280,16 @@ export const LeverView: React.FC<{ initial: LeverSetup; editable?: boolean; alt?
       {showScene && <svg ref={drag.svgRef} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={text} className="w-full max-w-[600px] mx-auto block rounded-xl bg-surface-lowest border border-surface-border" data-testid="lever-svg" style={ix ? { touchAction: 'none' } : undefined} onPointerDown={() => ix?.onSelect(null)}>
         {vis('fulcrum') && <g onPointerDown={(e) => { if (ix) { e.stopPropagation(); ix.onSelect('fulcrum'); } }} className={ix ? 'cursor-pointer' : undefined}>
         <polygon points={`${cx},${cy} ${cx - 16},${cy + 40} ${cx + 16},${cy + 40}`} fill="#334155" stroke={sel('fulcrum') ? SEL : PHYS.axis} strokeWidth={sel('fulcrum') ? 3 : 2} data-testid="fulcrum" />
-        <text x={cx} y={cy + 56} textAnchor="middle" fontSize={11} fill="#94A3B8">fulcrum</text>
+        <text x={cx} y={cy + 56} textAnchor="middle" fontSize={12} fill="#94A3B8">fulcrum</text>
         </g>}
         <line x1={barL.x} y1={barL.y} x2={barR.x} y2={barR.y} stroke="#cbd5e1" strokeWidth={7} strokeLinecap="round" data-testid="bar" />
         {vis('load') && <g onPointerDown={(e) => { if (ix) { e.stopPropagation(); ix.onSelect('load'); } }} className={ix ? 'cursor-pointer' : undefined}>
         {sel('load') && <circle cx={L.x} cy={L.y} r={13} fill="none" stroke={SEL} strokeWidth={2} strokeDasharray="4 3" />}
-        <g data-arrow="load"><Arrow x1={L.x} y1={L.y} x2={L.x} y2={L.y + loadPx} color={PHYS.vertical} width={4} /><text x={L.x} y={L.y + loadPx + 14} textAnchor="middle" fontSize={11} fontWeight={700} fill={PHYS.vertical}>load {f2(r.load)} N</text></g>
+        <g data-arrow="load"><Arrow x1={L.x} y1={L.y} x2={L.x} y2={L.y + loadPx} color={PHYS.vertical} width={4} /><text x={L.x} y={L.y + loadPx + 14} textAnchor="middle" fontSize={12} fontWeight={700} fill={PHYS.vertical}>load {f2(r.load)} N</text></g>
         </g>}
         {vis('effort') && <g onPointerDown={(e) => { if (ix) { e.stopPropagation(); ix.onSelect('effort'); } }} className={ix ? 'cursor-pointer' : undefined}>
         {sel('effort') && <circle cx={E.x} cy={E.y} r={13} fill="none" stroke={SEL} strokeWidth={2} strokeDasharray="4 3" />}
-        <g data-arrow="effort">{eDown ? <><Arrow x1={E.x} y1={E.y} x2={E.x} y2={E.y + effPx} color={ENERGY.work} width={4} /><text x={E.x} y={E.y + effPx + 14} textAnchor="middle" fontSize={11} fontWeight={800} fill={ENERGY.work}>effort {f2(setup.effort)} N</text></> : <><Arrow x1={E.x} y1={E.y} x2={E.x} y2={E.y - effPx} color={ENERGY.work} width={4} /><text x={E.x} y={E.y - effPx - 6} textAnchor="middle" fontSize={11} fontWeight={800} fill={ENERGY.work}>effort {f2(setup.effort)} N</text></>}</g>
+        <g data-arrow="effort">{eDown ? <><Arrow x1={E.x} y1={E.y} x2={E.x} y2={E.y + effPx} color={ENERGY.work} width={4} /><text x={E.x} y={E.y + effPx + 14} textAnchor="middle" fontSize={12} fontWeight={800} fill={ENERGY.work}>effort {f2(setup.effort)} N</text></> : <><Arrow x1={E.x} y1={E.y} x2={E.x} y2={E.y - effPx} color={ENERGY.work} width={4} /><text x={E.x} y={E.y - effPx - 6} textAnchor="middle" fontSize={12} fontWeight={800} fill={ENERGY.work}>effort {f2(setup.effort)} N</text></>}</g>
         </g>}
         {ix && vis('load') && <circle data-handle="load-arm" cx={L.x} cy={L.y} r={8} fill="#0f172a" fillOpacity={0.6} stroke={sel('load') ? SEL : PHYS.vertical} strokeWidth={2} className={ix.locks.load ? 'cursor-not-allowed' : 'cursor-ew-resize'}
           onPointerDown={(e) => drag.grab(e, k, () => ix.onSelect('load'), Boolean(ix.locks.load))}
@@ -289,13 +299,14 @@ export const LeverView: React.FC<{ initial: LeverSetup; editable?: boolean; alt?
           onPointerDown={(e) => drag.grab(e, k, () => ix.onSelect('effort'), Boolean(ix.locks.effort))}
           onPointerMove={(e) => { const sc = drag.frozen.current; const v = drag.point(e); if (sc !== null && v) change({ effortArm: Math.max(LEVER_LIMITS.armMin, Math.min(LEVER_LIMITS.armMax, Math.round((Math.abs((v.x - cx) * Math.cos(a) + (v.y - cy) * Math.sin(a))) / sc * 10) / 10)) }); }}
           onPointerUp={drag.release} onPointerCancel={drag.release}><title>Drag to change the effort arm</title></circle>}
-        <line x1={cx} y1={cy + 100} x2={cx + lpos} y2={cy + 100} stroke={PHYS.distance} strokeWidth={2} /><text x={cx + lpos / 2} y={cy + 116} textAnchor="middle" fontSize={11} fill={PHYS.distance}>load arm L₂ = {f2(setup.loadArm)} m</text>
-        <line x1={cx} y1={cy + 124} x2={cx + epos} y2={cy + 124} stroke={PHYS.displacement} strokeWidth={2} /><text x={cx + epos / 2} y={cy + 140} textAnchor="middle" fontSize={11} fill={PHYS.displacement}>effort arm L₁ = {f2(setup.effortArm)} m</text>
+        <line x1={cx} y1={cy + 100} x2={cx + lpos} y2={cy + 100} stroke={PHYS.distance} strokeWidth={2} /><text x={cx + lpos / 2} y={cy + 116} textAnchor="middle" fontSize={12} fill={PHYS.distance}>{isMobile ? 'L₂' : 'load arm L₂'} = {f2(setup.loadArm)} m</text>
+        <line x1={cx} y1={cy + 124} x2={cx + epos} y2={cy + 124} stroke={PHYS.displacement} strokeWidth={2} /><text x={cx + epos / 2} y={cy + 140} textAnchor="middle" fontSize={12} fill={PHYS.displacement}>{isMobile ? 'L₁' : 'effort arm L₁'} = {f2(setup.effortArm)} m</text>
       </svg>}
       {part === 'all' && <div className="flex flex-wrap items-center gap-2"><ProgressControl value={p} onChange={setP} label="Turn the lever (balanced)" testid="lever-progress" unit="of the turn" /></div>}
       {showReadout && <>
       <p className="text-xs text-slate-300" data-testid="lever-now">{r.state === 'balanced' ? `Turned ${f2(Math.abs(shown))}°: the effort end has moved ${f2(d1)} m and the load end ${f2(d2)} m (arc = arm × angle); work by the effort ${f2(r.balanceEffort * d1)} J, work on the load ${f2(r.load * d2)} J.` : `Not balanced: the lever turns so that the load ${r.state === 'load rises' ? 'rises' : 'falls'}. Set the effort to ${f2(r.balanceEffort)} N to balance it.`}</p>
       {editable && part === 'all' && <LeverControls setup={setup} change={change} />}
+      <ActivityDetails title="Measurements and explanation">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" data-testid="lever-readout">
         {cellOf('balance', 'effort that balances', `${f2(r.balanceEffort)} N`, ENERGY.work)}
         {cellOf('ma', 'mechanical advantage = load ÷ effort', `${f2(r.mechanicalAdvantage)} (= L₁ ÷ L₂)`)}
@@ -309,6 +320,7 @@ export const LeverView: React.FC<{ initial: LeverSetup; editable?: boolean; alt?
       <p className="text-sm rounded-xl border px-3 py-2 text-slate-100" style={{ borderColor: PHYS.correct }} data-testid="lever-check">{'✓ '}F₁ × L₁ = {f2(r.balanceEffort)} × {f2(setup.effortArm)} = {f2(r.balanceEffort * setup.effortArm)} N m = F₂ × L₂ = {f2(r.load)} × {f2(setup.loadArm)} = {f2(r.loadTorque)} N m. The effort end moves {f2(r.effortDistance / Math.max(r.loadDistance, 1e-12))} times as far as the load end: a smaller force over a longer distance, the same work. A lever does not create energy.</p>
       {!alt && <p className="text-xs text-slate-300" data-testid="lever-description">{text}</p>}
       <p className="text-[11px] text-slate-400">Assumptions: a rigid, light bar turning slowly about a frictionless fulcrum through a small angle (up to {LEVER_LIMITS.turnMax}°); the weights act downwards; the effort acts in the direction that raises the load. The turning effect (force × arm, N m) is used only to decide the balance and is marked as enrichment beyond the textbook's F₁ × L₁ = F₂ × L₂.</p>
+      </ActivityDetails>
       </>}
     </div>
   );

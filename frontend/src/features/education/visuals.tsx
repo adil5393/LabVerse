@@ -6,6 +6,9 @@
 
 import React, { createContext, useContext } from 'react';
 import type { VisualRef } from '../../engine/education/types';
+import { InteractiveActivity } from '../../components/InteractiveActivity';
+
+const activityKinds = new Set(['motionTrack', 'motionGraphs', 'derivation', 'circularMotion', 'forceArrows', 'forceCart', 'brakingDemo', 'secondLawDerivation', 'twoBody', 'pairIdentify', 'workLab', 'kineticLab', 'workDerivation', 'energyLab', 'powerLab', 'pulleyLab', 'rampLab', 'leverLab', 'soundVibration', 'soundBellJar', 'soundWave', 'soundGraph']);
 
 export interface VisualProps {
   props: Record<string, unknown>;
@@ -31,7 +34,9 @@ export const VisualHost: React.FC<{ visual: VisualRef; onAnswer?: (id: string) =
   }
   return (
     <figure className="m-0 min-w-0">
-      <div className="science-surface rounded-xl overflow-hidden"><Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} /></div>
+      {activityKinds.has(visual.kind)
+        ? <InteractiveActivity><Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} /></InteractiveActivity>
+        : <div className="science-surface rounded-xl overflow-hidden"><Visual props={visual.props ?? {}} alt={visual.alt} onAnswer={onAnswer} locked={locked} /></div>}
       <figcaption className="mt-2 text-xs text-slate-400 leading-relaxed">{visual.alt}</figcaption>
     </figure>
   );

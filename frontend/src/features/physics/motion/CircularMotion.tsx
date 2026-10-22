@@ -1,3 +1,5 @@
+import { useDiagramLayout } from '../shared/viewportProfiles';
+import { ActivityDetails } from '../../../components/InteractiveActivity';
 /**
  * Uniform circular motion experiment (PHY-1D). Real two-dimensional geometry: the position on the circle,
  * the tangent velocity, the arc distance and the straight-line chord displacement all come from
@@ -17,7 +19,7 @@ import {
 } from '../shared/controls';
 
 const r2 = (n: number, p = 2): string => { const r = Math.round(n * 10 ** p) / 10 ** p; return `${r < 0 ? '−' : ''}${Math.abs(r)}`; };
-const S = 300, C0 = S / 2, R_PX = 110;
+
 
 const Stat: React.FC<{ id: string; label: string; value: string; color: string; symbol: string; note?: string }> = ({ id, label, value, color, symbol, note }) => (
   <div className="rounded-lg border border-surface-border bg-surface-card px-3 py-2 min-w-0" style={{ borderLeft: `4px solid ${color}` }}>
@@ -116,6 +118,9 @@ export type CircularMotionModel = ReturnType<typeof useCircularMotion>;
 /** The picture: the circle with the arc, the chord, the velocity and the towards-the-centre arrow, and its legend. */
 export const CircleScene: React.FC<{ c: CircularMotionModel; alt?: string; hidden?: Record<string, boolean> }> = ({ c, alt, hidden = {} }) => {
   const { setup, s } = c;
+  const ref = useRef<SVGSVGElement>(null);
+  const { width: S } = useDiagramLayout(ref, 300, 300);
+  const C0 = S / 2, R_PX = Math.max(40, S / 2 - 48);
   const show = (id: string) => !hidden[id];
   const k = R_PX / setup.radiusM;
   const P = (x: number, y: number) => ({ px: C0 + x * k, py: C0 - y * k });
@@ -135,13 +140,13 @@ export const CircleScene: React.FC<{ c: CircularMotionModel; alt?: string; hidde
   return (
     <>
       <p className="sr-only">{text}</p>
-      <svg viewBox={`0 0 ${S} ${S}`} role="img" aria-label={text} className="w-full max-w-[420px] mx-auto rounded-xl bg-surface-lowest border border-surface-border block">
+      <svg ref={ref} viewBox={`0 0 ${S} ${S}`} role="img" aria-label={text} className="w-full max-w-[420px] mx-auto rounded-xl bg-surface-lowest border border-surface-border block">
         <circle cx={C0} cy={C0} r={R_PX} fill="none" stroke={PHYS.axis} strokeWidth={1.5} strokeDasharray="4 4" />
-        <circle cx={C0} cy={C0} r={3} fill={PHYS.origin} /><text x={C0 + 6} y={C0 + 14} fontSize={10} fill={PHYS.origin}>centre</text>
+        <circle cx={C0} cy={C0} r={3} fill={PHYS.origin} /><text x={C0 + 6} y={C0 + 14} fontSize={12} fill={PHYS.origin}>centre</text>
         {show('arc') && arcPath && <path d={arcPath} fill="none" stroke={PHYS.distance} strokeWidth={4} />}
         {show('displacement') && <path d={`M${start.px},${start.py} L${now.px},${now.py}`} stroke={PHYS.displacement} strokeWidth={2.5} />}
         {show('displacement') && s.displacement > 0.01 * setup.radiusM && <path d={head(start.px, start.py, now.px, now.py)} fill={PHYS.displacement} />}
-        <circle cx={start.px} cy={start.py} r={5} fill="none" stroke={PHYS.position} strokeWidth={2} /><text x={start.px + 8} y={start.py - 8} fontSize={10} fill={PHYS.position}>start</text>
+        <circle cx={start.px} cy={start.py} r={5} fill="none" stroke={PHYS.position} strokeWidth={2} /><text x={start.px + 8} y={start.py - 8} fontSize={12} fill={PHYS.position}>start</text>
         {show('acceleration') && <g><g stroke={PHYS.acceleration} strokeDasharray="4 3" strokeWidth={2}><line x1={now.px} y1={now.py} x2={aTip.px} y2={aTip.py} /></g>
         <path d={head(now.px, now.py, aTip.px, aTip.py)} fill={PHYS.acceleration} /></g>}
         {show('velocity') && <g><line x1={now.px} y1={now.py} x2={tip.px} y2={tip.py} stroke={PHYS.velocity} strokeWidth={3} />
@@ -322,7 +327,7 @@ export const CircularMotionView: React.FC<CircularMotionProps> = ({ radiusM = 10
       )}
 
       {/* 3. Measurements and Live Observations */}
-      <CircleReadout c={c} />
+      <ActivityDetails title="Measurements and observations"><CircleReadout c={c} /></ActivityDetails>
     </div>
   );
 };

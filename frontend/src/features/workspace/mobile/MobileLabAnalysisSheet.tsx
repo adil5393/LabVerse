@@ -86,7 +86,7 @@ export const MobileLabAnalysisSheet: React.FC<MobileLabAnalysisSheetProps> = ({
 
       {/* Expanded Body: Horizontal Tabs Bar + Scrollable Tab Content */}
       {isExpanded && (
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-surface-lowest">
+        <div className="science-surface flex-1 flex flex-col min-h-0 overflow-hidden bg-surface-lowest text-on-surface">
           {/* Tabs Bar */}
           <div
             role="tablist"

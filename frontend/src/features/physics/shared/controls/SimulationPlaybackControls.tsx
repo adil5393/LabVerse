@@ -74,8 +74,8 @@ export const SimulationPlaybackControls: React.FC<SimulationPlaybackControlsProp
       {!compact && (
         <div className="flex items-center justify-between w-full text-xs font-mono">
           <span className="flex items-center gap-1.5" style={{ color: PHYS.time }}>
-            <span className="material-symbols-outlined text-sm select-none" aria-hidden>
-              timer
+            <span className="text-sm select-none" aria-hidden>
+              ◷
             </span>
             <span>Simulated time: {r2(time)} s / {maxTime} s</span>
           </span>
@@ -96,8 +96,8 @@ export const SimulationPlaybackControls: React.FC<SimulationPlaybackControlsProp
         className={`${btnH} rounded-xl font-bold flex items-center justify-center gap-1.5 text-slate-950 shadow-sm transition-transform active:scale-95`}
         style={{ background: PHYS.time }}
       >
-        <span className="material-symbols-outlined text-base select-none" aria-hidden>
-          {playing ? 'pause' : atEnd ? 'replay' : 'play_arrow'}
+        <span className="text-base select-none" aria-hidden>
+          {playing ? 'Ⅱ' : atEnd ? '↻' : '▶'}
         </span>
         <span>{playing ? 'Pause' : atEnd ? 'Replay' : 'Play'}</span>
       </button>
@@ -147,16 +147,16 @@ export const SimulationPlaybackControls: React.FC<SimulationPlaybackControlsProp
           data-testid={setupToggle.testId ?? 'setup-toggle'}
           className={`${btnH} rounded-xl border border-surface-border bg-surface-lowest hover:bg-surface-card text-slate-200 font-semibold flex items-center justify-center gap-1.5 transition-colors select-none`}
         >
-          <span className="material-symbols-outlined text-base text-sky-400 select-none" aria-hidden>
-            tune
+          <span className="text-base text-sky-400 select-none" aria-hidden>
+            ⚙
           </span>
           <span>{setupToggle.label ?? 'Setup'}</span>
           <span
-            className="material-symbols-outlined text-sm text-slate-400 transition-transform duration-200 select-none"
+            className="text-sm text-slate-400 transition-transform duration-200 select-none"
             style={{ transform: setupToggle.open ? 'rotate(180deg)' : 'rotate(0deg)' }}
             aria-hidden
           >
-            expand_more
+            ⌄
           </span>
         </button>
       )}

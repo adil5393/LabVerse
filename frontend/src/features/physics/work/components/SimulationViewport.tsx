@@ -10,6 +10,7 @@ import {
 } from '../../../../engine/physics/work/workModel';
 import { useViewportCamera, clientToViewBox, viewBoxToApparatus, DEFAULT_CAMERA, type ViewportCamera } from './useViewportCamera';
 import { useViewportProfile } from '../../shared/viewportProfiles';
+import { MobileWorkScene } from './MobileWorkScene';
 
 const W = 1000, H = 450;
 /** Matches the 3 s playback in WorkView. */
@@ -311,11 +312,16 @@ export const SimulationViewport: React.FC<SimulationViewportProps> = ({
   const isTrackSelected = selectedObjectId === 'track' || selectedObjectId === 'Linear_Track';
   const isCaliperSelected = selectedObjectId === 'caliper' || selectedObjectId === 'DISP_01';
 
+  if (isMobile) return <section ref={containerRef} className="w-full h-full min-w-0 overflow-y-auto">
+    <MobileWorkScene result={r} progress={progress} showVertical={showVertical} alt={alt}
+      selectedObjectId={selectedObjectId} onSelectObject={onSelectObject} onSetupChange={onSetupChange}
+      lockMap={lockMap} showCart={showCart} showTrack={showTrack} showVectors={vectorsOn} showCaliper={showCaliper} />
+  </section>;
+
   return (
-    <section className="flex-1 flex flex-col bg-surface-container-lowest relative overflow-hidden border-r border-outline-variant h-full select-none">
+    <section ref={containerRef} className="flex-1 flex flex-col bg-surface-container-lowest relative overflow-hidden border-r border-outline-variant h-full select-none">
       {/* Viewport Canvas Arena */}
       <div
-        ref={containerRef}
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}

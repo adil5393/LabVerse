@@ -280,8 +280,9 @@ export const WorkDerivations: React.FC = () => {
           <h1 className="text-3xl font-black text-white">Derivations for Chapter 7</h1>
           <p className="text-sm text-slate-300 max-w-3xl">Follow the reasoning behind the formulas, change the numbers and supply the missing reasoning in the key steps. Reading a derivation never counts as mastery. Relations marked enrichment are LabVerse additions.</p>
         </header>
-        <DerivationView key={params.get('d') ?? 'K'} id={params.get('d') ?? 'K'} />
+        <InteractiveActivity><DerivationView key={params.get('d') ?? 'K'} id={params.get('d') ?? 'K'} /></InteractiveActivity>
       </main>
     </div>
   );
 };
+import { InteractiveActivity } from '../../../components/InteractiveActivity';

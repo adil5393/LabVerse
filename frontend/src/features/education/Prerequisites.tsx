@@ -348,7 +348,7 @@ export const PrerequisiteSet: React.FC<{
 };
 
 export const ChapterPrerequisites: React.FC<{ chapter: EduChapter }> = ({ chapter }) => (
-  <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
+  <NarrationEnabledProvider enabled>
   <div className="rounded-3xl border border-surface-border/80 bg-surface-lowest/70 p-4 sm:p-5 md:p-6 min-w-0 w-full overflow-hidden shadow-xs" data-testid="chapter-prerequisites">
     <PrerequisiteSet
       chapter={chapter}
@@ -364,7 +364,7 @@ export const UnitPrerequisites: React.FC<{ chapter: EduChapter; unitId: string }
   const unit = chapter.units.find((u) => u.id === unitId);
   if (!unit) return null;
   return (
-    <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
+    <NarrationEnabledProvider enabled>
       <PrerequisiteSet
         chapter={chapter}
         ids={unit.prerequisiteIds}

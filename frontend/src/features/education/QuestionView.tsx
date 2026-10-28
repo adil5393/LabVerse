@@ -36,16 +36,19 @@ export interface QuestionViewProps {
   disabled?: boolean;
   submitLabel?: string;
   savedAttempt?: { input: AnswerInput; evaluation: Evaluation };
+  /** Assessment mode: record the answer without revealing whether it is right (feedback comes after the whole assessment). */
+  hideFeedback?: boolean;
 }
 
-export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, onRefresher, lockOnCorrect = true, disabled, submitLabel = 'Check answer', savedAttempt }) => {
+export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, onRefresher, lockOnCorrect = true, disabled, submitLabel = 'Check answer', savedAttempt, hideFeedback }) => {
   const previousInput = savedAttempt?.input;
   const [selected, setSelected] = useState<string | null>(previousInput && (previousInput.kind === 'choice' || previousInput.kind === 'visual') ? previousInput.id : null);
   const [text, setText] = useState(previousInput?.kind === 'numeric' ? previousInput.text : '');
   const [result, setResult] = useState<Evaluation | null>(savedAttempt?.evaluation ?? null);
   const judges = useJudges();
   const [order, setOrder] = useState<string[]>(() => previousInput?.kind === 'order' ? previousInput.ids : question.kind === 'order' ? question.items.map((i) => i.id) : []);
-  const done = result?.correct === true && lockOnCorrect;
+  const done = result?.correct === true && lockOnCorrect && !hideFeedback;
+  const [parts, setParts] = useState<Record<string, string>>(previousInput?.kind === 'multi' ? previousInput.values : {});
   const inputId = `q-${question.id}`;
 
   const submit = (input: AnswerInput) => {
@@ -129,7 +132,7 @@ export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, 
         </div>
       )}
 
-      {(question.kind === 'numeric' || question.kind === 'judged') && (
+      {(question.kind === 'numeric' || (question.kind === 'judged' && question.input !== 'pair')) && (
         <form
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => { e.preventDefault(); if (!done && !disabled) submit({ kind: 'numeric', text }); }}
@@ -151,7 +154,25 @@ export const QuestionView: React.FC<QuestionViewProps> = ({ question, onSubmit, 
         </form>
       )}
 
-      {result && <MisconceptionFeedback evaluation={result} onRefresher={onRefresher} />}
+      {(question.kind === 'multi' || (question.kind === 'judged' && question.input === 'pair')) && (
+        <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); if (!done && !disabled) submit({ kind: 'multi', values: parts }); }}>
+          {(question.kind === 'multi' ? question.parts : [{ id: 'x', label: 'x', unit: undefined }, { id: 'y', label: 'y', unit: undefined }]).map((p) => (
+            <div key={p.id} className="flex flex-wrap items-center gap-2" data-part={p.id}>
+              <label htmlFor={`${inputId}-${p.id}`} className="min-w-[120px] text-sm text-slate-200">{p.label}</label>
+              <input id={`${inputId}-${p.id}`} inputMode="decimal" autoComplete="off" value={parts[p.id] ?? ''} disabled={done || disabled}
+                onChange={(e) => { setParts((m) => ({ ...m, [p.id]: e.target.value })); setResult(null); }}
+                className="w-32 min-h-[48px] px-3 rounded-xl bg-surface-lowest border border-surface-border text-white font-mono text-base focus:border-cyan-400 outline-none" />
+              {p.unit && <span className="text-sm text-slate-300">{p.unit}</span>}
+            </div>
+          ))}
+          <button type="submit" disabled={done || disabled || (question.kind === 'multi' ? question.parts : [{ id: 'x' }, { id: 'y' }]).some((p) => !(parts[p.id] ?? '').trim())} className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm hover:bg-amber-400 disabled:opacity-40">
+            {submitLabel}
+          </button>
+        </form>
+      )}
+
+      {result && !hideFeedback && <MisconceptionFeedback evaluation={result} onRefresher={onRefresher} />}
+      {result && hideFeedback && <p role="status" data-testid="answer-saved" className="text-sm text-slate-300">{result.invalid ? result.message : 'Answer saved. You can change it until you submit the assessment.'}</p>}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { ExplainerStep, GuidedItem, IndependentItem, LearningPhase, Reflection, WorkedExample as WorkedExampleData } from '../../engine/education/types';
+import type { ExplainerStep, GuidedItem, IndependentItem, LabTask, LearningPhase, Reflection, WorkedExample as WorkedExampleData } from '../../engine/education/types';
+import { LabTaskCard, PredictionCard, ProofList } from './LessonInteractions';
 import { useEducationStore } from '../../store/useEducationStore';
 import { QuestionView } from './QuestionView';
 import { VisualHost } from './visuals';
@@ -27,8 +28,16 @@ export const ConceptExplainer: React.FC<{
   step: ExplainerStep;
   lessonId?: string;
   onRefresher?: (id: string) => void;
-}> = ({ step, lessonId, onRefresher }) => {
+  /** The lesson task named by `step.labTaskId`, resolved by the lesson page. */
+  labTask?: LabTask;
+  /** Where the laboratory should send the student back to. */
+  backHref?: string;
+}> = ({ step, lessonId, onRefresher, labTask, backHref }) => {
   const markStepSeen = useEducationStore((s) => s.markStepSeen);
+  const storedPrediction = useEducationStore((s) => (lessonId && step.prediction ? Boolean(s.lessons[lessonId]?.predictions?.[step.prediction.id]) : false));
+  const [predicted, setPredicted] = useState(false);
+  // A step that asks for a prediction keeps its explanation hidden until the student commits.
+  const revealed = !step.prediction || storedPrediction || predicted;
   const recordCheck = useEducationStore((s) => s.recordCheck);
   // Seeing a step is recorded only as "seen"; it never counts toward mastery.
   useEffect(() => {
@@ -50,23 +59,13 @@ export const ConceptExplainer: React.FC<{
       </div>
       <Nar as="h3" domId={`step-${step.id}`} id={nid.title(step.id)} className="text-lg md:text-xl font-black text-white">{step.title}</Nar>
       {phase && <p className="text-xs text-slate-400 -mt-2">{phase.note}</p>}
+      {step.prediction && <PredictionCard lessonId={lessonId} prediction={step.prediction} onCommitted={() => setPredicted(true)} />}
+      {revealed && <>
       {shownVisual && ['forceCart', 'motionTrack', 'twoBody', 'brakingDemo', 'circularMotion'].includes(shownVisual.kind) ? (
         <div className="space-y-4">
           <div className="space-y-3 text-sm md:text-base text-slate-200 leading-relaxed max-w-3xl">
             {step.paragraphs.map((p, i) => <Nar key={i} id={nid.para(step.id, i)}>{p}</Nar>)}
-            {step.proof && (
-              <ol className="space-y-2" aria-label="Proof, one claim and reason per line">
-                {step.proof.map((ps, i) => (
-                  <Nar as="li" key={i} id={nid.proof(step.id, i)}>
-                    <button type="button" aria-current={activeProof === i} data-proof-step={i + 1} onClick={() => setActiveProof(i)}
-                      className={`w-full text-left min-h-[48px] rounded-xl border px-3 py-2 ${activeProof === i ? 'border-emerald-400 bg-emerald-950/30' : 'border-surface-border bg-surface-lowest hover:border-slate-500'}`}>
-                      <span className="font-mono text-emerald-300 mr-2">{i + 1}.</span><span className="text-white">{ps.claim}</span>
-                      <span className="block text-xs text-slate-400 mt-1"><em>Because: </em>{ps.reason}</span>
-                    </button>
-                  </Nar>
-                ))}
-              </ol>
-            )}
+            {step.proof && <ProofList stepId={step.id} proof={step.proof} active={activeProof} onSelect={setActiveProof} lessonId={lessonId} />}
             {step.vocabulary && step.vocabulary.length > 0 && (
               <dl className="grid gap-1.5 text-sm">
                 {step.vocabulary.map((v) => (
@@ -95,19 +94,7 @@ export const ConceptExplainer: React.FC<{
         <div className={step.visual ? 'grid gap-5 lg:grid-cols-2 items-start' : ''}>
           <div className="space-y-3 text-sm md:text-base text-slate-200 leading-relaxed">
             {step.paragraphs.map((p, i) => <Nar key={i} id={nid.para(step.id, i)}>{p}</Nar>)}
-            {step.proof && (
-              <ol className="space-y-2" aria-label="Proof, one claim and reason per line">
-                {step.proof.map((ps, i) => (
-                  <Nar as="li" key={i} id={nid.proof(step.id, i)}>
-                    <button type="button" aria-current={activeProof === i} data-proof-step={i + 1} onClick={() => setActiveProof(i)}
-                      className={`w-full text-left min-h-[48px] rounded-xl border px-3 py-2 ${activeProof === i ? 'border-emerald-400 bg-emerald-950/30' : 'border-surface-border bg-surface-lowest hover:border-slate-500'}`}>
-                      <span className="font-mono text-emerald-300 mr-2">{i + 1}.</span><span className="text-white">{ps.claim}</span>
-                      <span className="block text-xs text-slate-400 mt-1"><em>Because: </em>{ps.reason}</span>
-                    </button>
-                  </Nar>
-                ))}
-              </ol>
-            )}
+            {step.proof && <ProofList stepId={step.id} proof={step.proof} active={activeProof} onSelect={setActiveProof} lessonId={lessonId} />}
             {step.vocabulary && step.vocabulary.length > 0 && (
               <dl className="grid gap-1.5 text-sm">
                 {step.vocabulary.map((v) => (
@@ -143,6 +130,8 @@ export const ConceptExplainer: React.FC<{
           />
         </div>
       )}
+      {labTask && lessonId && <LabTaskCard task={labTask} lessonId={lessonId} backHref={backHref ?? '/'} />}
+      </>}
     </article>
     </NarrationRegion>
   );
@@ -276,11 +265,23 @@ export const GuidedPractice: React.FC<{ item: GuidedItem; lessonId: string; onRe
 // IndependentPractice: "You do". Hints and solutions are honest about help.
 // ---------------------------------------------------------------------------
 
-const IndependentCard: React.FC<{ item: IndependentItem; lessonId: string; index: number; onRefresher?: (id: string) => void }> = ({ item, lessonId, index, onRefresher }) => {
-  const rec = useEducationStore((s) => s.lessons[lessonId]?.independent[item.id]);
-  const submit = useEducationStore((s) => s.submitIndependent);
-  const hint = useEducationStore((s) => s.recordIndependentHint);
-  const reveal = useEducationStore((s) => s.revealIndependentSolution);
+const DIFFICULTY_LABEL = { basic: 'Basic', standard: 'Standard', challenge: 'Challenge' } as const;
+
+/**
+ * One independent problem. Bound to a lesson (`lessonId`) or, when `practiceChapterId` is given, to that chapter's practice bank.
+ * The help rules are identical either way; only where the evidence is filed differs.
+ */
+export const IndependentCard: React.FC<{ item: IndependentItem; lessonId: string; index: number; onRefresher?: (id: string) => void; practiceChapterId?: string }> = ({ item, lessonId, index, onRefresher, practiceChapterId }) => {
+  const rec = useEducationStore((s) => (practiceChapterId ? s.practice[practiceChapterId]?.[item.id] : s.lessons[lessonId]?.independent[item.id]));
+  const submitLesson = useEducationStore((s) => s.submitIndependent);
+  const hintLesson = useEducationStore((s) => s.recordIndependentHint);
+  const revealLesson = useEducationStore((s) => s.revealIndependentSolution);
+  const submitPractice = useEducationStore((s) => s.submitPractice);
+  const hintPractice = useEducationStore((s) => s.recordPracticeHint);
+  const revealPractice = useEducationStore((s) => s.revealPracticeSolution);
+  const submit = (_l: string, id: string, ev: Parameters<typeof submitLesson>[2]) => (practiceChapterId ? submitPractice(practiceChapterId, id, ev) : submitLesson(lessonId, id, ev));
+  const hint = (_l: string, id: string) => (practiceChapterId ? hintPractice(practiceChapterId, id) : hintLesson(lessonId, id));
+  const reveal = (_l: string, id: string) => (practiceChapterId ? revealPractice(practiceChapterId, id) : revealLesson(lessonId, id));
   const [hintLevel, setHintLevel] = useState(0);
   const [showSolution, setShowSolution] = useState(false);
   const attempts = rec?.attempts ?? 0;
@@ -288,7 +289,7 @@ const IndependentCard: React.FC<{ item: IndependentItem; lessonId: string; index
   return (
     <div className="rounded-xl border border-surface-border p-4 space-y-3" data-independent={item.id}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-mono text-slate-400">Problem {index + 1} · {item.topic}</span>
+        <span className="text-xs font-mono text-slate-400">Problem {index + 1} · {item.topic}{item.difficulty ? ` · ${DIFFICULTY_LABEL[item.difficulty]}` : ''}{item.marks ? ` · ${item.marks} mark${item.marks === 1 ? '' : 's'}` : ''}</span>
         {rec?.correct && (
           <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-surface-border text-slate-300" data-testid="independent-badge">
             {rec.firstAttemptUnassisted ? 'Independent success' : 'Solved with help or retries'}

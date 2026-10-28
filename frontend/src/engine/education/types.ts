@@ -124,14 +124,43 @@ export interface JudgedQuestion {
   visual?: VisualRef;
   judgeId: string;
   explanation: string;
+  /**
+   * 'integer' (default): one whole number. 'pair': a point (x, y), for questions with many right answers such as "give any
+   * point on this line"; the judge receives x and y.
+   */
+  input?: 'integer' | 'pair';
 }
 
-export type Question = ChoiceQuestion | NumericQuestion | VisualQuestion | OrderQuestion | JudgedQuestion;
+/** One labelled number in a multi-part answer ("diameter = 9 cm, circumference = 28.26 cm"). */
+export interface NumericPart {
+  id: string;
+  label: string;
+  answer: number;
+  tolerance?: number;
+  unit?: string;
+}
+
+/**
+ * Several numbers that must all be right (for example a length and an angle). Every part is checked; a partly right answer
+ * says which parts are right so the student can fix the rest.
+ */
+export interface MultiNumericQuestion {
+  kind: 'multi';
+  id: string;
+  prompt: string;
+  visual?: VisualRef;
+  parts: NumericPart[];
+  defaultFeedback: FeedbackEntry;
+  explanation: string;
+}
+
+export type Question = ChoiceQuestion | NumericQuestion | VisualQuestion | OrderQuestion | JudgedQuestion | MultiNumericQuestion;
 
 export type AnswerInput =
   | { kind: 'choice' | 'visual'; id: string }
   | { kind: 'numeric'; text: string }
-  | { kind: 'order'; ids: string[] };
+  | { kind: 'order'; ids: string[] }
+  | { kind: 'multi'; values: Record<string, string> };
 
 export interface Verdict {
   correct: boolean;
@@ -140,7 +169,7 @@ export interface Verdict {
   misconception?: string;
 }
 
-export type JudgeRegistry = Record<string, (value: number) => Verdict>;
+export type JudgeRegistry = Record<string, (value: number, y?: number) => Verdict>;
 
 export interface Evaluation {
   correct: boolean;
@@ -163,7 +192,68 @@ export interface ProofStep {
   reason: string;
   /** Ids the chapter's visual should emphasise while this step is selected. */
   show?: string[];
+  /**
+   * Optional "supply the reason" interaction: the student picks the reason for this claim from these choices before it is shown.
+   * `reason` must be one of them. Recorded as a quick check (`proofCheckId`), so it is evidence of reasoning, never of mastery alone.
+   */
+  reasonChoices?: string[];
 }
+
+/**
+ * A prediction before an investigation. Not graded: the student commits to a choice, then the explanation (and the step's visual,
+ * notice and why) is revealed. What they predicted is kept as learning evidence so the reflection can compare it with the result.
+ */
+export interface PredictionPrompt {
+  id: string;
+  prompt: string;
+  options: ChoiceOption[];
+  /** The option that matches what the investigation shows (used only to word the reveal, never to score). */
+  expectedId?: string;
+  /**
+   * A numeric prediction instead of options: the student types a value. `answer` and `closeWithin` only word the reveal
+   * ("close" or "worth comparing"); a prediction is never scored.
+   */
+  numeric?: { unit?: string; answer?: number; closeWithin?: number };
+  /** Shown after the student commits. */
+  reveal: string;
+}
+
+/** One measurable goal of a laboratory task, met by events the laboratory reports (never by pressing a "done" button). */
+export interface LabGoal {
+  id: string;
+  label: string;
+  /** Laboratory event names that satisfy this goal (for example "chord-moved"). */
+  events?: string[];
+  /** Number of qualifying events needed (default 1). */
+  count?: number;
+  /** A named view or mode the student must open. */
+  view?: string;
+}
+
+/**
+ * A guided investigation inside a real laboratory. The lesson tells the laboratory what to set up (`setup`, passed through the
+ * route), the laboratory reports events, and goals are met by those events. Observations are values the laboratory measured.
+ */
+export interface LabTask {
+  id: string;
+  title: string;
+  instruction: string;
+  /** Route of the laboratory; the task id and lesson id are added as query parameters. */
+  href: string;
+  /** Opaque setup for the laboratory (experiment id, allowed tools, highlighted objects). */
+  setup?: Record<string, unknown>;
+  goals: LabGoal[];
+  /** Prompt for the observation the student records (a measured value plus their own note). */
+  observePrompt?: string;
+  /** What the observations should show, revealed once goals are met. */
+  expectedPattern?: string;
+  /** When true, the lesson is not completed (and not mastered) until every goal is met. */
+  requiredForMastery?: boolean;
+  /** A prediction to commit before the investigation opens (used when no lesson step is free to carry it). */
+  prediction?: PredictionPrompt;
+}
+
+export type PracticeDifficulty = 'basic' | 'standard' | 'challenge';
 
 export interface ExplainerStep {
   id: string;
@@ -181,6 +271,10 @@ export interface ExplainerStep {
   phase?: LearningPhase;
   /** A deductive argument, one claim and one reason per line, linked to the diagram. */
   proof?: ProofStep[];
+  /** Ask for a prediction first; the rest of the step is revealed after the student commits. */
+  prediction?: PredictionPrompt;
+  /** Show a laboratory task card (id of one of the lesson's `labTasks`) at the end of this step. */
+  labTaskId?: string;
 }
 
 export interface Prerequisite {
@@ -238,6 +332,60 @@ export interface IndependentItem {
   solution: string[];
   /** Which lesson objective this item tests (see EduLesson.objectives). */
   objective?: string;
+  difficulty?: PracticeDifficulty;
+  marks?: number;
+  /** Original question aligned to a textbook section, or an original question of LabVerse's own. Never copied text. */
+  source?: { kind: 'original' | 'textbook-aligned'; ref?: string };
+}
+
+/** A persisted chapter practice bank: groups of independent items, outside any one lesson. */
+export interface PracticeGroup {
+  id: string;
+  title: string;
+  blurb: string;
+  items: IndependentItem[];
+}
+
+export interface PracticeSet {
+  id: string;
+  title: string;
+  groups: PracticeGroup[];
+}
+
+/** Where an assessment question sits on the board's competency scale (CBSE question paper design). */
+export type Competency = 'knowledge' | 'application' | 'analysis';
+
+export interface AssessmentItem {
+  id: string;
+  topic: string;
+  /** Lesson whose ideas the item tests (for revision recommendations). */
+  lessonId?: string;
+  competency: Competency;
+  marks: number;
+  prompt: string;
+  visual?: VisualRef;
+  question: Question;
+  /** Shown only after the assessment is submitted. */
+  solution: string[];
+}
+
+export interface AssessmentSection {
+  id: string;
+  title: string;
+  items: AssessmentItem[];
+}
+
+/**
+ * An end-of-chapter assessment. No hints during the attempt; feedback and solutions appear after submission. Results feed
+ * readiness and revision recommendations; an attempt made in teacher demonstration mode is recorded as a demonstration.
+ */
+export interface ChapterAssessment {
+  id: string;
+  title: string;
+  instructions: string;
+  sections: AssessmentSection[];
+  /** Share of marks for "ready" (default MASTERY_SHARE). */
+  readyShare?: number;
 }
 
 export interface Reflection {
@@ -279,6 +427,10 @@ export interface EduLesson {
    * of one easy question cannot stand in for the whole lesson.
    */
   objectives?: LearningObjective[];
+  /** Guided investigations in a laboratory, shown from steps that name them (`labTaskId`). */
+  labTasks?: LabTask[];
+  /** Marks the lesson as an optional extension beyond the curriculum: never counted in chapter completion or mastery. */
+  extension?: boolean;
 }
 
 export interface EduUnit {
@@ -301,7 +453,11 @@ export interface EduChapter {
   /** Honest statement of what was verified against the textbook. */
   ncertNote: string;
   /** Subject shown first in the lesson breadcrumb (see subjects.ts). Defaults to mathematics. */
-  subject?: 'mathematics' | 'physics' | 'chemistry';
+  subject?: 'mathematics' | 'physics' | 'chemistry' | 'biology' | 'integrated-science';
+  /** Persisted chapter practice bank (optional). */
+  practice?: PracticeSet;
+  /** End-of-chapter assessment (optional). */
+  assessment?: ChapterAssessment;
   purpose: string;
   learn: string[];
   realWorld: string[];
@@ -316,6 +472,8 @@ export interface EduChapter {
     prerequisites: (prereqId: string) => string;
     lab: string;
     practice?: string;
+    /** Chapter assessment page, when the chapter has one. */
+    assessment?: string;
   };
 }
 
@@ -368,7 +526,81 @@ export interface LessonRecord {
   teacherDemo: boolean;
   /** Where the student last was, so a refresh resumes there. Navigation only: it is never evidence. */
   lastStage?: LessonStage;
+  /** Predictions committed before investigations, by prediction id. Learning evidence, never scored. */
+  predictions?: Record<string, { choiceId: string; at: number }>;
+  /** Laboratory task evidence, by task id. */
+  labTasks?: Record<string, LabTaskRecord>;
   updatedAt: number;
+}
+
+export interface LabObservation {
+  id: string;
+  /** What was measured, as the laboratory names it. */
+  label: string;
+  /** The measured value as the laboratory formatted it (units included). */
+  value: string;
+  /** The student's own note, if any. */
+  note?: string;
+  at: number;
+}
+
+export interface LabTaskRecord {
+  /** Count of each laboratory event received for this task. */
+  events: Record<string, number>;
+  viewsSeen: string[];
+  observations: LabObservation[];
+  /** Ids of goals met (derived from events and views, stored for display and migration). */
+  goalsMet: string[];
+  /** True if any part was done in teacher demonstration mode. */
+  demonstrated: boolean;
+  updatedAt: number;
+}
+
+export interface AssessmentAnswerRecord {
+  correct: boolean;
+  marks: number;
+  misconception?: string;
+}
+
+export interface AssessmentAttempt {
+  id: string;
+  assessmentId: string;
+  startedAt: number;
+  submittedAt: number;
+  answers: Record<string, AssessmentAnswerRecord>;
+  score: number;
+  maxScore: number;
+  /** Made in teacher demonstration mode: shown, never counted as the student's result. */
+  demonstrated: boolean;
+}
+
+/**
+ * Progress imported from an older chapter-specific store. Kept for display ("earlier version") and never counted as mastery:
+ * the older stores marked lessons complete on a button press and used looser mastery rules.
+ */
+export interface LegacyLessonImport {
+  legacyLessonId: string;
+  /** The current lesson that teaches the same idea, from the chapter's explicit mapping table (never by id equality). */
+  mappedLessonId?: string;
+  completedClaim: boolean;
+  /** 'old-rule' = met the older store's evidence rule; 'unverified' = flag saved before evidence existed. */
+  masteryClaim: 'none' | 'old-rule' | 'unverified';
+  teacherBypassed: boolean;
+  /** Per-question first-attempt evidence, as the older store recorded it. */
+  practice: Record<string, { attempts: number; correct: boolean; firstAttemptCorrect: boolean; assisted: boolean }>;
+  prediction?: { answer: string; correct?: boolean };
+  interactions: number;
+  observations: number;
+}
+
+export interface LegacyChapterImport {
+  /** The storage key the data came from (left untouched). */
+  sourceKey: string;
+  importedAt: number;
+  /** A copy of the raw JSON as found, for audit. */
+  raw: string;
+  lessons: Record<string, LegacyLessonImport>;
+  lastVisitedLessonId?: string;
 }
 
 export type LearningStatus = 'not_started' | 'in_progress' | 'completed' | 'demonstrated' | 'mastered' | 'needs_review';

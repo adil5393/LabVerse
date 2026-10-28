@@ -66,6 +66,15 @@ export function evaluateAnswer(q: Question, input: AnswerInput, judges?: JudgeRe
       return evaluateOrder(q.items, input.ids, q.explanation);
     }
     case 'judged': {
+      if (q.input === 'pair') {
+        if (input.kind !== 'multi') return { correct: false, invalid: true, message: 'Give both coordinates.' };
+        const px = parseNumberInput(input.values.x ?? ''); const py = parseNumberInput(input.values.y ?? '');
+        if (px === null || py === null) return { correct: false, invalid: true, message: 'Give a number for x and for y.' };
+        const judgeP = judges?.[q.judgeId];
+        if (!judgeP) return { correct: false, invalid: true, message: 'This question cannot be checked right now.' };
+        const vp = judgeP(px, py);
+        return { ...vp, message: vp.correct ? q.explanation : vp.message };
+      }
       if (input.kind !== 'numeric') return { correct: false, invalid: true, message: 'Type a whole number.' };
       const v = parseNumberInput(input.text);
       if (v === null || !Number.isInteger(v)) return { correct: false, invalid: true, message: 'Type a whole number, such as 12.' };
@@ -73,6 +82,17 @@ export function evaluateAnswer(q: Question, input: AnswerInput, judges?: JudgeRe
       if (!judge) return { correct: false, invalid: true, message: 'This question cannot be checked right now.' };
       const verdict = judge(v);
       return { ...verdict, message: verdict.correct ? q.explanation : verdict.message };
+    }
+    case 'multi': {
+      if (input.kind !== 'multi') return { correct: false, invalid: true, message: 'Fill in every part.' };
+      const parsed = q.parts.map((p) => ({ p, v: parseNumberInput(input.values[p.id] ?? '') }));
+      const missing = parsed.filter((x) => x.v === null);
+      if (missing.length) return { correct: false, invalid: true, message: `Give a number for ${missing.map((x) => x.p.label).join(' and ')}.` };
+      const wrong = parsed.filter((x) => Math.abs((x.v as number) - x.p.answer) > (x.p.tolerance ?? 1e-9));
+      if (!wrong.length) return { correct: true, message: q.explanation };
+      const right = q.parts.length - wrong.length;
+      const base = fromEntry(q.defaultFeedback);
+      return { correct: false, ...base, message: right > 0 ? `${wrong.map((x) => x.p.label).join(' and ')} ${wrong.length === 1 ? 'is' : 'are'} not right yet; the rest is correct. ${base.message}` : base.message };
     }
     case 'numeric': {
       if (input.kind !== 'numeric') return { correct: false, invalid: true, message: 'Type a number.' };
@@ -93,6 +113,7 @@ export function describeCorrectAnswer(q: Question): string {
     case 'visual': return q.correctId;
     case 'numeric': return `${q.answer}${q.unit ? ` ${q.unit}` : ''}`;
     case 'order': return q.items.map((i) => i.text).join(' \u2192 ');
-    case 'judged': return 'a number that satisfies the condition';
+    case 'judged': return q.input === 'pair' ? 'a point that satisfies the condition' : 'a number that satisfies the condition';
+    case 'multi': return q.parts.map((p) => `${p.label} = ${p.answer}${p.unit ? ` ${p.unit}` : ''}`).join(', ');
   }
 }

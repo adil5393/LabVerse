@@ -24,7 +24,7 @@ const List: React.FC<{ title: string; items: string[]; icon?: string }> = ({ tit
 );
 
 export const ChapterIntroduction: React.FC<{ chapter: EduChapter }> = ({ chapter }) => (
-  <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
+  <NarrationEnabledProvider enabled>
   <NarrationRegion segments={chapterIntroSegments(chapter)} resetKey={chapter.id}>
   <section
     aria-label="About this chapter"

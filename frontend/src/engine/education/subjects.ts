@@ -8,6 +8,8 @@ export const SUBJECTS: Record<string, SubjectCrumb> = {
   mathematics: { label: 'Mathematics', href: '/mathematics' },
   physics: { label: 'Physics', href: '/physics' },
   chemistry: { label: 'Chemistry', href: '/chemistry' },
+  biology: { label: 'Biology', href: '/biology' },
+  'integrated-science': { label: 'Integrated Science', href: '/science' },
 };
 
 export const subjectCrumb = (chapter: Pick<EduChapter, 'subject'>): SubjectCrumb => SUBJECTS[chapter.subject ?? 'mathematics'] ?? SUBJECTS.mathematics;

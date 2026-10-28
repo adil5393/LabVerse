@@ -44,6 +44,8 @@ export function questionSegments(prefix: string, q: Question): NarrationSegment[
     q.items.forEach((o, i) => out.push(...seg(`${prefix}:item${i}`, `Step ${LETTERS[i] ?? i + 1}: ${o.text}`)));
   } else if (q.kind === 'numeric' && q.unit) {
     out.push(...seg(`${prefix}:unit`, `Give your answer in ${q.unit}.`));
+  } else if (q.kind === 'multi') {
+    out.push(...seg(`${prefix}:parts`, `Give ${q.parts.map((p) => (p.unit ? `${p.label} in ${p.unit}` : p.label)).join(', and ')}.`));
   }
   return out;
 }
@@ -52,8 +54,13 @@ export function questionSegments(prefix: string, q: Question): NarrationSegment[
 export function explainerSegments(step: ExplainerStep): NarrationSegment[] {
   const s = step.id;
   const out: NarrationSegment[] = [...seg(nid.title(s), step.title)];
+  if (step.prediction) {
+    out.push(...seg(`${s}:predict`, `Predict first. ${step.prediction.prompt}`));
+    step.prediction.options.forEach((o, i) => out.push(...seg(`${s}:predict${i}`, `Option ${LETTERS[i] ?? i + 1}: ${o.text}`)));
+  }
   step.paragraphs.forEach((p, i) => out.push(...seg(nid.para(s, i), p)));
-  step.proof?.forEach((p, i) => out.push(...seg(nid.proof(s, i), `Step ${i + 1}. ${p.claim}. Because: ${p.reason}`)));
+  // A reason the student is asked to supply is not read aloud (it would give the answer away).
+  step.proof?.forEach((p, i) => out.push(...seg(nid.proof(s, i), p.reasonChoices?.length ? `Step ${i + 1}. ${p.claim}.` : `Step ${i + 1}. ${p.claim}. Because: ${p.reason}`)));
   step.vocabulary?.forEach((v, i) => out.push(...seg(nid.vocab(s, i), `${v.term}: ${v.meaning}`)));
   if (step.notice) out.push(...seg(nid.notice(s), `Look at the diagram: ${step.notice}`));
   if (step.why) out.push(...seg(nid.why(s), `Why it works: ${step.why}`));

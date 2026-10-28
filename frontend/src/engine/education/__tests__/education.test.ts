@@ -236,16 +236,19 @@ describe('education store', () => {
     expect(again.getState().lessons.l1.lastStage).toBe('independent');
   });
   it('persists locally, restores in a new session and survives corrupt storage', async () => {
+    const V2 = 'labverse_learning_v2';
     const first = await fresh();
     first.getState().markStepSeen('l1', 's1');
     first.getState().bypassReadiness('p9');
-    expect(JSON.parse(localStorage.getItem(KEY)!).version).toBe(EDU_SCHEMA_VERSION);
+    expect(JSON.parse(localStorage.getItem(V2)!).version).toBe(2);
+    expect(localStorage.getItem(KEY)).toBeNull(); // version 1 is never written
+    expect(EDU_SCHEMA_VERSION).toBe(1);
     const second = await fresh();
     expect(second.getState().lessons.l1.stepsSeen).toEqual(['s1']);
     expect(second.getState().readiness.p9.status).toBe('bypassed');
     second.getState().resetEducation();
-    expect(localStorage.getItem(KEY)).toBeNull();
-    localStorage.setItem(KEY, '{broken');
+    expect((await fresh()).getState().lessons).toEqual({});
+    localStorage.setItem(V2, '{broken');
     const third = await fresh();
     expect(third.getState().lessons).toEqual({});
     vi.stubGlobal('localStorage', undefined);

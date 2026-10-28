@@ -46,7 +46,7 @@ input[type="range"] { accent-color: #008782; }
 :is(.reading-surface, .app-chrome) :is(.text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400, .text-amber-500) { color: var(--lv-accent-warm); }
 :is(.reading-surface, .app-chrome) :is(.text-cyan-100, .text-cyan-200, .text-cyan-300, .text-cyan-400, .text-sky-200, .text-sky-300, .text-sky-400, .text-teal-200, .text-teal-300, .text-teal-400) { color: var(--lv-accent-cool); }
 :is(.reading-surface, .app-chrome) :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-emerald-400, .text-green-300) { color: var(--lv-accent-good); }
-:is(.reading-surface, .app-chrome) :is(.text-violet-200, .text-violet-300, .text-violet-400, .text-purple-200, .text-purple-300, .text-purple-400, .text-indigo-200) { color: var(--lv-accent-purple); }
+:is(.reading-surface, .app-chrome) :is(.text-violet-100, .text-violet-200, .text-violet-300, .text-violet-400, .text-purple-200, .text-purple-300, .text-purple-400, .text-indigo-200) { color: var(--lv-accent-purple); }
 :is(.reading-surface, .app-chrome) :is(.text-red-200, .text-red-300, .text-rose-200, .text-rose-300) { color: var(--lv-accent-error); }
 .app-chrome { --lv-accent-warm: #955b0a; --lv-accent-cool: #006b7c; --lv-accent-good: #146543; --lv-accent-purple: #7040a0; --lv-accent-error: #b42338; }
 .reading-surface .science-surface { color: rgb(var(--lv-ink)); }
@@ -117,13 +117,13 @@ input[type="range"] { accent-color: #008782; }
   .workstation-modes button { min-width: 0; }
   .reading-surface :where(main) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   .reading-surface :where(main) select, .reading-surface :where(main) textarea { font-size: 16px; }
-  .reading-surface :where(main) :where(button, summary) { min-height: 44px; }
+  :where(.reading-surface main) :where(button, summary) { min-height: 44px; }
   .reading-surface :where(main) :where(p:not(.font-mono), label) { font-size: max(.875rem, 1em); line-height: 1.6; }
   .reading-surface :where(main) .text-xs:not(.font-mono):not(.material-symbols-outlined) { font-size: .875rem; }
   .reading-surface :where(main) .text-3xl { font-size: 1.75rem; }
   .reading-surface [aria-label="Lesson stages"] { top: 60px; }
   .reading-surface:has(.chapter-journey) [aria-label="Lesson stages"] { top: 112px; }
-  .app-chrome :is(button, summary) { min-height: 44px; }
+  :where(.app-chrome) :where(button, summary) { min-height: 44px; }
   .app-chrome :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), select, textarea) { font-size: 16px; min-height: 44px; }
   .app-chrome .geometry-tool-palette { width: 100%; border: 0; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); align-items: stretch; padding: 0; }
   .app-chrome .geometry-tool-palette > div:first-child { display: contents; }
@@ -180,7 +180,8 @@ input[type="range"] { accent-color: #008782; }
 .activity-focused > .activity-content { max-width: 960px; margin-inline: auto; }
 .activity-details { border: 1px solid #334155; border-radius: .75rem; padding: .25rem .75rem .75rem; }
 .activity-details > summary { min-height: 44px; padding-block: .75rem; cursor: pointer; color: #cbd5e1; font-size: .875rem; font-weight: 600; }
-.physics-activity button, .physics-activity select, .physics-activity input:not([type=checkbox]):not([type=radio]) { min-height: 44px; }
+/* Zero specificity: a 44 px floor for plain controls, while explicit size utilities (for example min-h-[48px]) still win. */
+:where(.physics-activity) :where(button, select, input:not([type=checkbox]):not([type=radio])) { min-height: 44px; }
 .physics-activity select, .physics-activity input { max-width: 100%; }
 [data-testid="derivation-math"] { overflow-x: auto; }
 @media (max-width: 639px) {

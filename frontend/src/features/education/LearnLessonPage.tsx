@@ -16,6 +16,7 @@ import { PrerequisiteCard, findLessonStep, findRefresher } from './Prerequisites
 import { JudgeProvider } from './judges';
 import { VisualRegistryProvider, type VisualRegistry } from './visuals';
 import { NarrationEnabledProvider } from '../narration/NarrationRegion';
+import { LabTaskCard } from './LessonInteractions';
 
 type Stage = 'understand' | 'worked' | 'guided' | 'independent' | 'reflect';
 const STAGES: { id: Stage; label: string; icon: string }[] = [
@@ -52,10 +53,13 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
   const markInvestigated = useEducationStore((s) => s.markInvestigated);
 
   // Resume where the student left off (decided once, on mount).
-  const [stage, setStageState] = useState<Stage>(() => (restart ? 'understand' : resumeStageFor(lesson, rec)));
+  // Returning from a laboratory task (`?step=<step id>`) reopens the step that launched it.
+  const returnStep = lesson ? lesson.steps.findIndex((st) => st.id === new URLSearchParams(location.search).get('step')) : -1;
+  const [stage, setStageState] = useState<Stage>(() => (returnStep >= 0 || restart ? 'understand' : resumeStageFor(lesson, rec)));
   const setLastStage = useEducationStore((s) => s.setLastStage);
   const setStage = (next: Stage) => { setStageState(next); if (lesson) setLastStage(lesson.id, next); };
   const [stepIdx, setStepIdx] = useState(() => {
+    if (returnStep >= 0) return returnStep;
     if (restart || !lesson || !rec) return 0;
     const firstUnseen = lesson.steps.findIndex((s) => !rec.stepsSeen.includes(s.id));
     return firstUnseen === -1 ? 0 : firstUnseen;
@@ -93,7 +97,7 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
 
   return (
     <VisualRegistryProvider value={registry}>
-      <NarrationEnabledProvider enabled={chapter.subject === 'physics'}>
+      <NarrationEnabledProvider enabled>
       <JudgeProvider value={judges}>
       <div className="min-h-screen flex flex-col bg-background text-on-surface antialiased lab-grid" data-lesson={lesson.id}>
         <GlobalHeader />
@@ -109,6 +113,11 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
               {unit && (
                 <span className="text-[11px] font-mono px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary font-bold">
                   Unit {unit.number}: {unit.title}
+                </span>
+              )}
+              {lesson.extension && (
+                <span data-testid="lesson-extension" className="text-[11px] font-mono px-2.5 py-1 rounded-full border border-violet-400/50 bg-violet-500/10 text-violet-200 font-bold">
+                  Beyond Class 9: optional, not part of chapter mastery
                 </span>
               )}
               <span
@@ -186,7 +195,10 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
           {stage === 'understand' && (
             <div className="space-y-4">
               <p className="text-xs font-mono text-slate-400" aria-live="polite">Idea {stepIdx + 1} of {lesson.steps.length}</p>
-              <ConceptExplainer key={step.id} step={step} lessonId={lesson.id} onRefresher={openRefresher} />
+              <ConceptExplainer key={step.id} step={step} lessonId={lesson.id} onRefresher={openRefresher} labTask={step.labTaskId ? lesson.labTasks?.find((t) => t.id === step.labTaskId) : undefined} backHref={`${location.pathname}?step=${encodeURIComponent(step.id)}`} />
+              {stepIdx === lesson.steps.length - 1 && (lesson.labTasks ?? []).filter((t) => !lesson.steps.some((st) => st.labTaskId === t.id)).map((t) => (
+                <LabTaskCard key={t.id} task={t} lessonId={lesson.id} backHref={`${location.pathname}?step=${encodeURIComponent(step.id)}`} />
+              ))}
               {lesson.investigation && stepIdx === lesson.steps.length - 1 && (
                 <div className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-4 space-y-2">
                   <h3 className="font-bold text-white">{lesson.investigation.title}</h3>

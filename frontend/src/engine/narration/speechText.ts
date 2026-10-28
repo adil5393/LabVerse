@@ -51,7 +51,36 @@ const COMPOUND: [RegExp, string][] = [
 ];
 
 const PRODUCTS = /\b(mgh|mv|ma|Fs|Fd|Fv|Pt|ut|vt)\b/g;
+/** Upper-case words that are read as words, not spelled out letter by letter. */
+const SPOKEN_WORDS = new Set(['NCERT', 'CBSE', 'SONAR', 'NASA', 'ISRO', 'OK', 'IF', 'THEN', 'AND', 'NOT', 'OR', 'TRUE', 'FALSE', 'YES', 'NO', 'LED', 'RADAR']);
 const spaceLetters = (w: string): string => w.split('').join(' ');
+
+const ELEMENT_SYMBOLS = new Set(['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Fe', 'Cu', 'Zn', 'Ag', 'Au', 'Pb', 'Hg', 'Ba', 'Br', 'I', 'U', 'Co', 'W']);
+const DIGIT_WORD: Record<string, string> = { '¹': 'one', '²': 'two', '³': 'three', '⁴': 'four', '⁵': 'five', '⁶': 'six', '⁷': 'seven', '⁸': 'eight', '⁹': 'nine' };
+const SUB_DIGIT: Record<string, string> = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
+
+/**
+ * Chemical formulae (H₂O, CaCl₂, Al₂(SO₄)₃, NO₃⁻) and ion charges (Na⁺, Mg²⁺, S²⁻). A token is treated as a formula only if every
+ * part is a known element symbol and it has a subscript, a charge or a two-letter symbol, so words such as "NCERT" or "NO" are left
+ * alone. Each symbol is spelled ("Ca" → "C A"); a bracketed group is read "… taken 3 times".
+ */
+function speakChemistry(text: string): string {
+  return text.replace(/(?<![A-Za-z0-9])((?:\(|\)[₀-₉]*|[A-Z][a-z]?[₀-₉]*)+)([¹²³⁴⁵⁶⁷⁸⁹]?[⁺⁻])?(?![A-Za-z])/g, (whole: string, body: string, charge?: string) => {
+    const symbols = body.match(/[A-Z][a-z]?/g) ?? [];
+    if (!symbols.length || !symbols.every((x) => ELEMENT_SYMBOLS.has(x))) return whole;
+    const hasSub = /[₀-₉]/.test(body), twoLetter = symbols.some((x) => x.length === 2);
+    if (!hasSub && !charge && !(twoLetter && symbols.length >= 2)) return whole;
+    const spellGroup = (g: string) => g.replace(/([A-Z][a-z]?)([₀-₉]*)/g, (_m, sym: string, sub: string) => ` ${sym.toUpperCase().split('').join(' ')}${sub ? ' ' + sub.split('').map((d) => SUB_DIGIT[d]).join('') : ''}`);
+    let spoken = body.replace(/\(([^()]*)\)([₀-₉]+)/g, (_m, inner: string, n: string) => `${spellGroup(inner)} taken ${n.split('').map((d) => SUB_DIGIT[d]).join('')} times,`);
+    spoken = spellGroup(spoken.replace(/[()]/g, ''));
+    if (charge) {
+      const sign = charge.endsWith('⁺') ? 'plus' : 'minus';
+      const n = charge.length > 1 ? `${DIGIT_WORD[charge[0]]} ` : '';
+      spoken += ` ${n}${sign}`;
+    }
+    return ` ${spoken.replace(/,\s*$/, '').replace(/\s+/g, ' ').trim()} `;
+  });
+}
 
 export function toSpeech(input: string): string {
   let t = ` ${input} `.replace(/[   ]/g, ' ');
@@ -62,6 +91,11 @@ export function toSpeech(input: string): string {
   // Abbreviations.
   t = t.replace(/\be\.g\./gi, 'for example').replace(/\bi\.e\./gi, 'that is').replace(/\bEqs\./g, 'Equations').replace(/\bEq\./g, 'Equation')
     .replace(/\bFigs\./g, 'Figures').replace(/\bFig\./g, 'Figure').replace(/\bvs\.?(?=\s)/g, 'versus').replace(/\bapprox\./g, 'approximately');
+
+  // Biology: micrometres and nanometres, microscope powers such as 10X, and "about" for a tilde before a number.
+  t = t.replace(/(\d(?:\.\d+)?)\s*µm(?![A-Za-z])/g, (_m, n: string) => `${n} ${plural(n) ? 'micrometres' : 'micrometre'}`).replace(/µm(?![A-Za-z])/g, 'micrometres')
+    .replace(/(\d(?:\.\d+)?)\s*nm(?![A-Za-z])/g, (_m, n: string) => `${n} ${plural(n) ? 'nanometres' : 'nanometre'}`)
+    .replace(/(\d)X(?![A-Za-z])/g, '$1 times').replace(/~\s*(?=\d)/g, 'about ');
 
   // Fractions.
   t = t.replace(/½/g, ' one half ').replace(/¼/g, ' one quarter ').replace(/¾/g, ' three quarters ');
@@ -81,12 +115,17 @@ export function toSpeech(input: string): string {
       return p ? `${base} ${p === '²' ? 'squared' : 'cubed'}` : base;
     });
 
+  // Chemistry: formulae and ion charges, read the way students say them ("C A C L 2", "S O 4 two minus").
+  t = speakChemistry(t);
+
   // Subscripts and superscripts that remain (variables).
   t = t.replace(/[₀-₉ₐₑₙₓ]/g, (c) => ` ${SUB[c]}`);
   t = t.replace(/_\{?([A-Za-z0-9]+)\}?/g, ' $1');
   t = t.replace(/⁻([¹²³⁴⁵⁶⁷⁸⁹])/g, (_m, c: string) => ` to the minus ${SUP[c]} `);
   t = t.replace(/²/g, ' squared ').replace(/³/g, ' cubed ');
   t = t.replace(/[⁰¹⁴-⁹]/g, (c) => ` to the power ${SUP[c]} `);
+  t = t.replace(/\^([A-Za-z])(?![A-Za-z])/g, ' to the power $1 ');
+  for (let guard = 0; guard < 4 && /\^\(/.test(t); guard++) t = t.replace(/\^\(([^()]*)\)/g, ' to the power of ($1) ');
   t = t.replace(/\^\{?(-?\d+)\}?/g, (_m, n: string) => (n === '2' ? ' squared ' : n === '3' ? ' cubed ' : ` to the power ${n.replace('-', 'minus ')} `));
 
   // Products of letters that a speech engine would try to pronounce as a word.
@@ -100,10 +139,19 @@ export function toSpeech(input: string): string {
   t = t.replace(/[α-ωΩΦΘ]/g, (c) => ` ${GREEK[c] ?? c} `);
 
   // Signs: negative / positive before a number or a letter at the start of an expression, minus / plus between operands.
-  t = t.replace(/(^|[\s(=,:;[])[−–-](?=[\d.A-Za-zΔ])/g, '$1 negative ');
+  // A hyphen before a word ending ("-ide", "-ous") is not a sign; a sign is followed by a number, Δ, or a single-letter variable.
+  t = t.replace(/(^|[\s(=,:;[])[−–-](?=[\d.Δ]|[A-Za-z](?![a-z]))/g, '$1 negative ');
+  t = t.replace(/(^|\s)-(?=[a-z]{2,})/g, '$1');
   t = t.replace(/(^|[\s(=,:;[])\+(?=\d)/g, '$1 positive ');
   t = t.replace(/(\d)\s*[–]\s*(\d)/g, '$1 to $2').replace(/([A-Za-z])[–](?=\d)/g, '$1 to ');
   t = t.replace(/\s−\s/g, ' minus ').replace(/−/g, ' minus ').replace(/\s\+\s/g, ' plus ').replace(/\s–\s/g, ', ');
+
+  // Geometry and logic notation (Mathematics). Named points ("AB", "∠PQR") are read letter by letter.
+  t = t.replace(/∠\s*/g, ' angle ').replace(/[△▵]\s*/g, ' triangle ').replace(/≅/g, ' is congruent to ').replace(/∥/g, ' is parallel to ')
+    .replace(/∦/g, ' is not parallel to ').replace(/[⊥⟂]/g, ' is perpendicular to ').replace(/∼/g, ' is similar to ').replace(/≡/g, ' is identical to ')
+    .replace(/⇔/g, ' if and only if ').replace(/∈/g, ' is in ').replace(/∉/g, ' is not in ').replace(/∩/g, ' intersection ').replace(/∪/g, ' union ')
+    .replace(/⌢/g, ' arc ').replace(/∵/g, ' because ').replace(/′/g, ' prime ');
+  t = t.replace(/(^|[^A-Za-z])([A-Z]{2,4})(?=$|[^A-Za-z])/g, (_m, pre: string, w: string) => (SPOKEN_WORDS.has(w) ? pre + w : `${pre}${spaceLetters(w)}`));
 
   // Operators and relations.
   t = t.replace(/×/g, ' times ').replace(/÷/g, ' divided by ').replace(/[·⋅]/g, ' times ')

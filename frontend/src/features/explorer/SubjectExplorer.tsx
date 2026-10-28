@@ -6,7 +6,8 @@ import { CHAPTER_REGISTRY, useChapterNavigationStore } from '../workspace/chapte
 import { BottomSheet } from '../workspace/BottomSheet';
 
 const descriptions: Record<string, string> = {
-  physics: 'Discover motion, forces, energy, sound and circuits.',
+  physics: 'Discover motion, forces, energy and sound.',
+  robotics: 'Build circuits and explore electronics.',
   mathematics: 'Explore shapes, equations, reasoning and data.',
   chemistry: 'See how particles move and matter changes.',
 };
@@ -67,7 +68,7 @@ export const SubjectExplorer: React.FC = () => {
       <section className="mt-8" aria-labelledby="chapters-heading">
         <h2 id="chapters-heading" className="text-xl font-bold mb-4">Find your next discovery</h2>
         <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter chapters by subject">
-          {[['all','All'],['physics','Physics'],['mathematics','Maths'],['chemistry','Chemistry']].map(([id,label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`min-h-11 px-4 rounded-full text-sm font-semibold border ${filter === id ? 'bg-primary text-on-primary border-primary' : 'bg-surface border-surface-border text-slate-300'}`}>{label}</button>)}
+          {[['all','All'],['physics','Physics'],['chemistry','Chemistry'],['mathematics','Maths'],['robotics','Robotics']].map(([id,label]) => <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={`min-h-11 px-4 rounded-full text-sm font-semibold border ${filter === id ? 'bg-primary text-on-primary border-primary' : 'bg-surface border-surface-border text-slate-300'}`}>{label}</button>)}
         </div>
         <div className="chapter-grid">
           {chapters.map((c) => <Link key={c.id} to={c.chapterUrl} className="chapter-link"><span className="material-symbols-outlined text-primary" aria-hidden>{icons[c.id] || 'science'}</span><div className="min-w-0"><h3 className="font-semibold">{c.shortTitle}</h3><p className="text-xs text-slate-400 mt-1">{c.subjectTitle}</p></div></Link>)}

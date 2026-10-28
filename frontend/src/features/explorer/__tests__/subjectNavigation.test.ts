@@ -51,31 +51,25 @@ describe('Subject Navigation & Routing Consistency (Milestone M3.2)', () => {
       expect(ids).toEqual(['physics', 'chemistry', 'mathematics', 'biology', 'robotics']);
     });
 
-    it('has exactly 3 available subjects and 2 in-development subjects', () => {
+    it('has all 5 subjects available (Robotics holds Electricity; Biology is built) and none in development', () => {
       const ready = getAvailableSubjects();
-      expect(ready.length).toBe(3);
-      expect(ready.map((s) => s.id)).toEqual(['physics', 'chemistry', 'mathematics']);
-
-      const dev = getInDevelopmentSubjects();
-      expect(dev.length).toBe(2);
-      expect(dev.map((s) => s.id)).toEqual(['biology', 'robotics']);
+      expect(ready.map((s) => s.id)).toEqual(['physics', 'chemistry', 'mathematics', 'biology', 'robotics']);
+      expect(getInDevelopmentSubjects().map((s) => s.id)).toEqual([]);
     });
 
-    it('confirms Physics metadata is accurate and electricity-focused', () => {
+    it('confirms Physics is the Class 9 chapters and Robotics holds the circuit workbench', () => {
       const phys = getSubjectById('physics')!;
-      expect(phys).toBeDefined();
       expect(phys.status).toBe('ready');
-      expect(phys.route).toBe('/physics/electricity');
-      expect(phys.buttonText).toBe('Enter Electricity Lab');
-      expect(phys.badgeText).toBe('Active Laboratory');
-      expect(phys.topicsCount).toBe(1);
-      expect(isSubjectActive('physics')).toBe(true);
-
-      // Verify features do not mention waves or classical mechanics as implemented
-      const featureTitles = phys.features?.map((f) => f.title);
+      expect(phys.route).toBe('/physics');
+      expect(phys.topicsCount).toBe(4);
+      expect(phys.features?.map((f) => f.title)).not.toContain('Solderless Breadboarding');
+      const rob = getSubjectById('robotics')!;
+      expect(rob.status).toBe('ready');
+      expect(rob.route).toBe('/robotics');
+      expect(isSubjectActive('robotics')).toBe(true);
+      const featureTitles = rob.features?.map((f) => f.title);
       expect(featureTitles).toContain('Solderless Breadboarding');
       expect(featureTitles).toContain('DC Loop Simulation');
-      expect(featureTitles).not.toContain('Wave Optics');
     });
 
     it('confirms Chemistry metadata contains States of Matter features and NOT Physics features', () => {
@@ -113,20 +107,13 @@ describe('Subject Navigation & Routing Consistency (Milestone M3.2)', () => {
       expect(featureTitles).toContain('Understanding Data');
     });
 
-    it('confirms Biology and Robotics are clearly marked Coming Soon without active routes', () => {
+    it('confirms Biology is active with its own route now that its chapters are built', () => {
       const bio = getSubjectById('biology')!;
-      expect(bio.status).toBe('in_development');
-      expect(bio.route).toBeUndefined();
-      expect(bio.buttonText).toBe('Coming Soon');
-      expect(bio.badgeText).toBe('Coming Soon');
-      expect(isSubjectActive('biology')).toBe(false);
-
-      const rob = getSubjectById('robotics')!;
-      expect(rob.status).toBe('in_development');
-      expect(rob.route).toBeUndefined();
-      expect(rob.buttonText).toBe('Coming Soon');
-      expect(rob.badgeText).toBe('Coming Soon');
-      expect(isSubjectActive('robotics')).toBe(false);
+      expect(bio.status).toBe('ready');
+      expect(bio.route).toBe('/biology');
+      expect(bio.buttonText).toBe('Explore Biology');
+      expect(bio.badgeText).toBe('Active Laboratory');
+      expect(isSubjectActive('biology')).toBe(true);
     });
   });
 
@@ -136,11 +123,12 @@ describe('Subject Navigation & Routing Consistency (Milestone M3.2)', () => {
         if (pathname.startsWith('/physics')) return 'physics';
         if (pathname.startsWith('/chemistry')) return 'chemistry';
         if (pathname.startsWith('/mathematics')) return 'mathematics';
+        if (pathname.startsWith('/robotics')) return 'robotics';
         return null;
       };
 
-      expect(checkActiveSubject('/physics/electricity')).toBe('physics');
-      expect(checkActiveSubject('/physics/electricity/workbench')).toBe('physics');
+      expect(checkActiveSubject('/robotics/electricity')).toBe('robotics');
+      expect(checkActiveSubject('/robotics/electricity/workbench')).toBe('robotics');
       expect(checkActiveSubject('/chemistry')).toBe('chemistry');
       expect(checkActiveSubject('/chemistry/states-of-matter')).toBe('chemistry');
       expect(checkActiveSubject('/mathematics')).toBe('mathematics');

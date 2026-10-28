@@ -50,7 +50,7 @@ export const WorkbenchHeader: React.FC<WorkbenchHeaderProps> = ({
       {/* Left: Breadcrumbs & Experiment Title */}
       <div className="flex items-center gap-3">
         <Link
-          to="/physics/electricity"
+          to="/robotics/electricity"
           className="h-9 px-2.5 flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-surface-elevated rounded-lg transition-colors text-xs font-medium"
         >
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>

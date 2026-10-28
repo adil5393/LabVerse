@@ -14,7 +14,7 @@
 
 import { create } from 'zustand';
 
-export type SubjectId = 'physics' | 'mathematics' | 'chemistry';
+export type SubjectId = 'physics' | 'mathematics' | 'chemistry' | 'biology' | 'robotics' | 'integrated-science';
 
 export interface ChapterMeta {
   id: string;
@@ -102,15 +102,15 @@ export const CHAPTER_REGISTRY: Record<string, ChapterMeta> = {
     id: 'electricity',
     title: 'Electricity & Circuits',
     shortTitle: 'Electricity',
-    subject: 'physics',
-    subjectTitle: 'Physics',
-    subjectUrl: '/physics',
-    chapterUrl: '/physics/electricity',
-    defaultLabUrl: '/physics/electricity/workbench',
+    subject: 'robotics',
+    subjectTitle: 'Robotics',
+    subjectUrl: '/robotics',
+    chapterUrl: '/robotics/electricity',
+    defaultLabUrl: '/robotics/electricity/workbench',
     defaultLabTitle: 'Circuit Workbench',
-    defaultLearnUrl: '/physics/electricity',
-    defaultExercisesUrl: '/physics/electricity',
-    defaultPracticeUrl: '/physics/electricity',
+    defaultLearnUrl: '/robotics/electricity',
+    defaultExercisesUrl: '/robotics/electricity',
+    defaultPracticeUrl: '/robotics/electricity',
     themeColor: 'amber',
     accentHex: '#F59E0B',
   },
@@ -250,7 +250,8 @@ function validateInternalRoute(url: string | undefined, defaultFallback: string)
   if (
     clean.startsWith('/physics') ||
     clean.startsWith('/mathematics') ||
-    clean.startsWith('/chemistry')
+    clean.startsWith('/chemistry') ||
+    clean.startsWith('/biology')
   ) {
     return clean;
   }

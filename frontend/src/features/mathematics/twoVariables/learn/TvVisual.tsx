@@ -9,6 +9,7 @@
  * well as colour. No animation.
  */
 
+import { TvPair } from './TvPair';
 import React, { useMemo, useRef, useState } from 'react';
 import type { VisualProps, VisualRegistry } from '../../../education/visuals';
 import { clipLineToBounds } from '../../../../engine/mathematics/twoVariables/graphMath';
@@ -264,4 +265,4 @@ const TvFig: React.FC<VisualProps> = ({ props, alt }) => {
   );
 };
 
-export const TV_VISUALS: VisualRegistry = { tvFig: TvFig };
+export const TV_VISUALS: VisualRegistry = { tvFig: TvFig, tvPair: TvPair };

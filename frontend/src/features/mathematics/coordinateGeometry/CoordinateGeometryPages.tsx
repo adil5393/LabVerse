@@ -8,6 +8,7 @@ import { IndependentPractice } from '../../education/LessonParts';
 import { VisualRegistryProvider } from '../../education/visuals';
 import { CG_VISUALS } from './visuals';
 import { ChapterWorkspaceNav } from '../../workspace';
+import { makeChapterPages } from '../../education/chapterPages';
 
 const CRUMB = 'Class 9 Coordinate Geometry';
 
@@ -56,3 +57,6 @@ export const CoordinateGeometryPracticePage: React.FC = () => (
     </div>
   </VisualRegistryProvider>
 );
+
+/** Chapter assessment (unified framework). */
+export const CoordinateGeometryAssessmentPage: React.FC = makeChapterPages(CHAPTER, CG_VISUALS, { crumb: CRUMB, subtitle: '', labs: [] }).Assessment;

@@ -31,7 +31,8 @@ describe('Understanding Data module isolation', () => {
   it('is loaded only through React.lazy, so it stays out of every initial bundle', () => {
     const staticImports = app.split(/\r?\n/).filter((l) => /^import\s/.test(l) && /understandingData/.test(l));
     expect(staticImports).toEqual([]);
-    expect(app).toMatch(/import\('\.\/features\/mathematics\/understandingData\/UnderstandingDataLab'\)/);
+    // The chapter page is the unified hub, which lazily wraps the older landing page behind the compatibility switch.
+    expect(app).toMatch(/import\('\.\/features\/mathematics\/understandingData\/learn\/UnderstandingDataHub'\)/);
     expect(app).toMatch(/import\('\.\/features\/mathematics\/understandingData\/UnderstandingDataWorkbenchPage'\)/);
   });
 

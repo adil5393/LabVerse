@@ -14,8 +14,8 @@
  *    - Independent Explore, Investigate, and Practice engines
  */
 
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useQuadrilateralStore } from '../../../store/useQuadrilateralStore';
 import { useQuadGuidedLearningStore } from '../../../store/useQuadGuidedLearningStore';
 import { QUAD_GUIDED_LESSONS } from '../../../engine/mathematics/quadrilaterals/curriculumPath';
@@ -25,24 +25,43 @@ import { QuadrilateralInspectorPanel } from './QuadrilateralInspectorPanel';
 import { QuadrilateralGuidedInspector } from './QuadrilateralGuidedInspector';
 import type { QuadMode } from '../../../engine/mathematics/quadrilaterals/types';
 import { WorkspaceShell } from '../../workspace';
+import { labTaskFor, QUAD_LESSON_MAP } from '../../../engine/mathematics/quadrilaterals/learn/unified';
+import { liveQuadMeasurements } from '../../../engine/mathematics/quadrilaterals/learn/liveMeasurements';
+import { LabTaskOverlay, useWorkbenchLessonTask } from '../../education/WorkbenchLessonTask';
+import { legacyPathEnabled } from '../../education/compat';
+
+type QuadState = ReturnType<typeof useQuadrilateralStore.getState>;
+const watchQuad = (s: QuadState) => [s.points, s.segments, s.quadrilaterals, s.triangles, s.angles];
+const measureQuad = (s: QuadState) => liveQuadMeasurements({ points: s.points, segments: s.segments, angles: s.angles });
 
 export const QuadrilateralWorkbenchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { setExperiment, setMode, fitToConstruction } = useQuadrilateralStore();
   const { selectLesson } = useQuadGuidedLearningStore();
 
+  const legacyOn = legacyPathEnabled('quadrilaterals', `?${searchParams.toString()}`);
+  const taskById = useCallback((id: string | null) => {
+    const l = id ? Object.values(QUAD_GUIDED_LESSONS).find((x) => `lt-${x.id}` === id) : undefined;
+    return l ? labTaskFor(l) : undefined;
+  }, []);
+  const { bridge, task, measurements } = useWorkbenchLessonTask({ store: useQuadrilateralStore, watch: watchQuad, taskById, measure: measureQuad });
+  const taskSetup = bridge.active && task ? (task.setup as { experimentId: string; allowedTools: string[] }) : undefined;
   const lessonParam = searchParams.get('lesson');
   const expParam = searchParams.get('exp');
   const modeParam = searchParams.get('mode') as QuadMode | null;
 
-  const isGuidedMode = Boolean(lessonParam);
-  const activeGuidedLesson = lessonParam
+  const isGuidedMode = Boolean(lessonParam) && legacyOn;
+  const activeGuidedLesson = isGuidedMode && lessonParam
     ? QUAD_GUIDED_LESSONS[lessonParam]
     : undefined;
 
   // Sync route params into geometry and guided stores
   useEffect(() => {
-    if (isGuidedMode && activeGuidedLesson) {
+    if (taskSetup) {
+      setExperiment(taskSetup.experimentId);
+      setMode('explore');
+      setTimeout(() => fitToConstruction(window.innerWidth * 0.6, window.innerHeight * 0.8), 50);
+    } else if (isGuidedMode && activeGuidedLesson) {
       // 1. Mount corresponding canonical experiment for geometry engine
       setExperiment(activeGuidedLesson.experimentId);
       // 2. Select guided lesson
@@ -71,13 +90,21 @@ export const QuadrilateralWorkbenchPage: React.FC = () => {
     selectLesson,
     setMode,
     fitToConstruction,
+    taskSetup,
   ]);
+
+  if (lessonParam && !legacyOn && !bridge.active) {
+    const mapped = QUAD_LESSON_MAP[lessonParam];
+    return <Navigate replace to={mapped ? `/mathematics/quadrilaterals/learn/${mapped}` : '/mathematics/quadrilaterals/practice'} />;
+  }
 
   const outlinerContent = (
     <div className="h-full flex flex-col overflow-hidden">
       <QuadrilateralToolRail
         allowedTools={
-          isGuidedMode && activeGuidedLesson
+          taskSetup
+            ? taskSetup.allowedTools
+            : isGuidedMode && activeGuidedLesson
             ? activeGuidedLesson.allowedTools
             : undefined
         }
@@ -88,6 +115,7 @@ export const QuadrilateralWorkbenchPage: React.FC = () => {
   const viewportContent = (
     <div className="flex-1 h-full relative overflow-hidden">
       <QuadrilateralCanvas />
+      <LabTaskOverlay bridge={bridge} task={task} measurements={measurements} />
 
       {/* Smart TV / Floating goal instruction pill in Guided Mode */}
       {isGuidedMode && activeGuidedLesson && (

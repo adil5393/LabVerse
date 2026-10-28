@@ -9,7 +9,7 @@ import {
 } from '../figure';
 import { cyclicFigure, equalChordsFigure, sameSegmentFigure } from '../questions';
 
-describeChapterIntegrity('Circles', CH, ['circle']);
+describeChapterIntegrity('Circles', CH, ['circle', 'circlePracticeScene']);
 
 const deg = (r: number) => (r * 180) / Math.PI;
 
@@ -122,7 +122,8 @@ describe('Circles figures: independent oracles', () => {
 
 describe('Circles lessons: authored figures and visuals', () => {
   it('every figure in every visual is internally consistent (points on the circle, ids resolve, no NaN)', () => {
-    for (const { where, v } of allVisuals(CH)) {
+    // 'circlePracticeScene' figures are the older exact practice scenes; they are checked in unifiedMigration.test.ts.
+    for (const { where, v } of allVisuals(CH).filter((x) => x.v.kind === 'circle')) {
       const fig = (v.props as { figure: Figure }).figure;
       expect(fig, where).toBeDefined();
       for (const p of fig.points) expect(Number.isFinite(p.angle), `${where} ${p.id}`).toBe(true);
@@ -135,7 +136,7 @@ describe('Circles lessons: authored figures and visuals', () => {
   });
 
   it('diameters really pass through the centre, radii touch it, and chords do not', () => {
-    for (const { where, v } of allVisuals(CH)) {
+    for (const { where, v } of allVisuals(CH).filter((x) => x.v.kind === 'circle')) {
       const fig = (v.props as { figure: Figure }).figure;
       for (const s of fig.segments ?? []) {
         if (!s.kind || s.kind === 'plain') continue;

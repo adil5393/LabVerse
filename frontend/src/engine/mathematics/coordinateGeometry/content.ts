@@ -607,7 +607,10 @@ const L7: EduLesson = {
 
 const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7];
 
+import { CG_ASSESSMENT } from './assessment';
+
 export const COORDINATE_GEOMETRY: EduChapter = {
+  assessment: CG_ASSESSMENT,
   id: 'coordinate-geometry',
   title: 'Coordinate Geometry',
   classGrade: 9,
@@ -626,6 +629,7 @@ export const COORDINATE_GEOMETRY: EduChapter = {
     prerequisites: (id) => `/mathematics/coordinate-geometry#${id}`,
     lab: '/mathematics/workbench?module=coordinate-geometry&experiment=distance',
     practice: '/mathematics/coordinate-geometry/practice',
+    assessment: '/mathematics/coordinate-geometry/assessment',
   },
 };
 

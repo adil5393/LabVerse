@@ -11,6 +11,7 @@ import {
   angleAt, angleOfPoint, chordLength, clampToArc, distanceToChord, norm360, pointPos, withAngle, type Figure,
 } from '../../../../engine/mathematics/circles/learn/figure';
 import type { CircleVisualOpts } from '../../../../engine/mathematics/circles/learn/questions';
+import { CirclePracticeFigure } from './CirclePracticeFigure';
 
 const C = { circle: '#475569', radius: '#fbbf24', chord: '#22d3ee', diameter: '#a78bfa', plain: '#64748b', text: '#e2e8f0', angle: '#34d399', rose: '#fb7185' };
 const SIZE = 480;
@@ -184,4 +185,4 @@ const CircleVisual: React.FC<VisualProps> = ({ props, alt, onAnswer, locked }) =
   );
 };
 
-export const CIRCLE_VISUALS: VisualRegistry = { circle: CircleVisual };
+export const CIRCLE_VISUALS: VisualRegistry = { circle: CircleVisual, circlePracticeScene: CirclePracticeFigure };

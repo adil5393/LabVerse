@@ -7,8 +7,8 @@
  *   ?mode=practice         chapter practice
  */
 
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useTwoVariablesStore } from '../../../store/useTwoVariablesStore';
 import { TV_GUIDED_LESSONS } from '../../../engine/mathematics/twoVariables/curriculumPath';
 import { TV_EXPERIMENTS } from '../../../engine/mathematics/twoVariables/experimentRegistry';
@@ -18,6 +18,16 @@ import { SystemExplorer } from './SystemExplorer';
 import { AlgebraLab } from './AlgebraLab';
 import { PracticePanel } from './PracticePanel';
 import { GuidedPanel } from './GuidedPanel';
+import { labTaskFor, TV_LESSON_MAP } from '../../../engine/mathematics/twoVariables/learn/unified';
+import { useWorkbenchLessonTask } from '../../education/WorkbenchLessonTask';
+import { LabTaskBanner } from '../../education/LabTaskBridge';
+import { legacyPathEnabled } from '../../education/compat';
+import { formatStandard } from '../../../engine/mathematics/twoVariables/linearEquation';
+
+type TvState = ReturnType<typeof useTwoVariablesStore.getState>;
+const watchTv = (s: TvState) => [s.eq1, s.eq2, s.tableRows];
+const viewTv = (s: TvState) => String(s.activeTab);
+const measureTv = (s: TvState) => [{ label: 'line 1', value: formatStandard(s.eq1) }, { label: 'line 2', value: formatStandard(s.eq2) }];
 
 const TABS: { id: TVWorkbenchTab; label: string; icon: string }[] = [
   { id: 'graph', label: 'Equation Graph', icon: 'show_chart' },
@@ -40,12 +50,19 @@ export const TwoVariablesWorkbenchPage: React.FC = () => {
   const setGuidedActive = useTwoVariablesStore((s) => s.setGuidedActive);
   const experimentId = useTwoVariablesStore((s) => s.currentExperimentId);
 
+  const legacyOn = legacyPathEnabled('two-variables', `?${params.toString()}`);
+  const taskById = useCallback((id: string | null) => {
+    const l = id ? Object.values(TV_GUIDED_LESSONS).find((x) => `lt-${x.id}` === id) : undefined;
+    return l ? labTaskFor(l) : undefined;
+  }, []);
+  const { bridge, task, measurements } = useWorkbenchLessonTask({ store: useTwoVariablesStore, watch: watchTv, taskById, measure: measureTv, view: viewTv });
+  const taskExperiment = bridge.active && task ? (task.setup as { experimentId: string }).experimentId : undefined;
   const lessonParam = params.get('lesson');
-  const expParam = params.get('exp');
+  const expParam = taskExperiment ?? params.get('exp');
   const tabParam = params.get('tab');
   const modeParam = params.get('mode');
 
-  const lesson = lessonParam ? TV_GUIDED_LESSONS[lessonParam] : undefined;
+  const lesson = lessonParam && legacyOn ? TV_GUIDED_LESSONS[lessonParam] : undefined;
   const guided = Boolean(lesson);
 
   useEffect(() => {
@@ -59,8 +76,13 @@ export const TwoVariablesWorkbenchPage: React.FC = () => {
     setMode((modeParam === 'practice' ? 'practice' : 'explore') as TVMode);
   }, [lesson, expParam, tabParam, modeParam, selectLesson, setExperiment, setActiveTab, setMode, setGuidedActive]);
 
-  const lessonNode = guided ? <GuidedPanel /> : undefined;
+  const lessonNode = guided ? <GuidedPanel /> : bridge.active ? <LabTaskBanner bridge={bridge} task={task} measurements={measurements} /> : undefined;
   const showPractice = mode === 'practice' && !guided;
+
+  if (lessonParam && !legacyOn && !bridge.active) {
+    const mapped = TV_LESSON_MAP[lessonParam];
+    return <Navigate replace to={mapped ? `/mathematics/two-variables/learn/${mapped}` : '/mathematics/two-variables/practice'} />;
+  }
 
   // Outliner: Workbench Views & Presets
   const outlinerContent = (

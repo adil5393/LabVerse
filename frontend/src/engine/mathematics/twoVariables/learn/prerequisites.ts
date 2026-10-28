@@ -139,4 +139,12 @@ export const TV_UNITS: EduUnit[] = [
     discover: ['What slope means', 'Positive, negative, zero and undefined slope', 'Why m is the slope in y = mx + d'],
     prerequisiteIds: ['tp-signed', 'tp-plane'], lessonIds: ['tv-l6', 'tv-l7'],
   },
+  {
+    id: 'tunit-5', number: 5, title: 'Pairs of equations',
+    centralIdea: 'Two facts about the same two unknowns give a pair of equations; their common solution is the point where the two lines meet, found by substitution, elimination or a graph, and a pair can have one, no or infinitely many solutions.',
+    connection: 'It puts two of the lines from Units 3 and 4 on one graph and asks what they share.',
+    vocabulary: [{ term: 'pair of linear equations', meaning: 'two linear equations in the same two variables' }, { term: 'consistent pair', meaning: 'a pair with at least one solution' }, { term: 'inconsistent pair', meaning: 'a pair with no solution (parallel lines)' }],
+    discover: ['Why one equation is not enough', 'How substitution and elimination reduce a pair to one equation', 'When a pair has one, no or infinitely many solutions', 'How to read a solution from two lines'],
+    prerequisiteIds: ['tp-equations', 'tp-plane'], lessonIds: ['tv-l8', 'tv-l9', 'tv-l10', 'tv-l11'],
+  },
 ];

@@ -3,8 +3,8 @@
  * Class 9 NCERT Ganita Manjari: Propositions and Their Converses
  */
 
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { usePropositionsStore } from '../../../store/usePropositionsStore';
 import { PROP_GUIDED_LESSONS } from '../../../engine/mathematics/propositions/curriculumPath';
 import { GuidedLessonPanel } from './GuidedLessonPanel';
@@ -19,6 +19,19 @@ import type {
   PropositionsMode,
 } from '../../../engine/mathematics/propositions/types';
 import { WorkspaceShell } from '../../workspace';
+import { labTaskFor, PROP_LESSON_MAP } from '../../../engine/mathematics/propositions/learn/unified';
+import { LabTaskOverlay, useWorkbenchLessonTask } from '../../education/WorkbenchLessonTask';
+import { legacyPathEnabled } from '../../education/compat';
+
+type PropState = ReturnType<typeof usePropositionsStore.getState>;
+const watchProp = (s: PropState) => [s.selectedPropositionId, s.isConverseView, s.testedNumber, s.counterexampleSearchRange, s.numberPropertyInput, s.triangleSides, s.selectedQuadType, s.assembledProofSteps, s.proofVerificationStatus];
+/** What the student can record: the state of the reasoning tool they are using. */
+const measureProp = (s: PropState) => [
+  { label: 'number tested', value: String(s.testedNumber) },
+  { label: 'triangle sides', value: `${s.triangleSides.a}, ${s.triangleSides.b}, ${s.triangleSides.c}` },
+  ...(s.searchResultNotice ? [{ label: 'search result', value: s.searchResultNotice }] : []),
+  ...(s.proofVerificationStatus !== 'idle' ? [{ label: 'proof check', value: s.proofVerificationStatus }] : []),
+];
 
 const PROP_TABS: { id: PropositionsWorkbenchTab; label: string; icon: string }[] = [
   { id: 'statement_explorer', label: 'Statements & Converses', icon: 'sync_alt' },
@@ -39,16 +52,26 @@ export const PropositionsWorkbenchPage: React.FC = () => {
     selectLesson,
   } = usePropositionsStore();
 
+  const legacyOn = legacyPathEnabled('propositions', `?${searchParams.toString()}`);
+  const taskById = useCallback((id: string | null) => {
+    const l = id ? Object.values(PROP_GUIDED_LESSONS).find((x) => `lt-${x.id}` === id) : undefined;
+    return l ? labTaskFor(l) : undefined;
+  }, []);
+  const { bridge, task, measurements } = useWorkbenchLessonTask({ store: usePropositionsStore, watch: watchProp, taskById, measure: measureProp });
+  const taskExperiment = bridge.active && task ? (task.setup as { experimentId: string }).experimentId : undefined;
   const lessonParam = searchParams.get('lesson');
   const expParam = searchParams.get('exp');
   const tabParam = searchParams.get('tab') as PropositionsWorkbenchTab | null;
   const modeParam = searchParams.get('mode') as PropositionsMode | null;
 
-  const isGuidedMode = Boolean(lessonParam);
-  const activeGuidedLesson = lessonParam ? PROP_GUIDED_LESSONS[lessonParam] : undefined;
+  const isGuidedMode = Boolean(lessonParam) && legacyOn;
+  const activeGuidedLesson = isGuidedMode && lessonParam ? PROP_GUIDED_LESSONS[lessonParam] : undefined;
 
   useEffect(() => {
-    if (isGuidedMode && activeGuidedLesson) {
+    if (taskExperiment) {
+      setExperiment(taskExperiment);
+      setMode('explore');
+    } else if (isGuidedMode && activeGuidedLesson) {
       setExperiment(activeGuidedLesson.experimentId);
       selectLesson(activeGuidedLesson.id);
       if (modeParam) setMode(modeParam);
@@ -73,6 +96,7 @@ export const PropositionsWorkbenchPage: React.FC = () => {
     selectLesson,
     setActiveTab,
     setMode,
+    taskExperiment,
   ]);
 
   // Outliner: Reasoning Engines
@@ -154,8 +178,14 @@ export const PropositionsWorkbenchPage: React.FC = () => {
   );
 
   // Viewport: Main reasoning canvas
+  if (lessonParam && !legacyOn && !bridge.active) {
+    const mapped = PROP_LESSON_MAP[lessonParam];
+    return <Navigate replace to={mapped ? `/mathematics/propositions/learn/${mapped}` : '/mathematics/propositions/practice'} />;
+  }
+
   const viewportContent = (
-    <main className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden bg-background">
+    <main className="relative flex-1 min-h-0 flex flex-col overflow-y-auto lg:overflow-hidden bg-background">
+      <LabTaskOverlay bridge={bridge} task={task} measurements={measurements} />
       {mode === 'practice' ? (
         <PracticePanel />
       ) : (

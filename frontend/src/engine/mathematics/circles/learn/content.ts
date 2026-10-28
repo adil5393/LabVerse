@@ -15,6 +15,7 @@
 import type { EduChapter, EduLesson, ExplainerStep } from '../../../education/types';
 import { arcFigure, chordFigure, type Figure } from './figure';
 import { CIRCLES_PREREQUISITES, CIRCLES_UNITS } from './prerequisites';
+import { buildCirclesPracticeSet, buildTangentExtension, CIRCLES_ASSESSMENT, enrichLesson } from './unified';
 import {
   PARTS_FIGURE, altForFigure, chordDistanceQ, chordLengthQ, centralFromInscribedQ, circleVisual, cyclicFigure, diameterQ, equalChordAngleQ, equalChordsFigure,
   inscribedFromCentralQ, oppositeAngleQ, partQ, pick, reflectQ, rotateQ, sameSegmentFigure, sameSegmentQ, semicircleQ, symmetryFigure,
@@ -657,26 +658,37 @@ const L11: EduLesson = {
   },
 };
 
-const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11];
+// Unified framework (pilot migration): each lesson also carries the older guided path's prediction and workbench investigation,
+// and the older proofs where the lesson had none (see ./unified.ts). The tangents lesson is an optional Beyond Class 9 extension.
+const EXTENSION = buildTangentExtension();
+const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11].map(enrichLesson).concat([EXTENSION]);
+const EXTENSION_UNIT = {
+  id: 'unit-ext', number: 5, title: 'Beyond Class 9 (optional)', centralIdea: 'A look ahead at tangents, which you will meet properly in Class 10. Nothing here counts toward this chapter.',
+  connection: 'Uses the perpendicular from the centre and Pythagoras from Units 2 and 3.', vocabulary: [{ term: 'tangent', meaning: 'a line that meets the circle at exactly one point' }],
+  discover: ['Why the tangent at a point is perpendicular to the radius there'], prerequisiteIds: ['cpre-triangles'], lessonIds: [EXTENSION.id],
+};
 
 export const CIRCLES_CHAPTER: EduChapter = {
   id: 'circles',
   title: 'Circles',
   classGrade: 9,
-  ncertNote: 'Aligned to NCERT Ganita Manjari Grade 9, Part I, Chapter 5 (sections 5.1 to 5.8, Theorems 1 to 12). Explanations, figures and questions are original; none are copied from the textbook. Tangents are not part of this chapter and appear only as an optional extension in the laboratory.',
+  ncertNote: 'Aligned to NCERT Ganita Manjari Grade 9, Part I, Chapter 5 (sections 5.1 to 5.8, Theorems 1 to 12). Explanations, figures and questions are original; none are copied from the textbook. Tangents are not part of this chapter: they appear only as an optional Beyond Class 9 lesson that never counts toward mastery.',
   purpose: 'Circles are about one idea: every point is the same distance from the centre. From it you can explain chords, symmetry, angles and four-point tests with reasons, not only measurements.',
   learn: ['Radius, chord and diameter', 'How many circles pass through points', 'Chords, midpoints and distances', 'Central and inscribed angles', 'Cyclic quadrilaterals'],
   realWorld: ['Wheels, gears and clocks', 'Roundabouts and curved roads', 'Camera and telescope lenses', 'Satellite and orbit paths'],
   outcomes: ['Explain a circle from its definition', 'Prove the angle at the centre is double', 'Use cyclic quadrilateral facts', 'Choose the right theorem for a figure'],
   prerequisiteIds: ['cpre-equal-distance', 'cpre-angles', 'cpre-triangles'],
-  units: CIRCLES_UNITS,
+  units: [...CIRCLES_UNITS, EXTENSION_UNIT],
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
+  practice: buildCirclesPracticeSet(),
+  assessment: CIRCLES_ASSESSMENT,
   prerequisites: Object.fromEntries(CIRCLES_PREREQUISITES.map((p) => [p.id, p])),
   routes: {
     landing: '/mathematics/circles',
     learn: (id) => `/mathematics/circles/learn/${id}`,
     prerequisites: (id) => `/mathematics/circles#${id}`,
     lab: '/mathematics/circles/workbench',
-    practice: '/mathematics/circles/workbench?mode=practice',
+    practice: '/mathematics/circles/practice',
+    assessment: '/mathematics/circles/assessment',
   },
 };

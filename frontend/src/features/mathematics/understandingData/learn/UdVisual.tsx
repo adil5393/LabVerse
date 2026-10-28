@@ -10,6 +10,7 @@
  * by keyboard and by buttons; nothing is animated.
  */
 
+import { UdQuestionChart } from './UdQuestionChart';
 import React, { useMemo, useState } from 'react';
 import type { VisualProps, VisualRegistry } from '../../../education/visuals';
 import { ClusteredChart } from '../ClusteredChart';
@@ -212,4 +213,4 @@ const UdChart: React.FC<VisualProps> = ({ props, alt }) => {
   );
 };
 
-export const UD_VISUALS: VisualRegistry = { udWeighted: UdWeighted, udChart: UdChart };
+export const UD_VISUALS: VisualRegistry = { udWeighted: UdWeighted, udChart: UdChart, udQuestionChart: UdQuestionChart };

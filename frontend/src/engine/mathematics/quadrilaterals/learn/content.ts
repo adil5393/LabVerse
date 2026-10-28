@@ -15,8 +15,12 @@ import type { EduChapter } from '../../../education/types';
 import { L1, L2, L3 } from './lessonsA';
 import { L4, L5, L6, L7, L8 } from './lessonsB';
 import { QUAD_PREREQUISITES, QUAD_UNITS } from './prerequisites';
+import { buildQuadPracticeSet, enrichLesson } from './unified';
+import { QUAD_ASSESSMENT } from './assessment';
 
-const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8];
+// Unified framework: each lesson also carries the predictions and workbench investigations of the older guided lessons that
+// teach the same idea (explicit table in ./unified.ts).
+const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8].map(enrichLesson);
 
 export const QUADRILATERALS_CHAPTER: EduChapter = {
   id: 'quadrilaterals',
@@ -31,11 +35,14 @@ export const QUADRILATERALS_CHAPTER: EduChapter = {
   units: QUAD_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(QUAD_PREREQUISITES.map((p) => [p.id, p])),
+  practice: buildQuadPracticeSet(),
+  assessment: QUAD_ASSESSMENT,
   routes: {
     landing: '/mathematics/quadrilaterals',
     learn: (id) => `/mathematics/quadrilaterals/learn/${id}`,
     prerequisites: (id) => `/mathematics/quadrilaterals#${id}`,
     lab: '/mathematics/quadrilaterals/workbench',
-    practice: '/mathematics/quadrilaterals/workbench?mode=practice',
+    practice: '/mathematics/quadrilaterals/practice',
+    assessment: '/mathematics/quadrilaterals/assessment',
   },
 };

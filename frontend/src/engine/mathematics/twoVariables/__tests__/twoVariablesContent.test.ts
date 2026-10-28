@@ -220,7 +220,8 @@ describe('module isolation', () => {
   it('is loaded only through React.lazy so it stays out of initial bundles', () => {
     const staticImports = appSrc.split(/\r?\n/).filter((l) => /^import\s/.test(l) && /twoVariables/.test(l));
     expect(staticImports).toEqual([]);
-    expect(appSrc).toMatch(/import\('\.\/features\/mathematics\/twoVariables\/TwoVariablesLab'\)/);
+    // The chapter page is the unified hub, which lazily wraps the older landing page behind the compatibility switch.
+    expect(appSrc).toMatch(/import\('\.\/features\/mathematics\/twoVariables\/learn\/TwoVariablesHub'\)/);
     expect(appSrc).toMatch(/import\('\.\/features\/mathematics\/twoVariables\/TwoVariablesWorkbenchPage'\)/);
   });
 

@@ -1,52 +1,67 @@
 /**
- * Interactive Workbench Page for Class 9 Circles Laboratory (Milestone M2.5)
+ * Interactive Workbench Page for Class 9 Circles Laboratory
  *
- * Supports two complementary learning experiences:
- * 1. Guided Learning Mode (?lesson=...):
- *    - Structured 6-stage progression
- *    - Gradually introduced toolset (allowedTools)
- *    - Contextual auto-framing and guidance
- *    - Direct lesson navigation and celebration transitions
- * 2. Free Laboratory Mode (?exp=... or ?mode=...):
- *    - Complete, unrestricted 13-experiment workbench
- *    - Full construction tool palette
- *    - Independent Explore, Investigate, and Practice engines
+ * Three ways in:
+ * 1. Lesson investigation (unified framework): `?ltLesson=&ltTask=` from a Learn lesson's laboratory task. The task's
+ *    experiment and allowed tools are set up; every finished change to the construction is reported to the lesson as a
+ *    "figure-changed" event (one per gesture, not per pointer move), and the student can record live measurements.
+ * 2. Free Laboratory Mode (?exp=... or ?mode=...): the complete, unrestricted 13-experiment workbench.
+ * 3. Older guided mode (?lesson=...): only while the compatibility switch is on (see ./compat.ts). Otherwise the link
+ *    redirects to the matching Learn lesson, so old bookmarks keep working.
  */
 
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useCircleStore } from '../../../store/useCircleStore';
 import { useGuidedLearningStore } from '../../../store/useGuidedLearningStore';
 import { CIRCLES_GUIDED_LESSONS } from '../../../engine/mathematics/circles/curriculumPath';
+import { CIRCLES_LESSON_MAP, labTaskFor } from '../../../engine/mathematics/circles/learn/unified';
+import { liveCircleMeasurements } from '../../../engine/mathematics/circles/learn/liveMeasurements';
 import { CircleToolRail } from './CircleToolRail';
 import { CircleCanvas } from './CircleCanvas';
 import { CircleInspectorPanel } from './CircleInspectorPanel';
 import { CircleGuidedInspector } from './CircleGuidedInspector';
 import type { CircleMode } from '../../../engine/mathematics/circles/types';
 import { WorkspaceShell } from '../../workspace';
+import { LabTaskOverlay, useWorkbenchLessonTask } from '../../education/WorkbenchLessonTask';
+import { legacyCirclesPathEnabled } from './compat';
+
+/** The laboratory task for a task id (`lt-<older lesson id>`), built from the same older lesson data. */
+const taskById = (id: string | null) => {
+  const lesson = id ? Object.values(CIRCLES_GUIDED_LESSONS).find((l) => `lt-${l.id}` === id) : undefined;
+  return lesson ? labTaskFor(lesson) : undefined;
+};
+
+type CircleState = ReturnType<typeof useCircleStore.getState>;
+const watchCircle = (s: CircleState) => [s.circles, s.circumferencePoints, s.chords, s.angles];
+const measureCircle = (s: CircleState) => liveCircleMeasurements({ circles: s.circles, circumferencePoints: s.circumferencePoints, chords: s.chords, angles: s.angles });
 
 export const CircleWorkbenchPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { setExperiment, setMode, fitToConstruction } = useCircleStore();
   const { selectLesson } = useGuidedLearningStore();
+  const legacyOn = legacyCirclesPathEnabled(`?${searchParams.toString()}`);
 
   const lessonParam = searchParams.get('lesson');
   const expParam = searchParams.get('exp');
   const modeParam = searchParams.get('mode') as CircleMode | null;
+  const byId = useCallback(taskById, []);
+  const { bridge, task, measurements } = useWorkbenchLessonTask({ store: useCircleStore, watch: watchCircle, taskById: byId, measure: measureCircle });
+  const taskSetup = bridge.active && task ? (task.setup as { experimentId: string; allowedTools: string[] }) : undefined;
 
-  const isGuidedMode = Boolean(lessonParam);
-  const activeGuidedLesson = lessonParam ? CIRCLES_GUIDED_LESSONS[lessonParam] : undefined;
+  const isGuidedMode = Boolean(lessonParam) && legacyOn;
+  const activeGuidedLesson = isGuidedMode && lessonParam ? CIRCLES_GUIDED_LESSONS[lessonParam] : undefined;
 
   // Sync route params into geometry and guided stores
   useEffect(() => {
-    if (isGuidedMode && activeGuidedLesson) {
-      // 1. Mount corresponding canonical experiment for geometry engine
-      setExperiment(activeGuidedLesson.experimentId);
-      // 2. Select guided lesson
-      selectLesson(activeGuidedLesson.id);
-      // 3. Set explore mode for free interaction during experiment stage
+    if (taskSetup) {
+      setExperiment(taskSetup.experimentId);
       setMode('explore');
-      // 4. Auto-frame geometry for optimal classroom/Smart-TV readability
+      setTimeout(() => fitToConstruction(window.innerWidth * 0.6, window.innerHeight * 0.8), 50);
+    } else if (isGuidedMode && activeGuidedLesson) {
+      setExperiment(activeGuidedLesson.experimentId);
+      selectLesson(activeGuidedLesson.id);
+      setMode('explore');
       setTimeout(() => {
         fitToConstruction(window.innerWidth * 0.6, window.innerHeight * 0.8);
       }, 50);
@@ -58,12 +73,17 @@ export const CircleWorkbenchPage: React.FC = () => {
     } else if (modeParam) {
       setMode(modeParam);
     }
-  }, [lessonParam, expParam, modeParam, isGuidedMode, activeGuidedLesson, setExperiment, selectLesson, setMode, fitToConstruction]);
+  }, [lessonParam, expParam, modeParam, isGuidedMode, activeGuidedLesson, setExperiment, selectLesson, setMode, fitToConstruction, taskSetup]);
+
+  if (lessonParam && !legacyOn && !bridge.active) {
+    const mapped = CIRCLES_LESSON_MAP[lessonParam];
+    return <Navigate replace to={mapped ? `/mathematics/circles/learn/${mapped}` : '/mathematics/circles/practice'} />;
+  }
 
   const outlinerContent = (
     <div className="h-full flex flex-col overflow-hidden">
       <CircleToolRail
-        allowedTools={isGuidedMode && activeGuidedLesson ? activeGuidedLesson.allowedTools : undefined}
+        allowedTools={taskSetup ? taskSetup.allowedTools : isGuidedMode && activeGuidedLesson ? activeGuidedLesson.allowedTools : undefined}
       />
     </div>
   );
@@ -71,6 +91,8 @@ export const CircleWorkbenchPage: React.FC = () => {
   const viewportContent = (
     <div className="flex-1 h-full relative overflow-hidden">
       <CircleCanvas />
+
+      <LabTaskOverlay bridge={bridge} task={task} measurements={measurements} />
 
       {/* Smart TV / Beginner floating instruction pill in Guided Mode */}
       {isGuidedMode && activeGuidedLesson && (
@@ -90,7 +112,7 @@ export const CircleWorkbenchPage: React.FC = () => {
   );
 
   const inspectorContent = (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-auto">
       {isGuidedMode ? <CircleGuidedInspector /> : <CircleInspectorPanel />}
     </div>
   );
@@ -100,15 +122,15 @@ export const CircleWorkbenchPage: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="p-2 rounded bg-surface-card border border-surface-border">
           <span className="text-outline text-[10px] block">EXPERIMENT</span>
-          <span className="text-primary font-bold text-sm uppercase">{expParam ?? 'Chords & Angles'}</span>
+          <span className="text-primary font-bold text-sm uppercase">{taskSetup?.experimentId ?? expParam ?? 'Chords & Angles'}</span>
         </div>
         <div className="p-2 rounded bg-surface-card border border-surface-border">
           <span className="text-outline text-[10px] block">MODE</span>
-          <span className="text-white font-bold text-sm uppercase">{isGuidedMode ? 'Guided Lesson' : (modeParam ?? 'Explore')}</span>
+          <span className="text-white font-bold text-sm uppercase">{bridge.active ? 'Lesson investigation' : isGuidedMode ? 'Guided Lesson' : (modeParam ?? 'Explore')}</span>
         </div>
         <div className="p-2 rounded bg-surface-card border border-surface-border">
           <span className="text-outline text-[10px] block">TOOLSET</span>
-          <span className="text-white font-bold text-sm">{isGuidedMode ? 'Stage Filtered' : 'Unrestricted'}</span>
+          <span className="text-white font-bold text-sm">{taskSetup || isGuidedMode ? 'Lesson tools' : 'Unrestricted'}</span>
         </div>
         <div className="p-2 rounded bg-surface-card border border-surface-border">
           <span className="text-outline text-[10px] block">THEOREM VERIFICATION</span>

@@ -7,8 +7,8 @@
  *   ?mode=practice       chapter practice
  */
 
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useUnderstandingDataStore } from '../../../store/useUnderstandingDataStore';
 import { UD_GUIDED_LESSONS } from '../../../engine/mathematics/understandingData/curriculumPath';
 import { UD_EXPERIMENTS } from '../../../engine/mathematics/understandingData/experimentRegistry';
@@ -19,6 +19,15 @@ import { ChartLab } from './ChartLab';
 import { AverageDayLab } from './AverageDayLab';
 import { PracticePanel } from './PracticePanel';
 import { GuidedPanel } from './GuidedPanel';
+import { labTaskFor, UD_LESSON_MAP } from '../../../engine/mathematics/understandingData/learn/unified';
+import { useWorkbenchLessonTask } from '../../education/WorkbenchLessonTask';
+import { LabTaskBanner } from '../../education/LabTaskBridge';
+import { legacyPathEnabled } from '../../education/compat';
+
+type UdState = ReturnType<typeof useUnderstandingDataStore.getState>;
+const watchUd = (s: UdState) => [s.rows, s.constituents, s.dataset, s.pieGroupId, s.popWeights, s.mixtureScale, s.selected, s.clusterBy];
+const viewUd = (s: UdState) => String(s.chartView);
+const measureUd = (s: UdState) => [{ label: 'chart view', value: String(s.chartView) }, { label: 'rows in the table', value: String(s.rows.length) }];
 
 const TABS: { id: UDTab; label: string; icon: string }[] = [
   { id: 'weighted', label: 'Weighted Average', icon: 'balance' },
@@ -41,11 +50,18 @@ export const UnderstandingDataWorkbenchPage: React.FC = () => {
   const setGuidedActive = useUnderstandingDataStore((s) => s.setGuidedActive);
   const experimentId = useUnderstandingDataStore((s) => s.currentExperimentId);
 
+  const legacyOn = legacyPathEnabled('understanding-data', `?${params.toString()}`);
+  const taskById = useCallback((id: string | null) => {
+    const l = id ? Object.values(UD_GUIDED_LESSONS).find((x) => `lt-${x.id}` === id) : undefined;
+    return l ? labTaskFor(l) : undefined;
+  }, []);
+  const { bridge, task, measurements } = useWorkbenchLessonTask({ store: useUnderstandingDataStore, watch: watchUd, taskById, measure: measureUd, view: viewUd });
+  const taskExperiment = bridge.active && task ? (task.setup as { experimentId: string }).experimentId : undefined;
   const lessonParam = params.get('lesson');
-  const expParam = params.get('exp');
+  const expParam = taskExperiment ?? params.get('exp');
   const tabParam = params.get('tab');
   const modeParam = params.get('mode');
-  const lesson = lessonParam ? UD_GUIDED_LESSONS[lessonParam] : undefined;
+  const lesson = lessonParam && legacyOn ? UD_GUIDED_LESSONS[lessonParam] : undefined;
   const guided = Boolean(lesson);
 
   useEffect(() => {
@@ -59,8 +75,13 @@ export const UnderstandingDataWorkbenchPage: React.FC = () => {
     setMode((modeParam === 'practice' ? 'practice' : 'explore') as UDMode);
   }, [lesson, expParam, tabParam, modeParam, selectLesson, setExperiment, setActiveTab, setMode, setGuidedActive]);
 
-  const lessonNode = guided ? <GuidedPanel /> : undefined;
+  const lessonNode = guided ? <GuidedPanel /> : bridge.active ? <LabTaskBanner bridge={bridge} task={task} measurements={measurements} /> : undefined;
   const showPractice = mode === 'practice' && !guided;
+
+  if (lessonParam && !legacyOn && !bridge.active) {
+    const mapped = UD_LESSON_MAP[lessonParam];
+    return <Navigate replace to={mapped ? `/mathematics/understanding-data/learn/${mapped}` : '/mathematics/understanding-data/practice'} />;
+  }
 
   // Outliner: Data Views & Presets
   const outlinerContent = (

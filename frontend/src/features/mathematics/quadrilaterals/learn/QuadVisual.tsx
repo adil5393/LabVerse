@@ -9,6 +9,7 @@
  * Observing a pattern here is evidence, never proof: the lesson text says so.
  */
 
+import { QuadPracticeFigure } from './QuadPracticeFigure';
 import React, { useMemo, useRef, useState } from 'react';
 import type { VisualProps, VisualRegistry } from '../../../education/visuals';
 import { generateQuadrilateralTiling } from '../../../../engine/mathematics/quadrilaterals/geometry';
@@ -320,4 +321,4 @@ const QuadGallery: React.FC<VisualProps> = ({ props, alt, onAnswer, locked }) =>
   );
 };
 
-export const QUAD_VISUALS: VisualRegistry = { quadFig: QuadFig, quadGallery: QuadGallery };
+export const QUAD_VISUALS: VisualRegistry = { quadFig: QuadFig, quadGallery: QuadGallery, quadPracticeScene: QuadPracticeFigure };

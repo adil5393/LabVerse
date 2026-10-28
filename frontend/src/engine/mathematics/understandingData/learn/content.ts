@@ -13,8 +13,10 @@ import type { EduChapter } from '../../../education/types';
 import { L1, L2, L3 } from './lessonsA';
 import { L4, L5, L6 } from './lessonsB';
 import { UD_PREREQUISITES, UD_UNITS } from './prerequisites';
+import { buildUdPracticeSet, enrichLesson, UD_ASSESSMENT } from './unified';
 
-const LESSON_LIST = [L1, L2, L3, L4, L5, L6];
+// Unified framework: each lesson also carries the older guided lessons' predictions and workbench investigations (./unified.ts).
+const LESSON_LIST = [L1, L2, L3, L4, L5, L6].map(enrichLesson);
 
 export const UNDERSTANDING_DATA_CHAPTER: EduChapter = {
   id: 'understanding-data',
@@ -29,11 +31,14 @@ export const UNDERSTANDING_DATA_CHAPTER: EduChapter = {
   units: UD_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(UD_PREREQUISITES.map((p) => [p.id, p])),
+  practice: buildUdPracticeSet(),
+  assessment: UD_ASSESSMENT,
   routes: {
     landing: '/mathematics/understanding-data',
     learn: (id) => `/mathematics/understanding-data/learn/${id}`,
     prerequisites: (id) => `/mathematics/understanding-data#${id}`,
     lab: '/mathematics/understanding-data/workbench',
-    practice: '/mathematics/understanding-data/workbench?mode=practice',
+    practice: '/mathematics/understanding-data/practice',
+    assessment: '/mathematics/understanding-data/assessment',
   },
 };

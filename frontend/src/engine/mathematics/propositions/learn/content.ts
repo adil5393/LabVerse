@@ -17,6 +17,7 @@ import {
   buildJudges, claimGrid, combinationQ, converseQ, counterQ, factorCountQ, firstFailureQ, gridVisual, orderQ, partQ, pick, sticksShapeQ, sticksVisual, truthQ,
 } from './questions';
 import type { SticksSpec } from './geometry';
+import { buildPropPracticeSet, enrichLesson, PROP_ASSESSMENT } from './unified';
 
 export const PROP_JUDGES = buildJudges('conv-different');
 
@@ -754,7 +755,8 @@ const L11: EduLesson = {
   },
 };
 
-const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11];
+// Unified framework: each lesson also carries the older guided lesson's prediction and workbench investigation (./unified.ts).
+const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11].map(enrichLesson);
 
 export const PROPOSITIONS_CHAPTER: EduChapter = {
   id: 'propositions',
@@ -769,12 +771,15 @@ export const PROPOSITIONS_CHAPTER: EduChapter = {
   units: PROP_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(PROP_PREREQUISITES.map((p) => [p.id, p])),
+  practice: buildPropPracticeSet(),
+  assessment: PROP_ASSESSMENT,
   routes: {
     landing: '/mathematics/propositions',
     learn: (id) => `/mathematics/propositions/learn/${id}`,
     prerequisites: (id) => `/mathematics/propositions#${id}`,
     lab: '/mathematics/propositions/workbench',
-    practice: '/mathematics/propositions/workbench?mode=practice',
+    practice: '/mathematics/propositions/practice',
+    assessment: '/mathematics/propositions/assessment',
   },
 };
 

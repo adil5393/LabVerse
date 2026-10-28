@@ -7,21 +7,21 @@ import { TWO_VARIABLES_CHAPTER as CH } from '../content';
 import { checkPair, chosenVariable, lineFacts, makeEq, meaningful, num, rat, reversedCheck, riseRun, tableRows, toNumber, wholeSolutions, type Rational } from '../model';
 import { toEq, type TvVisualProps } from '../questions';
 
-describeChapterIntegrity('Two Variables', CH, ['tvFig']);
+describeChapterIntegrity('Two Variables', CH, ['tvFig', 'tvPair']);
 
 // Independent oracle: plain floating-point arithmetic, not the engine's rationals.
 const f = (a: number, b: number, c: number, x: number, y: number) => a * x + b * y + c;
 const R = (n: number, d = 1): Rational => rat(n, d);
 
 describe('Two Variables: scope and honesty', () => {
-  it('has 7 lessons in 4 units and chapter plus unit prerequisites', () => {
-    expect(Object.keys(CH.lessons)).toHaveLength(7);
-    expect(CH.units).toHaveLength(4);
+  it('has 11 lessons in 5 units and chapter plus unit prerequisites', () => {
+    expect(Object.keys(CH.lessons)).toHaveLength(11); // Lessons 8 to 11: pairs of equations (13.4 to 13.6)
+    expect(CH.units).toHaveLength(5);
     expect(CH.prerequisiteIds.length).toBeGreaterThanOrEqual(3);
   });
   it('cites only sections the chapter has (13.1, 13.1.1, 13.2, 13.2.1, 13.2.2, 13.3, 13.3.1, 13.3.2) and no invented exercise or theorem numbers', () => {
     const text = JSON.stringify(CH);
-    for (const m of text.matchAll(/Section[s]? (13\.\d+(?:\.\d+)?)/g)) expect(['13.1', '13.1.1', '13.2', '13.2.1', '13.2.2', '13.3', '13.3.1', '13.3.2', '13.4', '13.6'], m[1]).toContain(m[1]);
+    for (const m of text.matchAll(/Section[s]? (13\.\d+(?:\.\d+)?)/g)) expect(['13.1', '13.1.1', '13.2', '13.2.1', '13.2.2', '13.3', '13.3.1', '13.3.2', '13.4', '13.5', '13.5.1', '13.6'], m[1]).toContain(m[1]);
     expect(text).not.toMatch(/Exercise (Set )?13\.\d|Theorem \d/);
   });
   it('observation steps do not claim proof; the one proof lesson observes first', () => {

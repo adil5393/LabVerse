@@ -186,8 +186,9 @@ describe('scientific regression: the laboratories agree with each other', () => 
 
 describe('preservation of the existing Physics platform and of earlier progress', () => {
   it('Motion, Forces and Electricity routes, hub cards and chapter registrations are intact; Chapter 7 adds its own routes', () => {
-    for (const r of ['/physics', '/physics/motion', '/physics/motion/practice', '/physics/forces', '/physics/forces/lab', '/physics/electricity', '/physics/electricity/workbench', '/physics/work', '/physics/work/lab', '/physics/work/kinetic', '/physics/work/energy', '/physics/work/machines', '/physics/work/power', '/physics/work/derivations', '/physics/work/practice', '/physics/work/exercises', '/physics/work/learn/:lessonId']) expect(appSource, r).toContain(`path="${r}"`);
-    for (const c of ['motion', 'forces', 'work', 'electricity']) expect(hubSource).toContain(`data-chapter-card="${c}"`);
+    for (const r of ['/physics', '/physics/motion', '/physics/motion/practice', '/physics/forces', '/physics/forces/lab', '/robotics', '/robotics/electricity', '/robotics/electricity/workbench', '/physics/electricity', '/physics/electricity/workbench', '/physics/work', '/physics/work/lab', '/physics/work/kinetic', '/physics/work/energy', '/physics/work/machines', '/physics/work/power', '/physics/work/derivations', '/physics/work/practice', '/physics/work/exercises', '/physics/work/learn/:lessonId']) expect(appSource, r).toContain(`path="${r}"`);
+    for (const c of ['motion', 'forces', 'work']) expect(hubSource).toContain(`data-chapter-card="${c}"`);
+    expect(hubSource).not.toContain('data-chapter-card="electricity"'); // Electricity moved to Robotics
     expect(CH.subject).toBe('physics'); expect(CH.routes.practice).toBe('/physics/work/practice');
   });
   it('the lesson, step and question ids from the earlier milestones are unchanged (stored progress keeps working) and distinct from the other chapters', () => {

@@ -1,11 +1,12 @@
 /**
  * Chapter Practice (/physics/motion/practice), PHY-1E. Original questions across the whole chapter, open to
  * everyone: no prerequisites, no login, no unlocking. Each question is shown once; the first answer is the
- * one that counts toward the summary. The summary is for the student only: practice results are not written to
- * the learning-progress store, and neither practice nor viewing a solution ever grants lesson mastery.
+ * one that counts toward the summary. The summary is for the student only: practice results are saved as chapter
+ * practice in the learning store (never as lesson evidence), and neither practice nor viewing a solution ever grants lesson mastery.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useEducationStore } from '../../../store/useEducationStore';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { PRACTICE_CATEGORIES, PRACTICE_ITEMS, practiceByCategory } from '../../../engine/physics/motion/practice';
@@ -14,7 +15,11 @@ import { PracticeDeck } from '../../education/PracticeDeck';
 import { MOTION_VISUALS } from './MotionTrack';
 
 export const MotionPractice: React.FC = () => {
-  const [first, setFirst] = useState<Record<string, boolean>>({});
+  // Saved in the shared learning store (chapter practice), so answers survive a refresh. "First try" means correct on the
+  // first attempt with no help, exactly as in lesson practice; practice never changes lesson mastery.
+  const records = useEducationStore((s) => s.practice['motion']);
+  const submitPractice = useEducationStore((s) => s.submitPractice);
+  const first: Record<string, boolean> = Object.fromEntries(Object.entries(records ?? {}).filter(([, r]) => r.attempts > 0).map(([id, r]) => [id, r.firstAttemptUnassisted === true]));
   const answered = Object.keys(first).length;
   const right = Object.values(first).filter(Boolean).length;
   const missed = PRACTICE_ITEMS.filter((i) => first[i.id] === false);
@@ -43,7 +48,7 @@ export const MotionPractice: React.FC = () => {
         </section>
 
         <VisualRegistryProvider value={MOTION_VISUALS}>
-          <PracticeDeck groups={PRACTICE_CATEGORIES.map((c) => ({ ...c, items: practiceByCategory(c.id) }))} onAnswer={(it, ev) => { if (ev.invalid) return; setFirst((f) => (it.id in f ? f : { ...f, [it.id]: ev.correct })); }} />
+          <PracticeDeck groups={PRACTICE_CATEGORIES.map((c) => ({ ...c, items: practiceByCategory(c.id) }))} onAnswer={(it, ev) => submitPractice('motion', it.id, ev)} />
         </VisualRegistryProvider>
       </main>
     </div>

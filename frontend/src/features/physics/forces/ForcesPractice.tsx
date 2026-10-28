@@ -5,7 +5,8 @@
  * viewing a solution ever grants lesson mastery. Same architecture as the Chapter 4 and Chapter 7 practice pages.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useEducationStore } from '../../../store/useEducationStore';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { FORCE_PRACTICE_CATEGORIES, FORCE_PRACTICE_ITEMS, forcePracticeByCategory } from '../../../engine/physics/forces/practice';
@@ -15,7 +16,11 @@ import { FORCE_VISUALS } from './ForcesPages';
 import { ChapterWorkspaceNav } from '../../workspace';
 
 export const ForcesPractice: React.FC = () => {
-  const [first, setFirst] = useState<Record<string, boolean>>({});
+  // Saved in the shared learning store (chapter practice), so answers survive a refresh. "First try" means correct on the
+  // first attempt with no help, exactly as in lesson practice; practice never changes lesson mastery.
+  const records = useEducationStore((s) => s.practice['forces']);
+  const submitPractice = useEducationStore((s) => s.submitPractice);
+  const first: Record<string, boolean> = Object.fromEntries(Object.entries(records ?? {}).filter(([, r]) => r.attempts > 0).map(([id, r]) => [id, r.firstAttemptUnassisted === true]));
   const answered = Object.keys(first).length;
   const right = Object.values(first).filter(Boolean).length;
   const lessons = [...new Set(FORCE_PRACTICE_ITEMS.filter((i) => first[i.id] === false).map((m) => m.lessonId))];
@@ -39,7 +44,7 @@ export const ForcesPractice: React.FC = () => {
         </section>
 
         <CalmVisualsProvider value><VisualRegistryProvider value={FORCE_VISUALS}>
-          <PracticeDeck groups={FORCE_PRACTICE_CATEGORIES.map((c) => ({ ...c, items: forcePracticeByCategory(c.id) }))} onAnswer={(it, ev) => { if (ev.invalid) return; setFirst((f) => (it.id in f ? f : { ...f, [it.id]: ev.correct })); }} />
+          <PracticeDeck groups={FORCE_PRACTICE_CATEGORIES.map((c) => ({ ...c, items: forcePracticeByCategory(c.id) }))} onAnswer={(it, ev) => submitPractice('forces', it.id, ev)} />
         </VisualRegistryProvider></CalmVisualsProvider>
       </main>
     </div>

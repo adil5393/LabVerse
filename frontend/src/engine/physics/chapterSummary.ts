@@ -34,7 +34,7 @@ export interface PhysicsChapterSummary {
 
 const make = (id: PhysicsChapterSummary['id'], lessons: number, exercisesSolved: number, exercisesTotal: number, practiceQuestions: number, counts: { available: number; planned: number }): PhysicsChapterSummary => ({
   id, lessons, exercisesSolved, exercisesTotal, practiceQuestions, mapAvailable: counts.available, mapPlanned: counts.planned,
-  line: `${lessons} lessons, ${exercisesSolved} of ${exercisesTotal} NCERT exercises solved, ${practiceQuestions} practice questions${counts.planned ? `; ${counts.planned} chapter item${counts.planned === 1 ? '' : 's'} still upcoming` : ''}.`,
+  line: `${lessons} lessons, ${exercisesSolved} of ${exercisesTotal} NCERT exercises solved, ${practiceQuestions} practice questions, a chapter assessment${counts.planned ? `; ${counts.planned} chapter item${counts.planned === 1 ? '' : 's'} still upcoming` : ''}.`,
 });
 
 /** Sound is only partly built, so its line says how many of the twelve planned lessons exist and never claims more. */
@@ -43,9 +43,12 @@ const soundSummary = (): PhysicsChapterSummary => {
   const ex = soundExerciseCounts();
   const lessons = Object.keys(SOUND_CHAPTER.lessons).length;
   const planned = SOUND_SYLLABUS.length;
+  const practiceCount = SOUND_CHAPTER.practice?.groups.reduce((n, g) => n + g.items.length, 0) ?? 0;
   return {
-    id: 'sound', lessons, exercisesSolved: ex.exercisesSolved, exercisesTotal: ex.exercises, practiceQuestions: 0, mapAvailable: counts.available, mapPlanned: counts.planned,
-    line: `${lessons} of ${planned} lessons and 2 laboratories open; ${ex.exercisesSolved} of ${ex.exercises} NCERT exercises solved; chapter practice and ${planned - lessons} lessons upcoming.`,
+    id: 'sound', lessons, exercisesSolved: ex.exercisesSolved, exercisesTotal: ex.exercises, practiceQuestions: practiceCount, mapAvailable: counts.available, mapPlanned: counts.planned,
+    line: lessons < planned
+      ? `${lessons} of ${planned} lessons open; ${ex.exercisesSolved} of ${ex.exercises} NCERT exercises solved; ${planned - lessons} lessons upcoming.`
+      : `${lessons} lessons, 3 laboratories, ${ex.exercisesSolved} of ${ex.exercises} NCERT exercises solved, ${practiceCount} practice questions and a chapter assessment.`,
   };
 };
 

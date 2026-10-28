@@ -11,6 +11,7 @@ import { W4, W5 } from './lessonsEnergy';
 import { W6, W7 } from './lessonsPotential';
 import { W8, W9, W10 } from './lessonsMachines';
 import { PW_PREREQUISITES, PW_UNITS } from './prerequisites';
+import { WORK_ASSESSMENT } from './assessment';
 
 const LESSON_LIST = [W1, W2, W3, W4, W5, W6, W7, W8, W9, W10];
 
@@ -28,10 +29,12 @@ export const WORK_CHAPTER: EduChapter = {
   units: PW_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(PW_PREREQUISITES.map((p) => [p.id, p])),
+  assessment: WORK_ASSESSMENT,
   routes: {
     landing: '/physics/work',
     learn: (id) => `/physics/work/learn/${id}`,
     prerequisites: (id) => `/physics/work#${id}`,
+    assessment: '/physics/work/assessment',
     lab: '/physics/work/lab',
     practice: '/physics/work/practice',
   },

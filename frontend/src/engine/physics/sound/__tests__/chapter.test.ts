@@ -6,7 +6,7 @@ import { emptyIndependent, emptyLessonRecord, lessonStatus, objectiveCoverage } 
 import type { LessonRecord } from '../../../education/types';
 import { subjectCrumb } from '../../../education/subjects';
 import { SOUND_CHAPTER as CH } from '../learn/content';
-import { SND1_COVERS, SOUND_MAP, SOUND_SYLLABUS, SOUND_TEXTBOOK_INVENTORY, soundCoverageCounts } from '../curriculum';
+import { SND1_COVERS, SND3_COVERS, SOUND_MAP, SOUND_SYLLABUS, SOUND_TEXTBOOK_INVENTORY, soundCoverageCounts } from '../curriculum';
 import { SOUND_EXERCISES, solvedExerciseNumbers, solvedPonderNumbers, soundExerciseCounts, exerciseSolved } from '../exercises';
 import { MOTION_CHAPTER } from '../../motion/learn/content';
 import { FORCES_CHAPTER } from '../../forces/learn/content';
@@ -15,7 +15,7 @@ import { SOUND_VISUALS } from '../../../../features/physics/sound/SoundVisuals';
 import { bellRinging, clampPressure, heardLoudness, NEAR_VACUUM } from '../medium';
 import { computeWave, DEFAULT_WAVE, compressionCentres } from '../wave';
 
-describeChapterIntegrity('Sound', CH, ['soundVibration', 'soundWave', 'soundGraph', 'soundBellJar']);
+describeChapterIntegrity('Sound', CH, ['soundVibration', 'soundWave', 'soundGraph', 'soundBellJar', 'soundSpeed', 'soundPitch', 'soundEcho', 'soundSonar']);
 
 class MemoryStorage {
   private m = new Map<string, string>();
@@ -38,17 +38,17 @@ describe('Sound chapter registration (SND-1)', () => {
     for (const r of ['/physics/sound', '/physics/sound/vibration', '/physics/sound/wave', '/physics/sound/exercises', '/physics/sound/learn/:lessonId', '/physics/work', '/physics/forces', '/physics/motion']) expect(appSource, r).toContain(`path="${r}"`);
   });
 
-  it('has exactly Lessons 1 to 6 in two units; Lessons 7 to 12 are NOT part of the chapter object', () => {
-    expect(Object.keys(CH.lessons)).toEqual(['ps-l1', 'ps-l2', 'ps-l3', 'ps-l4', 'ps-l5', 'ps-l6']);
-    expect(CH.units.map((u) => u.lessonIds)).toEqual([['ps-l1', 'ps-l2', 'ps-l3'], ['ps-l4', 'ps-l5', 'ps-l6']]);
-    for (const id of ['ps-l7', 'ps-l8', 'ps-l9', 'ps-l10', 'ps-l11', 'ps-l12']) expect(CH.lessons[id]).toBeUndefined();
+  it('has all twelve lessons in the five approved units (SND-1 to SND-3)', () => {
+    expect(Object.keys(CH.lessons)).toEqual(Array.from({ length: 12 }, (_, i) => `ps-l${i + 1}`));
+    expect(CH.units.map((u) => u.lessonIds)).toEqual([['ps-l1', 'ps-l2', 'ps-l3'], ['ps-l4', 'ps-l5', 'ps-l6'], ['ps-l7', 'ps-l8', 'ps-l9', 'ps-l10'], ['ps-l11'], ['ps-l12']]);
   });
 
-  it('keeps the complete approved syllabus: 12 lessons, 5 units; only Lessons 1 to 6 are available and the rest are planned', () => {
+  it('the approved syllabus is complete: 12 lessons, 5 units, all available and all present in the chapter', () => {
     expect(SOUND_SYLLABUS.length).toBe(12);
     expect(new Set(SOUND_SYLLABUS.map((l) => l.unit))).toEqual(new Set([1, 2, 3, 4, 5]));
-    expect(SOUND_SYLLABUS.filter((l) => l.status === 'available').map((l) => l.number)).toEqual([1, 2, 3, 4, 5, 6]);
-    for (const l of SOUND_SYLLABUS) { if (l.status === 'planned') expect(l.milestone, l.id).toMatch(/SND-[23]/); expect(Boolean(CH.lessons[l.id]), l.id).toBe(l.status === 'available'); }
+    for (const l of SOUND_SYLLABUS) { expect(l.status, l.id).toBe('available'); expect(CH.lessons[l.id], l.id).toBeDefined(); expect(CH.lessons[l.id].unitId).toBe(`ps-unit-${l.unit}`); }
+    expect(CH.practice?.groups.length).toBeGreaterThanOrEqual(4);
+    expect(CH.assessment).toBeDefined();
   });
 
   it('lesson, prerequisite and question ids are distinct from the Motion, Forces and Work chapters (progress is stored by id)', () => {
@@ -87,7 +87,12 @@ describe('Sound chapter registration (SND-1)', () => {
     expect(kinds('ps-l4').has('soundWave')).toBe(true);
     expect(kinds('ps-l5').has('soundWave')).toBe(true);
     expect(kinds('ps-l6').has('soundGraph') || kinds('ps-l6').has('soundWave')).toBe(true);
-    for (const l of lessons) { const inv = l.investigation; if (inv) expect(inv.href).toMatch(/^\/physics\/sound\/(vibration|wave)$/); }
+    expect(kinds('ps-l7').has('soundGraph')).toBe(true);
+    expect(kinds('ps-l9').has('soundSpeed')).toBe(true);
+    expect(kinds('ps-l10').has('soundPitch')).toBe(true);
+    expect(kinds('ps-l11').has('soundEcho')).toBe(true);
+    expect(kinds('ps-l12').has('soundSonar')).toBe(true);
+    for (const l of lessons) { const inv = l.investigation; if (inv) expect(inv.href).toMatch(/^\/physics\/sound\/(vibration|wave|characteristics)$/); }
     for (const v of allVisuals(CH)) expect(SOUND_VISUALS[v.v.kind], v.v.kind).toBeDefined();
   });
 
@@ -95,10 +100,8 @@ describe('Sound chapter registration (SND-1)', () => {
     for (const l of lessons) { expect(l.objectives!.length, l.id).toBe(3); for (const o of l.objectives!) expect(l.independent.filter((i) => i.objective === o.id).length, `${l.id}/${o.id}`).toBeGreaterThanOrEqual(2); }
   });
 
-  it('the lessons promise nothing of Lessons 7 to 12 as if it existed', () => {
-    const text = JSON.stringify(CH);
-    expect(text).not.toMatch(/Hz\) is defined as|the formula v = ν λ|v = ν × λ\b/);   // the relation is not taught yet
-    for (const l of lessons) for (const step of l.steps) expect(step.paragraphs.join(' ')).not.toMatch(/lesson 1[0-2]\b|lesson [789]\b(?! \()/i);
+  it('lessons never refer to a lesson number that does not exist', () => {
+    for (const l of lessons) for (const step of l.steps) for (const m of step.paragraphs.join(' ').matchAll(/lesson (\d+)\b/gi)) expect(Number(m[1]), `${l.id}/${step.id}`).toBeLessThanOrEqual(12);
   });
 });
 
@@ -112,17 +115,15 @@ describe('Sound curriculum coverage (verified against the PDF in SND-0)', () => 
     expect(SOUND_TEXTBOOK_INVENTORY.figures).toBe(34);
   });
 
-  it('every SND-1 section, activity and Pause and Ponder is taught by a Learn row mapped to existing lessons; everything else is planned', () => {
-    const sectionsCovered = new Set(SOUND_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook').map((r) => r.section.split(' ')[0]));
-    for (const s of SND1_COVERS.sections) expect(sectionsCovered.has(s), s).toBe(true);
+  it('every section of the chapter is taught by a Learn row mapped to existing lessons; only the closing activities are planned', () => {
+    const sectionsCovered = new Set(SOUND_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook').flatMap((r) => r.section.split(/,\s*/).map((x) => x.split(' ')[0])));
+    for (const s of SND3_COVERS.sections.filter((x) => x !== '10.6')) expect(sectionsCovered.has(s) || [...sectionsCovered].some((c) => c.startsWith(s)), s).toBe(true);
     const learnText = SOUND_MAP.filter((r) => r.status === 'learn' && r.kind === 'textbook').map((r) => r.topic).join(' | ');
     for (const a of SND1_COVERS.activities) expect(learnText, `Activity ${a}`).toContain(`${a}`);
     for (const r of SOUND_MAP) for (const id of r.lessonIds) expect(CH.lessons[id], `${r.id}/${id}`).toBeDefined();
     for (const r of SOUND_MAP.filter((x) => x.status === 'planned')) { expect(r.lessonIds, r.id).toEqual([]); expect(r.milestone, r.id).toBeTruthy(); }
-    // sections 10.6 onward are not claimed
-    const later = ['10.6.1', '10.6.2', '10.6.3', '10.6.4', '10.7', '10.8'];
-    for (const s of later) expect(SOUND_MAP.some((r) => r.section.startsWith(s) && r.status !== 'planned' && r.kind === 'textbook'), s).toBe(false);
-    const c = soundCoverageCounts(); expect(c.available + c.planned).toBe(c.total); expect(c.planned).toBeGreaterThanOrEqual(7);
+    const c = soundCoverageCounts(); expect(c.available + c.planned).toBe(c.total);
+    expect(SOUND_MAP.filter((r) => r.status === 'planned').map((r) => r.id)).toEqual(['s-quest']);
   });
 
   it('every lesson is claimed by the map', () => {
@@ -141,9 +142,9 @@ describe('NCERT exercise inventory (SND-1)', () => {
     expect(parts[5]).toEqual(['i', 'ii']); expect(parts[6]).toEqual(['A', 'B', 'C']); expect(parts[13]).toEqual(['lambda', 'nu']); expect(parts[14]).toEqual(['lambdaA', 'lambdaB', 'nuA', 'nuB']);
   });
 
-  it('solved exactly: Exercises 1, 2, 3 and 8 and Pause and Ponder 1 to 6; every other part is honestly upcoming with no solution', () => {
-    expect(solvedExerciseNumbers()).toEqual([1, 2, 3, 8]);
-    expect(solvedPonderNumbers()).toEqual([1, 2, 3, 4, 5, 6]);
+  it('every exercise and Pause and Ponder item is solved, each part with a full solution', () => {
+    expect(solvedExerciseNumbers()).toEqual(Array.from({ length: 15 }, (_, i) => i + 1));
+    expect(solvedPonderNumbers()).toEqual(Array.from({ length: 13 }, (_, i) => i + 1));
     for (const e of SOUND_EXERCISES) for (const p of e.parts) {
       if (exerciseSolved(e)) { expect(p.solution, `${e.kind}${e.number}`).toBeDefined(); expect(p.needs).toBeUndefined(); }
       else { expect(p.solution, `${e.kind}${e.number}/${p.id}`).toBeUndefined(); expect(p.needs, `${e.kind}${e.number}/${p.id}`).toBeTruthy(); }
@@ -158,8 +159,13 @@ describe('NCERT exercise inventory (SND-1)', () => {
     expect(20 / 4).toBe(5);
   });
 
-  it('no figure-dependent exercise is shown as solved (SND-2 readings come first)', () => {
-    for (const n of [5, 6, 13, 14]) expect(SOUND_EXERCISES.find((e) => e.kind === 'exercise' && e.number === n)!.parts.every((p) => p.status === 'upcoming'), `Q${n}`).toBe(true);
+  it('figure-dependent exercises use the verified SND-0 readings', () => {
+    const part = (n: number, id: string) => SOUND_EXERCISES.find((e) => e.kind === 'exercise' && e.number === n)!.parts.find((p) => p.id === id)!.solution!.answer;
+    expect(part(5, 'i')).toMatch(/\(a\).*greater wavelength/); expect(part(5, 'ii')).toMatch(/\(a\).*smaller amplitude/);
+    expect(part(6, 'A')).toMatch(/green/); expect(part(6, 'B')).toMatch(/red/); expect(part(6, 'C')).toMatch(/blue/);
+    expect(part(13, 'lambda')).toMatch(/0\.04 m/); expect(part(13, 'nu')).toMatch(/8500 Hz/);
+    expect(part(14, 'nuA')).toMatch(/13 800 Hz/); expect(part(14, 'nuB')).toMatch(/6900 Hz/);
+    expect(part(4, 'all')).toMatch(/Not an echo/); expect(part(15, 'all')).toMatch(/2 : 9/);
   });
 
   it('is isolated from learning progress: viewing a solution can never be mastery evidence', () => {

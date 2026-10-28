@@ -1,11 +1,13 @@
 /**
  * NCERT Class 9 Chapter 10 end-of-chapter exercises and Pause and Ponder items: inventory and the solutions built so far (SND-1).
  *
- * All 15 exercises (24 answer parts) and all 13 Pause and Ponder items are listed with the book's numbering (verified in SND-0).
- * Only the ones that Lessons 1 to 6 support are solved: Exercises 1, 2, 3 and 8, and Pause and Ponder 1 to 6. Every other part is
- * honestly 'upcoming': it shows what it needs and carries NO solution. Original wording; the book's text is summarised, not copied.
+ * All 15 exercises and all 13 Pause and Ponder items are listed with the book's numbering (verified in SND-0). All are solved:
+ * Exercises 1, 2, 3 and 8 and Pause and Ponder 1 to 6 with Lessons 1 to 6, the rest with Lessons 7 to 12 (./exercisesSolutions.ts).
+ * A part with no solution would show as 'upcoming' with what it needs. Original wording; the book's text is summarised, not copied.
  * Viewing a solution here never touches lesson mastery (this module imports no progress store).
  */
+
+import { MORE_SOLUTIONS } from './exercisesSolutions';
 
 export interface SoundStep { text: string; why: string }
 
@@ -38,7 +40,7 @@ export interface SoundExercise {
   parts: SoundExercisePart[];
 }
 
-const SOLUTIONS: Record<string, SoundSolution> = {
+const BASE_SOLUTIONS: Record<string, SoundSolution> = {
   'ex1-all': {
     principle: 'A mechanical wave is a wave that needs a material medium. The observation that separates sound from waves that do not need one is what supports it.',
     steps: [
@@ -153,6 +155,9 @@ const SOLUTIONS: Record<string, SoundSolution> = {
     illustration: 'phase',
   },
 };
+
+// Sections 10.6 to 10.8 (SND-2 and SND-3): ./exercisesSolutions.ts.
+const SOLUTIONS: Record<string, SoundSolution> = { ...BASE_SOLUTIONS, ...MORE_SOLUTIONS };
 
 const part = (key: string, id: string, label: string, needs: string): SoundExercisePart => {
   const solution = SOLUTIONS[key];

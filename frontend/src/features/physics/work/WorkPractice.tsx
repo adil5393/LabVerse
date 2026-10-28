@@ -5,7 +5,8 @@
  * viewing a solution ever grants lesson mastery. This is the same architecture as the Chapter 4 practice page.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useEducationStore } from '../../../store/useEducationStore';
 import { Link } from 'react-router-dom';
 import { GlobalHeader } from '../../../components/GlobalHeader';
 import { WORK_PRACTICE_CATEGORIES, WORK_PRACTICE_ITEMS, workPracticeByCategory } from '../../../engine/physics/work/practice';
@@ -15,7 +16,11 @@ import { WORK_VISUALS } from './visuals';
 import { ChapterWorkspaceNav } from '../../workspace';
 
 export const WorkPractice: React.FC = () => {
-  const [first, setFirst] = useState<Record<string, boolean>>({});
+  // Saved in the shared learning store (chapter practice), so answers survive a refresh. "First try" means correct on the
+  // first attempt with no help, exactly as in lesson practice; practice never changes lesson mastery.
+  const records = useEducationStore((s) => s.practice['work']);
+  const submitPractice = useEducationStore((s) => s.submitPractice);
+  const first: Record<string, boolean> = Object.fromEntries(Object.entries(records ?? {}).filter(([, r]) => r.attempts > 0).map(([id, r]) => [id, r.firstAttemptUnassisted === true]));
   const answered = Object.keys(first).length;
   const right = Object.values(first).filter(Boolean).length;
   const missed = WORK_PRACTICE_ITEMS.filter((i) => first[i.id] === false);
@@ -45,7 +50,7 @@ export const WorkPractice: React.FC = () => {
         </section>
 
         <VisualRegistryProvider value={WORK_VISUALS}>
-          <PracticeDeck groups={WORK_PRACTICE_CATEGORIES.map((c) => ({ ...c, items: workPracticeByCategory(c.id) }))} onAnswer={(it, ev) => { if (ev.invalid) return; setFirst((f) => (it.id in f ? f : { ...f, [it.id]: ev.correct })); }} />
+          <PracticeDeck groups={WORK_PRACTICE_CATEGORIES.map((c) => ({ ...c, items: workPracticeByCategory(c.id) }))} onAnswer={(it, ev) => submitPractice('work', it.id, ev)} />
         </VisualRegistryProvider>
       </main>
     </div>

@@ -34,8 +34,8 @@ describe('Forces chapter registration and Physics preservation', () => {
   it('is a Physics chapter with Physics breadcrumbs and its own routes; Motion and Electricity are untouched', () => {
     expect(subjectCrumb(CH)).toEqual({ label: 'Physics', href: '/physics' });
     expect(CH.routes.landing).toBe('/physics/forces'); expect(CH.routes.learn('pf-l1')).toBe('/physics/forces/learn/pf-l1'); expect(CH.routes.lab).toBe('/physics/forces/lab');
-    for (const r of ['/physics/forces', '/physics/forces/lab', '/physics/forces/exercises', '/physics/forces/learn/:lessonId', '/physics/motion', '/physics/motion/learn/:lessonId', '/physics/motion/exercises', '/physics/electricity', '/physics/electricity/workbench']) expect(appSource, r).toContain(`path="${r}"`);
-    expect(hubSource).toContain('data-chapter-card="forces"'); expect(hubSource).toContain('data-chapter-card="motion"'); expect(hubSource).toContain('data-chapter-card="electricity"');
+    for (const r of ['/physics/forces', '/physics/forces/lab', '/physics/forces/exercises', '/physics/forces/learn/:lessonId', '/physics/motion', '/physics/motion/learn/:lessonId', '/physics/motion/exercises', '/robotics', '/robotics/electricity', '/robotics/electricity/workbench', '/physics/electricity', '/physics/electricity/workbench']) expect(appSource, r).toContain(`path="${r}"`);
+    expect(hubSource).toContain('data-chapter-card="forces"'); expect(hubSource).toContain('data-chapter-card="motion"'); expect(hubSource).not.toContain('data-chapter-card="electricity"'); // Electricity moved to Robotics
   });
   it('lesson and prerequisite ids are distinct from the Motion chapter (progress is stored by id)', () => {
     const mine = [...Object.keys(CH.lessons), ...Object.keys(CH.prerequisites)];

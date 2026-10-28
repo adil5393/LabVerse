@@ -8,7 +8,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { computeWave, DEFAULT_WAVE, describeWave, displacement, physicalTime, WAVE_LIMITS, type WaveSetup } from '../../../engine/physics/sound/wave';
-import { btn, RangeField, TransportBar } from './SoundControls';
+import { useAudioSettings } from '../../../engine/audio/settings';
+import { useTone } from '../../audio/useTone';
+import { btn, btnPrimary, RangeField, SoundSwitch, TransportBar } from './SoundControls';
 import { DensityGraph, followedCompression, markedRestPosition, WaveScene, type GraphMode } from './WaveViews';
 import { useContainerPresentation } from './soundViewport';
 import { useSoundClock } from './useSoundClock';
@@ -35,6 +37,20 @@ export const WavePanel: React.FC<WavePanelProps> = ({ initialSetup, initialT, in
   const [showGraph, setShowGraph] = useState(initialGraph);
   const [mark, setMark] = useState(initialMark);
   const wave = useMemo(() => computeWave(setup), [setup]);
+  const soundOn = useAudioSettings((s) => s.soundOn);
+  const volume = useAudioSettings((s) => s.volume);
+  const { engine, snapshot } = useTone();
+  /** Loudness follows the density change (the amplitude slider); 0 is silence. */
+  const toneAmp = setup.densityAmp / WAVE_LIMITS.densityAmp[1];
+  const hearing = snapshot.playing;
+  const hear = () => {
+    if (hearing) { engine.stop('Tone stopped.'); return; }
+    if (wave.valid) engine.startTone({ hz: setup.frequencyHz, amplitude: toneAmp, volume });
+  };
+  // Keep a playing tone in step with the sliders: same frequency and loudness as the wave on the screen.
+  useEffect(() => { if (hearing) engine.setFrequency(setup.frequencyHz); }, [setup.frequencyHz]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (hearing) engine.setAmplitude(toneAmp, volume); }, [toneAmp, volume]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!soundOn) engine.stop(null); }, [soundOn, engine]);
   const periodVisual = wave.valid ? wave.slow / wave.frequencyHz : 5;
   const duration = Math.min(120, Math.max(12, Math.ceil(3 * periodVisual)));
   const clock = useSoundClock(duration);
@@ -69,6 +85,12 @@ export const WavePanel: React.FC<WavePanelProps> = ({ initialSetup, initialT, in
     <div className="space-y-3" data-testid="wave-controls">
       <RangeField id="wave-freq" label="Frequency ν (nu)" unit="Hz" value={setup.frequencyHz} min={WAVE_LIMITS.frequencyHz[0]} max={WAVE_LIMITS.frequencyHz[1]} step={10} onChange={(v) => change((s) => ({ ...s, frequencyHz: v }), true)} hint="At the same speed, a higher frequency gives a shorter wavelength." />
       <RangeField id="wave-amp" label="Amplitude (density change)" value={setup.densityAmp} min={WAVE_LIMITS.densityAmp[0]} max={WAVE_LIMITS.densityAmp[1]} step={0.05} format={(v) => f2(v)} onChange={(v) => change((s) => ({ ...s, densityAmp: v }), false)} hint="A bigger amplitude crowds the compressions more and carries more energy; the wavelength does not change." />
+      <SoundSwitch hz={wave.valid ? setup.frequencyHz : undefined} onHint="Press Hear this wave for a tone at the wave's real frequency. Moving the sliders changes the pitch and loudness as you listen. It stops by itself after 20 seconds." />
+      {soundOn && (
+        <button type="button" className={`${hearing ? btn : btnPrimary} w-full`} onClick={hear} disabled={!wave.valid} data-action="hear-wave">
+          <span className="material-symbols-outlined text-[20px]" aria-hidden>{hearing ? 'stop' : 'volume_up'}</span>{hearing ? 'Stop the tone' : `Hear this wave (${setup.frequencyHz} Hz)`}
+        </button>
+      )}
       {controls === 'lab' && (
         <>
           <div className="space-y-1" role="group" aria-label="How much slower than real time">
@@ -89,7 +111,7 @@ export const WavePanel: React.FC<WavePanelProps> = ({ initialSetup, initialT, in
             </div>
           </div>
           <label className="flex items-center gap-3 min-h-[44px] text-sm text-slate-200 cursor-pointer"><input type="checkbox" className="w-5 h-5 accent-amber-500" checked={mark} onChange={(e) => setMark(e.target.checked)} data-testid="mark-toggle" /> Mark one particle and follow one compression</label>
-          <button type="button" className={btn} onClick={() => { setSetup({ ...DEFAULT_WAVE }); clock.reset(); }} data-action="defaults">Back to the starting wave</button>
+          <button type="button" className={btn} onClick={() => { engine.stop(null); setSetup({ ...DEFAULT_WAVE }); clock.reset(); }} data-action="defaults">Back to the starting wave</button>
         </>
       )}
     </div>
@@ -118,7 +140,7 @@ export const WavePanel: React.FC<WavePanelProps> = ({ initialSetup, initialT, in
 
   const stepSize = wave.valid ? periodVisual / 8 : 0.5;
   const transport = controls === 'none' ? null : (
-    <TransportBar playing={clock.playing} t={clock.t} duration={duration} reduced={clock.reduced} blocked={clock.blocked} onToggle={clock.toggle} onReplay={clock.replay} onReset={clock.reset} onScrub={clock.scrub} timeLabel={timeLabel} stepSize={stepSize} />
+    <TransportBar playing={clock.playing} t={clock.t} duration={duration} reduced={clock.reduced} blocked={clock.blocked} onToggle={clock.toggle} onReplay={clock.replay} onReset={() => { engine.stop(null); clock.reset(); }} onScrub={clock.scrub} timeLabel={timeLabel} stepSize={stepSize} />
   );
 
   return (

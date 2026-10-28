@@ -106,7 +106,7 @@ export class ToneEngine {
   }
 
   /** Change the loudness of a steady (non-decaying) tone while it plays. */
-  setAmplitude(amplitude: number, volume = AUDIO.defaultVolume): void {
+  setAmplitude(amplitude: number, volume: number = AUDIO.defaultVolume): void {
     if (!this.voice || !this.ctx || this.voice.decay) return;
     this.voice.gain.gain.setTargetAtTime(toneGain(amplitude, volume), this.ctx.currentTime, 0.02);
   }

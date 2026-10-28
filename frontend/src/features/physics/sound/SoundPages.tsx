@@ -20,6 +20,8 @@ import { ChapterWorkspaceNav } from '../../workspace';
 import { VIBRATION_ASSUMPTIONS, VibrationPanel } from './VibrationLab';
 import { WavePanel } from './WaveLab';
 import { SOUND_VISUALS } from './SoundVisuals';
+import { SoundEchoVisual, SoundPitchVisual, SoundSonarVisual, SoundSpeedVisual } from './CharacteristicsVisuals';
+import { makeChapterPages } from '../../education/chapterPages';
 import { SOUND_COLORS } from './WaveViews';
 
 const CRUMB = 'Sound Waves';
@@ -72,15 +74,17 @@ export const SoundHub: React.FC = () => {
         <header className="space-y-2">
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">{SOUND_TEXTBOOK.book} ({SOUND_TEXTBOOK.edition}) · Chapter {SOUND_TEXTBOOK.chapterNumber}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{SOUND_TEXTBOOK.title}</h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Why does a plucked string sound, how does the sound reach you, and what does it look like as a wave? Six lessons and two laboratories are open now (Sections 10.1 to 10.5). Frequency, speed, pitch, echoes and SONAR come in later lessons. Sound is optional everywhere: turn it on only if you want to hear the tones.</p>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">Why does a plucked string sound, how does the sound reach you, and what does it look like as a wave? Twelve lessons cover the whole chapter (Sections 10.1 to 10.8), with three laboratories, every NCERT exercise solved, chapter practice and a chapter assessment. Sound is optional everywhere: turn it on only if you want to hear the tones.</p>
         </header>
 
         <section aria-label="Ways to learn" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="sound-destinations">
-          <Dest id="learn" to={ch.routes.learn(next.id)} icon="school" title="Learn" text={`${all.length} lessons in 2 units, with optional refreshers, worked examples and practice. ${started ? 'Continue where you left off.' : 'Start with Lesson 1.'}`} cta={started ? `Continue: Lesson ${next.number}` : 'Start Lesson 1'} />
+          <Dest id="learn" to={ch.routes.learn(next.id)} icon="school" title="Learn" text={`${all.length} lessons in 5 units, with optional refreshers, worked examples and practice. ${started ? 'Continue where you left off.' : 'Start with Lesson 1.'}`} cta={started ? `Continue: Lesson ${next.number}` : 'Start Lesson 1'} />
           <Dest id="vibration" to="/physics/sound/vibration" icon="graphic_eq" title="Vibration Laboratory" text="Pluck a rubber band or strike a tuning fork. See the vibration and the loudness, and (optionally) hear the tone." cta="Open the Vibration Laboratory" />
           <Dest id="wave" to="/physics/sound/wave" icon="waves" title="Wave Laboratory" text="Watch compressions and rarefactions travel while one marked particle only vibrates in place, with the density graph." cta="Open the Wave Laboratory" />
-          <Dest id="exercises" to="/physics/sound/exercises" icon="assignment" title="NCERT Exercises" text={`${ex.exercisesSolved} of ${ex.exercises} exercises and ${ex.pondersSolved} of ${ex.ponders} Pause and Ponder items are solved so far. The rest need Lessons 7 to 12.`} cta="Open the exercises" />
-          <Dest id="practice" icon="task_alt" title="Chapter Practice" text="Original practice questions across the whole chapter. Not built yet." cta="" upcoming="Upcoming (SND-3)" />
+          <Dest id="exercises" to="/physics/sound/exercises" icon="assignment" title="NCERT Exercises" text={`All ${ex.exercises} exercises and ${ex.ponders} Pause and Ponder items, solved step by step (${ex.exercisesSolved} and ${ex.pondersSolved} solved).`} cta="Open the exercises" />
+          <Dest id="characteristics" to="/physics/sound/characteristics" icon="tune" title="Sound Characteristics Laboratory" text="Speed in different media, pitch and the audible range, echoes and SONAR, with every number computed." cta="Open the laboratory" />
+          <Dest id="practice" to="/physics/sound/practice" icon="task_alt" title="Chapter Practice" text="Original practice questions across the whole chapter, saved on this device." cta="Start practising" />
+          <Dest id="assessment" to="/physics/sound/assessment" icon="quiz" title="Chapter Assessment" text="Check your readiness across all twelve lessons; feedback after you submit." cta="Open the assessment" />
         </section>
 
         <VisualRegistryProvider value={SOUND_VISUALS}>
@@ -117,7 +121,7 @@ export const SoundHub: React.FC = () => {
           </section>
         </VisualRegistryProvider>
 
-        <section aria-label="Upcoming lessons" className="rounded-2xl border border-dashed border-surface-border p-4 space-y-3" data-testid="sound-upcoming">
+        {planned.length > 0 && <section aria-label="Upcoming lessons" className="rounded-2xl border border-dashed border-surface-border p-4 space-y-3" data-testid="sound-upcoming">
           <h2 className="text-lg font-black text-slate-200">Upcoming lessons ({planned.length})</h2>
           <p className="text-xs text-slate-400">These lessons are planned and are <strong>not available yet</strong>. They are not links.</p>
           <ol className="grid gap-2 sm:grid-cols-2">
@@ -128,7 +132,7 @@ export const SoundHub: React.FC = () => {
               </li>
             ))}
           </ol>
-        </section>
+        </section>}
 
         <details className="rounded-2xl border border-surface-border bg-surface-card p-4" data-testid="sound-chapter-map">
           <summary className="min-h-[44px] flex flex-wrap items-center justify-between gap-2 cursor-pointer">
@@ -249,7 +253,7 @@ export const SoundExercises: React.FC = () => {
         <ChapterWorkspaceNav chapterId="sound" currentPageTitle="NCERT Exercises" currentMode="exercises" showBackToLab />
         <header className="space-y-2">
           <h1 className="text-3xl font-black text-white">NCERT Exercises: Sound Waves</h1>
-          <p className="text-sm text-slate-300 max-w-3xl">The chapter ends with {c.exercises} exercises ({c.exerciseParts} answer parts) and has {c.ponders} Pause and Ponder items. <strong>{c.exercisesSolved} exercises and {c.pondersSolved} Pause and Ponder items are solved so far</strong>: the others need lessons that are not built yet and are marked Upcoming with no solution.</p>
+          <p className="text-sm text-slate-300 max-w-3xl">The chapter ends with {c.exercises} exercises ({c.exerciseParts} answer parts) and has {c.ponders} Pause and Ponder items. <strong>{c.exercisesSolved} exercises and {c.pondersSolved} Pause and Ponder items are solved</strong>, each with the principle, the steps and a common mistake. Figure-based answers use verified readings of the book&apos;s figures.</p>
           <p className="text-xs text-slate-400">Opening a solution never changes your lesson progress. Solutions are written in LabVerse&apos;s own words.</p>
         </header>
         <section aria-label="Exercises" className="space-y-3"><h2 className="text-xl font-black text-white">Revise, Reflect, Refine: {c.exercises} exercises</h2><ol className="space-y-3" data-testid="sound-exercise-list">{exercises.map((e) => <ExerciseCard key={`e${e.number}`} e={e} />)}</ol></section>
@@ -259,3 +263,33 @@ export const SoundExercises: React.FC = () => {
   );
 };
 import { InteractiveActivity } from '../../../components/InteractiveActivity';
+
+export const CharacteristicsLabPage: React.FC = () => (
+  <LabShell title="Sound Characteristics Laboratory" crumb="Sound Characteristics Laboratory" mode="experiment" intro="Four investigations: how fast sound travels in air, water and steel; where a frequency sits on the hearing range; when a reflection is heard as an echo; and how SONAR finds a depth. Change the numbers and every result is recomputed." assumptions={[
+    'Speeds are the approximate values the chapter gives (air about 331 to 344 m/s depending on temperature, water about 1500 m/s, steel about 5000 m/s). Each problem in the lessons uses the speed it states.',
+    'The 0.1 s echo rule and the 0.05 s reverberation figure are approximate rules about human hearing, not exact laws.',
+    'Echo and SONAR assume sound goes straight to the reflector and back at one speed. No sound is played in this laboratory.',
+  ]}>
+    <CharacteristicsPanel />
+  </LabShell>
+);
+
+const CharacteristicsPanel: React.FC = () => {
+  const [tab, setTab] = React.useState<'speed' | 'pitch' | 'echo' | 'sonar'>('speed');
+  const TABS = [['speed', 'Speed'], ['pitch', 'Pitch and hearing'], ['echo', 'Echo'], ['sonar', 'SONAR']] as const;
+  return (
+    <div className="space-y-3" data-testid="characteristics-lab">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Investigations">
+        {TABS.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-[48px] px-4 rounded-full text-sm font-semibold border ${tab === id ? 'bg-primary text-on-primary border-primary' : 'bg-surface border-surface-border text-slate-300'}`}>{label}</button>)}
+      </div>
+      {tab === 'speed' && <SoundSpeedVisual props={{ editable: true }} alt="Travel time and wavelength of the same sound in air, water and steel." />}
+      {tab === 'pitch' && <SoundPitchVisual props={{ editable: true, ladder: true }} alt="A frequency and amplitude explorer with the audible range." />}
+      {tab === 'echo' && <SoundEchoVisual props={{ editable: true }} alt="An echo explorer: distance to a wall and the time for the reflection to return." />}
+      {tab === 'sonar' && <SoundSonarVisual props={{ editable: true }} alt="A SONAR explorer: echo time and depth." />}
+    </div>
+  );
+};
+
+const SOUND_PAGES = makeChapterPages(SOUND_CHAPTER, SOUND_VISUALS, { crumb: CRUMB, subtitle: '', labs: [] });
+export const SoundPracticePage = SOUND_PAGES.Practice;
+export const SoundAssessmentPage = SOUND_PAGES.Assessment;

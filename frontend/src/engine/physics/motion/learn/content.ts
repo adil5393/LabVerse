@@ -10,6 +10,7 @@ import { L4, L5 } from './lessonsSpeed';
 import { L6, L7, L8 } from './lessonsGraphs';
 import { L9, L10 } from './lessonsEquations';
 import { PM_PREREQUISITES, PM_UNITS } from './prerequisites';
+import { MOTION_ASSESSMENT } from './assessment';
 
 const LESSON_LIST = [L1, L2, L3, L4, L5, L6, L7, L8, L9, L10];
 
@@ -27,10 +28,12 @@ export const MOTION_CHAPTER: EduChapter = {
   units: PM_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(PM_PREREQUISITES.map((p) => [p.id, p])),
+  assessment: MOTION_ASSESSMENT,
   routes: {
     landing: '/physics/motion',
     learn: (id) => `/physics/motion/learn/${id}`,
     prerequisites: (id) => `/physics/motion#${id}`,
+    assessment: '/physics/motion/assessment',
     lab: '/physics/motion/lab',
     practice: '/physics/motion/practice',
   },

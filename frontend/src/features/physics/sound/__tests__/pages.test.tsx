@@ -18,19 +18,16 @@ const at = (el: React.ReactElement) => renderToStaticMarkup(<MemoryRouter>{el}</
 describe('Chapter 10 hub: only completed functionality is available', () => {
   const html = at(<SoundHub />);
 
-  it('links to Learn, both laboratories and the NCERT exercises; Chapter Practice is not a link', () => {
-    for (const to of ['/physics/sound/learn/ps-l1', '/physics/sound/vibration', '/physics/sound/wave', '/physics/sound/exercises']) expect(html, to).toContain(`href="${to}"`);
-    expect(html).toMatch(/data-destination="practice"[^>]*aria-disabled="true"/);
-    expect(html).not.toContain('href="/physics/sound/practice"');
-    expect(html).toContain('Upcoming (SND-3)');
+  it('links to Learn, all three laboratories, the NCERT exercises, chapter practice and the assessment', () => {
+    for (const to of ['/physics/sound/learn/ps-l1', '/physics/sound/vibration', '/physics/sound/wave', '/physics/sound/characteristics', '/physics/sound/exercises', '/physics/sound/practice', '/physics/sound/assessment']) expect(html, to).toContain(`href="${to}"`);
+    expect(html).not.toMatch(/aria-disabled="true"/);
+    expect(html).not.toContain('Upcoming (SND');
   });
 
-  it('shows Lessons 1 to 6 as links and Lessons 7 to 12 as planned, with their milestones, and NOT as links', () => {
-    for (let n = 1; n <= 6; n++) expect(html).toContain(`data-learn-link="ps-l${n}"`);
-    for (let n = 7; n <= 12; n++) { expect(html, `ps-l${n}`).toContain(`data-planned-lesson="ps-l${n}"`); expect(html).not.toContain(`/physics/sound/learn/ps-l${n}`); }
-    expect(html).toMatch(/Upcoming · SND-2/); expect(html).toMatch(/Upcoming · SND-3/);
-    expect(html).toContain('Upcoming lessons (6)');
-    expect(SOUND_SYLLABUS.filter((l) => l.status === 'planned').length).toBe(6);
+  it('shows all twelve lessons as links and no "upcoming lessons" section', () => {
+    for (let n = 1; n <= 12; n++) expect(html).toContain(`data-learn-link="ps-l${n}"`);
+    expect(html).not.toContain('data-testid="sound-upcoming"');
+    expect(SOUND_SYLLABUS.filter((l) => l.status === 'planned').length).toBe(0);
   });
 
   it('says plainly that sound is optional and off, and does not require an account', () => {
@@ -49,10 +46,12 @@ describe('Physics hub and navigation', () => {
     const html = at(<PhysicsHub />);
     expect(html).toContain('data-chapter-card="sound"'); expect(html).toContain('href="/physics/sound"');
     const s = physicsChapterSummaries().find((x) => x.id === 'sound')!;
-    expect(s.lessons).toBe(6);
+    expect(s.lessons).toBe(12);
     expect(html).toContain(s.line.replace(/&/g, '&amp;'));
-    expect(s.line).toMatch(/6 of 12 lessons/); expect(s.line).toMatch(/4 of 15 NCERT exercises/); expect(s.line).toMatch(/6 lessons upcoming/);
-    for (const c of ['motion', 'forces', 'work', 'electricity']) expect(html).toContain(`data-chapter-card="${c}"`);
+    expect(s.line).toMatch(/12 lessons/); expect(s.line).toMatch(/15 of 15 NCERT exercises/); expect(s.line).toMatch(/chapter assessment/);
+    expect(s.practiceQuestions).toBeGreaterThan(0);
+    for (const c of ['motion', 'forces', 'work', 'sound']) expect(html).toContain(`data-chapter-card="${c}"`);
+    expect(html).not.toContain('data-chapter-card="electricity"'); // Electricity lives in the Robotics section
   });
 
   it('the chapter is registered for the workspace navigation, with the right number', () => {
@@ -75,11 +74,11 @@ describe('NCERT exercises page', () => {
   it('lists all 15 exercises and all 13 Pause and Ponder items, with the solved counts stated', () => {
     expect(html.match(/data-exercise="exercise-\d+"/g)!.length).toBe(15);
     expect(html.match(/data-exercise="ponder-\d+"/g)!.length).toBe(13);
-    expect(html).toMatch(/4 exercises and 6 Pause and Ponder items are solved so far/);
+    expect(html).toMatch(/15 exercises and 13 Pause and Ponder items are solved/);
   });
-  it('upcoming parts show what they need and no answer; solved parts show a full solution', () => {
-    expect((html.match(/data-part-status="upcoming"/g) ?? []).length).toBe(22 - 4 + (13 - 6));   // upcoming exercise parts + upcoming P&P items
-    expect(html).toContain('No solution is shown until the lesson that teaches it exists.');
+  it('every part shows a full solution; none is left upcoming', () => {
+    expect((html.match(/data-part-status="upcoming"/g) ?? []).length).toBe(0);
+    expect((html.match(/data-part-status="solved"/g) ?? []).length).toBe(22 + 13);
     expect(html).toMatch(/data-exercise="exercise-3"[\s\S]*?\(ii\) 5 Hz/);
     expect(html).toMatch(/data-exercise="ponder-6"[\s\S]*?role="img"/);
   });

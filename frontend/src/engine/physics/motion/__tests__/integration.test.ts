@@ -25,21 +25,27 @@ async function fresh() {
   return (await import('../../../../store/useEducationStore')).useEducationStore;
 }
 
-describe('Physics route integration: Motion is added, Electricity is preserved', () => {
-  it('the original Electricity routes are still registered, unchanged', () => {
-    expect(appSource).toContain('<Route path="/physics/electricity" element={<ElectricityLab />} />');
-    expect(appSource).toContain('<Route path="/physics/electricity/workbench" element={<WorkbenchPage />} />');
+describe('Physics route integration: Motion is added, Electricity is preserved in the Robotics section', () => {
+  it('Electricity is served from the Robotics section, and the old Physics addresses redirect there', () => {
+    expect(appSource).toContain('<Route path="/robotics" element={<RoboticsHub />} />');
+    expect(appSource).toContain('<Route path="/robotics/electricity" element={<ElectricityLab />} />');
+    expect(appSource).toContain('<Route path="/robotics/electricity/workbench" element={<WorkbenchPage />} />');
+    expect(appSource).toContain('<Route path="/physics/electricity" element={<MovedToRobotics to="/robotics/electricity" />} />');
+    expect(appSource).toContain('<Route path="/physics/electricity/workbench" element={<MovedToRobotics to="/robotics/electricity/workbench" />} />');
   });
   it('the Physics hub and the four Motion destinations are registered', () => {
     for (const r of ['/physics', '/physics/motion', '/physics/motion/lab', '/physics/motion/exercises', '/physics/motion/learn/:lessonId']) expect(appSource, r).toContain(`path="${r}"`);
   });
   it('the phone-first subject card opens all Physics chapters and keeps Electricity available', () => {
-    expect(getSubjectById('physics')!.route).toBe('/physics/electricity');
+    expect(getSubjectById('physics')!.route).toBe('/physics');
+    expect(getSubjectById('robotics')!.route).toBe('/robotics');
     expect(LABVERSE_SUBJECTS.map((s) => s.id)).toEqual(['physics', 'chemistry', 'mathematics', 'biology', 'robotics']);
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(SubjectExplorer)));
     expect(html).toContain('href="/physics"');
-    expect(html).toContain('href="/physics/electricity"');
-    expect(electricitySource).toContain('<Link to="/physics"');
+    expect(html).toContain('href="/robotics"');
+    expect(html).not.toContain('href="/physics/electricity"');
+    expect(electricitySource).toContain('<Link to="/robotics"');
+    expect(electricitySource).not.toContain('/physics/electricity');
   });
   it('Chapter routes agree with the chapter data', () => {
     expect(CH.routes.landing).toBe('/physics/motion'); expect(CH.routes.learn('pm-l1')).toBe('/physics/motion/learn/pm-l1'); expect(CH.routes.lab).toBe('/physics/motion/lab');

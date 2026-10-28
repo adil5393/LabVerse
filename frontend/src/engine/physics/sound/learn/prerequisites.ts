@@ -104,4 +104,33 @@ export const PS_UNITS: EduUnit[] = [
     discover: ['How a vibrating source makes compressions and rarefactions travel', 'Why the particles stay where they are while the wave moves on', 'How a sound wave is drawn as a graph'],
     prerequisiteIds: ['psp-particles', 'psp-graph'], lessonIds: ['ps-l4', 'ps-l5', 'ps-l6'],
   },
+  {
+    id: 'ps-unit-3', number: 3, title: 'What describes a sound',
+    centralIdea: 'A sound wave is described by its wavelength, frequency, time period, amplitude and speed, linked by T ν = 1 and v = ν λ. We hear the frequency as pitch and the amplitude as loudness, within a range of about 20 Hz to 20 kHz.',
+    connection: 'This is Section 10.6. It puts numbers on the wave pictures of Unit 2.',
+    vocabulary: [
+      { term: 'wavelength λ', meaning: 'distance between neighbouring compressions (metres)' },
+      { term: 'frequency ν', meaning: 'oscillations per second (hertz)' },
+      { term: 'time period T', meaning: 'time for one oscillation (seconds)' },
+      { term: 'amplitude', meaning: 'largest change of density from its average' },
+    ],
+    discover: ['How λ, ν and T describe a wave', 'Why amplitude means energy and loudness', 'How fast sound travels in different media', 'What decides pitch and loudness, and the limits of hearing'],
+    prerequisiteIds: ['psp-graph'], lessonIds: ['ps-l7', 'ps-l8', 'ps-l9', 'ps-l10'],
+  },
+  {
+    id: 'ps-unit-4', number: 4, title: 'Reflection',
+    centralIdea: 'Sound reflects from surfaces. A reflection heard at least about 0.1 s after the original is an echo; closely spaced reflections merge into reverberation.',
+    connection: 'This is Section 10.7. It uses the speed of sound from Unit 3.',
+    vocabulary: [{ term: 'echo', meaning: 'a reflected sound heard separately' }, { term: 'reverberation', meaning: 'persistence of sound from many merged reflections' }],
+    discover: ['When an echo is heard', 'How far away a reflecting wall is', 'How halls control reverberation'],
+    prerequisiteIds: ['psp-tofro'], lessonIds: ['ps-l11'],
+  },
+  {
+    id: 'ps-unit-5', number: 5, title: 'Beyond hearing',
+    centralIdea: 'Infrasound and ultrasound lie outside human hearing. Ultrasound images and cleans things, and bats and SONAR locate objects by timing echoes.',
+    connection: 'This is Section 10.8. It combines the audible range (Unit 3) with echoes (Unit 4).',
+    vocabulary: [{ term: 'ultrasound', meaning: 'sound above 20 kHz' }, { term: 'infrasound', meaning: 'sound below 20 Hz' }, { term: 'SONAR', meaning: 'locating objects under water by timing ultrasound echoes' }],
+    discover: ['What infrasound and ultrasound are', 'How ultrasound is used', 'How SONAR finds a depth'],
+    prerequisiteIds: ['psp-tofro'], lessonIds: ['ps-l12'],
+  },
 ];

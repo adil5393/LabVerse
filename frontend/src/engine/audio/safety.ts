@@ -11,7 +11,7 @@ export const AUDIO = {
   /** Linear gain ceiling at full volume and full amplitude (about -12 dBFS). */
   masterCeiling: 0.25,
   /** Volume setting a visitor starts with, as a fraction of the ceiling. */
-  defaultVolume: 0.4,
+  defaultVolume: 0.8,
   fadeInSeconds: 0.03,
   fadeOutSeconds: 0.06,
   /** A continuous audible tone stops by itself after this long. */

@@ -52,11 +52,6 @@ export const PhysicsHub: React.FC = () => {
           <h2 className="text-xl font-black text-white">Sound Waves</h2>
           <p className="text-sm text-slate-300">Vibration, how sound travels, compressions and rarefactions, with a Vibration Laboratory and a Wave Laboratory. {sum.sound}</p>
         </Link>
-        <Link to="/physics/electricity" data-chapter-card="electricity" className="block rounded-2xl border border-surface-border bg-surface-card hover:border-sky-400/60 p-5 space-y-2 min-h-[120px]">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">Laboratory</span>
-          <h2 className="text-xl font-black text-white">Electricity and DC circuits</h2>
-          <p className="text-sm text-slate-300">The existing circuit workbench with a real DC solver.</p>
-        </Link>
       </div>
     </main>
   </div>
@@ -153,6 +148,7 @@ export const MotionHub: React.FC = () => {
               <p className="text-xs text-slate-300">{PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order; no prerequisites, no login.</p>
             </div>
             <Link to="/physics/motion/practice" data-destination="practice" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open Chapter Practice</Link>
+            <Link to="/physics/motion/assessment" data-destination="assessment" className="min-h-[46px] inline-flex items-center justify-center rounded-xl border border-emerald-500/50 text-emerald-200 hover:bg-emerald-950/40 font-bold text-sm transition-colors touch-manipulation">Take the chapter assessment</Link>
           </div>
         </section>
 

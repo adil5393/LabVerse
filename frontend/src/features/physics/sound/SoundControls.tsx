@@ -58,7 +58,7 @@ export const TransportBar: React.FC<{
  * The sound switch, volume and status. Sound is OFF every time the page is opened and nothing plays until a button that
  * starts a sound is pressed with the switch on. The status line is the text equivalent of the sound.
  */
-export const SoundSwitch: React.FC<{ hz?: number }> = ({ hz }) => {
+export const SoundSwitch: React.FC<{ hz?: number; onHint?: string }> = ({ hz, onHint = 'A tone plays only when you press Pluck or Strike. It stops by itself after the vibration dies away, and never lasts more than 20 seconds.' }) => {
   const soundOn = useAudioSettings((s) => s.soundOn);
   const setSoundOn = useAudioSettings((s) => s.setSoundOn);
   const volume = useAudioSettings((s) => s.volume);
@@ -71,7 +71,7 @@ export const SoundSwitch: React.FC<{ hz?: number }> = ({ hz }) => {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-bold text-white flex items-center gap-1.5"><span className="material-symbols-outlined text-[20px]" aria-hidden>{soundOn ? 'volume_up' : 'volume_off'}</span>Sound {soundOn ? 'on' : 'off'}</div>
-          <p className="text-xs text-slate-400">{soundOn ? 'A tone plays only when you press Pluck or Strike. It stops by itself after the vibration dies away, and never lasts more than 20 seconds.' : 'Off, so nothing will play. Everything on the screen still works without sound.'}</p>
+          <p className="text-xs text-slate-400">{soundOn ? onHint : 'Turn sound on to hear the experiment. Everything on the screen still works without sound.'}</p>
         </div>
         <button type="button" role="switch" aria-checked={soundOn} aria-label="Sound" onClick={toggle} data-testid="sound-toggle"
           className={`shrink-0 min-h-[44px] min-w-[64px] rounded-full border px-3 text-sm font-black touch-manipulation ${soundOn ? 'bg-amber-500 border-amber-300 text-slate-950' : 'bg-surface-lowest border-surface-border text-slate-300'}`}>{soundOn ? 'On' : 'Off'}</button>

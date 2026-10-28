@@ -258,6 +258,7 @@ export const WorkHub: React.FC = () => {
               <p className="text-xs text-slate-300">{WORK_PRACTICE_ITEMS.length} original questions on the whole chapter. Open to everyone, in any order.</p>
             </div>
             <Link to="/physics/work/practice" data-destination="practice" className="min-h-[46px] inline-flex items-center justify-center rounded-xl bg-surface-elevated hover:bg-surface-variant text-slate-100 font-bold text-sm border border-surface-border transition-colors touch-manipulation">Open Chapter Practice</Link>
+            <Link to="/physics/work/assessment" data-destination="assessment" className="min-h-[46px] inline-flex items-center justify-center rounded-xl border border-emerald-500/50 text-emerald-200 hover:bg-emerald-950/40 font-bold text-sm transition-colors touch-manipulation">Take the chapter assessment</Link>
           </div>
         </section>
 

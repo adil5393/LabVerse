@@ -96,6 +96,7 @@ export const VibrationPanel: React.FC<VibrationPanelProps> = ({ initialKind = 's
           </button>
         ))}
       </div>
+      <SoundSwitch hz={vib.valid ? vib.hz : undefined} />
       <button type="button" className={`${btnPrimary} w-full`} onClick={pluck} disabled={!vib.valid || vib.strike <= 0} data-action="pluck">
         <span className="material-symbols-outlined text-[20px]" aria-hidden>{kind === 'string' ? 'touch_app' : 'campaign'}</span>{kind === 'string' ? 'Pluck the band' : 'Strike the fork'}
       </button>
@@ -117,7 +118,6 @@ export const VibrationPanel: React.FC<VibrationPanelProps> = ({ initialKind = 's
         </>
       )}</ActivityDetails>
       <TransportBar playing={clock.playing} t={clock.t} duration={duration} reduced={clock.reduced} blocked={false} onToggle={onToggle} onReplay={pluck} onReset={onReset} onScrub={onScrub} timeLabel={timeLabel} playLabel={struck && !clock.atEnd ? 'Play' : 'Pluck'} />
-      <SoundSwitch hz={vib.valid ? vib.hz : undefined} />
       <button type="button" className={btn} onClick={() => { stopSound(null); }} hidden={!snapshot.playing} data-action="stop-sound">Stop the sound</button>
     </div>
   );

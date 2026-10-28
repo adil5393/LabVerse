@@ -314,3 +314,30 @@ describe('Wave Laboratory: one physical state, two presentations', () => {
     expect(host.querySelector('details')).not.toBeNull();                            // mobile folds the measurements
   });
 });
+
+describe('Wave Laboratory: optional tone at the wave\'s real frequency', () => {
+  it('is silent until the switch is on and Hear this wave is pressed; then one tone at the slider frequency', async () => {
+    await render(<WavePanel />);
+    expect(q('[data-action="hear-wave"]')).toBeNull();
+    await click('[data-testid="sound-toggle"]');
+    expect(backend.created).toEqual([]);
+    await click('[data-action="hear-wave"]');
+    expect(backend.oscillators.length).toBe(1);
+    expect(backend.oscillators[0].hz).toBeCloseTo(100, 6);
+    expect(engine.getSnapshot().playing).toBe(true);
+  });
+
+  it('moving the frequency slider changes the pitch of the playing tone; Reset and the switch stop it', async () => {
+    await render(<WavePanel />);
+    await click('[data-testid="sound-toggle"]'); await click('[data-action="hear-wave"]');
+    setField('wave-freq', 300);
+    expect(engine.getSnapshot()).toMatchObject({ playing: true, hz: 300 });
+    expect(backend.oscillators.length).toBe(1);
+    await click('[data-action="reset"]');
+    expect(engine.getSnapshot().playing).toBe(false);
+    await click('[data-action="hear-wave"]');
+    expect(engine.getSnapshot().playing).toBe(true);
+    await click('[data-testid="sound-toggle"]');
+    expect(engine.getSnapshot().playing).toBe(false);
+  });
+});

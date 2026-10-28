@@ -77,8 +77,11 @@ describe('Chapter 7 Chapter Practice bank', () => {
     expect(computeKinetic({ massKg: 2, netForce: 5, u: 0, displacement: 6 }).K1).toBe(30);
     const e = computeEnergy({ massKg: 4, startHeight: 3, angleDeg: 90, mu: 0, g: 10, u0: 0, refHeight: 0 }); expect(energyAtDistance(e, e.sEnd).K).toBeCloseTo(120, 9);
   });
-  it('practice is isolated from learning progress: it never writes to the store and scores only the first answer', () => {
-    for (const src of [practiceSource, pageSource]) { const code = src.replace(/\/\*[\s\S]*?\*\//g, ''); expect(code).not.toMatch(/useEducationStore|localStorage|submitIndependent|markStepSeen/); }
-    expect(pageSource).toMatch(/it\.id in f \? f/); expect(pageSource).toMatch(/ev\.invalid/);
+  it('practice is saved only as chapter practice (never lesson evidence) and scores the first, unassisted answer', () => {
+    expect(practiceSource.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/useEducationStore|localStorage/);
+    const code = pageSource.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(code).toMatch(/submitPractice\('work'/);
+    expect(code).not.toMatch(/localStorage|submitIndependent|markStepSeen/);
+    expect(code).toMatch(/firstAttemptUnassisted === true/);
   });
 });

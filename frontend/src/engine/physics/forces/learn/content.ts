@@ -10,6 +10,7 @@ import { F4, F5 } from './lessonsFirstLaw';
 import { F6, F7 } from './lessonsSecondLaw';
 import { F8, F9, F10 } from './lessonsThirdLaw';
 import { PF_PREREQUISITES, PF_UNITS } from './prerequisites';
+import { FORCES_ASSESSMENT } from './assessment';
 
 const LESSON_LIST = [F1, F2, F3, F4, F5, F6, F7, F8, F9, F10];
 
@@ -27,10 +28,12 @@ export const FORCES_CHAPTER: EduChapter = {
   units: PF_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(PF_PREREQUISITES.map((p) => [p.id, p])),
+  assessment: FORCES_ASSESSMENT,
   routes: {
     landing: '/physics/forces',
     learn: (id) => `/physics/forces/learn/${id}`,
     prerequisites: (id) => `/physics/forces#${id}`,
+    assessment: '/physics/forces/assessment',
     lab: '/physics/forces/lab',
   },
 };

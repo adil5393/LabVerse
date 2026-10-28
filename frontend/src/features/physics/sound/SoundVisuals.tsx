@@ -3,6 +3,7 @@
  * laboratory components, so a lesson figure and the laboratory can never disagree: they are the same model drawn by the same code.
  */
 
+import { SoundEchoVisual, SoundPitchVisual, SoundSonarVisual, SoundSpeedVisual } from './CharacteristicsVisuals';
 import React, { useEffect, useState } from 'react';
 import type { VisualProps, VisualRegistry } from '../../education/visuals';
 import { computeWave, DEFAULT_WAVE, type WaveSetup } from '../../../engine/physics/sound/wave';
@@ -96,6 +97,10 @@ export const SoundBellJarVisual: React.FC<VisualProps> = ({ props, alt }) => {
 };
 
 export const SOUND_VISUALS: VisualRegistry = {
+  soundSpeed: SoundSpeedVisual,
+  soundPitch: SoundPitchVisual,
+  soundEcho: SoundEchoVisual,
+  soundSonar: SoundSonarVisual,
   soundVibration: SoundVibrationVisual,
   soundWave: SoundWaveVisual,
   soundGraph: SoundGraphVisual,

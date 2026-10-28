@@ -56,11 +56,13 @@ describe('Chapter Practice bank', () => {
     }
   });
 
-  it('the practice module is isolated from the learning-progress store', async () => {
+  it('practice is saved only as chapter practice: it never writes lesson evidence', async () => {
     const src = await import('../practice?raw').then((m) => (m as unknown as { default: string }).default);
     expect(src.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/useEducationStore|localStorage/);
     const page = await import('../../../../features/physics/motion/MotionPractice.tsx?raw').then((m) => (m as unknown as { default: string }).default);
-    expect(page.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/useEducationStore|recordIndependent|localStorage/);
+    const code = page.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(code).toMatch(/submitPractice\('motion'/);
+    expect(code).not.toMatch(/recordIndependent|submitIndependent|markStepSeen|localStorage/);
   });
 
   it('the chapter route table now has a practice page', () => { expect(CH.routes.practice).toBe('/physics/motion/practice'); });

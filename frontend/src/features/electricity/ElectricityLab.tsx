@@ -21,7 +21,7 @@ export const ElectricityLab: React.FC = () => {
               <span>All Subjects</span>
             </Link>
             <span className="text-slate-500">/</span>
-            <Link to="/physics" className="text-slate-400 hover:text-primary transition-colors">Physics</Link>
+            <Link to="/robotics" className="text-slate-400 hover:text-primary transition-colors">Robotics</Link>
             <span className="text-slate-500">/</span>
             <span className="text-white font-semibold">Electricity & DC Circuits</span>
           </nav>
@@ -41,7 +41,7 @@ export const ElectricityLab: React.FC = () => {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider">
               <span className="material-symbols-outlined text-[15px]">electric_bolt</span>
-              <span>Physics Specialization Laboratory</span>
+              <span>Robotics Laboratory</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
               Electricity & DC Circuits
@@ -53,14 +53,14 @@ export const ElectricityLab: React.FC = () => {
 
           <div className="flex items-center gap-3 self-start md:self-auto">
             <Link
-              to="/physics/electricity/workbench?mode=free"
+              to="/robotics/electricity/workbench?mode=free"
               className="px-4 py-2.5 rounded-xl border border-surface-border bg-surface-card hover:bg-surface-elevated text-slate-200 text-xs font-semibold transition-all inline-flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[18px]">build</span>
               <span>Free Workbench</span>
             </Link>
             <Link
-              to="/physics/electricity/workbench?mode=guided"
+              to="/robotics/electricity/workbench?mode=guided"
               className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dim text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all inline-flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[18px]">play_arrow</span>
@@ -133,7 +133,7 @@ export const ElectricityLab: React.FC = () => {
               <div className="pt-6 mt-6 border-t border-surface-border flex items-center justify-between">
                 <span className="text-xs text-slate-400 font-mono">Topological Step Validator</span>
                 <Link
-                  to="/physics/electricity/workbench?mode=guided"
+                  to="/robotics/electricity/workbench?mode=guided"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dim text-white text-xs font-semibold transition-all shadow-md shadow-primary/20 group-hover:gap-3"
                 >
                   <span>Launch Guided Lab</span>
@@ -184,7 +184,7 @@ export const ElectricityLab: React.FC = () => {
               <div className="pt-6 mt-6 border-t border-surface-border flex items-center justify-between">
                 <span className="text-xs text-slate-400 font-mono">Independent Experimentation</span>
                 <Link
-                  to="/physics/electricity/workbench?mode=free"
+                  to="/robotics/electricity/workbench?mode=free"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-elevated hover:bg-surface-high border border-surface-border text-white text-xs font-semibold transition-all group-hover:gap-3"
                 >
                   <span>Open Free Workbench</span>

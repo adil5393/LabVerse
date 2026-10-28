@@ -9,9 +9,11 @@ import type { VisualProps, VisualRegistry } from '../../education/visuals';
 import { LabChoice, LabSlider, fmtNum } from '../../education/SubjectLabShell';
 import { LabButton, LabKey, LabPredict, LabStage, predictionNote, prefersReducedMotion, useTicker } from '../../education/LabLayout';
 import {
-  CONNECTIVE, EPITHELIA, JOINTS, MUSCLES, NEURON_PARTS, PLANT_TISSUES, TEAK_DATA, canMove, isComplex, plantTissue, ringsForAge, rootLength,
-  type JointId, type Movement, type MuscleId, type PlantTissueId,
+  CONNECTIVE, EPITHELIA, JOINT_PARTS, JOINT_RANGES, JOINTS, MUSCLES, NEURON_PARTS, PLANT_TISSUES, TEAK_DATA, canMove, isComplex, plantTissue, ringsForAge, rootLength,
+  type JointAxis, type JointId, type Movement, type MuscleId, type PlantTissueId,
 } from '../../../engine/biology/tissues/model';
+import { Model3D, ViewModeSwitch, useViewMode } from '../three/ViewMode';
+import { TISSUE_DIAGRAMS } from './TissueDiagrams';
 
 const TXT = '#e2e8f0', MUTED = '#94a3b8', A_COL = '#34d399', B_COL = '#f472b6';
 
@@ -266,7 +268,7 @@ export const AnimalTissuesVisual: React.FC<VisualProps> = ({ props, alt }) => {
 
 // ---------- Joints ----------
 
-const MOVES: { id: Movement; label: string }[] = [{ id: 'bend', label: 'Bend' }, { id: 'sideways', label: 'Swing sideways' }, { id: 'circle', label: 'Full circle' }, { id: 'turn', label: 'Turn side to side' }];
+const MOVES: { id: Movement; label: string }[] = [{ id: 'bend', label: 'Bend' }, { id: 'sideways', label: 'Swing sideways' }, { id: 'circle', label: 'Full circle' }, { id: 'turn', label: 'Turn (rotate)' }];
 const BONE = '#e7e5e4', CART = '#93c5fd';
 
 /** Each joint drawn differently: a hinge with its pin, a ring turning on a peg, a ball in a cup, or interlocking skull plates. */
@@ -311,6 +313,7 @@ const JointPicture: React.FC<{ joint: JointId; move: Movement; ok: boolean; pose
       {joint === 'ball-socket' && <>
         <path d={`M ${jx - 4} ${jy - 22} A 22 22 0 0 0 ${jx - 4} ${jy + 22}`} fill="none" stroke={BONE} strokeWidth="9" />
         <text x={jx - 14} y={jy + 40} fontSize="12" textAnchor="middle" fill={MUTED}>socket (cup)</text>
+        {moving && move === 'turn' && <><ellipse cx={jx + 70} cy={jy} rx="9" ry="22" fill="none" stroke="#34d399" strokeWidth="2.5" strokeDasharray="34 8" /><path d={`M ${jx + 61} ${jy - 6} l -4 10 l 9 -3 Z`} fill="#34d399" /><text x={jx + 70} y={jy + 40} fontSize="12" textAnchor="middle" fill="#6ee7b7">twists about its length</text></>}
         {moving && move === 'circle' && <ellipse cx={jx + 90} cy={jy} rx="18" ry="54" fill="none" stroke="#34d399" strokeWidth="2" strokeDasharray="5 4" className="lab-anim-flow" />}
       </>}
       <g style={rot}>
@@ -332,6 +335,14 @@ export const JointsVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const j = JOINTS[joint];
   const ok = canMove(joint, move);
   const tried = pose;
+  const [view, setView] = useViewMode();
+  const in3D = view === '3d';
+  const parts3D = JOINT_PARTS[joint];
+  const [part3D, setPart3D] = useState<string | null>(null);
+  const picked = parts3D.find((x) => x.id === part3D) ?? null;
+  const ranges = JOINT_RANGES[joint];
+  const AXES: [JointAxis, string][] = [['bend', 'bend'], ['sideways', 'swing sideways'], ['turn', 'turn (rotate)']];
+  const allowed3D = AXES.filter(([a]) => ranges[a]);
   const scene = (
     <svg viewBox="0 0 320 200" role="img" aria-label={`${j.name}: ${MOVES.find((m) => m.id === move)!.label.toLowerCase()} is ${ok ? 'allowed' : 'not possible'}.`}>
       <defs><marker id="jt-head" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#34d399" /></marker></defs>
@@ -345,16 +356,26 @@ export const JointsVisual: React.FC<VisualProps> = ({ props, alt }) => {
   return (
     <LabStage testId="joints" alt={alt} data={{ 'data-joint': joint, 'data-movement': move, 'data-allowed': ok ? 'true' : 'false', 'data-tried': String(tried) }}
       question="Which movements does each kind of joint allow?"
-      sceneNote="Simplified · not to scale"
-      scene={scene}
-      actions={q.editable ? <LabButton primary icon="pan_tool" data-action="try-move" onClick={() => setPose((p) => !p)}>{pose ? 'Back to rest' : 'Try the movement'}</LabButton> : undefined}
+      sceneNote={in3D ? 'Schematic 3D model · bone shapes simplified' : 'Schematic · not to scale'}
+      scene={<>
+        <ViewModeSwitch mode={view} onChange={setView} what="joint" />
+        {in3D
+          ? <Model3D spec={{ kind: 'joint', joint }} title={`3D model of a ${j.name.toLowerCase()}`} parts={parts3D.map(({ id, name }) => ({ id, name }))} selected={part3D} onSelect={setPart3D} onBack={() => setView('2d')} />
+          : scene}
+      </>}
+      actions={q.editable && !in3D ? <LabButton primary icon="pan_tool" data-action="try-move" onClick={() => setPose((p) => !p)}>{pose ? 'Back to rest' : 'Try the movement'}</LabButton> : undefined}
       controls={q.editable ? <>
-        <LabChoice name="joint" label="Joint" value={joint} options={(Object.keys(JOINTS) as JointId[]).map((k) => ({ id: k, label: JOINTS[k].name.replace(' joint', '') }))} onChange={(v) => { setJoint(v as JointId); setPose(false); }} />
-        <LabChoice name="movement" label="Movement" value={move} options={MOVES} onChange={(v) => { setMove(v as Movement); setPose(false); }} />
+        <LabChoice name="joint" label="Joint" value={joint} options={(Object.keys(JOINTS) as JointId[]).map((k) => ({ id: k, label: JOINTS[k].name.replace(' joint', '') }))} onChange={(v) => { setJoint(v as JointId); setPose(false); setPart3D(null); }} />
+        {!in3D && <LabChoice name="movement" label="Movement" value={move} options={MOVES} onChange={(v) => { setMove(v as Movement); setPose(false); }} />}
       </> : undefined}
       observation={<>
         <p className="m-0 text-base font-bold" data-testid="joint-name">{j.name} ({j.examples})</p>
-        <p className="m-0" data-testid="joint-result">{MOVES.find((m) => m.id === move)!.label}: <strong>{tried ? (ok ? 'allowed' : 'not possible') : 'try it to find out'}</strong>. {tried ? `This joint ${j.picture}.` : ''}</p>
+        {in3D
+          ? <>
+            <p className="m-0" data-testid="joint-result">{allowed3D.length ? <>Allows: <strong>{allowed3D.map(([, l]) => l).join(', ')}</strong>{joint === 'ball-socket' ? ', and so a full circle' : ''}. Use the sliders under the model; movements this joint cannot make are switched off.</> : <><strong>No movement</strong>: the bones are locked together.</>}</p>
+            {picked && <p className="m-0" data-testid="joint-part"><strong>{picked.name}:</strong> {picked.detail}</p>}
+          </>
+          : <p className="m-0" data-testid="joint-result">{MOVES.find((m) => m.id === move)!.label}: <strong>{tried ? (ok ? 'allowed' : 'not possible') : 'try it to find out'}</strong>. {tried ? `This joint ${j.picture}.` : ''}</p>}
       </>}
       explanation={<p className="m-0">The shape of the bone ends decides the movement. Joints do not move bones by themselves: muscles pull on the bones through tendons, and ligaments hold the bones together.</p>}
       finding={tried ? { label: `${j.name}: ${MOVES.find((m) => m.id === move)!.label.toLowerCase()}`, value: ok ? 'allowed' : 'not possible' } : null}
@@ -362,4 +383,4 @@ export const JointsVisual: React.FC<VisualProps> = ({ props, alt }) => {
   );
 };
 
-export const TISSUE_VISUALS: VisualRegistry = { rootGrowth: RootGrowthVisual, treeRings: TreeRingsVisual, plantTissues: PlantTissuesVisual, animalTissues: AnimalTissuesVisual, joints: JointsVisual };
+export const TISSUE_VISUALS: VisualRegistry = { ...TISSUE_DIAGRAMS, rootGrowth: RootGrowthVisual, treeRings: TreeRingsVisual, plantTissues: PlantTissuesVisual, animalTissues: AnimalTissuesVisual, joints: JointsVisual };

@@ -328,6 +328,7 @@ export const IndependentCard: React.FC<{ item: IndependentItem; lessonId: string
           {item.solution.map((l, i) => <li key={i}>{l}</li>)}
         </ol>
       )}
+      {showSolution && item.solutionVisual && <div data-testid="solution-visual"><VisualHost visual={item.solutionVisual} /></div>}
     </div>
   );
 };

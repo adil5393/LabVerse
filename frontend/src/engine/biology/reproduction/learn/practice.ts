@@ -1,6 +1,6 @@
 /** Chapter 11 (Reproduction) practice bank and chapter assessment. Original questions; numbers checked by `__tests__/reproduction.test.ts`. */
 
-import type { ChapterAssessment, IndependentItem, PracticeSet, Question } from '../../../education/types';
+import type { ChapterAssessment, IndependentItem, PracticeSet, Question, VisualRef } from '../../../education/types';
 import { num, ord, pick } from '../../../education/builders';
 
 const item = (id: string, topic: string, prompt: string, question: Question, hints: string[], solution: string[], difficulty: IndependentItem['difficulty'], marks = 1, ref?: string): IndependentItem =>
@@ -71,4 +71,12 @@ export const REPRO_ASSESSMENT: ChapterAssessment = {
       ],
     },
   ],
+};
+
+/** Diagrams shown with the worked solutions of these practice items. */
+export const REPRO_SOLUTION_DIAGRAMS: Record<string, VisualRef> = {
+  'brx-4': { kind: 'halving', props: {}, alt: 'Gametes carry half the chromosomes, so fertilisation restores the full number.' },
+  'brx-5': { kind: 'pollinationKinds', props: {}, alt: 'Self-pollination and cross-pollination compared.' },
+  'brx-6': { kind: 'pollenToSeed', props: {}, alt: 'Pollen lands, the pollen tube grows, fertilisation forms a zygote, and the ovule becomes a seed.' },
+  'brx-12': { kind: 'implantation', props: {}, alt: 'The embryo implants in the thick uterus lining, which must stay in place during pregnancy.' },
 };

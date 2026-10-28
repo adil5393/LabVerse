@@ -6,11 +6,12 @@
 import React from 'react';
 import { FOUNDATIONS_CHAPTER } from '../../../engine/chemistry/foundations/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { BondBuilderVisual, FOUND_VISUALS, FormulaBuilderVisual, FormulaMassVisual, MassBalanceVisual, PropertiesTestVisual } from './FoundationsVisuals';
 
 const LABS = [{ label: 'Formula Laboratory', href: '/chemistry/atomic-foundations/lab', blurb: 'Weigh reactions, build bonds, write formulae, calculate masses and test properties.' }];
-const PAGES = makeChapterPages(FOUNDATIONS_CHAPTER, FOUND_VISUALS, { crumb: 'Chemistry', subtitle: 'Chapter 9 · Matter: its nature and behaviour', labs: LABS });
+const PAGES = makeChapterPages(FOUNDATIONS_CHAPTER, FOUND_VISUALS, { crumb: 'Chemistry', subtitle: 'Chapter 9 · Matter: its nature and behaviour', labs: LABS, illustration: <ScienceArt name="chem-foundations" /> });
 export const FoundationsHub = PAGES.Hub;
 export const FoundationsLearnPage = PAGES.Learn;
 export const FoundationsPracticePage = PAGES.Practice;

@@ -167,6 +167,7 @@ export const D3: EduLesson = {
         'Leave grass or straw in pond water under a muslin cloth for a week to make a hay infusion. A drop under the microscope shows moving single cells: slipper-shaped Paramecium covered in cilia, shape-changing Amoeba, and green Euglena. Wear gloves and a mask; the infusion smells and must be sterilised before disposal.',
         'Protists are single-celled eukaryotes with no wall or a cellulose wall, living in water or damp places. Some photosynthesise, some feed on others, some decompose; they are an important link in water food chains.',
       ],
+      visual: v('protists', {}, 'Paramecium with cilia, Amoeba with false feet, and green Euglena with a flagellum: three single-celled eukaryotes.'),
       check: pick('chk-bd3-protista', 'A single cell with a true nucleus and many cilia is found in pond water. It most likely belongs to…', [['Protista', null], ['Monera', 'Monera have no true nucleus.', 'pro-eu-swap'], ['Animalia', 'Animals are multicellular.', 'uni-multi']], 'Single eukaryotic cell.', undefined, 'bd3-protista'),
     },
     {
@@ -175,6 +176,7 @@ export const D3: EduLesson = {
         'Fungi are mostly multicellular eukaryotes with cell walls of chitin. They cannot make food; fine threads forming a network called mycelium absorb nutrients. Most are saprophytes that feed on dead leaves, twigs and bodies, breaking them into simple minerals that return to the soil. Without fungi, decay would slow and soil would lose its fertility.',
         'Some fungi live in partnership with other organisms: a lichen is a fungus and an alga together, and its colour shows air quality. Others are parasites. Yeast, Aspergillus and Penicillium are used to make enzymes and antibiotics; mushrooms are farmed, but some wild ones are poisonous.',
       ],
+      visual: v('fungusBody', {}, 'Bread mould with numbered parts: spore cases on raised threads, spores, hyphae forming a mycelium, and root-like threads growing into the bread.'),
       check: pick('chk-bd3-fungi', 'What would happen to a forest if all fungi disappeared?', [['Dead matter would pile up and the soil would become less fertile', null], ['Trees would grow faster because no fungi compete with them', 'Trees rely on nutrients that fungi recycle; growth would suffer.', 'fungi-role'], ['Nothing, because fungi make food for trees', 'Fungi do not make food; they decompose dead matter.', 'auto-hetero']], 'Lost recycling.', undefined, 'bd3-fungi'),
     },
   ],

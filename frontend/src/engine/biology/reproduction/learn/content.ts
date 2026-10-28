@@ -7,7 +7,8 @@
 import type { EduChapter } from '../../../education/types';
 import { R1, R2, R3 } from './lessonsA';
 import { R4, R5, R6 } from './lessonsB';
-import { REPRO_ASSESSMENT, REPRO_PRACTICE } from './practice';
+import { REPRO_ASSESSMENT, REPRO_PRACTICE, REPRO_SOLUTION_DIAGRAMS } from './practice';
+import { withSolutionDiagrams } from '../../../education/builders';
 import { BR_PREREQUISITES, BR_UNITS } from './prerequisites';
 
 const LESSON_LIST = [R1, R2, R3, R4, R5, R6];
@@ -26,7 +27,7 @@ export const REPRODUCTION_CHAPTER: EduChapter = {
   units: BR_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(BR_PREREQUISITES.map((p) => [p.id, p])),
-  practice: REPRO_PRACTICE,
+  practice: withSolutionDiagrams(REPRO_PRACTICE, REPRO_SOLUTION_DIAGRAMS),
   assessment: REPRO_ASSESSMENT,
   routes: {
     landing: '/biology/reproduction',

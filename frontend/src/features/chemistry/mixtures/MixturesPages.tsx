@@ -6,6 +6,7 @@
 import React from 'react';
 import { MIXTURES_CHAPTER } from '../../../engine/chemistry/mixtures/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MIX_VISUALS, MixBeamVisual, MixChromatographyVisual, MixConcentrationVisual, MixSeparationVisual, MixSolubilityVisual } from './MixturesVisuals';
 
@@ -13,7 +14,7 @@ const LABS = [
   { label: 'Mixtures Laboratory', href: '/chemistry/mixtures/lab', blurb: 'Light beams, settling and filtering; concentration; solubility curves and crystallization; a separation bench with apparatus; and chromatography.' },
 ];
 
-const PAGES = makeChapterPages(MIXTURES_CHAPTER, MIX_VISUALS, { crumb: 'Chemistry', subtitle: 'Chapter 5 · Matter: its nature and behaviour', labs: LABS });
+const PAGES = makeChapterPages(MIXTURES_CHAPTER, MIX_VISUALS, { crumb: 'Chemistry', subtitle: 'Chapter 5 · Matter: its nature and behaviour', labs: LABS, illustration: <ScienceArt name="chem-mixtures" /> });
 export const MixturesHub = PAGES.Hub;
 export const MixturesLearnPage = PAGES.Learn;
 export const MixturesPracticePage = PAGES.Practice;

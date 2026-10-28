@@ -6,12 +6,13 @@
 import React from 'react';
 import { DIVERSITY_CHAPTER } from '../../../engine/biology/diversity/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MicroscopeVisual } from '../shared/Microscope';
 import { AnimalPhylaVisual, BinomialVisual, DIVERSITY_VISUALS, HierarchyVisual, KingdomKeyVisual, PlantKeyVisual } from './DiversityVisuals';
 
 const LABS = [{ label: 'Classification Laboratory', href: '/biology/diversity/lab', blurb: 'Key organisms into kingdoms and groups, explore animal phyla, compare ranks and check scientific names.' }];
-const PAGES = makeChapterPages(DIVERSITY_CHAPTER, DIVERSITY_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 12 · World of Living', labs: LABS });
+const PAGES = makeChapterPages(DIVERSITY_CHAPTER, DIVERSITY_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 12 · World of Living', labs: LABS, illustration: <ScienceArt name="bio-diversity" /> });
 export const DiversityHub = PAGES.Hub;
 export const DiversityLearnPage = PAGES.Learn;
 export const DiversityPracticePage = PAGES.Practice;

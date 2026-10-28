@@ -35,6 +35,7 @@ export const C4: EduLesson = {
         'Cells without a well-defined nucleus and without membrane-bound organelles are prokaryotic ("pro" primitive, "karyon" nucleus). Bacteria are prokaryotes; they are usually single cells about 1 to 10 µm across, and most of their activities happen in the cytoplasm.',
         'Cells with a membrane-bound nucleus and organelles are eukaryotic ("eu" true). They are larger, about 10 to 100 µm, and may form single-celled or multicellular organisms. In eukaryotic cells a network of fibres, the cytoskeleton, supports the cell and moves materials around. Viruses are not cells at all.',
       ],
+      visual: v('cellCompare', { type: 'bacterial', part: 'nucleoid' }, 'A bacterial cell with numbered parts. Its DNA lies in a nucleoid with no membrane around it.'),
       check: pick('chk-bc4-pro', 'A cell has DNA but no membrane-bound nucleus or organelles. It is…', [['prokaryotic, like a bacterium', null], ['eukaryotic, like a plant cell', 'Eukaryotic cells have a membrane-bound nucleus.', 'pro-eu-swap'], ['a virus', 'A virus is not a cell; it has no cytoplasm or membrane of its own.', 'virus-cell']], 'Prokaryotic.', undefined, 'bc4-pro'),
     },
     {
@@ -43,6 +44,7 @@ export const C4: EduLesson = {
         'The nucleus has a double nuclear membrane with pores that let materials pass to and from the cytoplasm. The dense nucleolus inside makes the subunits of ribosomes.',
         'The nucleus holds DNA, which carries the information for inheriting characters. In a cell that is not dividing, DNA with proteins forms a tangle of threads called chromatin. Just before division, chromatin coils up into rod-shaped chromosomes. Functional segments of DNA are called genes. Mature human red blood cells have no nucleus, which leaves more room for haemoglobin, but they cannot divide and live only about 120 days.',
       ],
+      visual: v('nucleusSection', {}, 'A section through the nucleus: the double nuclear envelope with pores, the nucleolus, threads of chromatin, and rough ER joined to the outer membrane.'),
       check: pick('chk-bc4-nucleus', 'When does chromatin become visible as chromosomes?', [['When the cell is about to divide', null], ['All the time', 'In a non-dividing cell DNA is spread out as chromatin threads.', 'chromosome-always'], ['Only after the cell dies', 'Chromosomes form for division, not at death.', 'irrelevant-cause']], 'Before division.', undefined, 'bc4-nucleus'),
     },
   ],
@@ -107,6 +109,7 @@ export const C5: EduLesson = {
         'Mitochondria are the powerhouses: in cellular respiration they break down glucose and store the energy released as ATP, the cell’s energy currency. Each has a smooth outer membrane and an inner membrane folded into cristae, which give a large surface for the reactions.',
         'Plants also make food in plastids. Chloroplasts contain chlorophyll, which absorbs sunlight for photosynthesis; sugars and starch are stored in their fluid stroma. Mitochondria and chloroplasts both have two membranes and their own DNA and ribosomes, a sign that they share history with bacteria.',
       ],
+      visual: v('energyOrganelles', {}, 'Sections through a mitochondrion, with its folded inner membrane, and a larger chloroplast with stacks of thylakoids. Both have two membranes and their own DNA.'),
       check: pick('chk-bc5-energy', 'Why is the inner membrane of a mitochondrion folded into cristae?', [['To increase the surface area for energy-releasing reactions', null], ['To store starch', 'Starch is stored in plastids, not in cristae.', 'organelle-swap'], ['To let the mitochondrion move', 'The folds are about surface area, not movement.', 'irrelevant-cause']], 'More surface.', undefined, 'bc5-energy'),
     },
     {

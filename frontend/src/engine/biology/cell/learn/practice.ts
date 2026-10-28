@@ -1,6 +1,6 @@
 /** Chapter 2 (Cell) practice bank and chapter assessment. Original questions; numbers checked by `__tests__/cell.test.ts`. */
 
-import type { ChapterAssessment, IndependentItem, PracticeSet, Question } from '../../../education/types';
+import type { ChapterAssessment, IndependentItem, PracticeSet, Question, VisualRef } from '../../../education/types';
 import { num, pick } from '../../../education/builders';
 
 const item = (id: string, topic: string, prompt: string, question: Question, hints: string[], solution: string[], difficulty: IndependentItem['difficulty'], marks = 1, ref?: string): IndependentItem =>
@@ -78,4 +78,13 @@ export const CELL_ASSESSMENT: ChapterAssessment = {
       ],
     },
   ],
+};
+
+/** Diagrams shown with the worked solutions of these practice items. */
+export const CELL_SOLUTION_DIAGRAMS: Record<string, VisualRef> = {
+  'bcx-4': { kind: 'tonicity', props: { cell: 'animal' }, alt: 'An animal cell in weaker, equal and stronger solutions: it swells, stays the same, or shrinks.' },
+  'bcx-6': { kind: 'membraneModel', props: {}, alt: 'Water passes through a living membrane but dissolved particles are held back.' },
+  'bcx-7': { kind: 'membraneModel', props: { wall: true }, alt: 'The cell wall lets water and dissolved particles through; the membrane holds dissolved particles back.' },
+  'bcx-8': { kind: 'cellCompare', props: { type: 'plant', part: 'chloroplast' }, alt: 'A plant cell with its parts numbered; chloroplasts are present in plant cells and absent in animal cells.' },
+  'bcx-9': { kind: 'energyOrganelles', props: {}, alt: 'A mitochondrion and a chloroplast, each with two membranes and its own DNA.' },
 };

@@ -97,6 +97,7 @@ export const R2: EduLesson = {
         'In sexual reproduction two parents both give genetic material. If each passed on all its chromosomes, the number would double every generation. Meiosis solves this: each gamete gets one chromosome from every pair, half the number.',
         'Human body cells have 23 pairs, 46 chromosomes. Sperm and eggs each have 23. When they fuse, the zygote has 46 again. In animals the male gametes are sperm and the female gametes are eggs; in plants, pollen grains deliver male gametes to ovules containing eggs.',
       ],
+      visual: v('halving', {}, 'Chromosome numbers with and without meiosis: without it the number doubles each generation; with it, 23 in each gamete gives 46 in the zygote.'),
       check: pick('chk-br2-halving', 'Why must gametes have half the chromosome number?', [['So that fertilisation restores the normal number instead of doubling it', null], ['So that gametes can swim faster', 'Speed has nothing to do with the chromosome number.', 'irrelevant-cause'], ['Because half the chromosomes are not needed', 'All the chromosomes are needed; the zygote gets a full set from two gametes.', 'half-unneeded']], 'Keep the number constant.', undefined, 'br2-halving'),
     },
     {
@@ -186,6 +187,7 @@ export const R3: EduLesson = {
         'Self-pollination: pollen reaches the stigma of the same flower or another flower on the same plant. Cross-pollination: pollen from a flower of one plant reaches a flower of another plant of the same kind.',
         'Cross-pollination mixes the chromosomes of two different plants, so it creates more variation. Plant breeders remove the stamens from a flower, bag it to stop self-pollination, and dust on pollen from a chosen plant: artificial cross-pollination.',
       ],
+      visual: v('pollinationKinds', {}, 'Self-pollination within one plant, and cross-pollination carrying pollen from a flower on one plant to a flower on another.'),
       check: pick('chk-br3-kinds', 'Anthers are removed from a flower before it matures, and pollen from another plant is dusted on its stigma. This ensures…', [['cross-pollination', null], ['self-pollination', 'The flower’s own anthers were removed, so its own pollen cannot reach it.', 'self-cross'], ['tissue culture', 'Tissue culture grows plants from cells; this is pollination.', 'method-swap']], 'Pollen from another plant.', undefined, 'br3-kinds'),
     },
   ],

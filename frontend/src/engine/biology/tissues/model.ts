@@ -120,13 +120,51 @@ export type JointId = 'ball-socket' | 'hinge' | 'pivot' | 'fixed';
 export type Movement = 'bend' | 'sideways' | 'circle' | 'turn';
 
 export const JOINTS: Record<JointId, { name: string; examples: string; allows: Movement[]; picture: string }> = {
-  'ball-socket': { name: 'Ball and socket joint', examples: 'shoulder, hip', allows: ['bend', 'sideways', 'circle'], picture: 'a rounded end fits into a hollow, so the arm can move forwards, backwards, sideways and in a full circle' },
+  'ball-socket': { name: 'Ball and socket joint', examples: 'shoulder, hip', allows: ['bend', 'sideways', 'circle', 'turn'], picture: 'a rounded end fits into a hollow, so the arm can move forwards, backwards, sideways, in a full circle, and turn (rotate) about its own length' },
   hinge: { name: 'Hinge joint', examples: 'elbow, knee', allows: ['bend'], picture: 'bends and straightens in one direction only, like a door hinge' },
   pivot: { name: 'Pivot joint', examples: 'skull on the backbone (neck)', allows: ['turn'], picture: 'lets the head turn from side to side, like a doorknob turning' },
   fixed: { name: 'Fixed joint', examples: 'bones of the skull', allows: [], picture: 'bones joined so they cannot move, keeping the brain safe' },
 };
 
 export const canMove = (joint: JointId, movement: Movement): boolean => JOINTS[joint].allows.includes(movement);
+
+/**
+ * Approximate range of each basic movement, in degrees from the resting position, used by the 3D joint models. Values are
+ * typical active ranges for a healthy adult (shoulder movements include help from the shoulder blade; neck turning is the
+ * part made at the pivot between the first two vertebrae). A missing movement is not possible at that joint.
+ */
+export type JointAxis = 'bend' | 'sideways' | 'turn';
+export const JOINT_RANGES: Record<JointId, Partial<Record<JointAxis, [number, number]>>> = {
+  'ball-socket': { bend: [-50, 170], sideways: [0, 170], turn: [-70, 80] },
+  hinge: { bend: [0, 145] },
+  pivot: { turn: [-40, 40] },
+  fixed: {},
+};
+
+/** The labelled structures of each 3D joint model. */
+export const JOINT_PARTS: Record<JointId, { id: string; name: string; detail: string }[]> = {
+  'ball-socket': [
+    { id: 'ball', name: 'Ball: head of the upper arm bone', detail: 'The rounded top of the arm bone. Because it is a sphere, it can roll in any direction inside the socket.' },
+    { id: 'socket', name: 'Socket: hollow in the shoulder bone', detail: 'A shallow cup on the shoulder blade that holds the ball.' },
+    { id: 'cartilage', name: 'Cartilage', detail: 'Smooth caps on the ball and in the socket so they glide without grinding.' },
+    { id: 'ligament', name: 'Ligaments', detail: 'Bands joining bone to bone around the joint. They hold the ball in the socket and stop it moving too far.' },
+  ],
+  hinge: [
+    { id: 'upper', name: 'End of the upper arm bone', detail: 'Shaped like a spool (a short rounded bar) lying across the joint.' },
+    { id: 'lower', name: 'Forearm bone with a hook-shaped notch', detail: 'The notch wraps around the spool, so the forearm can only swing about one line, like a door on its hinge.' },
+    { id: 'cartilage', name: 'Cartilage', detail: 'Covers both bone surfaces so they slide smoothly.' },
+    { id: 'ligament', name: 'Side ligaments', detail: 'Strong bands on both sides that stop the forearm swinging sideways.' },
+  ],
+  pivot: [
+    { id: 'peg', name: 'Peg of the second vertebra', detail: 'An upright peg of bone from the second vertebra of the neck.' },
+    { id: 'ring', name: 'Ring of the first vertebra', detail: 'The first vertebra, which carries the skull, is a ring around the peg. It turns on the peg like a wheel on an axle.' },
+    { id: 'ligament', name: 'Ligament holding the peg', detail: 'A strong band across the ring that keeps the peg in place while the ring turns.' },
+  ],
+  fixed: [
+    { id: 'plates', name: 'Skull bones', detail: 'Curved plates of bone that together form a case around the brain.' },
+    { id: 'suture', name: 'Suture', detail: 'A wavy seam where the plates interlock and are joined by fibres. It cannot move.' },
+  ],
+};
 export const BODY_JOINT: Record<string, JointId> = { shoulder: 'ball-socket', hip: 'ball-socket', elbow: 'hinge', knee: 'hinge', neck: 'pivot', skull: 'fixed' };
 
 // ---------- Body composition (Activity 3.4) and tree rings (Table 3.7) ----------

@@ -1,6 +1,6 @@
 /** Chapter 3 (Tissues in Action) practice bank and chapter assessment. Original questions; numbers checked by `__tests__/tissues.test.ts`. */
 
-import type { ChapterAssessment, IndependentItem, PracticeSet, Question } from '../../../education/types';
+import type { ChapterAssessment, IndependentItem, PracticeSet, Question, VisualRef } from '../../../education/types';
 import { num, pick } from '../../../education/builders';
 
 const item = (id: string, topic: string, prompt: string, question: Question, hints: string[], solution: string[], difficulty: IndependentItem['difficulty'], marks = 1, ref?: string): IndependentItem =>
@@ -71,4 +71,11 @@ export const TISSUES_ASSESSMENT: ChapterAssessment = {
       ],
     },
   ],
+};
+
+/** Diagrams shown with the worked solutions of these practice items. */
+export const TISSUES_SOLUTION_DIAGRAMS: Record<string, VisualRef> = {
+  'btx-2': { kind: 'plantTissues', props: { tissue: 'phloem' }, alt: 'A stem section with phloem highlighted: it carries food from the leaves.' },
+  'btx-12': { kind: 'plantTissues', props: { tissue: 'phloem' }, alt: 'A stem section: phloem lies just inside the bark, so a ring of damage cuts off food to the roots.' },
+  'btx-10': { kind: 'jointAnatomy', props: {}, alt: 'A knee joint: a hinge joint with cartilage, fluid and ligaments.' },
 };

@@ -6,12 +6,13 @@
 import React from 'react';
 import { CELL_CHAPTER } from '../../../engine/biology/cell/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MicroscopeVisual, SizeLadderVisual } from '../shared/Microscope';
 import { CELL_VISUALS, CellCompareVisual, DivisionVisual, OsmosisVisual } from './CellVisuals';
 
 const LABS = [{ label: 'Cell Laboratory', href: '/biology/cell/lab', blurb: 'Use a virtual microscope, run osmosis experiments, explore cell parts and watch cells divide.' }];
-const PAGES = makeChapterPages(CELL_CHAPTER, CELL_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 2 · World of Living', labs: LABS });
+const PAGES = makeChapterPages(CELL_CHAPTER, CELL_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 2 · World of Living', labs: LABS, illustration: <ScienceArt name="bio-cell" /> });
 export const CellHub = PAGES.Hub;
 export const CellLearnPage = PAGES.Learn;
 export const CellPracticePage = PAGES.Practice;

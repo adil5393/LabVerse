@@ -330,6 +330,8 @@ export interface IndependentItem {
   question: Question;
   hints: string[];
   solution: string[];
+  /** A diagram shown with the worked solution (never with the question, so it cannot give the answer away). */
+  solutionVisual?: VisualRef;
   /** Which lesson objective this item tests (see EduLesson.objectives). */
   objective?: string;
   difficulty?: PracticeDifficulty;

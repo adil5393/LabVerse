@@ -14,6 +14,7 @@ import {
   type OrganismFeatures, type Phylum, type PlantFeatures, type PlantGroup,
 } from '../../../engine/biology/diversity/model';
 import { MicroscopeVisual } from '../shared/Microscope';
+import { DIVERSITY_DIAGRAMS } from './DiversityDiagrams';
 
 const TXT = '#e2e8f0', MUTED = '#64748b', ON = '#2dd4bf';
 
@@ -319,4 +320,4 @@ export const BinomialVisual: React.FC<VisualProps> = ({ props, alt }) => {
   );
 };
 
-export const DIVERSITY_VISUALS: VisualRegistry = { microscope: MicroscopeVisual, kingdomKey: KingdomKeyVisual, plantKey: PlantKeyVisual, animalPhyla: AnimalPhylaVisual, hierarchy: HierarchyVisual, binomial: BinomialVisual };
+export const DIVERSITY_VISUALS: VisualRegistry = { ...DIVERSITY_DIAGRAMS, microscope: MicroscopeVisual, kingdomKey: KingdomKeyVisual, plantKey: PlantKeyVisual, animalPhyla: AnimalPhylaVisual, hierarchy: HierarchyVisual, binomial: BinomialVisual };

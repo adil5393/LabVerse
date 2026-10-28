@@ -6,12 +6,13 @@
 import React from 'react';
 import { TISSUES_CHAPTER } from '../../../engine/biology/tissues/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MicroscopeVisual } from '../shared/Microscope';
 import { AnimalTissuesVisual, JointsVisual, PlantTissuesVisual, RootGrowthVisual, TISSUE_VISUALS, TreeRingsVisual } from './TissueVisuals';
 
 const LABS = [{ label: 'Tissue Laboratory', href: '/biology/tissues/lab', blurb: 'Cut root tips, explore a stem section and animal tissues, test joints and count tree rings.' }];
-const PAGES = makeChapterPages(TISSUES_CHAPTER, TISSUE_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 3 · World of Living', labs: LABS });
+const PAGES = makeChapterPages(TISSUES_CHAPTER, TISSUE_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 3 · World of Living', labs: LABS, illustration: <ScienceArt name="bio-tissues" /> });
 export const TissuesHub = PAGES.Hub;
 export const TissuesLearnPage = PAGES.Learn;
 export const TissuesPracticePage = PAGES.Practice;

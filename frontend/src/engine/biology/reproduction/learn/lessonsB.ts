@@ -43,6 +43,7 @@ export const R4: EduLesson = {
         'When pollen lands on a suitable stigma, it grows a pollen tube down through the style into the ovary. A male gamete travels down the tube to the ovule and fuses with the egg cell: fertilisation. The fertilised egg, the zygote, grows into an embryo.',
         'Meanwhile the ovule becomes a seed and the ovary becomes the fruit. Seeds are spread by wind, water or animals, and germinate when water, air and temperature are right.',
       ],
+      visual: v('pollenToSeed', {}, 'Four stages in a section through a pistil: pollen lands on the stigma, a pollen tube grows down the style, the male gamete fuses with the egg in the ovule, and the ovary becomes a fruit with a seed.'),
       check: pick('chk-br4-fert', 'After fertilisation, the ovary develops into…', [['the fruit', null], ['the seed', 'The ovule becomes the seed; the ovary around it becomes the fruit.', 'ovary-ovule'], ['the pollen tube', 'The pollen tube grows from the pollen grain.', 'part-swap']], 'Fruit.', undefined, 'br4-fert'),
     },
   ],
@@ -114,6 +115,7 @@ export const R5: EduLesson = {
         'Gametes form by meiosis in the testes and ovaries (gametogenesis), so each has 23 chromosomes instead of 46. Males make millions of tiny, actively swimming sperm with no stored food. Females release a few large eggs with stored nutrients that cannot move on their own. This difference in size, number and movement is seen in most animals.',
         'A girl’s ovaries hold millions of immature eggs from birth; from puberty, usually one mature egg is released each month.',
       ],
+      visual: v('gametes', {}, 'A human egg and sperm drawn to the same scale: the egg is about 0.1 mm across and the sperm is tiny, with an enlarged view of the sperm’s head and tail.'),
       check: pick('chk-br5-gametes', 'Which statement about human gametes is correct?', [['Sperm are small, many and motile; eggs are large, few and non-motile', null], ['Eggs are small and swim to the sperm', 'Eggs are large and cannot move on their own.', 'gamete-swap'], ['Sperm contain stored nutrients for the embryo', 'Stored nutrients are in the egg.', 'gamete-swap']], 'Table 11.5.', undefined, 'br5-gametes'),
     },
   ],
@@ -167,6 +169,7 @@ export const R6: EduLesson = {
         'Before ovulation the lining of the uterus thickens. The released egg travels into the oviduct. If a sperm meets and fuses with it there, a zygote forms. The zygote divides by mitosis as it moves to the uterus and implants in the thick, blood-rich lining, which nourishes it. Implantation marks the start of pregnancy.',
         'The mother always gives an X chromosome; the father gives either an X (a girl, XX) or a Y (a boy, XY), so the father’s sperm decides the baby’s sex. In India, testing to find a baby’s sex before birth is prohibited by law, to protect the balance of the sex ratio.',
       ],
+      visual: v('implantation', {}, 'Four stages from ovulation to implantation: the egg enters the oviduct, is fertilised, divides while travelling, and implants in the thick uterus lining.'),
       check: pick('chk-br6-fert', 'Claim: "The zygote attaches to the uterus wall immediately, because the wall is always ready." This is…', [['false: the zygote divides while travelling, and the lining is only thick at one stage of the cycle', null], ['true', 'The zygote implants only after travelling to the uterus, and the lining thickens only in part of the cycle.', 'always-ready']], 'Both parts are false.', undefined, 'br6-fert'),
     },
     {

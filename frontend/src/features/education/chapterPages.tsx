@@ -26,6 +26,8 @@ export interface ChapterPageOptions {
   subtitle: string;
   labs: ChapterLabLink[];
   judges?: JudgeRegistry;
+  /** A small decorative illustration beside the chapter title on the hub. */
+  illustration?: React.ReactNode;
 }
 
 export const TeacherModeToggle: React.FC = () => {
@@ -65,7 +67,7 @@ export function makeChapterPages(chapter: EduChapter, registry: VisualRegistry, 
   const first = opts.labs[0];
   const Hub: React.FC = () => (
     <ChapterHub chapter={chapter} registry={registry} judges={opts.judges} crumb={opts.crumb} subtitle={opts.subtitle}
-      labLabel={first?.label ?? 'Laboratory'} labBlurb={first?.blurb ?? ''} labs={opts.labs} />
+      labLabel={first?.label ?? 'Laboratory'} labBlurb={first?.blurb ?? ''} labs={opts.labs} illustration={opts.illustration} />
   );
   const Learn: React.FC = () => {
     const { lessonId = '' } = useParams();

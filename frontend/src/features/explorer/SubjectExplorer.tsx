@@ -4,12 +4,14 @@ import { GlobalHeader } from '../../components/GlobalHeader';
 import { LABVERSE_SUBJECTS } from '../../types/subjectRegistry';
 import { CHAPTER_REGISTRY, useChapterNavigationStore } from '../workspace/chapterNavigation';
 import { BottomSheet } from '../workspace/BottomSheet';
+import { ScienceArt } from '../../components/ScienceArt';
 
 const descriptions: Record<string, string> = {
   physics: 'Discover motion, forces, energy and sound.',
   robotics: 'Build circuits and explore electronics.',
   mathematics: 'Explore shapes, equations, reasoning and data.',
-  chemistry: 'See how particles move and matter changes.',
+  chemistry: 'Separate mixtures, build atoms and bond elements.',
+  biology: 'Explore cells, tissues, flowers and the variety of life.',
 };
 const icons: Record<string, string> = { motion: 'directions_run', forces: 'open_with', work: 'bolt', sound: 'graphic_eq', electricity: 'electrical_services', 'coordinate-geometry': 'grid_4x4', circles: 'circle', quadrilaterals: 'crop_square', propositions: 'psychology', 'two-variables': 'show_chart', 'understanding-data': 'bar_chart', 'states-of-matter': 'science' };
 
@@ -59,7 +61,7 @@ export const SubjectExplorer: React.FC = () => {
         <div className="flex items-center justify-between gap-3 mb-4"><h2 id="subjects-heading" className="text-xl font-bold">Explore subjects</h2><span className="text-xs text-slate-400">Learn at your pace</span></div>
         <div className="subject-grid">
           {subjects.map((s) => <Link key={s.id} to={s.id === 'physics' ? '/physics' : s.route!} data-testid={s.id === 'physics' ? 'physics-chapters-link' : undefined} className="subject-card">
-            <span className="subject-card__icon"><span className="material-symbols-outlined text-[26px]" aria-hidden>{s.icon}</span></span>
+            <span className="subject-card__icon"><ScienceArt name={s.id} /></span>
             <div><h3 className="text-lg font-bold">{s.name}</h3><p className="subject-card__description text-sm text-slate-400 mt-2">{descriptions[s.id]}</p></div>
             <span className="material-symbols-outlined text-primary md:ml-auto" aria-hidden>chevron_right</span>
           </Link>)}
@@ -80,7 +82,7 @@ export const SubjectExplorer: React.FC = () => {
         <p className="text-sm text-slate-400">Progress is kept in this browser. Export experiments where available to keep a separate copy.</p>
         <button type="button" className="experience-primary" onClick={() => setGuide(false)}>Got it</button>
       </div></BottomSheet>}
-      <footer className="mt-10 pt-5 border-t border-surface-border text-sm text-slate-400">Made for curious minds. Biology and robotics are coming later.</footer>
+      <footer className="mt-10 pt-5 border-t border-surface-border text-sm text-slate-400">Made for curious minds.</footer>
     </main>
   </div>;
 };

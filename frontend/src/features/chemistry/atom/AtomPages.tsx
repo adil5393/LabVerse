@@ -6,11 +6,12 @@
 import React from 'react';
 import { ATOM_CHAPTER } from '../../../engine/chemistry/atom/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { ATOM_VISUALS, AtomBuilderVisual, AtomModelVisual, GoldFoilVisual, IsotopeMixVisual } from './AtomVisuals';
 
 const LABS = [{ label: 'Atom Laboratory', href: '/chemistry/atom/lab', blurb: 'Compare atomic models, build atoms, run the gold foil experiment and mix isotopes.' }];
-const PAGES = makeChapterPages(ATOM_CHAPTER, ATOM_VISUALS, { crumb: 'Chemistry', subtitle: 'Chapter 8 · Matter: its nature and behaviour', labs: LABS });
+const PAGES = makeChapterPages(ATOM_CHAPTER, ATOM_VISUALS, { crumb: 'Chemistry', subtitle: 'Chapter 8 · Matter: its nature and behaviour', labs: LABS, illustration: <ScienceArt name="chem-atom" /> });
 export const AtomHub = PAGES.Hub;
 export const AtomLearnPage = PAGES.Learn;
 export const AtomPracticePage = PAGES.Practice;

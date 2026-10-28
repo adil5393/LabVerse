@@ -1,6 +1,6 @@
 /** Chapter 12 (Diversity and Classification) practice bank and chapter assessment. Original questions; checked by `__tests__/diversity.test.ts`. */
 
-import type { ChapterAssessment, IndependentItem, PracticeSet, Question } from '../../../education/types';
+import type { ChapterAssessment, IndependentItem, PracticeSet, Question, VisualRef } from '../../../education/types';
 import { num, pick } from '../../../education/builders';
 
 const item = (id: string, topic: string, prompt: string, question: Question, hints: string[], solution: string[], difficulty: IndependentItem['difficulty'], marks = 1, ref?: string): IndependentItem =>
@@ -71,4 +71,12 @@ export const DIVERSITY_ASSESSMENT: ChapterAssessment = {
       ],
     },
   ],
+};
+
+/** Diagrams shown with the worked solutions of these practice items. */
+export const DIVERSITY_SOLUTION_DIAGRAMS: Record<string, VisualRef> = {
+  'bdx-1': { kind: 'protists', props: {}, alt: 'Paramecium is a single eukaryotic cell covered in cilia.' },
+  'bdx-4': { kind: 'protists', props: {}, alt: 'Euglena swims with a flagellum and has chloroplasts.' },
+  'bdx-2': { kind: 'fungusBody', props: {}, alt: 'A mould: threads with walls of chitin that absorb food.' },
+  'bdx-8': { kind: 'simplePlants', props: {}, alt: 'An alga and a moss: neither has vascular tissue.' },
 };

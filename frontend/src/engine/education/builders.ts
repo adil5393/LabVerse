@@ -4,7 +4,7 @@
  */
 
 import type {
-  ChoiceQuestion, FeedbackEntry, IndependentItem, NumericQuestion, NumericRule, OrderItem, OrderQuestion, Question, VisualRef,
+  ChoiceQuestion, FeedbackEntry, IndependentItem, NumericQuestion, NumericRule, OrderItem, OrderQuestion, PracticeSet, Question, VisualRef,
 } from './types';
 
 /** `options` are [text, why-it-is-wrong | null for the right option, optional mistake tag]. */
@@ -42,3 +42,8 @@ export function ord(id: string, prompt: string, items: OrderItem[], scramble: st
 }
 
 export const ind = (id: string, topic: string, objective: string | undefined, prompt: string, question: Question, hints: string[], solution: string[]): IndependentItem => ({ id, topic, objective, prompt, question, hints, solution });
+
+/** Attaches a diagram to the worked solution of the practice items named in `diagrams` (by item id). */
+export function withSolutionDiagrams(set: PracticeSet, diagrams: Record<string, VisualRef>): PracticeSet {
+  return { ...set, groups: set.groups.map((g) => ({ ...g, items: g.items.map((it) => (diagrams[it.id] ? { ...it, solutionVisual: diagrams[it.id] } : it)) })) };
+}

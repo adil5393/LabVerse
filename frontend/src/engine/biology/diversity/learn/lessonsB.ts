@@ -26,6 +26,7 @@ export const D4: EduLesson = {
         'Plants are multicellular autotrophs with cellulose walls; they are the base of most food chains. The simplest, Thallophyta (algae such as Spirogyra), have a thallus, a simple body with no roots, stems or leaves, that exchanges gases, water and nutrients directly with the water around it.',
         'Bryophyta (mosses and Marchantia) form green mats on damp walls and soil. They have rhizoids and simple stem-like and leaf-like parts but no vascular tissue, and their male cells must swim to the female cells. Needing water to reproduce, they are called the amphibians of the plant kingdom.',
       ],
+      visual: v('simplePlants', {}, 'The alga Spirogyra, a thread of cells with spiral chloroplasts, beside a moss with rhizoids, leaf-like parts and a spore capsule.'),
       check: pick('chk-bd4-simple', 'Why are bryophytes called the amphibians of the plant kingdom?', [['They live on land but need water to reproduce', null], ['They live only in the sea', 'Bryophytes grow on damp land.', 'habitat-mixup'], ['They can walk', 'Plants do not walk; the name refers to needing water and land.', 'irrelevant-cause']], 'Land but water for reproduction.', undefined, 'bd4-simple'),
     },
     {

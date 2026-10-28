@@ -25,6 +25,7 @@ export const T1: EduLesson = {
         'A tissue is a group of cells, similar in structure, that work together to perform a particular job. Different tissues share out the work of the body: this division of labour makes complex organisms efficient. Tissues form organs, organs form organ systems, and organ systems form the organism.',
         'Plants and animals have different tissues because they live differently. Most plants stay in one place, need rigid support and make their own food; animals move and digest food they take in.',
       ],
+      visual: v('organisation', {}, 'Five steps zooming out through a flowering plant: a xylem cell, xylem tissue, a stem (an organ), the shoot system, and the whole plant.'),
       check: pick('chk-bt1-tissue', 'A tissue is…', [['a group of similar cells working together on one job', null], ['a single cell that does every job', 'That describes a unicellular organism such as Amoeba.', 'tissue-cell'], ['several organs working together', 'That is an organ system.', 'order-slip']], 'Similar cells, shared job.', undefined, 'bt1-tissue'),
     },
     {
@@ -108,6 +109,7 @@ export const T2: EduLesson = {
         'Parenchyma has living, thin-walled, loosely packed cells. It stores food, makes food in green parts, and forms air spaces that help water plants float.',
         'Collenchyma has living cells with corners thickened by pectin, which gives rubbery flexibility, so young stems and tendrils bend without breaking. Sclerenchyma has thick walls hardened with lignin; most of its cells are dead. It makes coconut husk, walnut shells, seed coats and leaf veins hard and strong. All three have one kind of cell each: they are simple permanent tissues.',
       ],
+      visual: v('supportTissues', {}, 'Parenchyma, collenchyma and sclerenchyma side by side: thin walls with air spaces, walls thickened at the corners, and thick lignified walls.'),
       check: pick('chk-bt2-support', 'A fresh twig bends but a dry twig snaps. Which tissue gives the fresh twig its flexibility?', [['Collenchyma', null], ['Sclerenchyma', 'Sclerenchyma is hard and rigid; it does not give flexibility.', 'tissue-swap'], ['Xylem', 'Xylem carries water; flexibility comes from collenchyma.', 'tissue-swap']], 'Pectin-thickened corners.', undefined, 'bt2-support'),
     },
     {

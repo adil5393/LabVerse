@@ -12,6 +12,8 @@ import {
   CELL_PARTS, POTATO_SAP_PERCENT, cellResponse, divide, finalMass, partById, potatoMassChangePercent, type CellKind, type CellType,
 } from '../../../engine/biology/cell/model';
 import { MicroscopeVisual, SizeLadderVisual } from '../shared/Microscope';
+import { Model3D, ViewModeSwitch, useViewMode } from '../three/ViewMode';
+import { CELL_DIAGRAMS } from './CellDiagrams';
 
 // ---------- Osmosis ----------
 
@@ -181,11 +183,21 @@ export const CellCompareVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const [partId, setPartId] = useState(q.part ?? 'membrane');
   const part = partById(present.some((p) => p.id === partId) ? partId : present[0].id)!;
   const short = (name: string) => name.replace(/ \(.*\)/, '');
+  const [view, setView] = useViewMode();
+  const has3D = type !== 'bacterial';
+  const in3D = has3D && view === '3d';
+  const named = present.map((p) => ({ id: p.id, name: short(p.name) }));
   return (
-    <LabStage testId="cell-compare" alt={alt} data={{ 'data-cell-type': type, 'data-part': part.id }}
+    <LabStage testId="cell-compare" alt={alt} data={{ 'data-cell-type': type, 'data-part': part.id, 'data-view': in3D ? '3d' : '2d' }}
       question="What does each part of the cell do, and which cells have it?"
-      sceneNote="Not to scale · colours only tell parts apart · tap a number"
-      scene={<CellDiagram type={type} part={part.id} parts={present.map((p) => ({ id: p.id, name: short(p.name) }))} onPick={setPartId} />}
+      sceneNote={in3D ? 'Schematic 3D model · organelles enlarged and far fewer than in a real cell' : 'Schematic diagram · not to scale · tap a number'}
+      scene={<>
+        {has3D && <ViewModeSwitch mode={view} onChange={setView} what="cell" />}
+        {in3D
+          ? <Model3D spec={{ kind: 'cell', cell: type as 'plant' | 'animal' }} title={`3D model of ${type === 'plant' ? 'a plant' : 'an animal'} cell`} parts={named} selected={part.id} onSelect={setPartId} onBack={() => setView('2d')} />
+          : <CellDiagram type={type} part={part.id} parts={named} onPick={setPartId} />}
+        {!has3D && <p className="bio-viewmode__note">3D models are available for plant and animal cells.</p>}
+      </>}
       controls={q.editable ? <>
         <LabChoice name="cell-type" label="Cell" value={type} options={[{ id: 'bacterial', label: 'Bacterial' }, { id: 'plant', label: 'Plant' }, { id: 'animal', label: 'Animal' }]} onChange={(v) => setType(v as CellType)} />
         <LabChoice name="cell-part" label="Part (same numbers as the diagram)" value={part.id} options={present.map((p, i) => ({ id: p.id, label: `${i + 1}. ${short(p.name)}` }))} onChange={setPartId} />
@@ -302,4 +314,4 @@ export const DivisionVisual: React.FC<VisualProps> = ({ props, alt }) => {
   );
 };
 
-export const CELL_VISUALS: VisualRegistry = { microscope: MicroscopeVisual, sizeLadder: SizeLadderVisual, osmosis: OsmosisVisual, cellCompare: CellCompareVisual, division: DivisionVisual };
+export const CELL_VISUALS: VisualRegistry = { ...CELL_DIAGRAMS, microscope: MicroscopeVisual, sizeLadder: SizeLadderVisual, osmosis: OsmosisVisual, cellCompare: CellCompareVisual, division: DivisionVisual };

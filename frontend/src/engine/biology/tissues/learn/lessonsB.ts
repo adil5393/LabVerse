@@ -43,6 +43,7 @@ export const T4: EduLesson = {
         'Touch your elbow: bone is hard and rigid. Fold your ear or press your nose: cartilage is soft and flexible and springs back; it cushions the ends of bones.',
         'Wiggle your fingers and feel your forearm move: tendons connect muscle to bone and pass on the muscle’s pull. Lift your leg until the knee stops: ligaments connect bone to bone, limit movement and prevent dislocation.',
       ],
+      visual: v('jointAnatomy', {}, 'A section through a knee joint with numbered parts: bones, cartilage, the fluid-filled cavity, ligaments, a muscle and its tendon.'),
       check: pick('chk-bt4-links', 'A ligament connects…', [['bone to bone', null], ['muscle to bone', 'That is a tendon.', 'tendon-ligament'], ['muscle to muscle', 'Neither tendons nor ligaments do this.', 'tendon-ligament']], 'Bone to bone.', undefined, 'bt4-links'),
     },
   ],
@@ -105,6 +106,7 @@ export const T5: EduLesson = {
         'Pulling your hand from a hot pan or remembering a song involves nervous tissue, the body’s control network; the brain is the control centre. Muscles act on instructions from nerves: during exercise, the brain signals the heart to beat faster.',
         'A neuron has a cell body with the nucleus; dendrites that receive signals from other neurons; and a long axon that carries the message away and ends in axon terminals, which pass it on to other cells.',
       ],
+      visual: v('neuronDiagram', {}, 'A neuron with numbered parts: dendrites, cell body, nucleus, axon with a fatty sheath, and nerve endings, with the direction the message travels.'),
       check: pick('chk-bt5-neuron', 'Which part of a neuron receives signals from other neurons?', [['Dendrites', null], ['Axon', 'The axon carries the message away from the cell body.', 'neuron-part'], ['Axon terminals', 'Terminals pass the message on to the next cell.', 'neuron-part']], 'Dendrites.', undefined, 'bt5-neuron'),
     },
   ],
@@ -158,6 +160,7 @@ export const T6: EduLesson = {
         'The musculoskeletal system is made of bones, muscles, joints, cartilage, tendons and ligaments. It lets us stand upright, move, keep our posture and protects delicate organs, under the control of the nervous system.',
         'A joint lets bones move but cannot move them itself. When a muscle contracts, its tendon passes the pull to a bone, which moves at a joint. The adult skeleton is about 12 to 15 % of body weight.',
       ],
+      visual: v('musclePair', {}, 'The biceps and triceps moving the forearm: the biceps contracts to bend the arm; the triceps contracts to straighten it.'),
       check: pick('chk-bt6-system', 'What actually moves a bone at a joint?', [['A muscle contracting and pulling through its tendon', null], ['The joint pushing the bone', 'Joints allow movement; they cannot move bones on their own.', 'joint-moves'], ['Ligaments shortening', 'Ligaments hold bones together and limit movement.', 'tendon-ligament']], 'Muscle pull.', undefined, 'bt6-system'),
     },
     {

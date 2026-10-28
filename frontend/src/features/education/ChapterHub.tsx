@@ -37,7 +37,7 @@ function textbookBadge(chapterId: string, classGrade: number): string {
   return `NCERT ${book.title}${c.number ? ` · Chapter ${c.number}` : ''}`;
 }
 
-export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistry; judges?: JudgeRegistry; crumb: string; subtitle: string; labLabel: string; labBlurb: string; labs?: ChapterLabLink[] }> = ({ chapter, registry, judges = {}, crumb, subtitle, labLabel, labBlurb, labs }) => {
+export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistry; judges?: JudgeRegistry; crumb: string; subtitle: string; labLabel: string; labBlurb: string; labs?: ChapterLabLink[]; illustration?: React.ReactNode }> = ({ chapter, registry, judges = {}, crumb, subtitle, labLabel, labBlurb, labs, illustration }) => {
   const lessons = useEducationStore((s) => s.lessons);
   const reset = useEducationStore((s) => s.resetChapter);
   const practiceRecs = useEducationStore((s) => s.practice[chapter.id]);
@@ -66,10 +66,13 @@ export const ChapterHub: React.FC<{ chapter: EduChapter; registry: VisualRegistr
           <span className="text-amber-400 font-bold">{crumb}</span>
         </nav>
 
-        <header className="space-y-2">
+        <header className={illustration ? 'chapter-header chapter-header--art' : 'space-y-2'}>
+          {illustration && <div className="chapter-header__art">{illustration}</div>}
+          <div className="space-y-2 min-w-0">
           <span className="inline-block text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30" data-testid="chapter-badge">{textbookBadge(chapter.id, chapter.classGrade)}</span>
           <h1 className="text-3xl md:text-5xl font-black text-white">{chapter.title}</h1>
           <p className="text-sm md:text-base text-slate-300 max-w-3xl">{subtitle}</p>
+          </div>
         </header>
 
         <div className="grid gap-4 lg:grid-cols-12">

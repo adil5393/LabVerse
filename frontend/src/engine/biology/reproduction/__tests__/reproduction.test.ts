@@ -9,7 +9,7 @@ import {
   gameteCombinations, haploid, likelyAgent, pollenPerSeed, pollinationKind, stageName, survivors, trimester, utcDate,
 } from '../model';
 
-export const REPRO_VISUAL_KINDS = ['microscope', 'beadCombos', 'flowerParts', 'pollinationTest', 'pollinationStrategy', 'cycleCalendar'];
+export const REPRO_VISUAL_KINDS = ['microscope', 'beadCombos', 'flowerParts', 'pollinationTest', 'pollinationStrategy', 'cycleCalendar', 'halving', 'pollinationKinds', 'pollenToSeed', 'gametes', 'implantation'];
 describeChapterIntegrity('Reproduction', CH, REPRO_VISUAL_KINDS);
 
 const day = (d: Date) => d.toISOString().slice(0, 10);

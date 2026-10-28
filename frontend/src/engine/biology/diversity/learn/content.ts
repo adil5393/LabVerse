@@ -7,7 +7,8 @@
 import type { EduChapter } from '../../../education/types';
 import { D1, D2, D3 } from './lessonsA';
 import { D4, D5, D6 } from './lessonsB';
-import { DIVERSITY_ASSESSMENT, DIVERSITY_PRACTICE } from './practice';
+import { DIVERSITY_ASSESSMENT, DIVERSITY_PRACTICE, DIVERSITY_SOLUTION_DIAGRAMS } from './practice';
+import { withSolutionDiagrams } from '../../../education/builders';
 import { BD_PREREQUISITES, BD_UNITS } from './prerequisites';
 
 const LESSON_LIST = [D1, D2, D3, D4, D5, D6];
@@ -26,7 +27,7 @@ export const DIVERSITY_CHAPTER: EduChapter = {
   units: BD_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(BD_PREREQUISITES.map((p) => [p.id, p])),
-  practice: DIVERSITY_PRACTICE,
+  practice: withSolutionDiagrams(DIVERSITY_PRACTICE, DIVERSITY_SOLUTION_DIAGRAMS),
   assessment: DIVERSITY_ASSESSMENT,
   routes: {
     landing: '/biology/diversity',

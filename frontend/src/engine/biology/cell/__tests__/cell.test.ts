@@ -12,7 +12,7 @@ import {
   SPECIMENS, apparentSizeMm, cellsAcrossField, estimateCellSize, fieldDiameterMm, instrumentFor, mmToUm, specimenById, totalMagnification, visibility,
 } from '../../microscope';
 
-export const CELL_VISUAL_KINDS = ['microscope', 'osmosis', 'cellCompare', 'division', 'sizeLadder'];
+export const CELL_VISUAL_KINDS = ['microscope', 'osmosis', 'cellCompare', 'division', 'sizeLadder', 'nucleusSection', 'energyOrganelles', 'membraneModel', 'tonicity'];
 describeChapterIntegrity('Cell', CH, CELL_VISUAL_KINDS);
 
 describe('virtual microscope optics', () => {

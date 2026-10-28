@@ -9,7 +9,7 @@ import {
   lowestSharedRank, organism,
 } from '../model';
 
-export const DIVERSITY_VISUAL_KINDS = ['microscope', 'kingdomKey', 'plantKey', 'animalPhyla', 'hierarchy', 'binomial'];
+export const DIVERSITY_VISUAL_KINDS = ['microscope', 'kingdomKey', 'plantKey', 'animalPhyla', 'hierarchy', 'binomial', 'protists', 'fungusBody', 'simplePlants'];
 describeChapterIntegrity('Diversity', CH, DIVERSITY_VISUAL_KINDS);
 
 const inv = (o: Partial<Parameters<typeof classifyInvertebrate>[0]>) => classifyInvertebrate({ tissues: true, tentacles: false, flat: false, openings: 2, segmented: false, jointedLegs: false, softBodyFoot: false, spinySkin: false, ...o });

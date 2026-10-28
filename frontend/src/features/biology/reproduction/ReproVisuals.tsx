@@ -12,7 +12,9 @@ import {
   FLOWER_PARTS, HUMAN_PAIRS, PEA_TREATMENTS, POLLEN_STRATEGIES, TYPICAL_CYCLE_RANGE, addDays, allCombinations, cyclePhase, drawGamete, forecastCycle,
   gameteCombinations, peaPollinated, utcDate, type FlowerPartId, type PeaTreatment,
 } from '../../../engine/biology/reproduction/model';
+import { Model3D, ViewModeSwitch, useViewMode } from '../three/ViewMode';
 import { MicroscopeVisual } from '../shared/Microscope';
+import { REPRO_DIAGRAMS } from './ReproDiagrams';
 
 // ---------- Bead model (Activity 11.4) ----------
 
@@ -106,11 +108,18 @@ export const FlowerPartsVisual: React.FC<VisualProps> = ({ props, alt }) => {
       })}
     </svg>
   );
+  const [view, setView] = useViewMode();
+  const in3D = view === '3d';
   return (
-    <LabStage testId="flower-parts" alt={alt} data={{ 'data-part': part }}
+    <LabStage testId="flower-parts" alt={alt} data={{ 'data-part': part, 'data-view': view }}
       question="What does each part of a flower do in reproduction?"
-      sceneNote="Simplified section of a complete flower · tap a number"
-      scene={scene}
+      sceneNote={in3D ? 'Schematic 3D model of a generalised complete flower' : 'Schematic section of a complete flower · tap a number'}
+      scene={<>
+        <ViewModeSwitch mode={view} onChange={setView} what="flower" />
+        {in3D
+          ? <Model3D spec={{ kind: 'flower' }} title="3D model of a complete flower" parts={ids.map((k) => ({ id: k, name: FLOWER_PARTS[k].name }))} selected={part} onSelect={(id) => setPart(id as FlowerPartId)} onBack={() => setView('2d')} />
+          : scene}
+      </>}
       controls={q.editable ? <LabChoice name="flower-part" label="Part (same numbers as the diagram)" value={part} options={ids.map((k, i) => ({ id: k, label: `${i + 1}. ${FLOWER_PARTS[k].name}` }))} onChange={(v) => setPart(v as FlowerPartId)} /> : undefined}
       observation={<>
         <p className="m-0 text-base font-bold" data-testid="flower-part-name">{p.name} <span className="text-sm font-normal text-slate-300">({p.whorl})</span></p>
@@ -276,4 +285,4 @@ export const CycleCalendarVisual: React.FC<VisualProps> = ({ props, alt }) => {
   );
 };
 
-export const REPRO_VISUALS: VisualRegistry = { microscope: MicroscopeVisual, beadCombos: BeadCombosVisual, flowerParts: FlowerPartsVisual, pollinationTest: PollinationTestVisual, pollinationStrategy: PollinationStrategyVisual, cycleCalendar: CycleCalendarVisual };
+export const REPRO_VISUALS: VisualRegistry = { ...REPRO_DIAGRAMS, microscope: MicroscopeVisual, beadCombos: BeadCombosVisual, flowerParts: FlowerPartsVisual, pollinationTest: PollinationTestVisual, pollinationStrategy: PollinationStrategyVisual, cycleCalendar: CycleCalendarVisual };

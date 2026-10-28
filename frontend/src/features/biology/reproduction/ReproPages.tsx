@@ -6,12 +6,13 @@
 import React from 'react';
 import { REPRODUCTION_CHAPTER } from '../../../engine/biology/reproduction/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
+import { ScienceArt } from '../../../components/ScienceArt';
 import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MicroscopeVisual } from '../shared/Microscope';
 import { BeadCombosVisual, CycleCalendarVisual, FlowerPartsVisual, PollinationStrategyVisual, PollinationTestVisual, REPRO_VISUALS } from './ReproVisuals';
 
 const LABS = [{ label: 'Reproduction Laboratory', href: '/biology/reproduction/lab', blurb: 'See buds and spores, model meiosis with beads, dissect a flower and run the pea pollination experiment.' }];
-const PAGES = makeChapterPages(REPRODUCTION_CHAPTER, REPRO_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 11 · World of Living', labs: LABS });
+const PAGES = makeChapterPages(REPRODUCTION_CHAPTER, REPRO_VISUALS, { crumb: 'Biology', subtitle: 'Chapter 11 · World of Living', labs: LABS, illustration: <ScienceArt name="bio-reproduction" /> });
 export const ReproductionHub = PAGES.Hub;
 export const ReproductionLearnPage = PAGES.Learn;
 export const ReproductionPracticePage = PAGES.Practice;

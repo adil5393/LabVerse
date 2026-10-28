@@ -7,7 +7,8 @@
 import type { EduChapter } from '../../../education/types';
 import { T1, T2, T3 } from './lessonsA';
 import { T4, T5, T6 } from './lessonsB';
-import { TISSUES_ASSESSMENT, TISSUES_PRACTICE } from './practice';
+import { TISSUES_ASSESSMENT, TISSUES_PRACTICE, TISSUES_SOLUTION_DIAGRAMS } from './practice';
+import { withSolutionDiagrams } from '../../../education/builders';
 import { BT_PREREQUISITES, BT_UNITS } from './prerequisites';
 
 const LESSON_LIST = [T1, T2, T3, T4, T5, T6];
@@ -26,7 +27,7 @@ export const TISSUES_CHAPTER: EduChapter = {
   units: BT_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(BT_PREREQUISITES.map((p) => [p.id, p])),
-  practice: TISSUES_PRACTICE,
+  practice: withSolutionDiagrams(TISSUES_PRACTICE, TISSUES_SOLUTION_DIAGRAMS),
   assessment: TISSUES_ASSESSMENT,
   routes: {
     landing: '/biology/tissues',

@@ -7,7 +7,8 @@
 import type { EduChapter } from '../../../education/types';
 import { C1, C2, C3 } from './lessonsA';
 import { C4, C5, C6 } from './lessonsB';
-import { CELL_ASSESSMENT, CELL_PRACTICE } from './practice';
+import { CELL_ASSESSMENT, CELL_PRACTICE, CELL_SOLUTION_DIAGRAMS } from './practice';
+import { withSolutionDiagrams } from '../../../education/builders';
 import { BC_PREREQUISITES, BC_UNITS } from './prerequisites';
 
 const LESSON_LIST = [C1, C2, C3, C4, C5, C6];
@@ -26,7 +27,7 @@ export const CELL_CHAPTER: EduChapter = {
   units: BC_UNITS,
   lessons: Object.fromEntries(LESSON_LIST.map((l) => [l.id, l])),
   prerequisites: Object.fromEntries(BC_PREREQUISITES.map((p) => [p.id, p])),
-  practice: CELL_PRACTICE,
+  practice: withSolutionDiagrams(CELL_PRACTICE, CELL_SOLUTION_DIAGRAMS),
   assessment: CELL_ASSESSMENT,
   routes: {
     landing: '/biology/cell',

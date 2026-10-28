@@ -9,7 +9,7 @@ import {
   partMass, plantTissue, ringsForAge, rootLength,
 } from '../model';
 
-export const TISSUE_VISUAL_KINDS = ['rootGrowth', 'treeRings', 'plantTissues', 'animalTissues', 'joints'];
+export const TISSUE_VISUAL_KINDS = ['rootGrowth', 'treeRings', 'plantTissues', 'animalTissues', 'joints', 'organisation', 'supportTissues', 'jointAnatomy', 'neuronDiagram', 'musclePair'];
 describeChapterIntegrity('Tissues', CH, TISSUE_VISUAL_KINDS);
 
 describe('Tissues model', () => {

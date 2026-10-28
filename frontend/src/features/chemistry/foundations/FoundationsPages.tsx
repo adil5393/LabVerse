@@ -6,7 +6,7 @@
 import React from 'react';
 import { FOUNDATIONS_CHAPTER } from '../../../engine/chemistry/foundations/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
-import { SubjectLabShell } from '../../education/SubjectLabShell';
+import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { BondBuilderVisual, FOUND_VISUALS, FormulaBuilderVisual, FormulaMassVisual, MassBalanceVisual, PropertiesTestVisual } from './FoundationsVisuals';
 
 const LABS = [{ label: 'Formula Laboratory', href: '/chemistry/atomic-foundations/lab', blurb: 'Weigh reactions, build bonds, write formulae, calculate masses and test properties.' }];
@@ -15,6 +15,14 @@ export const FoundationsHub = PAGES.Hub;
 export const FoundationsLearnPage = PAGES.Learn;
 export const FoundationsPracticePage = PAGES.Practice;
 export const FoundationsAssessmentPage = PAGES.Assessment;
+
+export const FOUNDATIONS_LAB_VIEWS: LabView[] = [
+  { id: 'balance', label: 'Mass balance', render: () => <MassBalanceVisual props={{ editable: true }} alt="A reaction on a balance in an open or closed set-up." /> },
+  { id: 'bonds', label: 'Bond builder', render: () => <BondBuilderVisual props={{ editable: true, a: 'Na', b: 'Cl' }} alt="Choose two atoms and see the bond and formula." /> },
+  { id: 'formula', label: 'Formula builder', render: () => <FormulaBuilderVisual props={{ editable: true, mode: 'ionic' }} alt="Criss-cross a cation and an anion into a formula." /> },
+  { id: 'mass', label: 'Formula mass', render: () => <FormulaMassVisual props={{ editable: true }} alt="Type a formula and see its molecular or formula unit mass." /> },
+  { id: 'properties', label: 'Property tests', render: () => <PropertiesTestVisual props={{ editable: true }} alt="Test five compounds for solubility and conductivity." /> },
+];
 
 export const FoundationsLabPage: React.FC = () => (
   <SubjectLabShell
@@ -26,12 +34,6 @@ export const FoundationsLabPage: React.FC = () => (
       'Ion charges and atomic masses are the chapter’s values (Table 9.1; Cl = 35.5 u).',
       'Property results are those described in the chapter for sodium chloride, copper sulfate, sugar, camphor and naphthalene.',
     ]}
-    views={[
-      { id: 'balance', label: 'Mass balance', render: () => <MassBalanceVisual props={{ editable: true }} alt="A reaction on a balance in an open or closed set-up." /> },
-      { id: 'bonds', label: 'Bond builder', render: () => <BondBuilderVisual props={{ editable: true, a: 'Na', b: 'Cl' }} alt="Choose two atoms and see the bond and formula." /> },
-      { id: 'formula', label: 'Formula builder', render: () => <FormulaBuilderVisual props={{ editable: true, mode: 'ionic' }} alt="Criss-cross a cation and an anion into a formula." /> },
-      { id: 'mass', label: 'Formula mass', render: () => <FormulaMassVisual props={{ editable: true }} alt="Type a formula and see its molecular or formula unit mass." /> },
-      { id: 'properties', label: 'Property tests', render: () => <PropertiesTestVisual props={{ editable: true }} alt="Test five compounds for solubility and conductivity." /> },
-    ]}
+    views={FOUNDATIONS_LAB_VIEWS}
   />
 );

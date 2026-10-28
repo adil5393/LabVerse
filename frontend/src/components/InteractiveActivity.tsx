@@ -1,8 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 /** Keep the same simulation mounted when moving between a lesson and focus mode. */
-export function InteractiveActivity({ children, calm = false, title = 'Try it yourself' }: { children: React.ReactNode; calm?: boolean; title?: string }) {
+export function InteractiveActivity({ children, calm = false, title = 'Try it yourself', label = 'Physics activity', closeLabel = 'Back to lesson', resettable = false, onReset }: {
+  children: React.ReactNode; calm?: boolean; title?: string;
+  /** Accessible name of the focus-mode dialog. */
+  label?: string;
+  /** Text of the button that leaves focus mode. */
+  closeLabel?: string;
+  /** Show a Reset button that returns the activity to its starting settings (it remounts the children). */
+  resettable?: boolean;
+  onReset?: () => void;
+}) {
   const [focused, setFocused] = useState(false);
+  const [generation, setGeneration] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const close = useRef<HTMLButtonElement>(null);
@@ -42,14 +52,17 @@ export function InteractiveActivity({ children, calm = false, title = 'Try it yo
   }, [focused]);
   return (
     <div ref={root} className={`physics-activity ${calm ? 'app-chrome forces-session' : 'science-surface'} ${focused ? 'activity-focused' : ''}`}
-      role={focused ? 'dialog' : undefined} aria-modal={focused || undefined} aria-label={focused ? 'Physics activity' : undefined}>
+      role={focused ? 'dialog' : undefined} aria-modal={focused || undefined} aria-label={focused ? label : undefined}>
       <div className="activity-toolbar">
         <span className="text-xs font-semibold">{title}</span>
+        <span className="activity-toolbar__actions">
         {focused
-          ? <button ref={close} type="button" onClick={() => setFocused(false)}>Back to lesson <span aria-hidden>↙</span></button>
+          ? <button ref={close} type="button" onClick={() => setFocused(false)}>{closeLabel} <span aria-hidden>↙</span></button>
           : <button ref={trigger} type="button" onClick={() => setFocused(true)}>Focus activity <span aria-hidden>↗</span></button>}
+        {resettable && <button type="button" data-action="reset-activity" onClick={() => { setGeneration((g) => g + 1); onReset?.(); }}>Reset <span aria-hidden>↺</span></button>}
+        </span>
       </div>
-      <div className="activity-content">{children}</div>
+      <div className="activity-content"><React.Fragment key={generation}>{children}</React.Fragment></div>
     </div>
   );
 }

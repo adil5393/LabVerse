@@ -6,7 +6,8 @@
 
 import React, { useState } from 'react';
 import type { VisualProps } from '../../education/visuals';
-import { LabChoice, LabSelect, LabSlider, fmtNum, labCard } from '../../education/SubjectLabShell';
+import { LabChoice, LabSelect, LabSlider, fmtNum } from '../../education/SubjectLabShell';
+import { LabStage } from '../../education/LabLayout';
 import {
   OBJECTIVES, SIZE_LADDER, SPECIMENS, apparentSizeMm, estimateCellSize, fieldDiameterMm, instrumentFor, mmToUm, specimenById, totalMagnification, visibility,
   type Specimen,
@@ -78,6 +79,15 @@ function layout(sp: Specimen, fieldUm: number, seed: number): { mode: 'shapes' |
   return { mode: 'shapes', items: Array.from({ length: count }, () => { const a = rand() * 2 * Math.PI, r = Math.sqrt(rand()) * (R - px / 2); return { x: C + r * Math.cos(a), y: C + r * Math.sin(a), px }; }) };
 }
 
+/** A round scale-bar length (µm) that draws between about 22 and 70 units in a field of radius R. */
+function scaleBar(fieldUm: number): { um: number; px: number } {
+  const perUm = (2 * R) / fieldUm;
+  const nice = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+  const um = nice.find((n) => n * perUm >= 22) ?? 2000;
+  return { um, px: um * perUm };
+}
+const fmtUm = (um: number) => (um >= 1000 ? `${um / 1000} mm` : `${um} µm`);
+
 export const MicroscopeVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const q = props as { specimen?: string; objective?: number; editable?: boolean; specimens?: string[] };
   const choices = q.specimens?.length ? q.specimens.map((id) => specimenById(id)).filter(Boolean) as Specimen[] : SPECIMENS;
@@ -102,68 +112,87 @@ export const MicroscopeVisual: React.FC<VisualProps> = ({ props, alt }) => {
   const tick = fieldMm >= 2 ? 1 : 0.1;
   const visText = vis === 'invisible' ? 'Too small to make out at this magnification.' : vis === 'dots' ? 'Visible only as tiny specks: increase the magnification to see their shape.' : 'Shapes are clear enough to make out.';
   const filterId = `mf-${specId}-${objective}`;
+  const bar = scaleBar(fieldUm);
+  const measurable = sp.arrangement === 'regular' && !ruler;
+
+  const scene = (
+    <svg viewBox="0 0 240 214" role="img" aria-label={`${sp.label} at ${mag} times; field ${fmtNum(fieldMm, 2)} mm across; scale bar ${fmtUm(bar.um)}. ${visText}${!focused ? ' The image is blurred.' : ''}`}>
+      <defs>
+        <clipPath id={`clip-${filterId}`}><circle cx={C} cy={C} r={R} /></clipPath>
+        <filter id={filterId}><feGaussianBlur stdDeviation={blur} /></filter>
+      </defs>
+      <g transform="translate(20 4)">
+        <circle cx={C} cy={C} r={R + 3} fill="#0f172a" />
+        <circle cx={C} cy={C} r={R} fill="#f8fafc" />
+        <g clipPath={`url(#clip-${filterId})`} filter={blur > 0.05 ? `url(#${filterId})` : undefined}>
+          {ruler ? (
+            <g>
+              <rect x={C - R} y={C - 8} width={2 * R} height={16} fill="#fef9c3" opacity="0.8" />
+              {Array.from({ length: Math.floor(fieldMm / tick) + 1 }, (_, k) => { const x = C - R + (k * tick * 2 * R) / fieldMm; const major = Math.abs((k * tick) % 1) < 1e-9 || tick === 1; return <line key={k} x1={x} y1={C - 8} x2={x} y2={C - (major ? 0 : 3)} stroke="#334155" strokeWidth={major ? 0.9 : 0.5} />; })}
+              <text x={C} y={C + 22} fontSize="11" textAnchor="middle" fill="#334155">{tick === 1 ? 'marks every 1 mm' : 'marks every 0.1 mm'}</text>
+            </g>
+          ) : lay.mode === 'specks' && vis === 'detail' ? (
+            lay.items.slice(0, 160).map((it, i) => <CellShape key={i} sp={sp} x={it.x} y={it.y} px={Math.max(3.5, it.px)} i={i} stained={stained} />)
+          ) : lay.mode === 'specks' || vis === 'dots' ? (
+            lay.items.slice(0, 260).map((it, i) => <circle key={i} cx={it.x} cy={it.y} r={vis === 'invisible' ? 0 : Math.min(1.6, Math.max(0.8, it.px / 2))} fill={stained ? sp.colour : '#94a3b8'} opacity={stained ? 0.9 : 0.35} />)
+          ) : vis === 'invisible' ? null : (
+            lay.items.map((it, i) => <CellShape key={i} sp={sp} x={it.x} y={it.y} px={it.px} i={i} stained={stained} />)
+          )}
+          {measurable && <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="#0f766e" strokeWidth="0.8" strokeDasharray="3 2" />}
+        </g>
+        {!ruler && <g>
+          <rect x={C - bar.px / 2 - 6} y={C + R - 30} width={bar.px + 12} height="24" rx="4" fill="#0f172a" opacity="0.75" />
+          <line x1={C - bar.px / 2} y1={C + R - 22} x2={C + bar.px / 2} y2={C + R - 22} stroke="#fff" strokeWidth="2.5" />
+          <text x={C} y={C + R - 9} fontSize="11" textAnchor="middle" fill="#fff">{fmtUm(bar.um)}</text>
+        </g>}
+      </g>
+      <text x="4" y="16" fontSize="14" fontWeight="700" fill="#5eead4">{mag}X</text>
+      <text x="236" y="16" fontSize="12" textAnchor="end" fill="#cbd5e1">field {fmtNum(fieldMm, 2)} mm</text>
+      {!focused && !ruler && <text x="236" y="210" fontSize="12" textAnchor="end" fill="#fcd34d">blurred</text>}
+      {!stained && !ruler && <text x="4" y="210" fontSize="12" fill="#94a3b8">unstained</text>}
+    </svg>
+  );
 
   return (
-    <div className="space-y-3 p-3" data-testid="microscope" data-specimen={sp.id} data-objective={objective} data-magnification={mag} data-field-um={fieldUm}
-      data-visibility={vis} data-focused={focused ? 'true' : 'false'} data-cells-across={across} data-estimate={estimate === null ? '' : String(Math.round(estimate * 100) / 100)} aria-label={alt}>
-      <div className={labCard}>
-        <svg viewBox="0 0 200 200" className="w-full max-w-[320px] mx-auto block" role="img" aria-label={`${sp.label} at ${mag} times. ${visText}`}>
-          <defs>
-            <clipPath id={`clip-${filterId}`}><circle cx={C} cy={C} r={R} /></clipPath>
-            <filter id={filterId}><feGaussianBlur stdDeviation={blur} /></filter>
-          </defs>
-          <circle cx={C} cy={C} r={R + 3} fill="#0f172a" />
-          <circle cx={C} cy={C} r={R} fill="#f8fafc" />
-          <g clipPath={`url(#clip-${filterId})`} filter={blur > 0.05 ? `url(#${filterId})` : undefined}>
-            {ruler ? (
-              <g>
-                <rect x={C - R} y={C - 8} width={2 * R} height={16} fill="#fef9c3" opacity="0.8" />
-                {Array.from({ length: Math.floor(fieldMm / tick) + 1 }, (_, k) => { const x = C - R + (k * tick * 2 * R) / fieldMm; const major = Math.abs((k * tick) % 1) < 1e-9 || tick === 1; return <line key={k} x1={x} y1={C - 8} x2={x} y2={C - (major ? 0 : 3)} stroke="#334155" strokeWidth={major ? 0.9 : 0.5} />; })}
-                <text x={C} y={C + 20} fontSize="8" textAnchor="middle" fill="#334155">{tick === 1 ? 'marks every 1 mm' : 'marks every 0.1 mm'}</text>
-              </g>
-            ) : lay.mode === 'specks' && vis === 'detail' ? (
-              lay.items.slice(0, 160).map((it, i) => <CellShape key={i} sp={sp} x={it.x} y={it.y} px={Math.max(3.5, it.px)} i={i} stained={stained} />)
-            ) : lay.mode === 'specks' || vis === 'dots' ? (
-              lay.items.slice(0, 260).map((it, i) => <circle key={i} cx={it.x} cy={it.y} r={vis === 'invisible' ? 0 : Math.min(1.6, Math.max(0.8, it.px / 2))} fill={stained ? sp.colour : '#94a3b8'} opacity={stained ? 0.9 : 0.35} />)
-            ) : vis === 'invisible' ? null : (
-              lay.items.map((it, i) => <CellShape key={i} sp={sp} x={it.x} y={it.y} px={it.px} i={i} stained={stained} />)
-            )}
-            {!ruler && sp.arrangement === 'regular' && <line x1={C - R} y1={C} x2={C + R} y2={C} stroke="#0f766e" strokeWidth="0.8" strokeDasharray="3 2" />}
-          </g>
-        </svg>
-        <p className="text-sm text-white" data-testid="microscope-readout">{sp.label}: {eyepiece}X eyepiece × {objective}X objective = <strong>{mag}X</strong>. Field of view {fmtNum(fieldMm, 2)} mm ({fieldUm.toLocaleString('en-IN')} µm) across.</p>
-        <p className="text-sm text-slate-200" data-testid="microscope-visibility">{ruler ? 'The ruler is on the stage: read the width of the field from its marks.' : visText} {!ruler && !focused && <strong className="text-amber-300">The image is blurred: turn the focus knob.</strong>}</p>
-        {!ruler && vis !== 'invisible' && <p className="text-xs text-slate-400">{sp.note} Seen: {sp.features.join(', ')}.</p>}
-      </div>
-      {q.editable && (
-        <div className={labCard}>
-          {choices.length > 1 && choices.length <= 4 && <LabChoice name="specimen" label="Slide" value={sp.id} options={choices.map((s) => ({ id: s.id, label: s.label }))} onChange={(id) => { setSpecId(id); setCount(''); }} />}
-          {choices.length > 4 && <LabSelect id="ms-specimen" label="Slide" value={sp.id} options={choices.map((s) => ({ id: s.id, label: s.label }))} onChange={(id) => { setSpecId(id); setCount(''); }} />}
-          <LabChoice name="objective" label="Objective lens" value={String(objective)} options={OBJECTIVES.map((o) => ({ id: String(o), label: o === 100 ? '100X (oil)' : `${o}X` }))} onChange={(id) => { setObjective(Number(id)); setCount(''); }} />
-          <LabChoice name="eyepiece" label="Eyepiece" value={String(eyepiece)} options={[{ id: '10', label: '10X' }, { id: '15', label: '15X' }]} onChange={(id) => setEyepiece(Number(id))} />
-          <LabSlider id="ms-focus" label="Fine focus" value={focus} min={0} max={100} step={1} unit="" onChange={setFocus} />
-          <div className="flex flex-wrap gap-2">
-            <button type="button" data-action="stain" aria-pressed={stained} onClick={() => setStained((s) => !s)} className="min-h-[48px] px-3 rounded-xl border border-surface-border bg-surface text-sm text-white">{stained ? 'Remove stain' : 'Add stain'}</button>
-            <button type="button" data-action="ruler" aria-pressed={ruler} onClick={() => setRuler((r) => !r)} className="min-h-[48px] px-3 rounded-xl border border-surface-border bg-surface text-sm text-white">{ruler ? 'Remove the ruler' : 'Place a ruler on the stage'}</button>
-          </div>
-          {!stained && <p className="text-xs text-slate-400">Unstained cells have little contrast: most are almost transparent.</p>}
-          {sp.arrangement === 'regular' && !ruler && (
-            <div className="space-y-1">
-              <label htmlFor="ms-count" className="block text-sm text-slate-200">Cells counted along the dashed line
-                <input id="ms-count" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-surface-border bg-surface px-3 text-on-surface" />
-              </label>
-              {estimate !== null && <p className="text-sm text-white" data-testid="microscope-estimate">Estimated cell size = {fieldUm.toLocaleString('en-IN')} µm ÷ {n} = <strong>{fmtNum(estimate, 1)} µm</strong>. {Math.abs(estimate - sp.sizeUm) <= sp.sizeUm * 0.15 ? 'That matches a typical cell of this kind.' : `A typical cell here is about ${sp.sizeUm} µm; count again along the line.`}</p>}
-            </div>
-          )}
+    <LabStage testId="microscope" alt={alt}
+      data={{ 'data-specimen': sp.id, 'data-objective': objective, 'data-magnification': mag, 'data-field-um': fieldUm, 'data-visibility': vis, 'data-focused': focused ? 'true' : 'false', 'data-cells-across': across, 'data-estimate': estimate === null ? '' : String(Math.round(estimate * 100) / 100) }}
+      question={measurable ? 'How big is one cell? Count the cells along the dashed line across the field.' : 'What can you see at this magnification?'}
+      sceneNote="Drawn to the scale of the field · colours stand for stains"
+      scene={scene}
+      controls={q.editable ? <>
+        {choices.length > 1 && choices.length <= 4 && <LabChoice name="specimen" label="Slide" value={sp.id} options={choices.map((s) => ({ id: s.id, label: s.label }))} onChange={(id) => { setSpecId(id); setCount(''); }} />}
+        {choices.length > 4 && <LabSelect id="ms-specimen" label="Slide" value={sp.id} options={choices.map((s) => ({ id: s.id, label: s.label }))} onChange={(id) => { setSpecId(id); setCount(''); }} />}
+        <LabChoice name="objective" label="Objective lens" value={String(objective)} options={OBJECTIVES.map((o) => ({ id: String(o), label: o === 100 ? '100X oil' : `${o}X` }))} onChange={(id) => { setObjective(Number(id)); setCount(''); }} />
+        <LabSlider id="ms-focus" label="Fine focus" value={focus} min={0} max={100} step={1} unit="" format={() => (focused ? 'sharp' : 'blurred')} onChange={setFocus} />
+        <div className="flex flex-wrap gap-2">
+          <button type="button" data-action="stain" aria-pressed={stained} onClick={() => setStained((s) => !s)} className="lab-chip">{stained ? '✓ Stained' : 'Add stain'}</button>
+          <button type="button" data-action="ruler" aria-pressed={ruler} onClick={() => setRuler((r) => !r)} className="lab-chip">{ruler ? '✓ Ruler on stage' : 'Place a ruler'}</button>
         </div>
-      )}
-    </div>
+        {measurable && (
+          <label htmlFor="ms-count" className="block text-sm text-slate-200">Cells counted along the dashed line
+            <input id="ms-count" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-surface-border bg-surface px-3 text-on-surface" />
+          </label>
+        )}
+      </> : undefined}
+      more={q.editable ? <LabChoice name="eyepiece" label="Eyepiece" value={String(eyepiece)} options={[{ id: '10', label: '10X' }, { id: '15', label: '15X' }]} onChange={(id) => setEyepiece(Number(id))} /> : undefined}
+      observation={<>
+        <p className="m-0" data-testid="microscope-readout">{sp.label}: {eyepiece}X eyepiece × {objective}X objective = <strong>{mag}X</strong>. Field of view {fmtNum(fieldMm, 2)} mm ({fieldUm.toLocaleString('en-IN')} µm) across.</p>
+        <p className="m-0 text-slate-200" data-testid="microscope-visibility">{ruler ? 'The ruler is on the stage: read the width of the field from its marks.' : visText} {!ruler && !focused && <strong className="text-amber-300">The image is blurred: turn the focus knob.</strong>}</p>
+        {estimate !== null && measurable && <p className="m-0" data-testid="microscope-estimate">Estimated cell size = {fieldUm.toLocaleString('en-IN')} µm ÷ {n} = <strong>{fmtNum(estimate, 1)} µm</strong>. {Math.abs(estimate - sp.sizeUm) <= sp.sizeUm * 0.15 ? 'That matches a typical cell of this kind.' : `A typical cell here is about ${sp.sizeUm} µm; count again along the line.`}</p>}
+        {!stained && !ruler && <p className="m-0 text-slate-400">Unstained cells have little contrast: most are almost transparent.</p>}
+      </>}
+      explanation={!ruler && vis !== 'invisible' ? <p className="m-0">{sp.note} Seen: {sp.features.join(', ')}. A light microscope cannot separate details smaller than about 0.2 µm, however much it magnifies.</p> : undefined}
+      explanationTitle="What you are looking at"
+      finding={estimate !== null && measurable ? { label: `${sp.label}, ${mag}X, ${n} cells across`, value: `about ${fmtNum(estimate, 1)} µm per cell` } : { label: `${sp.label} at ${mag}X`, value: vis === 'detail' ? 'shapes clear' : vis === 'dots' ? 'specks only' : 'too small to see' }}
+    />
   );
 };
 
 export const SizeLadderVisual: React.FC<VisualProps> = ({ alt }) => (
-  <div className="space-y-2 p-3" data-testid="size-ladder" aria-label={alt}>
-    <ul className={labCard}>
+  <LabStage testId="size-ladder" alt={alt}
+    question="Which instrument do you need to see each object?"
+    sceneNote="Logarithmic scale: each step along is ten times larger"
+    scene={<ul className="m-0 p-2 space-y-2 list-none">
       {SIZE_LADDER.map((row) => {
         const tool = instrumentFor(row.sizeUm);
         const width = Math.max(4, Math.min(100, ((Math.log10(row.sizeUm) + 2.5) / 7.3) * 100));
@@ -175,7 +204,7 @@ export const SizeLadderVisual: React.FC<VisualProps> = ({ alt }) => (
           </li>
         );
       })}
-    </ul>
-    <p className="text-xs text-slate-400">Bar lengths use a logarithmic scale: each step along is ten times larger. Green: unaided eye; blue: light microscope; purple: electron microscope only.</p>
-  </div>
+    </ul>}
+    observation={<p className="m-0">Green: unaided eye; blue: light microscope; purple: electron microscope only. Each row also names the instrument in words.</p>}
+  />
 );

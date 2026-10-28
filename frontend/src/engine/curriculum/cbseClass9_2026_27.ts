@@ -32,7 +32,7 @@ const SCIENCE: CurriculumChapter[] = [
     route: '/biology/cell',
     implementation: {
       status: 'partial', lessons: 6, plannedLessons: 6,
-      labs: ['/biology/cell/lab'],
+      labs: ['/biology/cell/lab'], investigations: 5,
       practice: true, assessment: true, narration: true, note: 'All sections are taught in six lessons. Several NCERT end-of-chapter exercises are adapted in practice, but step-by-step solutions to every exercise are not built yet.',
     },
   },
@@ -43,7 +43,7 @@ const SCIENCE: CurriculumChapter[] = [
     route: '/biology/tissues',
     implementation: {
       status: 'partial', lessons: 6, plannedLessons: 6,
-      labs: ['/biology/tissues/lab'],
+      labs: ['/biology/tissues/lab'], investigations: 6,
       practice: true, assessment: true, narration: true, note: 'All sections are taught in six lessons. Several NCERT end-of-chapter exercises are adapted in practice, but step-by-step solutions to every exercise are not built yet.',
     },
   },
@@ -65,7 +65,7 @@ const SCIENCE: CurriculumChapter[] = [
     scope: { lessonPrefixes: ['cm-'], prereqPrefixes: ['cmp-'] },
     implementation: {
       status: 'partial', lessons: 9, plannedLessons: 9,
-      labs: ['/chemistry/mixtures/lab'],
+      labs: ['/chemistry/mixtures/lab'], investigations: 5,
       practice: true, assessment: true, narration: true, note: 'Step-by-step solutions to the NCERT end-of-chapter exercises are not built yet.',
     },
   },
@@ -98,7 +98,7 @@ const SCIENCE: CurriculumChapter[] = [
     scope: { lessonPrefixes: ['ca-'], prereqPrefixes: ['cap-'] },
     implementation: {
       status: 'partial', lessons: 8, plannedLessons: 8,
-      labs: ['/chemistry/atom/lab'],
+      labs: ['/chemistry/atom/lab'], investigations: 4,
       practice: true, assessment: true, narration: true, note: 'Step-by-step solutions to the NCERT end-of-chapter exercises are not built yet.',
     },
   },
@@ -109,7 +109,7 @@ const SCIENCE: CurriculumChapter[] = [
     scope: { lessonPrefixes: ['cf-'], prereqPrefixes: ['cfp-'] },
     implementation: {
       status: 'partial', lessons: 8, plannedLessons: 8,
-      labs: ['/chemistry/atomic-foundations/lab'],
+      labs: ['/chemistry/atomic-foundations/lab'], investigations: 5,
       practice: true, assessment: true, narration: true, note: 'Step-by-step solutions to the NCERT end-of-chapter exercises are not built yet.',
     },
   },
@@ -131,7 +131,7 @@ const SCIENCE: CurriculumChapter[] = [
     route: '/biology/reproduction',
     implementation: {
       status: 'partial', lessons: 6, plannedLessons: 6,
-      labs: ['/biology/reproduction/lab'],
+      labs: ['/biology/reproduction/lab'], investigations: 6,
       practice: true, assessment: true, narration: true, note: 'All sections are taught in six lessons. Several NCERT end-of-chapter exercises are adapted in practice, but step-by-step solutions to every exercise are not built yet.',
     },
   },
@@ -142,7 +142,7 @@ const SCIENCE: CurriculumChapter[] = [
     route: '/biology/diversity',
     implementation: {
       status: 'partial', lessons: 6, plannedLessons: 6,
-      labs: ['/biology/diversity/lab'],
+      labs: ['/biology/diversity/lab'], investigations: 6,
       practice: true, assessment: true, narration: true, note: 'All sections are taught in six lessons. Several NCERT end-of-chapter exercises are adapted in practice, but step-by-step solutions to every exercise are not built yet.',
     },
   },

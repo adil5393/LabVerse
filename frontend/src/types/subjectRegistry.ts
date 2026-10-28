@@ -9,6 +9,9 @@
  * - Global header navigation tabs
  */
 
+import { chaptersFor } from '../engine/curriculum';
+import type { SubjectArea } from '../engine/curriculum/types';
+
 export type SubjectId = 'physics' | 'chemistry' | 'mathematics' | 'biology' | 'robotics';
 
 export type SubjectStatus = 'ready' | 'in_development';
@@ -33,6 +36,18 @@ export interface SubjectDefinition {
   topicsCount: number;
   experimentsCount: number;
   features?: SubjectFeature[];
+}
+
+/**
+ * Chapter and investigation counts read from the curriculum registry, so a subject card cannot fall out of date when a chapter
+ * or an investigation is added. Only built chapters count (complete or partly built), not optional refreshers.
+ */
+export function curriculumCounts(subject: SubjectArea): { topicsCount: number; experimentsCount: number } {
+  const built = chaptersFor(subject).filter((c) => c.implementation.status === 'complete' || c.implementation.status === 'partial');
+  return {
+    topicsCount: built.length,
+    experimentsCount: built.reduce((n, c) => n + (c.implementation.investigations ?? c.implementation.labs.length), 0),
+  };
 }
 
 export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
@@ -66,27 +81,31 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
   {
     id: 'chemistry',
     name: 'Chemistry',
-    category: 'States of Matter & Thermodynamic Behavior',
+    category: 'Class 9: Mixtures, the Atom and Atomic Foundations of Matter',
     description:
-      'Investigate molecular arrangements, kinetic particle motion, solids, liquids, and gases, dynamic heating curves, phase transitions, and thermodynamic behavior in interactive simulation chambers.',
+      'The three Class 9 Chemistry chapters of NCERT Exploration (2026-27): mixtures and their separation, the structure of the atom, and how atoms combine into molecules and ionic compounds, with lessons, laboratories, practice and assessments.',
     icon: 'science',
     status: 'ready',
     route: '/chemistry',
     accentColor: '#10b981',
     badgeText: 'Active Laboratory',
-    buttonText: 'Enter Chemistry Lab',
-    topicsCount: 1,
-    experimentsCount: 6,
+    buttonText: 'Explore Chemistry',
+    ...curriculumCounts('chemistry'),
     features: [
       {
-        title: 'Particle Motion & Phases',
-        description: 'Real-time 2D molecular kinematics modeling solid lattice vibration, liquid flow, and gas diffusion.',
-        icon: 'bubble_chart',
+        title: 'Mixtures Laboratory',
+        description: 'Light beams and settling, concentration, solubility and crystallization, a separation bench with apparatus, and chromatography.',
+        icon: 'filter_alt',
       },
       {
-        title: 'Heating & Phase Transitions',
-        description: 'Interactive thermal burner & piston to observe melting, boiling, latent heat plateaus, and pressure response.',
-        icon: 'thermostat',
+        title: 'Atom Laboratory',
+        description: 'Atomic models, an atom builder, the gold foil experiment and isotopes.',
+        icon: 'blur_on',
+      },
+      {
+        title: 'Formula Laboratory',
+        description: 'Conservation of mass on a balance, ionic and covalent bonds, formulae, formula mass and property tests.',
+        icon: 'hub',
       },
     ],
   },
@@ -149,8 +168,7 @@ export const LABVERSE_SUBJECTS: SubjectDefinition[] = [
     accentColor: '#06b6d4',
     badgeText: 'Active Laboratory',
     buttonText: 'Explore Biology',
-    topicsCount: 4,
-    experimentsCount: 23,
+    ...curriculumCounts('biology'),
     features: [
       { title: 'Virtual Microscope', description: 'Objective lenses, focus, stains, a stage ruler and Activity 2.1 cell-size estimates.', icon: 'biotech' },
       { title: 'Cell Laboratory', description: 'Osmosis in potatoes and cells, bacterial, plant and animal cells part by part, mitosis and meiosis.', icon: 'bubble_chart' },

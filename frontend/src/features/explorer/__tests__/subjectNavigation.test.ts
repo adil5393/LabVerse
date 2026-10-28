@@ -72,18 +72,18 @@ describe('Subject Navigation & Routing Consistency (Milestone M3.2)', () => {
       expect(featureTitles).toContain('DC Loop Simulation');
     });
 
-    it('confirms Chemistry metadata contains States of Matter features and NOT Physics features', () => {
+    it('confirms Chemistry metadata describes the three built chapters and NOT Physics features', () => {
       const chem = getSubjectById('chemistry')!;
       expect(chem).toBeDefined();
       expect(chem.status).toBe('ready');
       expect(chem.route).toBe('/chemistry');
-      expect(chem.buttonText).toBe('Enter Chemistry Lab');
+      expect(chem.buttonText).toBe('Explore Chemistry');
       expect(chem.badgeText).toBe('Active Laboratory');
       expect(isSubjectActive('chemistry')).toBe(true);
 
       const featureTitles = chem.features?.map((f) => f.title) || [];
-      expect(featureTitles).toContain('Particle Motion & Phases');
-      expect(featureTitles).toContain('Heating & Phase Transitions');
+      expect(featureTitles).toEqual(['Mixtures Laboratory', 'Atom Laboratory', 'Formula Laboratory']);
+      expect(chem.topicsCount).toBe(3);
       expect(featureTitles).not.toContain('Solderless Breadboarding');
       expect(featureTitles).not.toContain('DC Loop Simulation');
     });

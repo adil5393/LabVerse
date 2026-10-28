@@ -6,7 +6,7 @@
 import React from 'react';
 import { DIVERSITY_CHAPTER } from '../../../engine/biology/diversity/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
-import { SubjectLabShell } from '../../education/SubjectLabShell';
+import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MicroscopeVisual } from '../shared/Microscope';
 import { AnimalPhylaVisual, BinomialVisual, DIVERSITY_VISUALS, HierarchyVisual, KingdomKeyVisual, PlantKeyVisual } from './DiversityVisuals';
 
@@ -17,6 +17,15 @@ export const DiversityLearnPage = PAGES.Learn;
 export const DiversityPracticePage = PAGES.Practice;
 export const DiversityAssessmentPage = PAGES.Assessment;
 
+export const DIVERSITY_LAB_VIEWS: LabView[] = [
+  { id: 'microscope', label: 'Microbes', render: () => <MicroscopeVisual props={{ editable: true, specimen: 'paramecium', objective: 10, specimens: ['bacteria', 'paramecium', 'amoeba', 'spirogyra', 'yeast'] }} alt="Bacteria, protists, algae and yeast under the virtual microscope." /> },
+  { id: 'kingdoms', label: 'Kingdom key', render: () => <KingdomKeyVisual props={{ editable: true }} alt="A key to the five kingdoms." /> },
+  { id: 'plants', label: 'Plant key', render: () => <PlantKeyVisual props={{ editable: true }} alt="A key to the five plant groups." /> },
+  { id: 'animals', label: 'Animal phyla', render: () => <AnimalPhylaVisual props={{ editable: true }} alt="The eight invertebrate phyla." /> },
+  { id: 'hierarchy', label: 'Hierarchy', render: () => <HierarchyVisual props={{ editable: true, a: 'Tiger', b: 'Lion' }} alt="Two organisms compared from kingdom to species." /> },
+  { id: 'names', label: 'Scientific names', render: () => <BinomialVisual props={{ editable: true }} alt="Check a scientific name against the binomial rules." /> },
+];
+
 export const DiversityLabPage: React.FC = () => (
   <SubjectLabShell
     title="Classification Laboratory" testId="diversity-lab" back={{ href: '/biology/diversity', label: 'Diversity chapter' }}
@@ -26,13 +35,6 @@ export const DiversityLabPage: React.FC = () => (
       'Ranks follow Fig. 12.17 using seven main ranks; sub-ranks such as sub-phylum Vertebrata are left out of the ladder.',
       'The name checker can test capital and small letters but not italics, which are a matter of printing.',
     ]}
-    views={[
-      { id: 'microscope', label: 'Microbes', render: () => <MicroscopeVisual props={{ editable: true, specimen: 'paramecium', objective: 10, specimens: ['bacteria', 'paramecium', 'amoeba', 'spirogyra', 'yeast'] }} alt="Bacteria, protists, algae and yeast under the virtual microscope." /> },
-      { id: 'kingdoms', label: 'Kingdom key', render: () => <KingdomKeyVisual props={{ editable: true }} alt="A key to the five kingdoms." /> },
-      { id: 'plants', label: 'Plant key', render: () => <PlantKeyVisual props={{ editable: true }} alt="A key to the five plant groups." /> },
-      { id: 'animals', label: 'Animal phyla', render: () => <AnimalPhylaVisual props={{ editable: true }} alt="The eight invertebrate phyla." /> },
-      { id: 'hierarchy', label: 'Hierarchy', render: () => <HierarchyVisual props={{ editable: true, a: 'Tiger', b: 'Lion' }} alt="Two organisms compared from kingdom to species." /> },
-      { id: 'names', label: 'Scientific names', render: () => <BinomialVisual props={{ editable: true }} alt="Check a scientific name against the binomial rules." /> },
-    ]}
+    views={DIVERSITY_LAB_VIEWS}
   />
 );

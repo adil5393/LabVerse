@@ -12,6 +12,7 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onOpenGuide, onImpor
   const contexts = useChapterNavigationStore((s) => s.contexts);
   const chapter = Object.values(CHAPTER_REGISTRY).filter((c) => pathname === c.chapterUrl || pathname.startsWith(c.chapterUrl + '/')).sort((a, b) => b.chapterUrl.length - a.chapterUrl.length)[0];
   const practicing = /\/(practice|exercises)(\/|$)/.test(pathname);
+  const inLab = /\/lab(\/|$)/.test(pathname);
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -54,8 +55,8 @@ export const GlobalHeader: React.FC<GlobalHeaderProps> = ({ onOpenGuide, onImpor
       </div>
     </div>
     {chapter && <nav className="chapter-journey" aria-label="Chapter learning journey">
-      <Link to={contexts[chapter.id]?.lastLessonUrl || chapter.defaultLearnUrl} aria-current={!practicing ? 'page' : undefined}><span className="material-symbols-outlined text-[18px]" aria-hidden>menu_book</span>Learn</Link>
-      <Link to={useChapterNavigationStore.getState().getLabDestination(chapter.id).url}><span className="material-symbols-outlined text-[18px]" aria-hidden>science</span>Lab</Link>
+      <Link to={contexts[chapter.id]?.lastLessonUrl || chapter.defaultLearnUrl} aria-current={!practicing && !inLab ? 'page' : undefined}><span className="material-symbols-outlined text-[18px]" aria-hidden>menu_book</span>Learn</Link>
+      <Link to={useChapterNavigationStore.getState().getLabDestination(chapter.id).url} aria-current={inLab ? 'page' : undefined}><span className="material-symbols-outlined text-[18px]" aria-hidden>science</span>Lab</Link>
       {(chapter.defaultPracticeUrl || chapter.defaultExercisesUrl) && <Link to={chapter.defaultPracticeUrl || chapter.defaultExercisesUrl!} aria-current={practicing ? 'page' : undefined}><span className="material-symbols-outlined text-[18px]" aria-hidden>edit_note</span>Practice</Link>}
     </nav>}
   </header>;

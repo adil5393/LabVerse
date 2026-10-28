@@ -43,6 +43,11 @@ export interface ChapterImplementation {
   plannedLessons: number;
   /** Interactive laboratories (routes) that exist for this chapter. */
   labs: string[];
+  /**
+   * Investigations offered across those laboratories, where a laboratory groups several (Chemistry and Biology). A test checks
+   * it against the laboratory pages' investigation lists; subject cards add these up instead of hard-coding a count.
+   */
+  investigations?: number;
   practice: boolean;
   assessment: boolean;
   narration: boolean;

@@ -6,7 +6,7 @@
 import React from 'react';
 import { CELL_CHAPTER } from '../../../engine/biology/cell/learn/content';
 import { makeChapterPages } from '../../education/chapterPages';
-import { SubjectLabShell } from '../../education/SubjectLabShell';
+import { SubjectLabShell, type LabView } from '../../education/SubjectLabShell';
 import { MicroscopeVisual, SizeLadderVisual } from '../shared/Microscope';
 import { CELL_VISUALS, CellCompareVisual, DivisionVisual, OsmosisVisual } from './CellVisuals';
 
@@ -16,6 +16,14 @@ export const CellHub = PAGES.Hub;
 export const CellLearnPage = PAGES.Learn;
 export const CellPracticePage = PAGES.Practice;
 export const CellAssessmentPage = PAGES.Assessment;
+
+export const CELL_LAB_VIEWS: LabView[] = [
+  { id: 'microscope', label: 'Microscope', render: () => <MicroscopeVisual props={{ editable: true, specimen: 'onion', objective: 4 }} alt="A virtual light microscope with slides, objective lenses, focus, stain and a ruler for measuring the field." /> },
+  { id: 'osmosis', label: 'Osmosis bench', render: () => <OsmosisVisual props={{ editable: true, mode: 'potato', outside: 0 }} alt="Potato pieces and single cells in solutions of different concentration." /> },
+  { id: 'cells', label: 'Cell explorer', render: () => <CellCompareVisual props={{ editable: true, type: 'plant' }} alt="Bacterial, plant and animal cells with each part explained." /> },
+  { id: 'division', label: 'Cell division', render: () => <DivisionVisual props={{ editable: true, kind: 'mitosis', chromosomes: 4 }} alt="Mitosis and meiosis compared by daughter cells and chromosomes." /> },
+  { id: 'sizes', label: 'Size ladder', render: () => <SizeLadderVisual props={{}} alt="Objects from a chicken egg to proteins and the instrument needed to see each." /> },
+];
 
 export const CellLabPage: React.FC = () => (
   <SubjectLabShell
@@ -27,12 +35,6 @@ export const CellLabPage: React.FC = () => (
       'Osmosis results are illustrative: cell contents are taken as about 3 % dissolved substances.',
       'Cell diagrams are not to scale and colours only tell the parts apart.',
     ]}
-    views={[
-      { id: 'microscope', label: 'Microscope', render: () => <MicroscopeVisual props={{ editable: true, specimen: 'onion', objective: 4 }} alt="A virtual light microscope with slides, objective lenses, focus, stain and a ruler for measuring the field." /> },
-      { id: 'osmosis', label: 'Osmosis bench', render: () => <OsmosisVisual props={{ editable: true, mode: 'potato', outside: 0 }} alt="Potato pieces and single cells in solutions of different concentration." /> },
-      { id: 'cells', label: 'Cell explorer', render: () => <CellCompareVisual props={{ editable: true, type: 'plant' }} alt="Bacterial, plant and animal cells with each part explained." /> },
-      { id: 'division', label: 'Cell division', render: () => <DivisionVisual props={{ editable: true, kind: 'mitosis', chromosomes: 4 }} alt="Mitosis and meiosis compared by daughter cells and chromosomes." /> },
-      { id: 'sizes', label: 'Size ladder', render: () => <SizeLadderVisual props={{}} alt="Objects from a chicken egg to proteins and the instrument needed to see each." /> },
-    ]}
+    views={CELL_LAB_VIEWS}
   />
 );

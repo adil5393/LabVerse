@@ -11,3 +11,11 @@ export function labTaskHref(task: LabTask, lessonId: string, backHref: string): 
   q.set(LAB_TASK_PARAMS.back, backHref);
   return `${path}?${q.toString()}`;
 }
+
+/** A link to a laboratory that remembers where the student came from, so the laboratory can offer “Back to the lesson”. */
+export function labHrefFrom(labHref: string, backHref: string): string {
+  const [path, query = ''] = labHref.split('?');
+  const q = new URLSearchParams(query);
+  q.set(LAB_TASK_PARAMS.back, backHref);
+  return `${path}?${q.toString()}`;
+}

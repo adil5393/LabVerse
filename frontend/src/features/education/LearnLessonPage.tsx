@@ -17,6 +17,7 @@ import { JudgeProvider } from './judges';
 import { VisualRegistryProvider, type VisualRegistry } from './visuals';
 import { NarrationEnabledProvider } from '../narration/NarrationRegion';
 import { LabTaskCard } from './LessonInteractions';
+import { labHrefFrom } from './labTaskLinks';
 
 type Stage = 'understand' | 'worked' | 'guided' | 'independent' | 'reflect';
 const STAGES: { id: Stage; label: string; icon: string }[] = [
@@ -254,7 +255,7 @@ const LearnLesson: React.FC<LearnLessonProps> = ({ chapter, registry, judges = {
               <div className="flex flex-wrap gap-2">
                 {next && <Link className="min-h-[48px] px-5 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm inline-flex items-center" to={chapter.routes.learn(next)} state={{ restart: true }}>Next lesson</Link>}
                 <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={chapter.routes.landing}>Chapter overview</Link>
-                <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={chapter.routes.lab}>Free laboratory</Link>
+                <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={labHrefFrom(chapter.routes.lab, location.pathname)} data-testid="lesson-free-lab">Free laboratory</Link>
                 {chapter.routes.practice && <Link className="min-h-[48px] px-4 rounded-xl border border-surface-border text-slate-200 text-sm inline-flex items-center" to={chapter.routes.practice}>Chapter practice</Link>}
               </div>
             </div>

@@ -141,6 +141,14 @@ export interface MixtureCase {
   kind: 'two-miscible-liquids' | 'two-immiscible-liquids' | 'solid-in-liquid-solution' | 'insoluble-solid-in-liquid' | 'fine-particles-in-liquid' | 'two-solids' | 'coloured-components' | 'alloy';
   /** Boiling points (°C) for two miscible liquids. */
   boilingPoints?: [number, number];
+  /** The two liquids, as keys of `BOILING_POINTS`, in the same order as `boilingPoints`. */
+  liquids?: [string, string];
+  /**
+   * Names of the two parts, used to label a drawing of the separation. Their order depends on the kind: two immiscible liquids
+   * [upper layer, lower layer]; a solid in a liquid [solid, liquid]; fine particles [particles, liquid]; two solids [the part the
+   * method takes out, the part left behind]; coloured components [components, mixture]; an alloy [metal, metal].
+   */
+  parts?: [string, string];
   /** Which component is wanted, for a solution of a solid. */
   want?: 'solid' | 'solvent' | 'pure-crystals';
   /** For two solids: does one sublime, is one magnetic, is one soluble in water? */
@@ -191,22 +199,51 @@ export function chooseMethod(c: MixtureCase): MethodChoice {
 export const BOILING_POINTS: Record<string, number> = { water: 100, acetone: 56, alcohol: 78, chloroform: 61, benzene: 80 };
 
 export const MIXTURE_CASES: MixtureCase[] = [
-  { id: 'acetone-water', name: 'Acetone and water', kind: 'two-miscible-liquids', boilingPoints: [56, 100] },
-  { id: 'alcohol-benzene', name: 'Alcohol and benzene', kind: 'two-miscible-liquids', boilingPoints: [78, 80] },
-  { id: 'oil-water', name: 'Mustard oil and water', kind: 'two-immiscible-liquids' },
-  { id: 'salt-from-water', name: 'Common salt from salt water', kind: 'solid-in-liquid-solution', want: 'solid' },
-  { id: 'water-from-salt', name: 'Pure water from salt water', kind: 'solid-in-liquid-solution', want: 'solvent' },
-  { id: 'copper-sulfate', name: 'Pure copper sulfate from an impure sample', kind: 'solid-in-liquid-solution', want: 'pure-crystals' },
-  { id: 'sand-water', name: 'Sand and water', kind: 'insoluble-solid-in-liquid' },
-  { id: 'blood', name: 'Plasma from blood cells', kind: 'fine-particles-in-liquid', needsSpinning: true },
-  { id: 'muddy-water', name: 'Fine mud from cloudy water', kind: 'fine-particles-in-liquid', needsSpinning: false },
-  { id: 'camphor-sand', name: 'Camphor and sand', kind: 'two-solids', sublimes: true },
-  { id: 'iron-sawdust', name: 'Iron nails and sawdust', kind: 'two-solids', magnetic: true },
-  { id: 'chalk-salt', name: 'Chalk powder and common salt', kind: 'two-solids', oneSoluble: true },
-  { id: 'ink', name: 'The dyes in black ink', kind: 'coloured-components' },
-  { id: 'brass', name: 'Copper and zinc in brass', kind: 'alloy' },
+  { id: 'acetone-water', name: 'Acetone and water', kind: 'two-miscible-liquids', liquids: ['acetone', 'water'], boilingPoints: [56, 100] },
+  { id: 'alcohol-benzene', name: 'Alcohol and benzene', kind: 'two-miscible-liquids', liquids: ['alcohol', 'benzene'], boilingPoints: [78, 80] },
+  { id: 'oil-water', name: 'Mustard oil and water', kind: 'two-immiscible-liquids', parts: ['mustard oil', 'water'] },
+  { id: 'salt-from-water', name: 'Common salt from salt water', kind: 'solid-in-liquid-solution', want: 'solid', parts: ['common salt', 'water'] },
+  { id: 'water-from-salt', name: 'Pure water from salt water', kind: 'solid-in-liquid-solution', want: 'solvent', parts: ['common salt', 'water'] },
+  { id: 'copper-sulfate', name: 'Pure copper sulfate from an impure sample', kind: 'solid-in-liquid-solution', want: 'pure-crystals', parts: ['copper sulfate', 'water'] },
+  { id: 'sand-water', name: 'Sand and water', kind: 'insoluble-solid-in-liquid', parts: ['sand', 'water'] },
+  { id: 'blood', name: 'Plasma from blood cells', kind: 'fine-particles-in-liquid', needsSpinning: true, parts: ['blood cells', 'plasma'] },
+  { id: 'muddy-water', name: 'Fine mud from cloudy water', kind: 'fine-particles-in-liquid', needsSpinning: false, parts: ['fine mud', 'water'] },
+  { id: 'camphor-sand', name: 'Camphor and sand', kind: 'two-solids', sublimes: true, parts: ['camphor', 'sand'] },
+  { id: 'iron-sawdust', name: 'Iron nails and sawdust', kind: 'two-solids', magnetic: true, parts: ['iron nails', 'sawdust'] },
+  { id: 'chalk-salt', name: 'Chalk powder and common salt', kind: 'two-solids', oneSoluble: true, parts: ['common salt', 'chalk'] },
+  { id: 'ink', name: 'The dyes in black ink', kind: 'coloured-components', parts: ['dyes', 'black ink'] },
+  { id: 'brass', name: 'Copper and zinc in brass', kind: 'alloy', parts: ['copper', 'zinc'] },
 ];
 export const caseById = (id: string): MixtureCase => MIXTURE_CASES.find((m) => m.id === id) ?? MIXTURE_CASES[0];
+
+/** Liquids of the boiling-point table that do not mix with water (they form a separate layer). The others mix with each other. */
+export const IMMISCIBLE_WITH_WATER: ReadonlySet<string> = new Set(['chloroform', 'benzene']);
+/** Of those, the ones denser than water (they form the lower layer): chloroform about 1.5 g/cm³; benzene about 0.88 g/cm³ floats. */
+export const DENSER_THAN_WATER: ReadonlySet<string> = new Set(['chloroform']);
+
+/** [upper layer, lower layer] for water and a liquid that does not mix with it. */
+function twoLayers(a: string, b: string): [string, string] {
+  const other = a === 'water' ? b : a;
+  return DENSER_THAN_WATER.has(other) ? ['water', other] : [other, 'water'];
+}
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * The mixture of two liquids from the boiling-point table. A pair that matches a book example returns that example, so the
+ * preset, the liquid pickers, the name and the boiling points can never disagree. Any other pair is described by the same
+ * properties: its name and boiling points come from `BOILING_POINTS`, and water with benzene or chloroform forms two layers.
+ */
+export function twoLiquidCase(a: string, b: string): MixtureCase {
+  const preset = MIXTURE_CASES.find((c) => c.liquids && ((c.liquids[0] === a && c.liquids[1] === b) || (c.liquids[0] === b && c.liquids[1] === a)));
+  if (preset) return preset;
+  const pair: [string, string] = [a, b];
+  const name = `${capitalize(a)} and ${b}`;
+  const layers = (a === 'water' && IMMISCIBLE_WITH_WATER.has(b)) || (b === 'water' && IMMISCIBLE_WITH_WATER.has(a));
+  return layers
+    ? { id: `liquids-${a}-${b}`, name, kind: 'two-immiscible-liquids', liquids: pair, parts: twoLayers(a, b) }
+    : { id: `liquids-${a}-${b}`, name, kind: 'two-miscible-liquids', liquids: pair, boilingPoints: [BOILING_POINTS[a], BOILING_POINTS[b]] };
+}
 
 // ---------- Paper chromatography ----------
 
